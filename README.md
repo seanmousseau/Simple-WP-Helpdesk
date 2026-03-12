@@ -1,15 +1,13 @@
-====================================================================
 SIMPLE WP HELPDESK - DOCUMENTATION
-====================================================================
+
 Latest Version: 1.1
 Requires at least: WordPress 5.3
 Requires PHP: 7.2+
 
 A comprehensive, lightweight, and secure ticketing system built natively for WordPress. Keep your client data entirely on your own server.
 
-====================================================================
 1. FEATURE SUMMARY
-====================================================================
+
 - Secure Client Portal: Clients can submit, view, and reply to tickets from the front-end without needing a WordPress user account. Access is secured via unique cryptographic email tokens.
 - Customizable Workflows: Fully customizable ticket statuses and priority levels to fit your business logic.
 - Smart Communications: Highly customizable email templates with dynamic placeholders. 
@@ -20,10 +18,8 @@ A comprehensive, lightweight, and secure ticketing system built natively for Wor
 - Robust Anti-Spam: Built-in Honeypot, Google reCAPTCHA v2, and Cloudflare Turnstile integrations.
 - Page Builder Friendly: Scoped CSS architecture ensures the frontend UI looks perfect inside Elementor and other modern page builders.
 
+2. INSTALLATION
 
-====================================================================
-2. INSTALLATION GUIDE
-====================================================================
 Installing the plugin via a .zip file is quick and easy through the standard WordPress dashboard.
 
 Prerequisites: Ensure you have the "simple-wp-helpdesk.zip" file saved to your computer.
@@ -40,10 +36,8 @@ NEXT STEP (FRONTEND SETUP):
 To display the helpdesk to your users, create a new WordPress Page (e.g., "Support") and place the following shortcode anywhere on the page:
 [submit_ticket]
 
+3. CONFIGURATION
 
-====================================================================
-3. CONFIGURATION DOCUMENT
-====================================================================
 To configure the plugin, navigate to Tickets > Settings in your WordPress dashboard. The settings are divided into six tabs:
 
 TAB 1: GENERAL
@@ -72,10 +66,7 @@ TAB 6: TOOLS
 - Uninstallation Behavior: Check this box if you want WordPress to securely wipe all tickets, files, and settings when you delete the plugin.
 - Danger Zone: Manual tools to Purge all tickets, Factory Reset the plugin, or perform a GDPR-compliant purge of a specific client's email address and data.
 
-
-====================================================================
-4. USER GUIDE
-====================================================================
+4. USAGE
 
 PART A: FOR CLIENTS / END-USERS
 
@@ -106,10 +97,7 @@ Communicating with Clients:
 4. Saving: Once you have typed your reply and/or updated the status dropdowns on the right, scroll up and click the blue "Update" button on the right-hand side.
    (Pro-Tip: If you type a public reply AND change the status to Closed/Resolved simultaneously, the system will smartly combine these actions into a single email notification for the client.)
 
-
-====================================================================
 5. CHANGELOG
-====================================================================
 
 VERSION 1.1
 - Improved: Elementor Page Builder compatibility. The frontend shortcode now utilizes a completely scoped CSS architecture. This forces internal form elements to remain neatly left-aligned even if the surrounding Elementor column is center-justified. 
