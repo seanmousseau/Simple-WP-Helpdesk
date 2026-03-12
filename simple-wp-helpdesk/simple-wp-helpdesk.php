@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, and deep uninstallation/GDPR cleanup.
- * Version: 1.0
+ * Version: 1.1
  * Requires at least: 5.3
  * Requires PHP: 7.2
  * Author: SM WP Plugins
@@ -15,22 +15,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // 1. PLUGIN SETUP, UPGRADE LOGIC & CRON
 // ==============================================================================
 
-define( 'SWH_VERSION', '1.0' );
+define( 'SWH_VERSION', '1.1' );
 
 register_activation_hook( __FILE__, 'swh_activate' );
 function swh_activate() {
     add_role( 'technician', 'Technician', array( 'read' => true, 'edit_posts' => true, 'upload_files' => true ) );
     
-    // Schedule separate lightweight cron jobs to prevent cURL 28 timeouts
-    if (!wp_next_scheduled('swh_autoclose_event')) {
-        wp_schedule_event(time(), 'hourly', 'swh_autoclose_event');
-    }
-    if (!wp_next_scheduled('swh_retention_tickets_event')) {
-        wp_schedule_event(time() + 1800, 'hourly', 'swh_retention_tickets_event');
-    }
-    if (!wp_next_scheduled('swh_retention_attachments_event')) {
-        wp_schedule_event(time() + 3600, 'hourly', 'swh_retention_attachments_event');
-    }
+    if (!wp_next_scheduled('swh_autoclose_event')) { wp_schedule_event(time(), 'hourly', 'swh_autoclose_event'); }
+    if (!wp_next_scheduled('swh_retention_tickets_event')) { wp_schedule_event(time() + 1800, 'hourly', 'swh_retention_tickets_event'); }
+    if (!wp_next_scheduled('swh_retention_attachments_event')) { wp_schedule_event(time() + 3600, 'hourly', 'swh_retention_attachments_event'); }
     
     swh_run_upgrade_routine();
 }
@@ -40,8 +33,6 @@ function swh_deactivate() {
     wp_clear_scheduled_hook('swh_autoclose_event');
     wp_clear_scheduled_hook('swh_retention_tickets_event');
     wp_clear_scheduled_hook('swh_retention_attachments_event');
-    
-    // Clear legacy hooks just in case
     wp_clear_scheduled_hook('swh_hourly_maintenance_event');
     wp_clear_scheduled_hook('swh_daily_autoclose_event');
 }
@@ -235,7 +226,6 @@ function swh_delete_file_by_url($url) {
     if (empty($url)) return;
     $upload_dir = wp_get_upload_dir();
     if ( strpos($url, $upload_dir['baseurl']) !== 0 ) return; 
-
     $path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $url);
     if (file_exists($path)) { @unlink($path); }
 }
@@ -266,11 +256,12 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 
 
 // ==============================================================================
-// 3. BACKGROUND CRON TASKS (Optimized SQL to prevent cURL error 28)
+// 3. BACKGROUND CRON TASKS 
 // ==============================================================================
 
 add_action('swh_autoclose_event', 'swh_process_autoclose');
 function swh_process_autoclose() {
+    if ( function_exists('set_time_limit') ) { @set_time_limit(0); }
     $defs = swh_get_defaults();
     $days = (int) get_option('swh_autoclose_days', 3);
     if ($days <= 0) return;
@@ -279,7 +270,6 @@ function swh_process_autoclose() {
     $closed_status   = get_option('swh_closed_status', $defs['swh_closed_status']);
     $threshold = current_time('timestamp') - ($days * DAY_IN_SECONDS);
     
-    // Strict SQL filtering: Process exactly 1 ticket that is definitely expired.
     $tickets = get_posts(array(
         'post_type' => 'helpdesk_ticket',
         'numberposts' => 1, 
@@ -322,12 +312,12 @@ function swh_process_autoclose() {
 
 add_action('swh_retention_attachments_event', 'swh_process_retention_attachments');
 function swh_process_retention_attachments() {
+    if ( function_exists('set_time_limit') ) { @set_time_limit(0); }
     $days = (int) get_option('swh_retention_attachments_days', 0);
     if ($days <= 0) return;
 
     $threshold_date = date('Y-m-d H:i:s', current_time('timestamp') - ($days * DAY_IN_SECONDS));
 
-    // Limit to 1 main ticket attachment process per run
     $tickets = get_posts(array(
         'post_type' => 'helpdesk_ticket',
         'numberposts' => 1,
@@ -349,7 +339,6 @@ function swh_process_retention_attachments() {
         }
     }
 
-    // Limit to 1 comment attachment process per run
     $comments = get_comments(array(
         'post_type' => 'helpdesk_ticket',
         'number' => 1,
@@ -371,12 +360,12 @@ function swh_process_retention_attachments() {
 
 add_action('swh_retention_tickets_event', 'swh_process_retention_tickets');
 function swh_process_retention_tickets() {
+    if ( function_exists('set_time_limit') ) { @set_time_limit(0); }
     $days = (int) get_option('swh_retention_tickets_days', 0);
     if ($days <= 0) return;
 
     $threshold_date = date('Y-m-d H:i:s', current_time('timestamp') - ($days * DAY_IN_SECONDS));
 
-    // Limit to 1 ticket deletion per run
     $tickets = get_posts(array(
         'post_type' => 'helpdesk_ticket',
         'numberposts' => 1, 
@@ -807,11 +796,13 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
     $current_user = wp_get_current_user();
 
+    // 1. PROCESS INTERNAL NOTE
     if ( ! empty( $_POST['swh_tech_note_text'] ) ) {
         $comment_id = wp_insert_comment( array( 'comment_post_ID' => $post_id, 'comment_author' => $current_user->display_name, 'comment_author_email' => $current_user->user_email, 'comment_content' => sanitize_textarea_field( $_POST['swh_tech_note_text'] ), 'comment_approved' => 1 ) );
         update_comment_meta( $comment_id, '_is_internal_note', '1' );
     }
 
+    // 2. PROCESS PUBLIC REPLY & STATUS EMAILS
     $just_replied = false;
     $attach_urls = array();
     
@@ -871,7 +862,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
 
 // ==============================================================================
-// 6. FRONT-END SHORTCODE [submit_ticket]
+// 6. FRONT-END SHORTCODE [submit_ticket] (With Elementor CSS Layout Scoping)
 // ==============================================================================
 
 add_shortcode( 'submit_ticket', 'swh_ticket_frontend' );
@@ -887,6 +878,32 @@ function swh_ticket_frontend() {
     $default_prio    = get_option('swh_default_priority', $defs['swh_default_priority']);
     $spam_method     = get_option('swh_spam_method', 'none');
 
+    // SCOPED CSS FOR ELEMENTOR COMPATIBILITY
+    ?>
+    <style>
+        .swh-helpdesk-wrapper { max-width: 800px; margin: 0 auto; text-align: left !important; font-family: inherit; line-height: 1.6; color: #333; }
+        .swh-helpdesk-wrapper * { box-sizing: border-box; }
+        .swh-form-group { margin-bottom: 15px; text-align: left !important; }
+        .swh-form-group label { display: block; font-weight: 600; margin-bottom: 5px; color: #333; }
+        .swh-form-control { width: 100%; max-width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 15px; background: #fff; color:#333; }
+        .swh-form-control:focus { border-color: #0073aa; outline: none; box-shadow: 0 0 3px rgba(0,115,170,.3); }
+        .swh-btn { padding: 10px 20px; background-color: #0073aa; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: 600; display: inline-block; text-decoration: none; transition: background 0.2s; }
+        .swh-btn:hover { background-color: #005177; color: #fff; }
+        .swh-alert { padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: 500; border: 1px solid transparent; }
+        .swh-alert-success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .swh-alert-error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .swh-alert-info { background-color: #e6f7ff; border-color: #b3e0ff; color: #005980; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .swh-card { border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin-bottom: 20px; background: #fff; }
+        .swh-badge { padding: 4px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .swh-badge-closed { background-color: #f8d7da; color: #721c24; }
+        .swh-badge-open { background-color: #d4edda; color: #155724; }
+        .swh-chat-bubble { padding: 15px; margin-bottom: 15px; border-radius: 4px; border-left: 4px solid #0073aa; }
+        .swh-chat-user { background-color: #f9f9f9; border-color: #aaa; }
+        .swh-chat-tech { background-color: #e6f7ff; border-color: #0073aa; }
+    </style>
+    <div class="swh-helpdesk-wrapper">
+    <?php
+
     // --------------------------------------------------------------------------
     // MODE A: VIEW / REPLY TO EXISTING TICKET
     // --------------------------------------------------------------------------
@@ -898,7 +915,7 @@ function swh_ticket_frontend() {
         $db_token = get_post_meta( $ticket_id, '_ticket_token', true );
         
         if ( ! $post || $post->post_type !== 'helpdesk_ticket' || ! hash_equals( $db_token, $token ) ) {
-            echo '<div style="color:red; font-weight:bold;">'.esc_html(get_option('swh_msg_err_invalid', $defs['swh_msg_err_invalid'])).'</div>'; return ob_get_clean();
+            echo '<div class="swh-alert swh-alert-error">'.esc_html(get_option('swh_msg_err_invalid', $defs['swh_msg_err_invalid'])).'</div></div>'; return ob_get_clean();
         }
 
         $data = array(
@@ -929,7 +946,7 @@ function swh_ticket_frontend() {
             $u_message = swh_parse_template( get_option('swh_em_user_closed_body', $defs['swh_em_user_closed_body']), $data );
             wp_mail( $data['email'], $u_subject, $u_message );
 
-            echo '<div style="color:green; font-weight:bold; margin-bottom: 20px;">'.esc_html(get_option('swh_msg_success_closed', $defs['swh_msg_success_closed'])).'</div>';
+            echo '<div class="swh-alert swh-alert-success">'.esc_html(get_option('swh_msg_success_closed', $defs['swh_msg_success_closed'])).'</div>';
             $data['status'] = $closed_status;
         }
 
@@ -960,7 +977,7 @@ function swh_ticket_frontend() {
                 $u_message = swh_parse_template( get_option('swh_em_user_reopen_body', $defs['swh_em_user_reopen_body']), $data );
                 wp_mail( $data['email'], $u_subject, $u_message );
 
-                echo '<div style="color:green; font-weight:bold; margin-bottom: 20px;">'.esc_html(get_option('swh_msg_success_reopen', $defs['swh_msg_success_reopen'])).'</div>';
+                echo '<div class="swh-alert swh-alert-success">'.esc_html(get_option('swh_msg_success_reopen', $defs['swh_msg_success_reopen'])).'</div>';
                 $data['status'] = $reopened_status;
             }
         }
@@ -991,15 +1008,15 @@ function swh_ticket_frontend() {
                 if ( !empty($attach_urls) ) $message .= "\n\nAttachments:\n" . implode("\n", $attach_urls);
                 wp_mail( $admin_email, $subject, $message );
 
-                echo '<div style="color:green; font-weight:bold; margin-bottom: 20px;">'.esc_html(get_option('swh_msg_success_reply', $defs['swh_msg_success_reply'])).'</div>';
+                echo '<div class="swh-alert swh-alert-success">'.esc_html(get_option('swh_msg_success_reply', $defs['swh_msg_success_reply'])).'</div>';
             }
         }
 
         ?>
-        <div style="border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <div class="swh-card">
             <div style="float: right; font-weight: bold; color: #666; font-size: 1.2em;"><?php echo esc_html($data['ticket_id']); ?></div>
-            <h3 style="margin-top:0;"><?php echo esc_html( $data['title'] ); ?></h3>
-            <p><strong>Status:</strong> <span style="padding: 3px 8px; border-radius: 3px; background: <?php echo ($data['status'] === $closed_status) ? '#f8d7da' : '#d4edda'; ?>; color: <?php echo ($data['status'] === $closed_status) ? '#721c24' : '#155724'; ?>;"><?php echo esc_html( $data['status'] ); ?></span>
+            <h3 style="margin-top:0; font-size: 22px; color: #222;"><?php echo esc_html( $data['title'] ); ?></h3>
+            <p style="margin: 0 0 15px 0;"><strong>Status:</strong> <span class="swh-badge <?php echo ($data['status'] === $closed_status) ? 'swh-badge-closed' : 'swh-badge-open'; ?>"><?php echo esc_html( $data['status'] ); ?></span>
                 &nbsp;|&nbsp; <strong>Priority:</strong> <?php echo esc_html( $data['priority'] ); ?></p>
             <hr>
             <p><?php echo nl2br( esc_html( $post->post_content ) ); ?></p>
@@ -1008,13 +1025,13 @@ function swh_ticket_frontend() {
             $attachments = get_post_meta( $ticket_id, '_ticket_attachments', true );
             if ( !empty($attachments) && is_array($attachments) ) {
                 echo '<p><strong>Attachments:</strong><br>';
-                foreach($attachments as $i => $url) { echo '<a href="'.esc_url($url).'" target="_blank" style="text-decoration: underline; margin-right:10px;">File '.($i+1).'</a>'; }
+                foreach($attachments as $i => $url) { echo '<a href="'.esc_url($url).'" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa;">File '.($i+1).'</a>'; }
                 echo '</p>';
             }
             ?>
         </div>
 
-        <h4>Conversation History</h4>
+        <h4 style="margin-bottom: 15px;">Conversation History</h4>
         <div style="margin-bottom: 20px;">
             <?php
             $comments = get_comments( array( 'post_id' => $ticket_id, 'order' => 'ASC' ) );
@@ -1024,16 +1041,16 @@ function swh_ticket_frontend() {
 
                     $is_user = get_comment_meta( $comment->comment_ID, '_is_user_reply', true );
                     $author_name = $is_user ? 'You' : 'Technician (' . esc_html($comment->comment_author) . ')';
-                    $bg_color = $is_user ? '#f9f9f9' : '#e6f7ff';
+                    $bubble_class = $is_user ? 'swh-chat-user' : 'swh-chat-tech';
                     $attach_urls = get_comment_meta( $comment->comment_ID, '_attachments', true );
 
-                    echo '<div style="background: ' . $bg_color . '; padding: 15px; margin-bottom: 10px; border-left: 4px solid #0073aa; border-radius: 3px;">';
-                    echo '<strong style="display:block; margin-bottom: 5px;">' . $author_name . ' <span style="font-weight:normal; font-size: 0.8em; color: #666;">(' . $comment->comment_date . ')</span></strong>';
+                    echo '<div class="swh-chat-bubble ' . $bubble_class . '">';
+                    echo '<strong style="display:block; margin-bottom: 5px;">' . $author_name . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(' . $comment->comment_date . ')</span></strong>';
                     echo nl2br( esc_html( $comment->comment_content ) );
                     
                     if ( !empty($attach_urls) && is_array($attach_urls) ) {
                         echo '<div style="margin-top: 10px;">';
-                        foreach($attach_urls as $i => $url) echo '<a href="'.esc_url($url).'" target="_blank" style="text-decoration: underline; margin-right:10px;">Attachment '.($i+1).'</a>';
+                        foreach($attach_urls as $i => $url) echo '<a href="'.esc_url($url).'" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">Attachment '.($i+1).'</a>';
                         echo '</div>';
                     }
                     echo '</div>';
@@ -1043,42 +1060,56 @@ function swh_ticket_frontend() {
         </div>
 
         <?php if ( $data['status'] === $resolved_status ) : ?>
-            <div style="background: #e6f7ff; border: 1px solid #b3e0ff; padding: 20px; border-radius: 5px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div class="swh-alert swh-alert-info">
                 <div>
-                    <h4 style="margin: 0 0 5px 0; color: #0073aa;">Is your issue fully resolved?</h4>
-                    <p style="margin: 0; font-size: 13px; color: #555;">Click the button to close this ticket, or use the form below to reply if you still need help.</p>
+                    <h4 style="margin: 0 0 5px 0; color: #005980;">Is your issue fully resolved?</h4>
+                    <p style="margin: 0; font-size: 13px; color: #005980;">Click the button to close this ticket, or use the form below to reply if you still need help.</p>
                 </div>
-                <form method="POST" action="">
+                <form method="POST" action="" style="margin:0;">
                     <?php wp_nonce_field( 'swh_user_close', 'swh_close_nonce' ); ?>
-                    <input type="submit" name="swh_user_close_ticket_submit" value="Yes, Close Ticket" style="padding: 10px 20px; background: #0073aa; color: #fff; border: none; cursor: pointer; border-radius: 3px;">
+                    <input type="submit" name="swh_user_close_ticket_submit" value="Yes, Close Ticket" class="swh-btn">
                 </form>
             </div>
         <?php endif; ?>
 
         <?php if ( $data['status'] !== $closed_status ) : ?>
-            <form method="POST" action="" class="swh-frontend-form" enctype="multipart/form-data">
+            <form method="POST" action="" enctype="multipart/form-data">
                 <?php wp_nonce_field( 'swh_user_reply', 'swh_reply_nonce' ); ?>
-                <label><strong>Add a Reply:</strong></label><br>
-                <textarea name="ticket_reply_text" rows="4" style="width:100%; max-width: 600px; padding: 10px;"></textarea><br>
-                <label style="display:block; margin-top: 10px;"><strong>Attach Files (Optional):</strong></label>
-                <input type="file" name="swh_user_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" style="margin-bottom: 10px;" class="swh-file-input">
-                <br><small style="color:#666; display:block; margin-bottom:10px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB per file.</small>
-                <input type="submit" name="swh_user_reply_submit" value="Send Reply" style="padding: 10px 20px; background: #0073aa; color: #fff; border: none; cursor: pointer;">
+                <div class="swh-form-group">
+                    <label>Add a Reply:</label>
+                    <textarea name="ticket_reply_text" rows="4" class="swh-form-control"></textarea>
+                </div>
+                <div class="swh-form-group">
+                    <label>Attach Files (Optional):</label>
+                    <input type="file" name="swh_user_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
+                    <small style="color:#666; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB per file.</small>
+                </div>
+                <div class="swh-form-group">
+                    <input type="submit" name="swh_user_reply_submit" value="Send Reply" class="swh-btn">
+                </div>
             </form>
         <?php else : ?>
-            <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 20px; border-radius: 5px; margin-top: 20px;">
-                <p style="color: #856404; margin-top: 0; font-weight: bold;">This ticket is closed.</p>
-                <form method="POST" action="" class="swh-frontend-form" enctype="multipart/form-data">
+            <div class="swh-alert swh-alert-error">
+                <p style="margin-top: 0; font-weight: bold;">This ticket is closed.</p>
+                <form method="POST" action="" enctype="multipart/form-data">
                     <?php wp_nonce_field( 'swh_user_reopen', 'swh_reopen_nonce' ); ?>
-                    <textarea name="ticket_reopen_text" rows="3" placeholder="Explain why you need this re-opened..." style="width:100%; max-width: 600px; padding: 10px;"></textarea><br>
-                    <label style="display:block; margin-top: 10px; color: #856404;"><strong>Attach Files (Optional):</strong></label>
-                    <input type="file" name="swh_reopen_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" style="margin-bottom: 10px;" class="swh-file-input">
-                    <br><small style="color:#856404; display:block; margin-bottom:10px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB per file.</small>
-                    <input type="submit" name="swh_user_reopen_submit" value="Re-open Ticket" style="padding: 10px 20px; background: #dc3232; color: #fff; border: none; cursor: pointer;">
+                    <div class="swh-form-group">
+                        <label>Explain why you need this re-opened:</label>
+                        <textarea name="ticket_reopen_text" rows="3" class="swh-form-control"></textarea>
+                    </div>
+                    <div class="swh-form-group">
+                        <label>Attach Files (Optional):</label>
+                        <input type="file" name="swh_reopen_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
+                        <small style="color:#721c24; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB.</small>
+                    </div>
+                    <div class="swh-form-group">
+                        <input type="submit" name="swh_user_reopen_submit" value="Re-open Ticket" class="swh-btn swh-btn-danger">
+                    </div>
                 </form>
             </div>
         <?php endif; ?>
         
+        </div> <!-- End .swh-helpdesk-wrapper -->
         <?php
         swh_render_js_validation();
         return ob_get_clean(); 
@@ -1125,7 +1156,7 @@ function swh_ticket_frontend() {
         }
 
         if ( $is_spam ) {
-            echo '<div style="color: red; margin-bottom: 20px; padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">'.esc_html(get_option('swh_msg_err_spam', $defs['swh_msg_err_spam'])).'</div>';
+            echo '<div class="swh-alert swh-alert-error">'.esc_html(get_option('swh_msg_err_spam', $defs['swh_msg_err_spam'])).'</div>';
         } elseif ( $data['name'] && $data['title'] && $data['message'] && $data['email'] ) {
             $ticket_id = wp_insert_post( array( 'post_title' => $data['title'], 'post_content' => $data['message'], 'post_type' => 'helpdesk_ticket', 'post_status' => 'publish' ) );
 
@@ -1159,10 +1190,10 @@ function swh_ticket_frontend() {
                 if ( !empty($attach_urls) ) $admin_msg .= "\n\nAttachments:\n" . implode("\n", $attach_urls);
                 wp_mail( $admin_email, $admin_sub, $admin_msg );
 
-                echo '<div style="color: green; font-weight: bold; margin-bottom: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">'.esc_html(get_option('swh_msg_success_new', $defs['swh_msg_success_new'])).'</div>';
+                echo '<div class="swh-alert swh-alert-success">'.esc_html(get_option('swh_msg_success_new', $defs['swh_msg_success_new'])).'</div>';
             }
         } else {
-            echo '<div style="color: red; margin-bottom: 20px; padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">'.esc_html(get_option('swh_msg_err_missing', $defs['swh_msg_err_missing'])).'</div>';
+            echo '<div class="swh-alert swh-alert-error">'.esc_html(get_option('swh_msg_err_missing', $defs['swh_msg_err_missing'])).'</div>';
         }
 
         if ( empty($ticket_id) ) {
@@ -1175,29 +1206,41 @@ function swh_ticket_frontend() {
     }
 
     ?>
-    <form method="POST" action="" class="swh-frontend-form" enctype="multipart/form-data">
+    <form method="POST" action="" enctype="multipart/form-data">
         <?php wp_nonce_field( 'swh_create_ticket', 'swh_ticket_nonce' ); ?>
-        <p><label><strong>Your Name:</strong></label><br>
-            <input type="text" name="ticket_name" required style="width:100%; max-width: 400px; padding: 8px;" value="<?php echo esc_attr( $form_name ); ?>"></p>
-        <p><label><strong>Your Email:</strong></label><br>
-            <input type="email" name="ticket_email" required style="width:100%; max-width: 400px; padding: 8px;" value="<?php echo esc_attr( $form_email ); ?>"></p>
-        <p><label><strong>Priority:</strong></label><br>
-            <select name="ticket_priority" style="width:100%; max-width: 400px; padding: 8px;">
+        
+        <div class="swh-form-group">
+            <label>Your Name:</label>
+            <input type="text" name="ticket_name" required class="swh-form-control" value="<?php echo esc_attr( $form_name ); ?>">
+        </div>
+        <div class="swh-form-group">
+            <label>Your Email:</label>
+            <input type="email" name="ticket_email" required class="swh-form-control" value="<?php echo esc_attr( $form_email ); ?>">
+        </div>
+        <div class="swh-form-group">
+            <label>Priority:</label>
+            <select name="ticket_priority" class="swh-form-control">
                 <?php foreach($priorities as $p): ?>
                     <option value="<?php echo esc_attr($p); ?>" <?php selected( $form_prio, $p ); ?>><?php echo esc_html($p); ?></option>
                 <?php endforeach; ?>
-            </select></p>
-        <p><label><strong>Problem Summary (Title):</strong></label><br>
-            <input type="text" name="ticket_title" required style="width:100%; max-width: 400px; padding: 8px;" value="<?php echo esc_attr( $form_title ); ?>"></p>
-        <p><label><strong>Problem Description:</strong></label><br>
-            <textarea name="ticket_desc" rows="5" required style="width:100%; max-width: 400px; padding: 8px;"><?php echo esc_textarea( $form_desc ); ?></textarea></p>
-        
-        <p><label><strong>Attachments (Optional):</strong></label><br>
-            <input type="file" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" style="width:100%; max-width: 400px; padding: 8px;" class="swh-file-input">
-            <br><small style="color:#666; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT.<br>You can select multiple files. Max size per file: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB.</small>
-        </p>
+            </select>
+        </div>
+        <div class="swh-form-group">
+            <label>Problem Summary (Title):</label>
+            <input type="text" name="ticket_title" required class="swh-form-control" value="<?php echo esc_attr( $form_title ); ?>">
+        </div>
+        <div class="swh-form-group">
+            <label>Problem Description:</label>
+            <textarea name="ticket_desc" rows="5" required class="swh-form-control"><?php echo esc_textarea( $form_desc ); ?></textarea>
+        </div>
+        <div class="swh-form-group">
+            <label>Attachments (Optional):</label>
+            <input type="file" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input" style="padding: 5px;">
+            <small style="color:#666; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT.<br>You can select multiple files. Max size per file: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB.</small>
+        </div>
 
         <?php 
+        // EXPLICIT RENDERING FOR ANTI-SPAM
         if ( $spam_method === 'honeypot' ) { 
             echo '<div style="position: absolute; left: -9999px;"><label>Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>'; 
         } 
@@ -1215,8 +1258,11 @@ function swh_ticket_frontend() {
         }
         ?>
 
-        <p><input type="submit" name="swh_submit_ticket" value="Submit Ticket" style="padding: 10px 20px; background: #0073aa; color: #fff; border: none; cursor: pointer;"></p>
+        <div class="swh-form-group">
+            <input type="submit" name="swh_submit_ticket" value="Submit Ticket" class="swh-btn">
+        </div>
     </form>
+    </div> <!-- End .swh-helpdesk-wrapper -->
     <?php
     swh_render_js_validation();
     return ob_get_clean();
