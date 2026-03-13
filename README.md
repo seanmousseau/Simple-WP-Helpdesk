@@ -6,6 +6,12 @@ Requires PHP: 7.2+
 
 A comprehensive, lightweight, and secure ticketing system built natively for WordPress. Keep your client data entirely on your own server.
 
+0. ORIGINS
+
+I was looking for a lightweight, simple and easy to setup helpdesk plugin for Wordpress that was free.   My search didn't go well.  I resorted to just a standard E-mail form but really wanted better tracking.  So, I did what any other "normal" person would do and i sat down with Google Gemini and some ideas and pounded out a helpdesk plugin that did everything that I wanted.  This is the result of it.
+
+Note that this plugin is a Work in Progress and there may be bugs.  I have tried my best to test all functionality.  Please raise an issue if you find anything.
+
 1. FEATURE SUMMARY
 
 - Secure Client Portal: Clients can submit, view, and reply to tickets from the front-end without needing a WordPress user account. Access is secured via unique cryptographic email tokens.
@@ -100,7 +106,6 @@ Communicating with Clients:
 5. CHANGELOG
 
 VERSION 1.2
-
 - Added: Native GitHub auto-updater. The plugin now securely checks the linked GitHub repository for new releases and serves them directly to the WordPress dashboard, functioning identically to an official repository plugin.
 - Optimized: Completely overhauled the background maintenance crons. Tasks (Auto-Close, Ticket Purge, Attachment Purge) are now split into separate staggered events and use strict SQL-level filtering to process tiny micro-batches. This completely eliminates the "cURL error 28" timeout issue on resource-restricted web hosts.
 - Optimized: Centralized the default configuration engine into a statically cached object to drastically lower memory usage on every page load and guarantee fallback text if settings are not explicitly saved.
@@ -123,3 +128,7 @@ VERSION 1.0 (Initial Release)
 - Added: GDPR Client Data Purge tool and deep uninstallation cleanup routines.
 - Added: Honeypot, Google reCAPTCHA v2, and Cloudflare Turnstile anti-spam integrations.
 - Optimized: Micro-batched cron jobs to prevent server timeouts (cURL error 28).
+
+6. KNOWN ISSUES AND UNTESTED FUNCTIONALITY
+
+- Untested: GitHub update functionality has not been tested.
