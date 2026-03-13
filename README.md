@@ -141,4 +141,4 @@ VERSION 1.0 (Initial Release)
 
 6. KNOWN ISSUES AND UNTESTED FUNCTIONALITY
 
-- Untested: GitHub update functionality has not been tested.
+- There are no known issues or untested functionality at this time.
