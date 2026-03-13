@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Simple WP Helpdesk
- * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, and deep uninstallation/GDPR cleanup.
- * Version: 1.1
+ * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
+ * Version: 1.2
  * Requires at least: 5.3
  * Requires PHP: 7.2
  * Author: SM WP Plugins
@@ -15,15 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // 1. PLUGIN SETUP, UPGRADE LOGIC & CRON
 // ==============================================================================
 
-define( 'SWH_VERSION', '1.1' );
+define( 'SWH_VERSION', '1.2' );
 
 register_activation_hook( __FILE__, 'swh_activate' );
 function swh_activate() {
     add_role( 'technician', 'Technician', array( 'read' => true, 'edit_posts' => true, 'upload_files' => true ) );
     
-    if (!wp_next_scheduled('swh_autoclose_event')) { wp_schedule_event(time(), 'hourly', 'swh_autoclose_event'); }
-    if (!wp_next_scheduled('swh_retention_tickets_event')) { wp_schedule_event(time() + 1800, 'hourly', 'swh_retention_tickets_event'); }
-    if (!wp_next_scheduled('swh_retention_attachments_event')) { wp_schedule_event(time() + 3600, 'hourly', 'swh_retention_attachments_event'); }
+    if (!wp_next_scheduled('swh_autoclose_event')) {
+        wp_schedule_event(time(), 'hourly', 'swh_autoclose_event');
+    }
+    if (!wp_next_scheduled('swh_retention_tickets_event')) {
+        wp_schedule_event(time() + 1800, 'hourly', 'swh_retention_tickets_event');
+    }
+    if (!wp_next_scheduled('swh_retention_attachments_event')) {
+        wp_schedule_event(time() + 3600, 'hourly', 'swh_retention_attachments_event');
+    }
     
     swh_run_upgrade_routine();
 }
@@ -33,6 +39,8 @@ function swh_deactivate() {
     wp_clear_scheduled_hook('swh_autoclose_event');
     wp_clear_scheduled_hook('swh_retention_tickets_event');
     wp_clear_scheduled_hook('swh_retention_attachments_event');
+    
+    // Clear legacy hooks just in case
     wp_clear_scheduled_hook('swh_hourly_maintenance_event');
     wp_clear_scheduled_hook('swh_daily_autoclose_event');
 }
@@ -256,7 +264,7 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 
 
 // ==============================================================================
-// 3. BACKGROUND CRON TASKS 
+// 3. BACKGROUND CRON TASKS (Micro-Batched to prevent cURL error 28)
 // ==============================================================================
 
 add_action('swh_autoclose_event', 'swh_process_autoclose');
@@ -272,7 +280,7 @@ function swh_process_autoclose() {
     
     $tickets = get_posts(array(
         'post_type' => 'helpdesk_ticket',
-        'numberposts' => 1, 
+        'numberposts' => 2, 
         'meta_query' => array(
             'relation' => 'AND',
             array('key' => '_ticket_status', 'value' => $resolved_status),
@@ -379,7 +387,7 @@ function swh_process_retention_tickets() {
 
 
 // ==============================================================================
-// 4. ADMIN SETTINGS PAGE 
+// 4. ADMIN SETTINGS PAGE
 // ==============================================================================
 
 add_action( 'admin_menu', 'swh_register_settings_page' );
@@ -796,13 +804,11 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
     $current_user = wp_get_current_user();
 
-    // 1. PROCESS INTERNAL NOTE
     if ( ! empty( $_POST['swh_tech_note_text'] ) ) {
         $comment_id = wp_insert_comment( array( 'comment_post_ID' => $post_id, 'comment_author' => $current_user->display_name, 'comment_author_email' => $current_user->user_email, 'comment_content' => sanitize_textarea_field( $_POST['swh_tech_note_text'] ), 'comment_approved' => 1 ) );
         update_comment_meta( $comment_id, '_is_internal_note', '1' );
     }
 
-    // 2. PROCESS PUBLIC REPLY & STATUS EMAILS
     $just_replied = false;
     $attach_urls = array();
     
@@ -862,7 +868,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
 
 // ==============================================================================
-// 6. FRONT-END SHORTCODE [submit_ticket] (With Elementor CSS Layout Scoping)
+// 6. FRONT-END SHORTCODE [submit_ticket]
 // ==============================================================================
 
 add_shortcode( 'submit_ticket', 'swh_ticket_frontend' );
@@ -878,7 +884,6 @@ function swh_ticket_frontend() {
     $default_prio    = get_option('swh_default_priority', $defs['swh_default_priority']);
     $spam_method     = get_option('swh_spam_method', 'none');
 
-    // SCOPED CSS FOR ELEMENTOR COMPATIBILITY
     ?>
     <style>
         .swh-helpdesk-wrapper { max-width: 800px; margin: 0 auto; text-align: left !important; font-family: inherit; line-height: 1.6; color: #333; }
@@ -889,6 +894,8 @@ function swh_ticket_frontend() {
         .swh-form-control:focus { border-color: #0073aa; outline: none; box-shadow: 0 0 3px rgba(0,115,170,.3); }
         .swh-btn { padding: 10px 20px; background-color: #0073aa; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: 600; display: inline-block; text-decoration: none; transition: background 0.2s; }
         .swh-btn:hover { background-color: #005177; color: #fff; }
+        .swh-btn-danger { background-color: #dc3232; }
+        .swh-btn-danger:hover { background-color: #a02222; }
         .swh-alert { padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: 500; border: 1px solid transparent; }
         .swh-alert-success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
         .swh-alert-error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
@@ -904,9 +911,6 @@ function swh_ticket_frontend() {
     <div class="swh-helpdesk-wrapper">
     <?php
 
-    // --------------------------------------------------------------------------
-    // MODE A: VIEW / REPLY TO EXISTING TICKET
-    // --------------------------------------------------------------------------
     if ( isset( $_GET['swh_ticket'] ) && isset( $_GET['token'] ) ) {
         $ticket_id = intval( $_GET['swh_ticket'] );
         $token     = sanitize_text_field( $_GET['token'] );
@@ -1115,9 +1119,6 @@ function swh_ticket_frontend() {
         return ob_get_clean(); 
     }
 
-    // --------------------------------------------------------------------------
-    // MODE B: CREATE NEW TICKET FORM 
-    // --------------------------------------------------------------------------
     $current_user = wp_get_current_user();
     
     $form_name  = is_user_logged_in() ? $current_user->display_name : '';
@@ -1236,7 +1237,7 @@ function swh_ticket_frontend() {
         <div class="swh-form-group">
             <label>Attachments (Optional):</label>
             <input type="file" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input" style="padding: 5px;">
-            <small style="color:#666; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT.<br>You can select multiple files. Max size per file: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB.</small>
+            <small style="color:#666; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html(get_option('swh_max_upload_size', 5)); ?>MB.</small>
         </div>
 
         <?php 
@@ -1302,3 +1303,118 @@ function swh_render_js_validation() {
     </script>
     <?php
 }
+
+// ==============================================================================
+// 7. GITHUB UPDATER
+// ==============================================================================
+
+class SWH_GitHub_Updater {
+    
+    private $github_user = 'seanmousseau'; 
+    private $github_repo = 'Simple-WP-Helpdesk';       
+    private $github_token = ''; 
+    
+    private $plugin_slug;
+    private $plugin_file;
+
+    public function __construct() {
+        $this->plugin_file = plugin_basename( __FILE__ );
+        $this->plugin_slug = dirname( $this->plugin_file );
+
+        add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_update' ) );
+        add_filter( 'plugins_api', array( $this, 'plugin_popup' ), 10, 3 );
+        add_filter( 'upgrader_source_selection', array( $this, 'rename_github_zip_folder' ), 10, 3 );
+    }
+
+    private function fetch_github_release() {
+        $transient_key = 'swh_gh_release_' . SWH_VERSION;
+        $cached = get_transient( $transient_key );
+        if ( $cached !== false ) return $cached;
+
+        $url = sprintf( 'https://api.github.com/repos/%s/%s/releases/latest', $this->github_user, $this->github_repo );
+        $headers = array(
+            'Accept' => 'application/vnd.github.v3+json',
+            'User-Agent' => 'Simple-WP-Helpdesk-Updater'
+        );
+        if ( ! empty( $this->github_token ) ) {
+            $headers['Authorization'] = 'token ' . $this->github_token;
+        }
+
+        $response = wp_remote_get( $url, array( 'headers' => $headers, 'timeout' => 10 ) );
+        if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+            set_transient( $transient_key, null, 12 * HOUR_IN_SECONDS ); 
+            return null;
+        }
+
+        $data = json_decode( wp_remote_retrieve_body( $response ) );
+        set_transient( $transient_key, $data, 12 * HOUR_IN_SECONDS );
+        return $data;
+    }
+
+    public function check_update( $transient ) {
+        if ( empty( $transient->checked ) ) return $transient;
+
+        $release = $this->fetch_github_release();
+        if ( ! $release ) return $transient;
+
+        $latest_version = ltrim( $release->tag_name, 'v' );
+
+        if ( version_compare( SWH_VERSION, $latest_version, '<' ) ) {
+            $plugin_data = array(
+                'slug'        => $this->plugin_slug,
+                'plugin'      => $this->plugin_file,
+                'new_version' => $latest_version,
+                'url'         => $release->html_url,
+                'package'     => $release->zipball_url,
+            );
+            $transient->response[ $this->plugin_file ] = (object) $plugin_data;
+        }
+
+        return $transient;
+    }
+
+    public function plugin_popup( $result, $action, $args ) {
+        if ( $action !== 'plugin_information' || empty( $args->slug ) || $args->slug !== $this->plugin_slug ) {
+            return $result;
+        }
+
+        $release = $this->fetch_github_release();
+        if ( ! $release ) return $result;
+
+        $latest_version = ltrim( $release->tag_name, 'v' );
+
+        $plugin_info = array(
+            'name'              => 'Simple WP Helpdesk',
+            'slug'              => $this->plugin_slug,
+            'version'           => $latest_version,
+            'author'            => '<a href="https://github.com/' . $this->github_user . '">SM WP Plugins</a>',
+            'homepage'          => $release->html_url,
+            'requires'          => '5.3',
+            'tested'            => get_bloginfo( 'version' ),
+            'requires_php'      => '7.2',
+            'last_updated'      => $release->published_at,
+            'sections'          => array(
+                'description' => 'A comprehensive helpdesk system natively built for WordPress.',
+                'changelog'   => nl2br( esc_html( $release->body ) )
+            ),
+            'download_link'     => $release->zipball_url,
+        );
+
+        return (object) $plugin_info;
+    }
+
+    public function rename_github_zip_folder( $source, $remote_source, $wp_upgrader ) {
+        global $wp_filesystem;
+        
+        if ( ! isset( $wp_upgrader->skin->plugin ) || $wp_upgrader->skin->plugin !== $this->plugin_file ) {
+            return $source;
+        }
+
+        $new_source = trailingslashit( $remote_source ) . $this->plugin_slug;
+        $wp_filesystem->move( $source, $new_source );
+        
+        return trailingslashit( $new_source );
+    }
+}
+
+new SWH_GitHub_Updater();
