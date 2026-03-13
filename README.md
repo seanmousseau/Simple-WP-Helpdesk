@@ -1,6 +1,6 @@
 SIMPLE WP HELPDESK - DOCUMENTATION
 
-Latest Version: 1.1
+Latest Version: 1.2
 Requires at least: WordPress 5.3
 Requires PHP: 7.2+
 
