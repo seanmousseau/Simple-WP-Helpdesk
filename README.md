@@ -1,8 +1,10 @@
-SIMPLE WP HELPDESK - DOCUMENTATION
+SIMPLE WP HELPDESK
 
-Latest Version: 1.4
-Requires at least: WordPress 5.3
-Requires PHP: 7.2+
+- Latest Version: 1.4
+- Requires Wordpress: 5.3+
+- Requires PHP: 7.2+
+
+PLUGIN DESCRIPTION
 
 A comprehensive, lightweight, and secure ticketing system built natively for WordPress. Keep your client data entirely on your own server.
 
