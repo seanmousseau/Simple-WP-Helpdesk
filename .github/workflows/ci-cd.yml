@@ -44,7 +44,7 @@ jobs:
         run: composer install --prefer-dist --no-progress --no-suggest
 
       - name: Run PHP CodeSniffer (WordPress Standards)
-        run: vendor/bin/phpcs
+        run: vendor/bin/phpcs .
 
       - name: Run PHPUnit Tests
         # Only run if you have a phpunit.xml file configured
