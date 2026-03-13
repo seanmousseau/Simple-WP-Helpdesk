@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 1.3
+ * Version: 1.4
  * Requires at least: 5.3
  * Requires PHP: 7.2
  * Author: SM WP Plugins
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ==============================================================================
 // 1. PLUGIN SETUP, UPGRADE LOGIC & CRON
 // ==============================================================================
-define( 'SWH_VERSION', '1.3' );
+define( 'SWH_VERSION', '1.4' );
 
 register_activation_hook( __FILE__, 'swh_activate' );
 function swh_activate() {
@@ -1594,7 +1594,8 @@ class SWH_GitHub_Updater {
     }
     
     private function fetch_github_release() {
-        $transient_key = 'swh_gh_release_' . SWH_VERSION;
+        // Cache-busted key to force an immediate fresh check of the API
+        $transient_key = 'swh_gh_release_v3_' . SWH_VERSION;
         $cached        = get_transient( $transient_key );
         if ( false !== $cached ) {
             return $cached;
@@ -1633,7 +1634,6 @@ class SWH_GitHub_Updater {
         }
         $latest_version = ltrim( $release->tag_name, 'v' );
         
-        // Use attached asset ZIP if it exists, otherwise fallback to source zipball
         $download_url = $release->zipball_url;
         if ( ! empty( $release->assets ) && isset( $release->assets[0]->browser_download_url ) ) {
             $download_url = $release->assets[0]->browser_download_url;
@@ -1645,7 +1645,7 @@ class SWH_GitHub_Updater {
                 'plugin'      => $this->plugin_file,
                 'new_version' => $latest_version,
                 'url'         => $release->html_url,
-                'package'     => $download_url, // Now uses your attached file!
+                'package'     => $download_url,
             );
             $transient->response[ $this->plugin_file ] = (object) $plugin_data;
         }
@@ -1691,9 +1691,21 @@ class SWH_GitHub_Updater {
         if ( ! isset( $wp_upgrader->skin->plugin ) || $this->plugin_file !== $wp_upgrader->skin->plugin ) {
             return $source;
         }
+        
+        // Smart Folder-Flattening: If the repo has the plugin buried in a subfolder matching the slug, target that folder.
+        $inner_folder = trailingslashit( $source ) . $this->plugin_slug;
+        if ( $wp_filesystem->is_dir( $inner_folder ) ) {
+            $source = $inner_folder;
+        }
+        
         $new_source = trailingslashit( $remote_source ) . $this->plugin_slug;
-        $wp_filesystem->move( $source, $new_source );
-        return trailingslashit( $new_source );
+        
+        if ( untrailingslashit( $source ) !== untrailingslashit( $new_source ) ) {
+            $wp_filesystem->move( $source, $new_source );
+            return trailingslashit( $new_source );
+        }
+        
+        return trailingslashit( $source );
     }
 }
 new SWH_GitHub_Updater();
