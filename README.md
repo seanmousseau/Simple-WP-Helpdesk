@@ -1,6 +1,6 @@
 SIMPLE WP HELPDESK - DOCUMENTATION
 
-Latest Version: 1.2
+Latest Version: 1.3
 Requires at least: WordPress 5.3
 Requires PHP: 7.2+
 
@@ -104,6 +104,9 @@ Communicating with Clients:
    (Pro-Tip: If you type a public reply AND change the status to Closed/Resolved simultaneously, the system will smartly combine these actions into a single email notification for the client.)
 
 5. CHANGELOG
+
+VERSION 1.3
+- Security: Fixed several security issues found by automated tools.
 
 VERSION 1.2
 - Added: Native GitHub auto-updater. The plugin now securely checks the linked GitHub repository for new releases and serves them directly to the WordPress dashboard, functioning identically to an official repository plugin.
