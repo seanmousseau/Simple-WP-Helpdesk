@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 1.2
+ * Version: 1.3
  * Requires at least: 5.3
  * Requires PHP: 7.2
  * Author: SM WP Plugins
