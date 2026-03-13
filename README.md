@@ -8,7 +8,7 @@ A comprehensive, lightweight, and secure ticketing system built natively for Wor
 
 0. ORIGINS
 
-I was looking for a lightweight, simple and easy to setup helpdesk plugin for Wordpress that was free.   My search didn't go well.  I resorted to just a standard E-mail form but really wanted better tracking.  So, I did what any other "normal" person would do and i sat down with Google Gemini and some ideas and pounded out a helpdesk plugin that did everything that I wanted.  This is the result of it.
+I was looking for a lightweight, simple and easy to setup helpdesk plugin for Wordpress that was free.   My search didn't go well.  I resorted to just a standard E-mail form but really wanted better tracking.  So, I did what any other "normal" person would do and I sat down with Google Gemini and some ideas and pounded out a helpdesk plugin that did everything that I wanted.  This is the result of it.
 
 Note that this plugin is a Work in Progress and there may be bugs.  I have tried my best to test all functionality.  Please raise an issue if you find anything.
 
