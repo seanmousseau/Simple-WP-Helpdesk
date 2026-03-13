@@ -1632,13 +1632,20 @@ class SWH_GitHub_Updater {
             return $transient;
         }
         $latest_version = ltrim( $release->tag_name, 'v' );
+        
+        // Use attached asset ZIP if it exists, otherwise fallback to source zipball
+        $download_url = $release->zipball_url;
+        if ( ! empty( $release->assets ) && isset( $release->assets[0]->browser_download_url ) ) {
+            $download_url = $release->assets[0]->browser_download_url;
+        }
+
         if ( version_compare( SWH_VERSION, $latest_version, '<' ) ) {
             $plugin_data = array(
                 'slug'        => $this->plugin_slug,
                 'plugin'      => $this->plugin_file,
                 'new_version' => $latest_version,
                 'url'         => $release->html_url,
-                'package'     => $release->zipball_url,
+                'package'     => $download_url, // Now uses your attached file!
             );
             $transient->response[ $this->plugin_file ] = (object) $plugin_data;
         }
@@ -1654,6 +1661,12 @@ class SWH_GitHub_Updater {
             return $result;
         }
         $latest_version = ltrim( $release->tag_name, 'v' );
+        
+        $download_url = $release->zipball_url;
+        if ( ! empty( $release->assets ) && isset( $release->assets[0]->browser_download_url ) ) {
+            $download_url = $release->assets[0]->browser_download_url;
+        }
+
         $plugin_info = array(
             'name'          => 'Simple WP Helpdesk',
             'slug'          => $this->plugin_slug,
@@ -1668,7 +1681,7 @@ class SWH_GitHub_Updater {
                 'description' => 'A comprehensive helpdesk system natively built for WordPress.',
                 'changelog'   => nl2br( esc_html( $release->body ) ),
             ),
-            'download_link' => $release->zipball_url,
+            'download_link' => $download_url,
         );
         return (object) $plugin_info;
     }
