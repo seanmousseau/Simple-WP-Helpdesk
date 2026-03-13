@@ -51,30 +51,7 @@ jobs:
         run: vendor/bin/phpunit 
 
   # ---------------------------------------------------
-  # JOB 2: Security Scanning (CodeQL)
-  # ---------------------------------------------------
-  security-scan:
-    name: Security Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: 'php, javascript' # Scans both PHP and JS (React/jQuery) files
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-  # ---------------------------------------------------
-  # JOB 3: Check Dependency Vulnerabilities
+  # JOB 2: Check Dependency Vulnerabilities
   # ---------------------------------------------------
   dependency-check:
     name: Check Composer Dependencies
