@@ -1,6 +1,6 @@
 SIMPLE WP HELPDESK - DOCUMENTATION
 
-Latest Version: 1.3
+Latest Version: 1.4
 Requires at least: WordPress 5.3
 Requires PHP: 7.2+
 
@@ -104,6 +104,13 @@ Communicating with Clients:
    (Pro-Tip: If you type a public reply AND change the status to Closed/Resolved simultaneously, the system will smartly combine these actions into a single email notification for the client.)
 
 5. CHANGELOG
+
+VERSION 1.4
+
+- Fix: Resolved a fatal installation error ("No valid plugins were found") during automatic updates.
+- Improved: The GitHub Updater now utilizes "Smart Folder-Flattening". It automatically detects if the plugin files are nested inside a sub-directory within the GitHub repository and extracts them correctly into the WordPress plugins folder.
+- Improved: The updater now prioritizes downloading attached compiled .zip release assets over the raw GitHub source code for cleaner, safer updates.
+Optimized: Implemented cache-busting on the transient update checker to ensure new releases are detected immediately without waiting for the 12-hour timeout.
 
 VERSION 1.3
 - Security: Fixed several security issues found by automated tools.
