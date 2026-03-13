@@ -99,6 +99,15 @@ Communicating with Clients:
 
 5. CHANGELOG
 
+VERSION 1.2
+
+- Added: Native GitHub auto-updater. The plugin now securely checks the linked GitHub repository for new releases and serves them directly to the WordPress dashboard, functioning identically to an official repository plugin.
+- Optimized: Completely overhauled the background maintenance crons. Tasks (Auto-Close, Ticket Purge, Attachment Purge) are now split into separate staggered events and use strict SQL-level filtering to process tiny micro-batches. This completely eliminates the "cURL error 28" timeout issue on resource-restricted web hosts.
+- Optimized: Centralized the default configuration engine into a statically cached object to drastically lower memory usage on every page load and guarantee fallback text if settings are not explicitly saved.
+- Security: Enhanced the frontend cryptographic token validation logic, utilizing hash_equals() to protect the client portal against advanced timing attacks.
+- Security: Added strict path-traversal prevention to the data retention file unlinking functions.
+- Security: Added explicit authorization checks (current_user_can) to the backend save routines to prevent privilege escalation.
+
 VERSION 1.1
 - Improved: Elementor Page Builder compatibility. The frontend shortcode now utilizes a completely scoped CSS architecture. This forces internal form elements to remain neatly left-aligned even if the surrounding Elementor column is center-justified. 
 - Updated: Modernized the frontend UI with better padding, focus states, badge designs, and alert box styling for a more professional appearance out-of-the-box.
