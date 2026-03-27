@@ -9,7 +9,9 @@
 
 ---
 
-## Installing via ZIP Upload (Recommended)
+## Installing the Plugin
+
+Simple WP Helpdesk is not listed on the WordPress.org plugin directory. It is installed manually via ZIP upload through the WordPress dashboard.
 
 1. Download `simple-wp-helpdesk.zip` from the [latest GitHub release](https://github.com/seanmousseau/Simple-WP-Helpdesk/releases/latest).
 2. In your WordPress dashboard, go to **Plugins → Add New**.

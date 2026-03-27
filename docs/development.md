@@ -148,7 +148,7 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/ --exclude "simple-wp-helpdesk/phpcs.xml"
 ```
 
-The resulting archive contains `simple-wp-helpdesk/simple-wp-helpdesk.php` and is ready for direct upload to WordPress or attachment to a GitHub release.
+The resulting archive contains `simple-wp-helpdesk/simple-wp-helpdesk.php` and is ready for manual installation via the WordPress dashboard (**Plugins → Add New → Upload Plugin**) or for attachment to a GitHub release.
 
 ---
 
