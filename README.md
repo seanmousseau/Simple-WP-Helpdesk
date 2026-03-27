@@ -38,7 +38,7 @@ That's it — your helpdesk is live.
 
 | Guide | Description |
 |-------|-------------|
-| [Installation](docs/installation.md) | Detailed install steps, auto-updates, and uninstall |
+| [Installation](docs/installation.md) | Manual ZIP install, automatic updates, and uninstall |
 | [Configuration](docs/configuration.md) | All settings tabs explained |
 | [Usage](docs/usage.md) | Guide for clients and technicians |
 | [Security](docs/security.md) | Token auth, anti-spam, nonces, input handling |
