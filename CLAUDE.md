@@ -6,7 +6,7 @@ This file provides guidance for AI assistants working on the Simple WP Helpdesk 
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.4
+- **Plugin Version:** 1.5
 - **WordPress Minimum:** 5.3+
 - **PHP Minimum:** 7.2+
 - **Author:** SM WP Plugins / seanmousseau
@@ -76,6 +76,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_max_upload_size`             | `5`                                | MB per file                                  |
 | `swh_default_assignee`            | `''`                               | User ID of default technician                |
 | `swh_fallback_email`              | `''`                               | Fallback alert email if no assignee          |
+| `swh_ticket_page_id`              | `0`                                | Page ID containing `[submit_ticket]` shortcode (for admin-created ticket portal links) |
 | `swh_spam_method`                 | `honeypot`                         | `none`, `honeypot`, `recaptcha`, `turnstile` |
 | `swh_recaptcha_site_key`          | `''`                               |                                              |
 | `swh_recaptcha_secret_key`        | `''`                               |                                              |
@@ -236,13 +237,45 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 | Tab                    | Description                                                      |
 |------------------------|------------------------------------------------------------------|
 | General                | Priorities, statuses, defaults, auto-close days, upload size     |
-| Assignment & Routing   | Default assignee, fallback email                                 |
+| Assignment & Routing   | Default assignee, fallback email, helpdesk portal page           |
 | Email Templates        | 16 subject+body templates with placeholder reference             |
 | Messages               | 7 user-facing success/error messages                             |
 | Anti-Spam              | Method selector + API keys for reCAPTCHA/Turnstile               |
 | Tools                  | Data retention, uninstall settings, GDPR purge, factory reset    |
 
+## Admin Ticket Creation
+
+Admins can create tickets directly from the WP admin Add New screen. The sidebar meta box shows editable **Client Name** and **Client Email** fields. On first save:
+- `_ticket_uid`, `_ticket_token`, and `_ticket_url` are auto-generated.
+- `_ticket_url` is derived from the **Helpdesk Page** setting (`swh_ticket_page_id`).
+- Optionally sends the standard new-ticket confirmation email to the client (checkbox in the sidebar).
+- No email is sent if client email is empty or the checkbox is unchecked.
+
 ---
+
+## v1.5 Change Summary
+
+Key fixes and additions relative to v1.4:
+
+| Area | Change |
+|------|--------|
+| Defaults | All option defaults now live solely in `swh_get_defaults()`; hardcoded `add_option` calls removed from upgrade routine |
+| Settings save | PRG redirect after every save (no double-submit on refresh); tab restored via `?swh_tab=` query arg |
+| `swh_delete_on_uninstall` | Fixed silent reset when saving unrelated tabs; now uses a separate nonce (`swh_save_tools_action`) for the Tools form |
+| Integer options | `swh_autoclose_days`, `swh_max_upload_size`, retention days, `swh_ticket_page_id` now saved with `absint()` |
+| `swh_field()` | Moved from nested definition inside `swh_render_settings_page()` to top-level named function |
+| Reset button | JS uses `data-field-name` attribute lookup instead of fragile `previousElementSibling` traversal |
+| Anti-spam scripts | Removed duplicate `wp_head` injection; shortcode handles its own script loading with explicit render mode |
+| Cron | Removed `@set_time_limit(0)` from all three cron functions (micro-batch design makes it unnecessary) |
+| Retention attachments | Fixed `date_query` to use `post_modified` instead of `post_date` so active tickets are not affected |
+| Status/Priority/Assignee | Validated against allowed lists in `swh_save_ticket_data()` before persisting |
+| Assignee | Validated that user ID belongs to `administrator` or `technician` role |
+| Portal handlers | Sequential `if` blocks converted to `if/elseif/elseif` to prevent multi-handler firing |
+| Rate limiting | 30-second transient-based cooldown on close/reopen/reply frontend actions |
+| Conversation meta box | Fixed double `esc_html()` that mangled special characters in author names |
+| Upload failures | Failures now logged via `error_log()` instead of silently discarded |
+| Admin ticket creation | Client Name + Client Email editable in sidebar; token/UID/URL auto-bootstrapped on first save; optional client confirmation email |
+| Portal page setting | New `swh_ticket_page_id` option in Assignment & Routing tab; used as base URL for admin-created ticket links |
 
 ## Common Pitfalls
 
@@ -253,3 +286,6 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 - **Comment visibility** — internal notes (`_is_internal_note = 1`) must be filtered out of the frontend client view.
 - **Attachment arrays** — stored as serialized PHP arrays; may exist as a single URL string (legacy format). The `swh_delete_file_by_url()` function handles both.
 - **Email on ticket save** — `swh_save_ticket_data()` detects what changed (status, reply, assignment) and sends appropriate emails. Adding new meta fields must account for the save lifecycle to avoid spurious emails.
+- **Two settings forms** — The main form and the Tools/Retention form use different nonces (`swh_save_settings_action` vs `swh_save_tools_action`). The Tools form exclusively owns `swh_retention_*` and `swh_delete_on_uninstall`; never add those to the main form save handler.
+- **Admin-created tickets have no portal URL until `swh_ticket_page_id` is configured** — `swh_get_secure_ticket_link()` returns `false` if `_ticket_url` is empty. Check the return value before using it.
+- **`swh_get_defaults()` is the single source of truth** — all option defaults live here. Add new options here and they will automatically be registered by the upgrade routine, included in factory reset, and cleaned up on uninstall.
