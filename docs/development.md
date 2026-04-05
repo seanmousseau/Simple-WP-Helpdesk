@@ -121,9 +121,10 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 2. **Update `CHANGELOG.md`** and any relevant `docs/` pages.
 
-3. **Build the release ZIP** — build locally but do not commit it (covered by `.gitignore`):
+3. **Build the release ZIP** and commit it under `releases/vX.Y/`:
    ```bash
-   zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/
+   mkdir -p releases/vX.Y
+   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
    ```
    > The ZIP must be named `simple-wp-helpdesk.zip` (not versioned) so WordPress treats it as an update to the existing plugin rather than a new install.
 

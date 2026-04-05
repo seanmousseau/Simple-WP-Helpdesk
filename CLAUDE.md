@@ -213,11 +213,12 @@ Follow these steps every time a new version is released:
 
 3. **Update any affected documentation** in `docs/` and `README.md`.
 
-4. **Build the release ZIP** — build locally but **do not commit it to git**. The ZIP is distributed exclusively as a GitHub Release asset:
+4. **Build the release ZIP** and commit it under `releases/vX.Y/`:
    ```bash
-   zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/
+   mkdir -p releases/vX.Y
+   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
    ```
-   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level. The file is covered by `.gitignore` to prevent accidental commits.
+   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level.
 
 5. **Close any GitHub issues** that are addressed by the release.
 
