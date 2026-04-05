@@ -16,7 +16,7 @@ vendor/
 composer.lock
 
 # Release builds — ZIP locally, then upload as GitHub Release asset. Do not commit.
-releases/
+releases/**/*.zip
 
 # WordPress debug log
 *.log
