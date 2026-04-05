@@ -75,7 +75,14 @@ function swh_run_upgrade_routine() {
     foreach ( swh_get_defaults() as $key => $val ) {
         add_option( $key, $val );
     }
-    // Ensure the technician role has all required capabilities.
+    update_option( 'swh_db_version', SWH_VERSION );
+}
+
+add_action( 'admin_init', 'swh_ensure_technician_caps' );
+function swh_ensure_technician_caps() {
+    if ( get_option( 'swh_tech_caps_v2' ) ) {
+        return;
+    }
     $tech = get_role( 'technician' );
     if ( $tech ) {
         foreach ( array( 'edit_others_posts', 'edit_published_posts', 'publish_posts', 'delete_posts', 'upload_files' ) as $cap ) {
@@ -84,7 +91,7 @@ function swh_run_upgrade_routine() {
             }
         }
     }
-    update_option( 'swh_db_version', SWH_VERSION );
+    update_option( 'swh_tech_caps_v2', '1' );
 }
 
 register_uninstall_hook( __FILE__, 'swh_uninstall' );
@@ -1064,7 +1071,8 @@ function swh_ticket_list_query( $query ) {
         return;
     }
 
-    // Handle sortable columns.
+    // Handle sortable columns. Only apply meta sort when explicitly requested
+    // to avoid filtering out tickets that lack the meta key.
     $orderby = $query->get( 'orderby' );
     if ( 'ticket_status' === $orderby ) {
         $query->set( 'meta_key', '_ticket_status' );
@@ -1072,11 +1080,6 @@ function swh_ticket_list_query( $query ) {
     } elseif ( 'ticket_uid' === $orderby ) {
         $query->set( 'meta_key', '_ticket_uid' );
         $query->set( 'orderby', 'meta_value' );
-    } elseif ( empty( $orderby ) ) {
-        // Default sort: by status meta, then post ID ascending.
-        $query->set( 'meta_key', '_ticket_status' );
-        $query->set( 'orderby', 'meta_value' );
-        $query->set( 'order', 'ASC' );
     }
 
     // Handle filter dropdowns.
