@@ -1,0 +1,21 @@
+.swh-helpdesk-wrapper { max-width: 800px; margin: 0 auto; text-align: left !important; font-family: inherit; line-height: 1.6; color: #333; }
+.swh-helpdesk-wrapper * { box-sizing: border-box; }
+.swh-form-group { margin-bottom: 15px; text-align: left !important; }
+.swh-form-group label { display: block; font-weight: 600; margin-bottom: 5px; color: #333; }
+.swh-form-control { width: 100%; max-width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 15px; background: #fff; color:#333; }
+.swh-form-control:focus { border-color: #0073aa; outline: none; box-shadow: 0 0 3px rgba(0,115,170,.3); }
+.swh-btn { padding: 10px 20px; background-color: #0073aa; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: 600; display: inline-block; text-decoration: none; transition: background 0.2s; }
+.swh-btn:hover { background-color: #005177; color: #fff; }
+.swh-btn-danger { background-color: #dc3232; }
+.swh-btn-danger:hover { background-color: #a02222; }
+.swh-alert { padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: 500; border: 1px solid transparent; }
+.swh-alert-success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+.swh-alert-error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+.swh-alert-info { background-color: #e6f7ff; border-color: #b3e0ff; color: #005980; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+.swh-card { border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin-bottom: 20px; background: #fff; }
+.swh-badge { padding: 4px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; display: inline-block; }
+.swh-badge-closed { background-color: #f8d7da; color: #721c24; }
+.swh-badge-open { background-color: #d4edda; color: #155724; }
+.swh-chat-bubble { padding: 15px; margin-bottom: 15px; border-radius: 4px; border-left: 4px solid #0073aa; }
+.swh-chat-user { background-color: #f9f9f9; border-color: #aaa; }
+.swh-chat-tech { background-color: #e6f7ff; border-color: #0073aa; }

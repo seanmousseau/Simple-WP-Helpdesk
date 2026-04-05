@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.5
+- **Plugin Version:** 1.6
 - **WordPress Minimum:** 5.3+
-- **PHP Minimum:** 7.2+
+- **PHP Minimum:** 7.4+
 - **Author:** SM WP Plugins / seanmousseau
 - **GitHub Repo:** seanmousseau/Simple-WP-Helpdesk
 
@@ -24,10 +24,13 @@ Simple-WP-Helpdesk/
 ├── LICENSE
 ├── docs/                                   # User and developer documentation
 └── simple-wp-helpdesk/
-    └── simple-wp-helpdesk.php              # Entire plugin — single file
+    ├── simple-wp-helpdesk.php              # Entire plugin — single file
+    └── assets/
+        ├── swh-frontend.css                # Frontend shortcode styles
+        └── swh-admin.js                    # Settings page JavaScript
 ```
 
-> **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. There are no sub-files, partials, or separate class files (except the `SWH_GitHub_Updater` class defined at the bottom of that same file).
+> **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. The two asset files in `assets/` contain only CSS/JS extracted from the main file — no PHP logic lives there.
 
 ---
 
@@ -72,6 +75,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_reopened_status`             | `Open`                             | Assigned when client re-opens               |
 | `swh_autoclose_days`              | `3`                                | Days after resolved until auto-closed        |
 | `swh_max_upload_size`             | `5`                                | MB per file                                  |
+| `swh_max_upload_count`            | `5`                                | Max files per upload (0 = unlimited)          |
 | `swh_default_assignee`            | `''`                               | User ID of default technician                |
 | `swh_fallback_email`              | `''`                               | Fallback alert email if no assignee          |
 | `swh_ticket_page_id`              | `0`                                | Page ID containing `[submit_ticket]` shortcode (for admin-created ticket portal links) |
@@ -84,7 +88,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_retention_tickets_days`      | `0`                                | 0 = disabled                                 |
 | `swh_delete_on_uninstall`         | `no`                               | `yes` or `no`                                |
 | `swh_db_version`                  | *(current version)*                | Tracks upgrade state                         |
-| Email template keys (12 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
+| Email template keys (14 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
 | Frontend message keys (7 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
 
 ---
