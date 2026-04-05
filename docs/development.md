@@ -20,6 +20,17 @@ Simple-WP-Helpdesk/
 
 ---
 
+## Getting Started
+
+```bash
+git clone https://github.com/seanmousseau/Simple-WP-Helpdesk.git
+cd Simple-WP-Helpdesk
+```
+
+No build step is required. Drop the `simple-wp-helpdesk/` folder into your WordPress `wp-content/plugins/` directory and activate it from the WordPress dashboard.
+
+---
+
 ## Architecture Overview
 
 ### No Custom Database Tables
@@ -62,7 +73,7 @@ When adding a new option:
    'swh_my_new_option' => 'default_value',
    ```
 2. Add the field to the appropriate settings tab in `swh_render_settings_page()`.
-3. Add it to the correct save handler (`swh_handle_settings_save()` or `swh_handle_tools_save()`).
+3. Add it to the correct save block inside `swh_render_settings_page()` — the main form handler (guarded by `swh_settings_nonce`) or the Tools form handler (guarded by `swh_tools_nonce`).
 
 ### New Email Template
 
@@ -106,10 +117,10 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 ## Building a Release ZIP
 
 ```bash
-zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/ --exclude "simple-wp-helpdesk/phpcs.xml"
+zip -r releases/simple-wp-helpdesk-vX.Y.zip simple-wp-helpdesk/
 ```
 
-The resulting archive contains `simple-wp-helpdesk/simple-wp-helpdesk.php` and is ready for manual installation via the WordPress dashboard (**Plugins → Add New → Upload Plugin**) or for attachment to a GitHub release.
+Replace `X.Y` with the version number (e.g. `v1.5`). The resulting archive contains `simple-wp-helpdesk/simple-wp-helpdesk.php` and is ready for manual installation via the WordPress dashboard (**Plugins → Add New → Upload Plugin**) or for attachment to a GitHub release.
 
 ---
 

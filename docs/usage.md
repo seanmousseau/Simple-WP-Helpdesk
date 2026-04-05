@@ -34,7 +34,7 @@ If a ticket is **Closed** but your issue is unresolved, the standard reply form 
 ### Viewing Tickets
 
 1. Log into the WordPress dashboard and click **Tickets**.
-2. The ticket list shows all open tickets with their status, priority, and assignee.
+2. The ticket list shows all tickets with their status, priority, and assignee.
 3. Click a ticket title to open the Ticket Editor.
 
 ### Updating Ticket Details

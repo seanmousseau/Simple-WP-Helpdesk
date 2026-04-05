@@ -31,7 +31,7 @@ Create a WordPress page (e.g., "Support") and add the following shortcode to its
 [submit_ticket]
 ```
 
-This page serves as both the ticket submission form and the secure client portal. Record the page ID — you will need it in **Settings → Assignment & Routing → Helpdesk Page**.
+This page serves as both the ticket submission form and the secure client portal. Once the plugin is activated, go to **Tickets → Settings → Assignment & Routing** and select this page from the **Helpdesk Page** dropdown.
 
 ---
 

@@ -85,7 +85,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_retention_tickets_days`      | `0`                                | 0 = disabled                                 |
 | `swh_delete_on_uninstall`         | `no`                               | `yes` or `no`                                |
 | `swh_db_version`                  | *(current version)*                | Tracks upgrade state                         |
-| Email template keys (16 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
+| Email template keys (12 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
 | Frontend message keys (7 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
 
 ---
@@ -127,7 +127,7 @@ The `[submit_ticket]` shortcode has two modes determined by URL parameters:
 
 ## Email System
 
-16 email templates (subject + body), all customizable in Settings → Email Templates.
+12 email templates (subject + body), all customizable in Settings → Email Templates.
 
 **Template variables** available in all email body/subject fields:
 - `{name}` — Client name
@@ -220,7 +220,7 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 |------------------------|------------------------------------------------------------------|
 | General                | Priorities, statuses, defaults, auto-close days, upload size     |
 | Assignment & Routing   | Default assignee, fallback email, helpdesk portal page           |
-| Email Templates        | 16 subject+body templates with placeholder reference             |
+| Email Templates        | 12 subject+body templates with placeholder reference             |
 | Messages               | 7 user-facing success/error messages                             |
 | Anti-Spam              | Method selector + API keys for reCAPTCHA/Turnstile               |
 | Tools                  | Data retention, uninstall settings, GDPR purge, factory reset    |

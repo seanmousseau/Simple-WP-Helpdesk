@@ -17,7 +17,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 - **Double-Escaped Author Names:** Special characters (apostrophes, accented letters) in technician names were being double-escaped and rendered as HTML entities in the conversation timeline.
 - **Retention Cron Active-Ticket Bug:** The attachment retention cron was using `post_date` for its age query, meaning it could delete attachments from recently-updated (but old) tickets. Fixed to use `post_modified`.
 - **Multi-Handler Firing:** Sequential `if` blocks for the frontend portal (close / reopen / reply) could theoretically fire multiple handlers in one request. Converted to `if/elseif/elseif`.
-- **GitHub Auto-Updater:** Resolved a fatal "No valid plugins were found" installation error introduced in versions ≤ 1.4.
+- **GitHub Auto-Updater:** Fully resolved the "No valid plugins were found" fatal error that persisted through v1.4.
 
 ### Improved
 - **Single Source of Truth:** All option defaults now live exclusively in `swh_get_defaults()`. Hardcoded `add_option` calls removed from the upgrade routine.
@@ -35,9 +35,6 @@ All notable changes to Simple WP Helpdesk are documented here.
 ---
 
 ## [1.4] — 2025
-
-### Fixed
-- Fatal installation error ("No valid plugins were found") during automatic GitHub-based updates.
 
 ### Improved
 - **Smart Folder-Flattening:** The GitHub Updater now automatically detects plugin files nested inside a sub-directory within the release archive and extracts them correctly.
