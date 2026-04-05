@@ -202,6 +202,38 @@ When modifying this plugin, maintain these patterns:
 
 ---
 
+## Release Process
+
+Follow these steps every time a new version is released:
+
+1. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
+   - Update the `Version:` field in the plugin header comment.
+   - Update `define( 'SWH_VERSION', 'X.Y' )`.
+
+2. **Update `CHANGELOG.md`** with a new versioned entry covering all changes.
+
+3. **Update any affected documentation** in `docs/` and `README.md`.
+
+4. **Build the release ZIP** — the ZIP must be named `simple-wp-helpdesk.zip` (no version suffix) inside a versioned subfolder so WordPress and the auto-updater handle it correctly:
+   ```bash
+   mkdir -p releases/vX.Y
+   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   ```
+   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level.
+
+5. **Close any GitHub issues** that are addressed by the release.
+
+6. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
+
+7. **Create a GitHub Release**:
+   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against.
+   - Attach `releases/vX.Y/simple-wp-helpdesk.zip` as a release asset.
+   - The updater prioritizes attached `.zip` assets over raw source archives.
+
+> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin on first install, breaking the upgrade path. Keeping it as `simple-wp-helpdesk.zip` inside a versioned folder (`releases/vX.Y/`) preserves both human-readable versioning and WordPress compatibility.
+
+---
+
 ## GitHub Auto-Updater
 
 Class `SWH_GitHub_Updater` (defined at end of main plugin file):

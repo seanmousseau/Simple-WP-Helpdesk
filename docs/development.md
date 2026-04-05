@@ -114,20 +114,23 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 ---
 
-## Building a Release ZIP
+## Release Process
 
-```bash
-zip -r releases/simple-wp-helpdesk-vX.Y.zip simple-wp-helpdesk/
-```
+1. **Bump the version** in `simple-wp-helpdesk.php`:
+   - `Version:` in the plugin header comment
+   - `define( 'SWH_VERSION', 'X.Y' )`
 
-Replace `X.Y` with the version number (e.g. `v1.5`). The resulting archive contains `simple-wp-helpdesk/simple-wp-helpdesk.php` and is ready for manual installation via the WordPress dashboard (**Plugins → Add New → Upload Plugin**) or for attachment to a GitHub release.
+2. **Update `CHANGELOG.md`** and any relevant `docs/` pages.
 
----
+3. **Build the release ZIP** — always named `simple-wp-helpdesk.zip` inside a versioned subfolder:
+   ```bash
+   mkdir -p releases/vX.Y
+   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   ```
+   > The ZIP must be named `simple-wp-helpdesk.zip` (not versioned) so WordPress treats it as an update to the existing plugin rather than a new install.
 
-## Versioning
+4. **Close any GitHub issues** addressed by the release.
 
-1. Update `Version:` in the plugin header comment inside `simple-wp-helpdesk.php`.
-2. Update `define( 'SWH_VERSION', 'X.Y' )`.
-3. If the settings schema changed, add an upgrade path in `swh_run_upgrade_routine()`.
-4. Add a version entry to `CHANGELOG.md`.
-5. Build and attach the release ZIP to the GitHub release. The tag name must match the `Version:` header for the auto-updater to work correctly.
+5. **Open a PR** from `dev` to `main`.
+
+6. **Create a GitHub Release** with a tag that **exactly matches** the `Version:` header (e.g. `1.6`). Attach `releases/vX.Y/simple-wp-helpdesk.zip` as the release asset — the auto-updater prioritizes attached `.zip` assets over raw source archives.
