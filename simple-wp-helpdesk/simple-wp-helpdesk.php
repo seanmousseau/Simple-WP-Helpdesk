@@ -623,14 +623,18 @@ function swh_register_settings_page() {
     add_submenu_page( 'edit.php?post_type=helpdesk_ticket', 'Helpdesk Settings', 'Settings', 'manage_options', 'swh-settings', 'swh_render_settings_page' );
 }
 
-function swh_render_settings_page() {
+add_action( 'admin_init', 'swh_handle_settings_save' );
+function swh_handle_settings_save() {
+    // Only process on the settings page.
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( ! isset( $_POST['swh_save_settings'] ) && ! isset( $_POST['swh_gdpr_delete'] ) && ! isset( $_POST['swh_purge_tickets'] ) && ! isset( $_POST['swh_factory_reset'] ) ) {
+        return;
+    }
     if ( ! current_user_can( 'manage_options' ) ) {
         return;
     }
     $defs         = swh_get_defaults();
     $options_list = swh_get_all_option_keys();
-
-    // Options that hold integers — use absint() instead of sanitize_text_field().
     $integer_opts = array( 'swh_autoclose_days', 'swh_max_upload_size', 'swh_max_upload_count', 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_ticket_page_id' );
 
     // GDPR SPECIFIC CLIENT DELETE
@@ -697,10 +701,7 @@ function swh_render_settings_page() {
 
     // SAVE GENERAL SETTINGS (main form).
     if ( isset( $_POST['swh_save_settings'], $_POST['swh_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_settings_nonce'] ) ), 'swh_save_settings_action' ) ) {
-        // Determine which tab was active so we can redirect back to it.
         $active_tab = isset( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
-
-        // Keys managed by the tools form are intentionally excluded here.
         $tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall' );
 
         foreach ( $options_list as $opt ) {
@@ -719,6 +720,13 @@ function swh_render_settings_page() {
         wp_safe_redirect( add_query_arg( array( 'swh_notice' => 'saved', 'swh_tab' => $active_tab ), menu_page_url( 'swh-settings', false ) ) );
         exit;
     }
+}
+
+function swh_render_settings_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    $defs         = swh_get_defaults();
 
     // Display notices from redirects.
     if ( isset( $_GET['swh_notice'] ) ) {
