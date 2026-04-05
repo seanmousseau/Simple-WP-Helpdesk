@@ -25,11 +25,23 @@ function swh_activate() {
             'technician',
             'Technician',
             array(
-                'read'         => true,
-                'edit_posts'   => true,
-                'upload_files' => true,
+                'read'                 => true,
+                'edit_posts'           => true,
+                'edit_others_posts'    => true,
+                'edit_published_posts' => true,
+                'publish_posts'        => true,
+                'delete_posts'         => true,
+                'upload_files'         => true,
             )
         );
+    } else {
+        // Ensure existing installs get the missing capabilities.
+        $tech = get_role( 'technician' );
+        foreach ( array( 'edit_others_posts', 'edit_published_posts', 'publish_posts', 'delete_posts' ) as $cap ) {
+            if ( ! $tech->has_cap( $cap ) ) {
+                $tech->add_cap( $cap );
+            }
+        }
     }
     if ( ! wp_next_scheduled( 'swh_autoclose_event' ) ) {
         wp_schedule_event( time(), 'hourly', 'swh_autoclose_event' );
@@ -62,6 +74,15 @@ function swh_run_upgrade_routine() {
     // Add any missing options without overwriting existing values.
     foreach ( swh_get_defaults() as $key => $val ) {
         add_option( $key, $val );
+    }
+    // Ensure the technician role has all required capabilities.
+    $tech = get_role( 'technician' );
+    if ( $tech ) {
+        foreach ( array( 'edit_others_posts', 'edit_published_posts', 'publish_posts', 'delete_posts', 'upload_files' ) as $cap ) {
+            if ( ! $tech->has_cap( $cap ) ) {
+                $tech->add_cap( $cap );
+            }
+        }
     }
     update_option( 'swh_db_version', SWH_VERSION );
 }
