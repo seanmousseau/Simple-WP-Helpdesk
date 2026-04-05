@@ -1,6 +1,6 @@
-# CLAUDE.md — Simple WP Helpdesk
+# CLAUDE.md
 
-This file provides guidance for AI assistants working on the Simple WP Helpdesk codebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -99,7 +99,6 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `admin_init`                   | `swh_run_upgrade_routine()`      | Version-based upgrades & option init       |
 | `init`                         | `swh_register_ticket_cpt()`      | Register `helpdesk_ticket` post type       |
 | `post_edit_form_tag`           | `swh_add_enctype_to_post_form()` | Adds `enctype="multipart/form-data"`       |
-| `wp_head`                      | `swh_load_spam_scripts_in_head()`| Loads reCAPTCHA/Turnstile JS               |
 | `admin_menu`                   | `swh_register_settings_page()`   | Adds Settings submenu under Tickets        |
 | `add_meta_boxes`               | `swh_add_ticket_meta_boxes()`    | Registers sidebar + conversation meta boxes|
 | `save_post_helpdesk_ticket`    | `swh_save_ticket_data()`         | Handles ticket save, emails, attachments   |
@@ -205,7 +204,7 @@ vendor/bin/phpunit
 
 ### Git Branching
 
-- Default development branch for AI-assisted work: `claude/add-claude-documentation-suuR9`
+- Development branch: `dev`
 - Production branch: `main`
 - GitHub auto-updater checks GitHub releases; tag names must match the plugin `Version:` header.
 
@@ -213,7 +212,7 @@ vendor/bin/phpunit
 
 1. All plugin code lives in `simple-wp-helpdesk/simple-wp-helpdesk.php`. Do not create new PHP files unless there is a compelling reason (and even then, require them from the main file).
 2. Follow existing function naming: prefix with `swh_`.
-3. Add new options to both `swh_get_defaults()` and `swh_get_all_option_keys()` to ensure they are included in upgrades, factory resets, and uninstall cleanup.
+3. Add new options to `swh_get_defaults()` — `swh_get_all_option_keys()` returns `array_keys( swh_get_defaults() )`, so no separate update is needed.
 4. When adding new email templates, add both `_sub` and `_body` variants.
 5. When adding new cron events, register them in `swh_activate()` and clear them in `swh_deactivate()`.
 6. After modifying settings structure, bump the version string and add an upgrade path in `swh_run_upgrade_routine()` if needed.
@@ -250,32 +249,6 @@ Admins can create tickets directly from the WP admin Add New screen. The sidebar
 - `_ticket_url` is derived from the **Helpdesk Page** setting (`swh_ticket_page_id`).
 - Optionally sends the standard new-ticket confirmation email to the client (checkbox in the sidebar).
 - No email is sent if client email is empty or the checkbox is unchecked.
-
----
-
-## v1.5 Change Summary
-
-Key fixes and additions relative to v1.4:
-
-| Area | Change |
-|------|--------|
-| Defaults | All option defaults now live solely in `swh_get_defaults()`; hardcoded `add_option` calls removed from upgrade routine |
-| Settings save | PRG redirect after every save (no double-submit on refresh); tab restored via `?swh_tab=` query arg |
-| `swh_delete_on_uninstall` | Fixed silent reset when saving unrelated tabs; now uses a separate nonce (`swh_save_tools_action`) for the Tools form |
-| Integer options | `swh_autoclose_days`, `swh_max_upload_size`, retention days, `swh_ticket_page_id` now saved with `absint()` |
-| `swh_field()` | Moved from nested definition inside `swh_render_settings_page()` to top-level named function |
-| Reset button | JS uses `data-field-name` attribute lookup instead of fragile `previousElementSibling` traversal |
-| Anti-spam scripts | Removed duplicate `wp_head` injection; shortcode handles its own script loading with explicit render mode |
-| Cron | Removed `@set_time_limit(0)` from all three cron functions (micro-batch design makes it unnecessary) |
-| Retention attachments | Fixed `date_query` to use `post_modified` instead of `post_date` so active tickets are not affected |
-| Status/Priority/Assignee | Validated against allowed lists in `swh_save_ticket_data()` before persisting |
-| Assignee | Validated that user ID belongs to `administrator` or `technician` role |
-| Portal handlers | Sequential `if` blocks converted to `if/elseif/elseif` to prevent multi-handler firing |
-| Rate limiting | 30-second transient-based cooldown on close/reopen/reply frontend actions |
-| Conversation meta box | Fixed double `esc_html()` that mangled special characters in author names |
-| Upload failures | Failures now logged via `error_log()` instead of silently discarded |
-| Admin ticket creation | Client Name + Client Email editable in sidebar; token/UID/URL auto-bootstrapped on first save; optional client confirmation email |
-| Portal page setting | New `swh_ticket_page_id` option in Assignment & Routing tab; used as base URL for admin-created ticket links |
 
 ## Common Pitfalls
 
