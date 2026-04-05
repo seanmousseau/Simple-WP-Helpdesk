@@ -4,6 +4,31 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ---
 
+## [1.7] — 2026-04-05
+
+### Added
+- **HTML Email Support (#26):** All outgoing emails now use a clean, table-based HTML layout with clickable links. New `Email Format` setting in the Email Templates tab allows toggling between HTML and Plain Text. Defaults to HTML.
+- **Admin Ticket List Columns (#29):** The All Tickets admin screen now displays Ticket #, Status (color-coded badge), Priority, Assigned To, Client, and Date columns. Status and Priority filter dropdowns and sortable columns included.
+- **Admin Notice for Unconfigured Helpdesk Page (#38):** A dismissible warning appears on ticket screens when the Helpdesk Page setting is not configured, preventing silent misconfiguration of portal URLs.
+
+### Fixed
+- **Sidebar Attachment Labels (#31):** The "All Attachments" list in the admin sidebar meta box now displays actual filenames instead of generic "File 1, File 2" labels.
+- **`requires_php` Mismatch (#32):** The GitHub Updater plugin info popup now correctly reports `Requires PHP: 7.4` (was hardcoded to `7.2`).
+- **Frontend Priority Validation (#33):** Ticket priority submitted via the frontend form is now validated against the configured priority list, preventing arbitrary values from being stored.
+- **Missing `$_FILES` Check (#34):** Frontend ticket submission no longer triggers a PHP notice when no file attachment is included.
+- **Legacy Attachment Retention (#39):** The attachment retention cron now handles legacy single-URL string format and checks `_ticket_attachment_url` / `_ticket_attachment_id` meta keys, preventing orphaned files.
+
+### Improved
+- **Email Helper Refactor (#36):** All 14 `wp_mail()` call sites consolidated into a single `swh_send_email()` helper function, reducing ~100 lines of duplicate code and providing a single point of change for email behavior.
+- **Frontend CSS Scoped to Shortcode (#30):** `swh-frontend.css` is now enqueued only when the `[submit_ticket]` shortcode is rendered, eliminating an unnecessary HTTP request on all other pages.
+- **Frontend JS Extracted (#35):** Client-side file validation JavaScript extracted from inline `<script>` to `assets/swh-frontend.js` and loaded via `wp_enqueue_script()` with `wp_localize_script()` for CSP compliance.
+
+### Closed
+- **#25:** Closed as duplicate of #29.
+- **#37:** `SWH_GitHub_Updater` confirmed instantiated at line 1873. Closed as not applicable.
+
+---
+
 ## [1.6] — 2026-04-05
 
 ### Added
