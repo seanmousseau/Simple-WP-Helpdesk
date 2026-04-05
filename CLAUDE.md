@@ -1,14 +1,14 @@
-# CLAUDE.md — Simple WP Helpdesk
+# CLAUDE.md
 
-This file provides guidance for AI assistants working on the Simple WP Helpdesk codebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.5
+- **Plugin Version:** 1.6
 - **WordPress Minimum:** 5.3+
-- **PHP Minimum:** 7.2+
+- **PHP Minimum:** 7.4+
 - **Author:** SM WP Plugins / seanmousseau
 - **GitHub Repo:** seanmousseau/Simple-WP-Helpdesk
 
@@ -19,17 +19,18 @@ Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/he
 ```
 Simple-WP-Helpdesk/
 ├── CLAUDE.md                               # This file
+├── CHANGELOG.md
 ├── README.md                               # End-user documentation
-├── LICENSE                                 # License
-├── composer.json                           # Dev dependencies (PHPUnit, PHPCS, WPCS)
-├── composer.lock
-├── vendor/                                 # Composer dev tools (not distributed)
+├── LICENSE
+├── docs/                                   # User and developer documentation
 └── simple-wp-helpdesk/
-    ├── simple-wp-helpdesk.php              # Entire plugin — single file, 1710 lines
-    └── phpcs.xml                           # PHP CodeSniffer rules
+    ├── simple-wp-helpdesk.php              # Entire plugin — single file
+    └── assets/
+        ├── swh-frontend.css                # Frontend shortcode styles
+        └── swh-admin.js                    # Settings page JavaScript
 ```
 
-> **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. There are no sub-files, partials, or separate class files (except the `SWH_GitHub_Updater` class defined at the bottom of that same file).
+> **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. The two asset files in `assets/` contain only CSS/JS extracted from the main file — no PHP logic lives there.
 
 ---
 
@@ -74,6 +75,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_reopened_status`             | `Open`                             | Assigned when client re-opens               |
 | `swh_autoclose_days`              | `3`                                | Days after resolved until auto-closed        |
 | `swh_max_upload_size`             | `5`                                | MB per file                                  |
+| `swh_max_upload_count`            | `5`                                | Max files per upload (0 = unlimited)          |
 | `swh_default_assignee`            | `''`                               | User ID of default technician                |
 | `swh_fallback_email`              | `''`                               | Fallback alert email if no assignee          |
 | `swh_ticket_page_id`              | `0`                                | Page ID containing `[submit_ticket]` shortcode (for admin-created ticket portal links) |
@@ -86,7 +88,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_retention_tickets_days`      | `0`                                | 0 = disabled                                 |
 | `swh_delete_on_uninstall`         | `no`                               | `yes` or `no`                                |
 | `swh_db_version`                  | *(current version)*                | Tracks upgrade state                         |
-| Email template keys (16 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
+| Email template keys (14 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
 | Frontend message keys (7 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
 
 ---
@@ -99,7 +101,6 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `admin_init`                   | `swh_run_upgrade_routine()`      | Version-based upgrades & option init       |
 | `init`                         | `swh_register_ticket_cpt()`      | Register `helpdesk_ticket` post type       |
 | `post_edit_form_tag`           | `swh_add_enctype_to_post_form()` | Adds `enctype="multipart/form-data"`       |
-| `wp_head`                      | `swh_load_spam_scripts_in_head()`| Loads reCAPTCHA/Turnstile JS               |
 | `admin_menu`                   | `swh_register_settings_page()`   | Adds Settings submenu under Tickets        |
 | `add_meta_boxes`               | `swh_add_ticket_meta_boxes()`    | Registers sidebar + conversation meta boxes|
 | `save_post_helpdesk_ticket`    | `swh_save_ticket_data()`         | Handles ticket save, emails, attachments   |
@@ -129,7 +130,7 @@ The `[submit_ticket]` shortcode has two modes determined by URL parameters:
 
 ## Email System
 
-16 email templates (subject + body), all customizable in Settings → Email Templates.
+12 email templates (subject + body), all customizable in Settings → Email Templates.
 
 **Template variables** available in all email body/subject fields:
 - `{name}` — Client name
@@ -187,25 +188,9 @@ When modifying this plugin, maintain these patterns:
 
 ## Development Workflow
 
-### Code Quality Tools
-
-```bash
-# Install dev dependencies
-composer install
-
-# Run PHP CodeSniffer (WordPress Coding Standards)
-vendor/bin/phpcs --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Auto-fix PHPCS issues
-vendor/bin/phpcbf --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Run PHPUnit tests (test files not yet present)
-vendor/bin/phpunit
-```
-
 ### Git Branching
 
-- Default development branch for AI-assisted work: `claude/add-claude-documentation-suuR9`
+- Development branch: `dev`
 - Production branch: `main`
 - GitHub auto-updater checks GitHub releases; tag names must match the plugin `Version:` header.
 
@@ -213,10 +198,42 @@ vendor/bin/phpunit
 
 1. All plugin code lives in `simple-wp-helpdesk/simple-wp-helpdesk.php`. Do not create new PHP files unless there is a compelling reason (and even then, require them from the main file).
 2. Follow existing function naming: prefix with `swh_`.
-3. Add new options to both `swh_get_defaults()` and `swh_get_all_option_keys()` to ensure they are included in upgrades, factory resets, and uninstall cleanup.
+3. Add new options to `swh_get_defaults()` — `swh_get_all_option_keys()` returns `array_keys( swh_get_defaults() )`, so no separate update is needed.
 4. When adding new email templates, add both `_sub` and `_body` variants.
 5. When adding new cron events, register them in `swh_activate()` and clear them in `swh_deactivate()`.
 6. After modifying settings structure, bump the version string and add an upgrade path in `swh_run_upgrade_routine()` if needed.
+
+---
+
+## Release Process
+
+Follow these steps every time a new version is released:
+
+1. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
+   - Update the `Version:` field in the plugin header comment.
+   - Update `define( 'SWH_VERSION', 'X.Y' )`.
+
+2. **Update `CHANGELOG.md`** with a new versioned entry covering all changes.
+
+3. **Update any affected documentation** in `docs/` and `README.md`.
+
+4. **Build the release ZIP** and commit it under `releases/vX.Y/`:
+   ```bash
+   mkdir -p releases/vX.Y
+   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   ```
+   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level.
+
+5. **Close any GitHub issues** that are addressed by the release.
+
+6. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
+
+7. **Create a GitHub Release**:
+   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.6`) as the updater strips it.
+   - **Attach `simple-wp-helpdesk.zip` as a release asset.** This is critical — without an attached asset the updater falls back to the raw source archive, which includes the entire repo and is unreliable.
+   - The updater checks `assets[0]->browser_download_url` before falling back to `zipball_url`.
+
+> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
 
 ---
 
@@ -238,7 +255,7 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 |------------------------|------------------------------------------------------------------|
 | General                | Priorities, statuses, defaults, auto-close days, upload size     |
 | Assignment & Routing   | Default assignee, fallback email, helpdesk portal page           |
-| Email Templates        | 16 subject+body templates with placeholder reference             |
+| Email Templates        | 12 subject+body templates with placeholder reference             |
 | Messages               | 7 user-facing success/error messages                             |
 | Anti-Spam              | Method selector + API keys for reCAPTCHA/Turnstile               |
 | Tools                  | Data retention, uninstall settings, GDPR purge, factory reset    |
@@ -250,32 +267,6 @@ Admins can create tickets directly from the WP admin Add New screen. The sidebar
 - `_ticket_url` is derived from the **Helpdesk Page** setting (`swh_ticket_page_id`).
 - Optionally sends the standard new-ticket confirmation email to the client (checkbox in the sidebar).
 - No email is sent if client email is empty or the checkbox is unchecked.
-
----
-
-## v1.5 Change Summary
-
-Key fixes and additions relative to v1.4:
-
-| Area | Change |
-|------|--------|
-| Defaults | All option defaults now live solely in `swh_get_defaults()`; hardcoded `add_option` calls removed from upgrade routine |
-| Settings save | PRG redirect after every save (no double-submit on refresh); tab restored via `?swh_tab=` query arg |
-| `swh_delete_on_uninstall` | Fixed silent reset when saving unrelated tabs; now uses a separate nonce (`swh_save_tools_action`) for the Tools form |
-| Integer options | `swh_autoclose_days`, `swh_max_upload_size`, retention days, `swh_ticket_page_id` now saved with `absint()` |
-| `swh_field()` | Moved from nested definition inside `swh_render_settings_page()` to top-level named function |
-| Reset button | JS uses `data-field-name` attribute lookup instead of fragile `previousElementSibling` traversal |
-| Anti-spam scripts | Removed duplicate `wp_head` injection; shortcode handles its own script loading with explicit render mode |
-| Cron | Removed `@set_time_limit(0)` from all three cron functions (micro-batch design makes it unnecessary) |
-| Retention attachments | Fixed `date_query` to use `post_modified` instead of `post_date` so active tickets are not affected |
-| Status/Priority/Assignee | Validated against allowed lists in `swh_save_ticket_data()` before persisting |
-| Assignee | Validated that user ID belongs to `administrator` or `technician` role |
-| Portal handlers | Sequential `if` blocks converted to `if/elseif/elseif` to prevent multi-handler firing |
-| Rate limiting | 30-second transient-based cooldown on close/reopen/reply frontend actions |
-| Conversation meta box | Fixed double `esc_html()` that mangled special characters in author names |
-| Upload failures | Failures now logged via `error_log()` instead of silently discarded |
-| Admin ticket creation | Client Name + Client Email editable in sidebar; token/UID/URL auto-bootstrapped on first save; optional client confirmation email |
-| Portal page setting | New `swh_ticket_page_id` option in Assignment & Routing tab; used as base URL for admin-created ticket links |
 
 ## Common Pitfalls
 

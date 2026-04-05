@@ -17,6 +17,7 @@ Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are o
 | **Re-Opened Status** | Assigned when a client re-opens a closed ticket | `Open` |
 | **Auto-Close Days** | Days after "Resolved" before automatic closure (0 = disabled) | `3` |
 | **Max Upload Size** | Maximum file size per upload in MB | `5` |
+| **Max Files Per Upload** | Maximum number of files per submission (0 = unlimited) | `5` |
 
 ---
 
@@ -55,15 +56,25 @@ Customize the subject line and body of every email the plugin sends. Click **Res
 | `{admin_url}` | WordPress admin edit link (technicians only) |
 | `{autoclose_days}` | Configured auto-close threshold |
 
-**Email events (16 total):**
-- New ticket submitted
-- New ticket assigned to technician
-- Technician public reply
-- Client reply received
-- Status changed
+**Email events (14 templates, 8 client-facing + 6 admin-facing):**
+
+*Sent to client:*
+- New ticket received (confirmation)
+- Technician replied
+- Status changed (no reply)
+- Technician replied + status changed (combined)
+- Ticket resolved
+- Ticket re-opened
 - Ticket auto-closed
-- Ticket re-opened by client
-- ... and more
+- Ticket closed by client (confirmation)
+
+*Sent to technician/admin:*
+- New ticket submitted
+- Client replied
+- Client re-opened ticket
+- Client closed ticket
+- Ticket assigned to technician
+- Ticket auto-closed (admin copy)
 
 ---
 

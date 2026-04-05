@@ -90,4 +90,4 @@ When saving a ticket, the assigned user ID is verified to belong to either the `
 
 ## Reporting Vulnerabilities
 
-Please open an issue on [GitHub](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues) to report any security vulnerabilities or concerns.
+Please use [GitHub Security Advisories](https://github.com/seanmousseau/Simple-WP-Helpdesk/security/advisories/new) to report vulnerabilities privately. Do not open a public issue for security concerns.

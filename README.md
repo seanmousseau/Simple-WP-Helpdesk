@@ -10,7 +10,7 @@ A comprehensive, lightweight ticketing system built natively for WordPress. No t
 
 - **Secure Client Portal** — Clients view and reply to tickets via unique cryptographic email links, no WordPress account needed.
 - **Customizable Workflows** — Define your own ticket statuses and priority levels.
-- **Email Templates** — 16 fully customizable email templates with dynamic placeholders.
+- **Email Templates** — 12 fully customizable email templates with dynamic placeholders.
 - **File Attachments** — Two-way multi-file uploads for clients and technicians, with configurable size limits and instant JavaScript validation.
 - **Internal Notes** — Technicians can leave private notes clients never see.
 - **Admin Ticket Creation** — Create tickets on behalf of clients directly from the WordPress dashboard, with optional confirmation email.
@@ -54,7 +54,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 ## Known Issues
 
-- GitHub Auto-Update is broken in versions 1.3 and earlier. Upgrade to 1.4+ to restore update functionality.
+- GitHub Auto-Update is broken in versions 1.4 and earlier. Upgrade to v1.5 for fully functional automatic updates.
 
 ---
 
