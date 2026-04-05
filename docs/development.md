@@ -11,7 +11,6 @@ Simple-WP-Helpdesk/
 ├── README.md
 ├── LICENSE
 ├── docs/                                # This documentation
-├── releases/                            # Distribution ZIPs
 └── simple-wp-helpdesk/
     └── simple-wp-helpdesk.php           # Entire plugin — single file
 ```
@@ -122,10 +121,9 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 2. **Update `CHANGELOG.md`** and any relevant `docs/` pages.
 
-3. **Build the release ZIP** — always named `simple-wp-helpdesk.zip` inside a versioned subfolder:
+3. **Build the release ZIP** — build locally but do not commit it (covered by `.gitignore`):
    ```bash
-   mkdir -p releases/vX.Y
-   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/
    ```
    > The ZIP must be named `simple-wp-helpdesk.zip` (not versioned) so WordPress treats it as an update to the existing plugin rather than a new install.
 
@@ -133,4 +131,4 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 5. **Open a PR** from `dev` to `main`.
 
-6. **Create a GitHub Release** with a tag that **exactly matches** the `Version:` header (e.g. `1.6`). Attach `releases/vX.Y/simple-wp-helpdesk.zip` as the release asset — the auto-updater prioritizes attached `.zip` assets over raw source archives.
+6. **Create a GitHub Release** with a tag that **exactly matches** the `Version:` header (e.g. `1.6`, a `v` prefix is fine). **Attach `simple-wp-helpdesk.zip` as a release asset** — without an attached asset the auto-updater falls back to the raw source archive, which is unreliable.

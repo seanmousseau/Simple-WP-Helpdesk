@@ -23,7 +23,6 @@ Simple-WP-Helpdesk/
 ├── README.md                               # End-user documentation
 ├── LICENSE
 ├── docs/                                   # User and developer documentation
-├── releases/                               # Distribution ZIPs
 └── simple-wp-helpdesk/
     └── simple-wp-helpdesk.php              # Entire plugin — single file
 ```
@@ -214,23 +213,22 @@ Follow these steps every time a new version is released:
 
 3. **Update any affected documentation** in `docs/` and `README.md`.
 
-4. **Build the release ZIP** — the ZIP must be named `simple-wp-helpdesk.zip` (no version suffix) inside a versioned subfolder so WordPress and the auto-updater handle it correctly:
+4. **Build the release ZIP** — build locally but **do not commit it to git**. The ZIP is distributed exclusively as a GitHub Release asset:
    ```bash
-   mkdir -p releases/vX.Y
-   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/
    ```
-   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level.
+   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level. The file is covered by `.gitignore` to prevent accidental commits.
 
 5. **Close any GitHub issues** that are addressed by the release.
 
 6. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
 
 7. **Create a GitHub Release**:
-   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against.
-   - Attach `releases/vX.Y/simple-wp-helpdesk.zip` as a release asset.
-   - The updater prioritizes attached `.zip` assets over raw source archives.
+   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.6`) as the updater strips it.
+   - **Attach `simple-wp-helpdesk.zip` as a release asset.** This is critical — without an attached asset the updater falls back to the raw source archive, which includes the entire repo and is unreliable.
+   - The updater checks `assets[0]->browser_download_url` before falling back to `zipball_url`.
 
-> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin on first install, breaking the upgrade path. Keeping it as `simple-wp-helpdesk.zip` inside a versioned folder (`releases/vX.Y/`) preserves both human-readable versioning and WordPress compatibility.
+> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
 
 ---
 

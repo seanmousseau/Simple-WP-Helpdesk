@@ -34,7 +34,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ---
 
-## [1.4] — 2025
+## [1.4] — 2026-03-13
 
 ### Improved
 - **Smart Folder-Flattening:** The GitHub Updater now automatically detects plugin files nested inside a sub-directory within the release archive and extracts them correctly.
@@ -43,14 +43,14 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ---
 
-## [1.3] — 2025
+## [1.3] — 2026-03-13
 
 ### Security
 - Fixed several security vulnerabilities identified by automated scanning tools.
 
 ---
 
-## [1.2] — 2025
+## [1.2] — 2026-03-13
 
 ### Added
 - **GitHub Auto-Updater:** The plugin now checks its linked GitHub repository for new releases and delivers them directly to the WordPress dashboard, functioning identically to a wordpress.org-hosted plugin.
@@ -66,7 +66,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ---
 
-## [1.1] — 2025
+## [1.1] — 2026-03-12
 
 ### Improved
 - **Page Builder Compatibility:** Frontend shortcode now uses a fully scoped CSS architecture under `.swh-helpdesk-wrapper`, keeping form elements correctly aligned inside Elementor columns.
@@ -77,7 +77,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ---
 
-## [1.0] — 2025 — Initial Release
+## [1.0] — 2026-03-12 — Initial Release
 
 ### Added
 - Custom Post Type (`helpdesk_ticket`) for native WordPress backend integration.
