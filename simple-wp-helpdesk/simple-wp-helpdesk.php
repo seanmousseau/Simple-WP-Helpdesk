@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 1.6
+ * Version: 1.7
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Author: SM WP Plugins
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ==============================================================================
 // 1. PLUGIN SETUP, UPGRADE LOGIC & CRON
 // ==============================================================================
-define( 'SWH_VERSION', '1.6' );
+define( 'SWH_VERSION', '1.7' );
 
 register_activation_hook( __FILE__, 'swh_activate' );
 function swh_activate() {
@@ -25,11 +25,23 @@ function swh_activate() {
             'technician',
             'Technician',
             array(
-                'read'         => true,
-                'edit_posts'   => true,
-                'upload_files' => true,
+                'read'                 => true,
+                'edit_posts'           => true,
+                'edit_others_posts'    => true,
+                'edit_published_posts' => true,
+                'publish_posts'        => true,
+                'delete_posts'         => true,
+                'upload_files'         => true,
             )
         );
+    } else {
+        // Ensure existing installs get the missing capabilities.
+        $tech = get_role( 'technician' );
+        foreach ( array( 'edit_others_posts', 'edit_published_posts', 'publish_posts', 'delete_posts' ) as $cap ) {
+            if ( ! $tech->has_cap( $cap ) ) {
+                $tech->add_cap( $cap );
+            }
+        }
     }
     if ( ! wp_next_scheduled( 'swh_autoclose_event' ) ) {
         wp_schedule_event( time(), 'hourly', 'swh_autoclose_event' );
@@ -64,6 +76,22 @@ function swh_run_upgrade_routine() {
         add_option( $key, $val );
     }
     update_option( 'swh_db_version', SWH_VERSION );
+}
+
+add_action( 'admin_init', 'swh_ensure_technician_caps' );
+function swh_ensure_technician_caps() {
+    if ( get_option( 'swh_tech_caps_v2' ) ) {
+        return;
+    }
+    $tech = get_role( 'technician' );
+    if ( $tech ) {
+        foreach ( array( 'edit_others_posts', 'edit_published_posts', 'publish_posts', 'delete_posts', 'upload_files' ) as $cap ) {
+            if ( ! $tech->has_cap( $cap ) ) {
+                $tech->add_cap( $cap );
+            }
+        }
+    }
+    update_option( 'swh_tech_caps_v2', '1' );
 }
 
 register_uninstall_hook( __FILE__, 'swh_uninstall' );
@@ -148,6 +176,8 @@ function swh_get_defaults() {
             'swh_default_assignee'             => '',
             'swh_fallback_email'               => '',
             'swh_ticket_page_id'               => 0,
+            // Email Format.
+            'swh_email_format'                 => 'html',
             // Anti-Spam.
             'swh_spam_method'                  => 'honeypot',
             'swh_recaptcha_site_key'           => '',
@@ -232,6 +262,51 @@ function swh_parse_template( $template, $data ) {
         $template = str_replace( '{' . $key . '}', $value, $template );
     }
     return $template;
+}
+
+function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = array() ) {
+    $defs    = swh_get_defaults();
+    $subject = swh_parse_template( get_option( $subject_key, isset( $defs[ $subject_key ] ) ? $defs[ $subject_key ] : '' ), $data );
+    $body    = swh_parse_template( get_option( $body_key, isset( $defs[ $body_key ] ) ? $defs[ $body_key ] : '' ), $data );
+    $headers = array();
+    $format  = get_option( 'swh_email_format', 'html' );
+    if ( 'html' === $format ) {
+        $headers[] = 'Content-Type: text/html; charset=UTF-8';
+        $body      = swh_wrap_html_email( $body, $attachments );
+    } else {
+        if ( ! empty( $attachments ) ) {
+            $body .= "\n\nAttachments:\n" . implode( "\n", $attachments );
+        }
+    }
+    if ( ! wp_mail( $to, $subject, $body, $headers ) ) {
+        error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $to . ', subject: ' . $subject );
+    }
+}
+
+function swh_wrap_html_email( $body, $attachments = array() ) {
+    $html_body = nl2br( esc_html( $body ) );
+    // Auto-link URLs that are not already inside HTML tags.
+    $html_body = preg_replace(
+        '~(?<!href=["\'])(?<!">)(https?://[^\s<]+)~i',
+        '<a href="$1" style="color:#0073aa;">$1</a>',
+        $html_body
+    );
+    $attachment_html = '';
+    if ( ! empty( $attachments ) ) {
+        $attachment_html = '<p style="margin-top:15px;"><strong>Attachments:</strong><br>';
+        foreach ( $attachments as $url ) {
+            $attachment_html .= '<a href="' . esc_url( $url ) . '" style="color:#0073aa;">' . esc_html( basename( $url ) ) . '</a><br>';
+        }
+        $attachment_html .= '</p>';
+    }
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
+        . '<body style="margin:0;padding:0;background:#f5f5f5;">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0;">'
+        . '<tr><td align="center">'
+        . '<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #ddd;border-radius:4px;padding:30px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;">'
+        . '<tr><td>' . $html_body . $attachment_html . '</td></tr>'
+        . '</table>'
+        . '</td></tr></table></body></html>';
 }
 
 function swh_get_admin_email( $ticket_id = 0 ) {
@@ -425,11 +500,7 @@ function swh_process_autoclose() {
             'message'        => '',
         );
         if ( $data['email'] && $data['ticket_url'] ) {
-            $subject = swh_parse_template( get_option( 'swh_em_user_autoclose_sub', $defs['swh_em_user_autoclose_sub'] ), $data );
-            $message = swh_parse_template( get_option( 'swh_em_user_autoclose_body', $defs['swh_em_user_autoclose_body'] ), $data );
-            if ( ! wp_mail( $data['email'], $subject, $message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $subject );
-            }
+            swh_send_email( $data['email'], 'swh_em_user_autoclose_sub', 'swh_em_user_autoclose_body', $data );
         }
     }
 }
@@ -458,7 +529,10 @@ function swh_process_retention_attachments() {
     );
     foreach ( $tickets as $ticket ) {
         $atts = get_post_meta( $ticket->ID, '_ticket_attachments', true );
-        if ( ! empty( $atts ) && is_array( $atts ) ) {
+        if ( ! empty( $atts ) ) {
+            if ( ! is_array( $atts ) ) {
+                $atts = array( $atts );
+            }
             foreach ( $atts as $url ) {
                 swh_delete_file_by_url( $url );
             }
@@ -472,6 +546,17 @@ function swh_process_retention_attachments() {
                 )
             );
             update_comment_meta( $comment_id, '_is_internal_note', '1' );
+        }
+        // Handle legacy single-URL attachment format.
+        $legacy_url = get_post_meta( $ticket->ID, '_ticket_attachment_url', true );
+        if ( $legacy_url ) {
+            swh_delete_file_by_url( $legacy_url );
+            delete_post_meta( $ticket->ID, '_ticket_attachment_url' );
+        }
+        $legacy_id = get_post_meta( $ticket->ID, '_ticket_attachment_id', true );
+        if ( $legacy_id ) {
+            wp_delete_attachment( $legacy_id, true );
+            delete_post_meta( $ticket->ID, '_ticket_attachment_id' );
         }
     }
     
@@ -491,7 +576,10 @@ function swh_process_retention_attachments() {
     );
     foreach ( $comments as $comment ) {
         $atts = get_comment_meta( $comment->comment_ID, '_attachments', true );
-        if ( ! empty( $atts ) && is_array( $atts ) ) {
+        if ( ! empty( $atts ) ) {
+            if ( ! is_array( $atts ) ) {
+                $atts = array( $atts );
+            }
             foreach ( $atts as $url ) {
                 swh_delete_file_by_url( $url );
             }
@@ -548,10 +636,7 @@ function swh_field( $name, $defs, $type = 'text' ) {
     echo '<br><a href="#" class="swh-reset-field" style="font-size:12px; color:#d63638;">Reset to default</a>';
 }
 
-add_action( 'wp_enqueue_scripts', 'swh_enqueue_frontend_assets' );
-function swh_enqueue_frontend_assets() {
-    wp_enqueue_style( 'swh-frontend', plugin_dir_url( __FILE__ ) . 'assets/swh-frontend.css', array(), SWH_VERSION );
-}
+// Frontend CSS and JS are enqueued inside swh_ticket_frontend() only when the shortcode is rendered.
 
 add_action( 'admin_enqueue_scripts', 'swh_enqueue_admin_assets' );
 function swh_enqueue_admin_assets( $hook ) {
@@ -566,14 +651,18 @@ function swh_register_settings_page() {
     add_submenu_page( 'edit.php?post_type=helpdesk_ticket', 'Helpdesk Settings', 'Settings', 'manage_options', 'swh-settings', 'swh_render_settings_page' );
 }
 
-function swh_render_settings_page() {
+add_action( 'admin_init', 'swh_handle_settings_save' );
+function swh_handle_settings_save() {
+    // Only process on the settings page.
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( ! isset( $_POST['swh_save_settings'] ) && ! isset( $_POST['swh_gdpr_delete'] ) && ! isset( $_POST['swh_purge_tickets'] ) && ! isset( $_POST['swh_factory_reset'] ) ) {
+        return;
+    }
     if ( ! current_user_can( 'manage_options' ) ) {
         return;
     }
     $defs         = swh_get_defaults();
     $options_list = swh_get_all_option_keys();
-
-    // Options that hold integers — use absint() instead of sanitize_text_field().
     $integer_opts = array( 'swh_autoclose_days', 'swh_max_upload_size', 'swh_max_upload_count', 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_ticket_page_id' );
 
     // GDPR SPECIFIC CLIENT DELETE
@@ -640,10 +729,7 @@ function swh_render_settings_page() {
 
     // SAVE GENERAL SETTINGS (main form).
     if ( isset( $_POST['swh_save_settings'], $_POST['swh_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_settings_nonce'] ) ), 'swh_save_settings_action' ) ) {
-        // Determine which tab was active so we can redirect back to it.
         $active_tab = isset( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
-
-        // Keys managed by the tools form are intentionally excluded here.
         $tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall' );
 
         foreach ( $options_list as $opt ) {
@@ -662,6 +748,13 @@ function swh_render_settings_page() {
         wp_safe_redirect( add_query_arg( array( 'swh_notice' => 'saved', 'swh_tab' => $active_tab ), menu_page_url( 'swh-settings', false ) ) );
         exit;
     }
+}
+
+function swh_render_settings_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    $defs         = swh_get_defaults();
 
     // Display notices from redirects.
     if ( isset( $_GET['swh_notice'] ) ) {
@@ -743,6 +836,20 @@ function swh_render_settings_page() {
             </div>
 
             <div id="tab-emails" class="swh-tab-content" style="display:none;">
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Email Format</th>
+                        <td>
+                            <?php $email_format = get_option( 'swh_email_format', 'html' ); ?>
+                            <select name="swh_email_format">
+                                <option value="html" <?php selected( $email_format, 'html' ); ?>>HTML (Recommended)</option>
+                                <option value="plain" <?php selected( $email_format, 'plain' ); ?>>Plain Text</option>
+                            </select>
+                            <p class="description">HTML emails include clickable links and a clean layout. Switch to Plain Text for basic SMTP setups.</p>
+                        </td>
+                    </tr>
+                </table>
+                <hr>
                 <p><strong>Placeholders:</strong> <code>{name}</code>, <code>{email}</code>, <code>{ticket_id}</code>, <code>{title}</code>, <code>{status}</code>, <code>{priority}</code>, <code>{message}</code>, <code>{ticket_url}</code>, <code>{admin_url}</code>, <code>{autoclose_days}</code></p><hr>
                 <h3>Emails Sent to Client</h3>
                 <table class="form-table">
@@ -865,8 +972,181 @@ function swh_render_settings_page() {
 }
 
 // ==============================================================================
+// 4.5  ADMIN TICKET LIST — COLUMNS, SORTING & FILTERS
+// ==============================================================================
+
+add_action( 'admin_head', 'swh_admin_list_styles' );
+function swh_admin_list_styles() {
+    $screen = get_current_screen();
+    if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
+        return;
+    }
+    echo '<style>
+        .swh-status-badge { padding:3px 8px; border-radius:3px; font-size:12px; font-weight:600; display:inline-block; white-space:nowrap; }
+        .column-ticket_uid { width:100px; }
+        .column-ticket_status { width:120px; }
+        .column-ticket_priority { width:100px; }
+        .column-ticket_assigned { width:140px; }
+        .column-ticket_client { width:160px; }
+    </style>';
+}
+
+add_filter( 'manage_helpdesk_ticket_posts_columns', 'swh_ticket_columns' );
+function swh_ticket_columns( $columns ) {
+    $new = array();
+    $new['cb']              = $columns['cb'];
+    $new['ticket_uid']      = 'Ticket #';
+    $new['title']           = $columns['title'];
+    $new['ticket_status']   = 'Status';
+    $new['ticket_priority'] = 'Priority';
+    $new['ticket_assigned'] = 'Assigned To';
+    $new['ticket_client']   = 'Client';
+    $new['date']            = $columns['date'];
+    return $new;
+}
+
+add_action( 'manage_helpdesk_ticket_posts_custom_column', 'swh_ticket_column_content', 10, 2 );
+function swh_ticket_column_content( $column, $post_id ) {
+    $defs = swh_get_defaults();
+    switch ( $column ) {
+        case 'ticket_uid':
+            echo esc_html( get_post_meta( $post_id, '_ticket_uid', true ) ?: '—' );
+            break;
+        case 'ticket_status':
+            $status          = get_post_meta( $post_id, '_ticket_status', true );
+            $closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+            $resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+            if ( $status === $closed_status ) {
+                $bg = '#f8d7da'; $color = '#721c24';
+            } elseif ( $status === $resolved_status ) {
+                $bg = '#e6f7ff'; $color = '#005980';
+            } elseif ( stripos( $status, 'progress' ) !== false ) {
+                $bg = '#fff3cd'; $color = '#856404';
+            } else {
+                $bg = '#d4edda'; $color = '#155724';
+            }
+            echo '<span class="swh-status-badge" style="background:' . esc_attr( $bg ) . ';color:' . esc_attr( $color ) . ';">' . esc_html( $status ) . '</span>';
+            break;
+        case 'ticket_priority':
+            echo esc_html( get_post_meta( $post_id, '_ticket_priority', true ) ?: '—' );
+            break;
+        case 'ticket_assigned':
+            $assigned = get_post_meta( $post_id, '_ticket_assigned_to', true );
+            if ( $assigned ) {
+                $user = get_userdata( $assigned );
+                echo $user ? esc_html( $user->display_name ) : 'Unknown';
+            } else {
+                echo '<span style="color:#999;">Unassigned</span>';
+            }
+            break;
+        case 'ticket_client':
+            $name  = get_post_meta( $post_id, '_ticket_name', true );
+            $email = get_post_meta( $post_id, '_ticket_email', true );
+            if ( $name ) {
+                echo esc_html( $name );
+            }
+            if ( $email ) {
+                echo '<br><small style="color:#666;">' . esc_html( $email ) . '</small>';
+            }
+            if ( ! $name && ! $email ) {
+                echo '—';
+            }
+            break;
+    }
+}
+
+add_filter( 'manage_edit-helpdesk_ticket_sortable_columns', 'swh_ticket_sortable_columns' );
+function swh_ticket_sortable_columns( $columns ) {
+    $columns['ticket_uid']    = 'ticket_uid';
+    $columns['ticket_status'] = 'ticket_status';
+    return $columns;
+}
+
+add_action( 'pre_get_posts', 'swh_ticket_list_query' );
+function swh_ticket_list_query( $query ) {
+    if ( ! is_admin() || ! $query->is_main_query() ) {
+        return;
+    }
+    if ( 'helpdesk_ticket' !== $query->get( 'post_type' ) ) {
+        return;
+    }
+
+    // Handle sortable columns. Only apply meta sort when explicitly requested
+    // to avoid filtering out tickets that lack the meta key.
+    $orderby = $query->get( 'orderby' );
+    if ( 'ticket_status' === $orderby ) {
+        $query->set( 'meta_key', '_ticket_status' );
+        $query->set( 'orderby', 'meta_value' );
+    } elseif ( 'ticket_uid' === $orderby ) {
+        $query->set( 'meta_key', '_ticket_uid' );
+        $query->set( 'orderby', 'meta_value' );
+    }
+
+    // Handle filter dropdowns.
+    // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+    $meta_query = array();
+    if ( ! empty( $_GET['swh_filter_status'] ) ) {
+        $meta_query[] = array(
+            'key'   => '_ticket_status',
+            'value' => sanitize_text_field( wp_unslash( $_GET['swh_filter_status'] ) ),
+        );
+    }
+    if ( ! empty( $_GET['swh_filter_priority'] ) ) {
+        $meta_query[] = array(
+            'key'   => '_ticket_priority',
+            'value' => sanitize_text_field( wp_unslash( $_GET['swh_filter_priority'] ) ),
+        );
+    }
+    if ( ! empty( $meta_query ) ) {
+        $meta_query['relation'] = 'AND';
+        $query->set( 'meta_query', $meta_query );
+    }
+}
+
+add_action( 'restrict_manage_posts', 'swh_ticket_filter_dropdowns' );
+function swh_ticket_filter_dropdowns( $post_type ) {
+    if ( 'helpdesk_ticket' !== $post_type ) {
+        return;
+    }
+    $statuses        = swh_get_statuses();
+    $current_status  = isset( $_GET['swh_filter_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_status'] ) ) : '';
+    echo '<select name="swh_filter_status"><option value="">All Statuses</option>';
+    foreach ( $statuses as $s ) {
+        echo '<option value="' . esc_attr( $s ) . '"' . selected( $current_status, $s, false ) . '>' . esc_html( $s ) . '</option>';
+    }
+    echo '</select>';
+
+    $priorities       = swh_get_priorities();
+    $current_priority = isset( $_GET['swh_filter_priority'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_priority'] ) ) : '';
+    echo '<select name="swh_filter_priority"><option value="">All Priorities</option>';
+    foreach ( $priorities as $p ) {
+        echo '<option value="' . esc_attr( $p ) . '"' . selected( $current_priority, $p, false ) . '>' . esc_html( $p ) . '</option>';
+    }
+    echo '</select>';
+}
+
+// ==============================================================================
 // 5. ADMIN DASHBOARD - TICKET EDITOR UI & LOGIC
 // ==============================================================================
+add_action( 'admin_notices', 'swh_admin_helpdesk_page_notice' );
+function swh_admin_helpdesk_page_notice() {
+    $screen = get_current_screen();
+    if ( ! $screen || false === strpos( $screen->id, 'helpdesk_ticket' ) ) {
+        return;
+    }
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    $page_id = (int) get_option( 'swh_ticket_page_id', 0 );
+    if ( $page_id && get_post( $page_id ) ) {
+        return;
+    }
+    echo '<div class="notice notice-warning is-dismissible"><p>';
+    echo '<strong>Simple WP Helpdesk:</strong> The Helpdesk Page setting is not configured. Admin-created tickets will not have a client portal URL. ';
+    echo '<a href="' . esc_url( admin_url( 'edit.php?post_type=helpdesk_ticket&page=swh-settings' ) ) . '">Configure it under Settings &rarr; Assignment &amp; Routing.</a>';
+    echo '</p></div>';
+}
+
 add_action( 'add_meta_boxes', 'swh_add_ticket_meta_boxes' );
 function swh_add_ticket_meta_boxes() {
     add_meta_box( 'swh_ticket_status', 'Ticket Details', 'swh_status_meta_box_html', 'helpdesk_ticket', 'side', 'high' );
@@ -927,7 +1207,7 @@ function swh_status_meta_box_html( $post ) {
     ?>
         <p><strong>All Attachments:</strong><br>
         <?php foreach ( $all_attachments as $i => $url ) : ?>
-            <a href="<?php echo esc_url( $url ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;">File <?php echo esc_html( $i + 1 ); ?></a>
+            <a href="<?php echo esc_url( $url ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( basename( $url ) ); ?></a>
         <?php endforeach; ?></p>
     <?php endif; ?>
     <hr>
@@ -1071,11 +1351,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
                 'message'        => '',
                 'autoclose_days' => get_option( 'swh_autoclose_days', $defs['swh_autoclose_days'] ),
             );
-            $assign_subject = swh_parse_template( get_option( 'swh_em_assigned_sub', $defs['swh_em_assigned_sub'] ), $assign_data );
-            $assign_body    = swh_parse_template( get_option( 'swh_em_assigned_body', $defs['swh_em_assigned_body'] ), $assign_data );
-            if ( ! wp_mail( $assignee_user->user_email, $assign_subject, $assign_body ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $assignee_user->user_email . ', subject: ' . $assign_subject );
-            }
+            swh_send_email( $assignee_user->user_email, 'swh_em_assigned_sub', 'swh_em_assigned_body', $assign_data );
         }
     }
 
@@ -1115,11 +1391,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
                     'message'        => '',
                     'autoclose_days' => get_option( 'swh_autoclose_days', $defs['swh_autoclose_days'] ),
                 );
-                $subject = swh_parse_template( get_option( 'swh_em_user_new_sub', $defs['swh_em_user_new_sub'] ), $new_data );
-                $body    = swh_parse_template( get_option( 'swh_em_user_new_body', $defs['swh_em_user_new_body'] ), $new_data );
-                if ( ! wp_mail( $client_email, $subject, $body ) ) {
-                    error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $client_email . ', subject: ' . $subject );
-                }
+                swh_send_email( $client_email, 'swh_em_user_new_sub', 'swh_em_user_new_body', $new_data );
             }
         }
     }
@@ -1194,46 +1466,19 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
     
     if ( $data['email'] ) {
         if ( $just_replied && $status_changed && $is_resolving ) {
-            $subject = swh_parse_template( get_option( 'swh_em_user_resolved_sub', $defs['swh_em_user_resolved_sub'] ), $data );
-            $message = swh_parse_template( get_option( 'swh_em_user_resolved_body', $defs['swh_em_user_resolved_body'] ), $data );
-            if ( ! empty( $attach_urls ) ) {
-                $message .= "\n\nAttachments: \n" . implode( "\n", $attach_urls );
-            }
-            if ( ! wp_mail( $data['email'], $subject, $message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $subject );
-            }
+            swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, $attach_urls );
         } elseif ( $just_replied && $status_changed ) {
-            $subject = swh_parse_template( get_option( 'swh_em_user_reply_status_sub', $defs['swh_em_user_reply_status_sub'] ), $data );
-            $message = swh_parse_template( get_option( 'swh_em_user_reply_status_body', $defs['swh_em_user_reply_status_body'] ), $data );
-            if ( ! empty( $attach_urls ) ) {
-                $message .= "\n\nAttachments: \n" . implode( "\n", $attach_urls );
-            }
-            if ( ! wp_mail( $data['email'], $subject, $message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $subject );
-            }
+            swh_send_email( $data['email'], 'swh_em_user_reply_status_sub', 'swh_em_user_reply_status_body', $data, $attach_urls );
         } elseif ( $just_replied ) {
-            $subject = swh_parse_template( get_option( 'swh_em_user_reply_sub', $defs['swh_em_user_reply_sub'] ), $data );
-            $message = swh_parse_template( get_option( 'swh_em_user_reply_body', $defs['swh_em_user_reply_body'] ), $data );
-            if ( ! empty( $attach_urls ) ) {
-                $message .= "\n\nAttachments: \n" . implode( "\n", $attach_urls );
-            }
-            if ( ! wp_mail( $data['email'], $subject, $message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $subject );
-            }
+            swh_send_email( $data['email'], 'swh_em_user_reply_sub', 'swh_em_user_reply_body', $data, $attach_urls );
         } elseif ( $status_changed ) {
             $data['message'] = 'No additional notes provided.';
             if ( $is_resolving ) {
-                $subject = swh_parse_template( get_option( 'swh_em_user_resolved_sub', $defs['swh_em_user_resolved_sub'] ), $data );
-                $message = swh_parse_template( get_option( 'swh_em_user_resolved_body', $defs['swh_em_user_resolved_body'] ), $data );
+                swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data );
             } elseif ( $new_status === get_option( 'swh_reopened_status', $defs['swh_reopened_status'] ) && $old_status === get_option( 'swh_closed_status', $defs['swh_closed_status'] ) ) {
-                $subject = swh_parse_template( get_option( 'swh_em_user_reopen_sub', $defs['swh_em_user_reopen_sub'] ), $data );
-                $message = swh_parse_template( get_option( 'swh_em_user_reopen_body', $defs['swh_em_user_reopen_body'] ), $data );
+                swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
             } else {
-                $subject = swh_parse_template( get_option( 'swh_em_user_status_sub', $defs['swh_em_user_status_sub'] ), $data );
-                $message = swh_parse_template( get_option( 'swh_em_user_status_body', $defs['swh_em_user_status_body'] ), $data );
-            }
-            if ( ! wp_mail( $data['email'], $subject, $message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $subject );
+                swh_send_email( $data['email'], 'swh_em_user_status_sub', 'swh_em_user_status_body', $data );
             }
         }
     }
@@ -1244,8 +1489,16 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 // ==============================================================================
 add_shortcode( 'submit_ticket', 'swh_ticket_frontend' );
 function swh_ticket_frontend() {
+    wp_enqueue_style( 'swh-frontend', plugin_dir_url( __FILE__ ) . 'assets/swh-frontend.css', array(), SWH_VERSION );
+    wp_enqueue_script( 'swh-frontend', plugin_dir_url( __FILE__ ) . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
+    wp_localize_script( 'swh-frontend', 'swhConfig', array(
+        'maxMb'       => (int) get_option( 'swh_max_upload_size', 5 ),
+        'maxFiles'    => (int) get_option( 'swh_max_upload_count', 5 ),
+        'allowedExts' => array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ),
+    ) );
+
     ob_start();
-    
+
     $defs            = swh_get_defaults();
     $closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
     $resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
@@ -1304,16 +1557,8 @@ function swh_ticket_frontend() {
             );
             update_comment_meta( $comment_id, '_is_user_reply', '1' );
             $admin_email = swh_get_admin_email( $ticket_id );
-            $subject     = swh_parse_template( get_option( 'swh_em_admin_closed_sub', $defs['swh_em_admin_closed_sub'] ), $data );
-            $message     = swh_parse_template( get_option( 'swh_em_admin_closed_body', $defs['swh_em_admin_closed_body'] ), $data );
-            if ( ! wp_mail( $admin_email, $subject, $message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $admin_email . ', subject: ' . $subject );
-            }
-            $u_subject = swh_parse_template( get_option( 'swh_em_user_closed_sub', $defs['swh_em_user_closed_sub'] ), $data );
-            $u_message = swh_parse_template( get_option( 'swh_em_user_closed_body', $defs['swh_em_user_closed_body'] ), $data );
-            if ( ! wp_mail( $data['email'], $u_subject, $u_message ) ) {
-                error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $u_subject );
-            }
+            swh_send_email( $admin_email, 'swh_em_admin_closed_sub', 'swh_em_admin_closed_body', $data );
+            swh_send_email( $data['email'], 'swh_em_user_closed_sub', 'swh_em_user_closed_body', $data );
             echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_closed', $defs['swh_msg_success_closed'] ) ) . '</div>';
             $data['status'] = $closed_status;
         } elseif ( $is_post_action && isset( $_POST['swh_user_reopen_submit'], $_POST['swh_reopen_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_reopen_nonce'] ) ), 'swh_user_reopen' ) ) {
@@ -1341,19 +1586,8 @@ function swh_ticket_frontend() {
                 }
                 $data['message'] = $reply_text ?: 'Attached file(s)';
                 $admin_email = swh_get_admin_email( $ticket_id );
-                $subject     = swh_parse_template( get_option( 'swh_em_admin_reopen_sub', $defs['swh_em_admin_reopen_sub'] ), $data );
-                $message     = swh_parse_template( get_option( 'swh_em_admin_reopen_body', $defs['swh_em_admin_reopen_body'] ), $data );
-                if ( ! empty( $attach_urls ) ) {
-                    $message .= "\n\nAttachments:\n" . implode( "\n", $attach_urls );
-                }
-                if ( ! wp_mail( $admin_email, $subject, $message ) ) {
-                    error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $admin_email . ', subject: ' . $subject );
-                }
-                $u_subject = swh_parse_template( get_option( 'swh_em_user_reopen_sub', $defs['swh_em_user_reopen_sub'] ), $data );
-                $u_message = swh_parse_template( get_option( 'swh_em_user_reopen_body', $defs['swh_em_user_reopen_body'] ), $data );
-                if ( ! wp_mail( $data['email'], $u_subject, $u_message ) ) {
-                    error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $u_subject );
-                }
+                swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data, $attach_urls );
+                swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
                 echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reopen', $defs['swh_msg_success_reopen'] ) ) . '</div>';
                 $data['status'] = $reopened_status;
             }
@@ -1385,14 +1619,7 @@ function swh_ticket_frontend() {
                 }
                 $data['message'] = $reply_text ?: 'Attached file(s)';
                 $admin_email = swh_get_admin_email( $ticket_id );
-                $subject     = swh_parse_template( get_option( 'swh_em_admin_reply_sub', $defs['swh_em_admin_reply_sub'] ), $data );
-                $message     = swh_parse_template( get_option( 'swh_em_admin_reply_body', $defs['swh_em_admin_reply_body'] ), $data );
-                if ( ! empty( $attach_urls ) ) {
-                    $message .= "\n\nAttachments:\n" . implode( "\n", $attach_urls );
-                }
-                if ( ! wp_mail( $admin_email, $subject, $message ) ) {
-                    error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $admin_email . ', subject: ' . $subject );
-                }
+                swh_send_email( $admin_email, 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data, $attach_urls );
                 echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reply', $defs['swh_msg_success_reply'] ) ) . '</div>';
             }
         }
@@ -1501,7 +1728,6 @@ function swh_ticket_frontend() {
         <?php endif; ?>
         </div> <!-- End .swh-helpdesk-wrapper -->
         <?php
-        swh_render_js_validation();
         return ob_get_clean();
     }
     
@@ -1532,6 +1758,10 @@ function swh_ticket_frontend() {
             'priority' => isset( $_POST['ticket_priority'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_priority'] ) ) : '',
             'status'   => $default_status,
         );
+        // Validate priority against allowed list.
+        if ( ! in_array( $data['priority'], $priorities, true ) ) {
+            $data['priority'] = $default_prio;
+        }
         $is_spam = false;
         if ( 'honeypot' === $spam_method && ! empty( $_POST['swh_website_url_hp'] ) ) {
             $is_spam = true;
@@ -1579,8 +1809,11 @@ function swh_ticket_frontend() {
                 )
             );
             if ( $ticket_id ) {
+                $attach_urls = array();
                 // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-                $attach_urls = swh_handle_multiple_uploads( $_FILES['ticket_attachments'] );
+                if ( ! empty( $_FILES['ticket_attachments']['name'][0] ) ) {
+                    $attach_urls = swh_handle_multiple_uploads( $_FILES['ticket_attachments'] );
+                }
                 if ( ! empty( $attach_urls ) ) {
                     update_post_meta( $ticket_id, '_ticket_attachments', $attach_urls );
                 }
@@ -1605,20 +1838,9 @@ function swh_ticket_frontend() {
                 if ( $default_assignee ) {
                     update_post_meta( $ticket_id, '_ticket_assigned_to', $default_assignee );
                 }
-                $subject = swh_parse_template( get_option( 'swh_em_user_new_sub', $defs['swh_em_user_new_sub'] ), $data );
-                $message = swh_parse_template( get_option( 'swh_em_user_new_body', $defs['swh_em_user_new_body'] ), $data );
-                if ( ! wp_mail( $data['email'], $subject, $message ) ) {
-                    error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $data['email'] . ', subject: ' . $subject );
-                }
+                swh_send_email( $data['email'], 'swh_em_user_new_sub', 'swh_em_user_new_body', $data );
                 $admin_email = swh_get_admin_email( $ticket_id );
-                $admin_sub   = swh_parse_template( get_option( 'swh_em_admin_new_sub', $defs['swh_em_admin_new_sub'] ), $data );
-                $admin_msg   = swh_parse_template( get_option( 'swh_em_admin_new_body', $defs['swh_em_admin_new_body'] ), $data );
-                if ( ! empty( $attach_urls ) ) {
-                    $admin_msg .= "\n\nAttachments:\n" . implode( "\n", $attach_urls );
-                }
-                if ( ! wp_mail( $admin_email, $admin_sub, $admin_msg ) ) {
-                    error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $admin_email . ', subject: ' . $admin_sub );
-                }
+                swh_send_email( $admin_email, 'swh_em_admin_new_sub', 'swh_em_admin_new_body', $data, $attach_urls );
                 echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_new', $defs['swh_msg_success_new'] ) ) . '</div>';
             }
         } else {
@@ -1694,48 +1916,7 @@ function swh_ticket_frontend() {
     </form>
     </div> <!-- End .swh-helpdesk-wrapper -->
     <?php
-    swh_render_js_validation();
     return ob_get_clean();
-}
-
-function swh_render_js_validation() {
-    $max_mb    = (int) get_option( 'swh_max_upload_size', 5 );
-    $max_count = (int) get_option( 'swh_max_upload_count', 5 );
-    ?>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var maxMb = <?php echo esc_js( $max_mb ); ?>;
-        var maxBytes = maxMb * 1024 * 1024;
-        var maxFiles = <?php echo esc_js( $max_count ); ?>;
-        var allowedExts = ['jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt'];
-        var fileInputs = document.querySelectorAll('.swh-file-input');
-        fileInputs.forEach(function(input) {
-            input.addEventListener('change', function() {
-                if (maxFiles > 0 && this.files.length > maxFiles) {
-                    alert('You may only attach up to ' + maxFiles + ' file(s) per upload.');
-                    this.value = '';
-                    return;
-                }
-                var errorMsg = '';
-                for (var i = 0; i < this.files.length; i++) {
-                    var file = this.files[i];
-                    var ext = file.name.split('.').pop().toLowerCase();
-                    if (allowedExts.indexOf(ext) === -1) {
-                        errorMsg += 'File "' + file.name + '" has an invalid type.\n';
-                    }
-                    if (file.size > maxBytes) {
-                        errorMsg += 'File "' + file.name + '" exceeds the ' + maxMb + 'MB size limit.\n';
-                    }
-                }
-                if (errorMsg !== '') {
-                    alert(errorMsg);
-                    this.value = '';
-                }
-            });
-        });
-    });
-    </script>
-    <?php
 }
 
 // ==============================================================================
@@ -1838,7 +2019,7 @@ class SWH_GitHub_Updater {
             'homepage'      => $release->html_url,
             'requires'      => '5.3',
             'tested'        => get_bloginfo( 'version' ),
-            'requires_php'  => '7.2',
+            'requires_php'  => '7.4',
             'last_updated'  => $release->published_at,
             'sections'      => array(
                 'description' => 'A comprehensive helpdesk system natively built for WordPress.',
