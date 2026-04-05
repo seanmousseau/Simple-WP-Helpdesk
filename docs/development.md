@@ -10,52 +10,13 @@ Simple-WP-Helpdesk/
 ├── CLAUDE.md                            # AI assistant guidance
 ├── README.md
 ├── LICENSE
-├── composer.json                        # Dev dependencies (PHPUnit, PHPCS, WPCS)
-├── composer.lock
-├── simple-wp-helpdesk.zip               # Distribution archive
-├── vendor/                              # Composer dev tools (not distributed)
 ├── docs/                                # This documentation
+├── releases/                            # Distribution ZIPs
 └── simple-wp-helpdesk/
-    ├── simple-wp-helpdesk.php           # Entire plugin — single file
-    └── phpcs.xml                        # PHP CodeSniffer ruleset
+    └── simple-wp-helpdesk.php           # Entire plugin — single file
 ```
 
 > All plugin logic lives in **one file**: `simple-wp-helpdesk/simple-wp-helpdesk.php`.
-
----
-
-## Setting Up
-
-```bash
-# Clone the repository
-git clone https://github.com/seanmousseau/Simple-WP-Helpdesk.git
-cd Simple-WP-Helpdesk
-
-# Install dev dependencies
-composer install
-```
-
----
-
-## Code Quality
-
-### PHP CodeSniffer (WordPress Coding Standards)
-
-```bash
-# Check for violations
-vendor/bin/phpcs --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Auto-fix fixable violations
-vendor/bin/phpcbf --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-```
-
-### PHPUnit
-
-```bash
-vendor/bin/phpunit
-```
-
-> Note: Automated test coverage is in progress. Test files are not yet present.
 
 ---
 

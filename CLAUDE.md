@@ -19,14 +19,13 @@ Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/he
 ```
 Simple-WP-Helpdesk/
 ├── CLAUDE.md                               # This file
+├── CHANGELOG.md
 ├── README.md                               # End-user documentation
-├── LICENSE                                 # License
-├── composer.json                           # Dev dependencies (PHPUnit, PHPCS, WPCS)
-├── composer.lock
-├── vendor/                                 # Composer dev tools (not distributed)
+├── LICENSE
+├── docs/                                   # User and developer documentation
+├── releases/                               # Distribution ZIPs
 └── simple-wp-helpdesk/
-    ├── simple-wp-helpdesk.php              # Entire plugin — single file, 1710 lines
-    └── phpcs.xml                           # PHP CodeSniffer rules
+    └── simple-wp-helpdesk.php              # Entire plugin — single file
 ```
 
 > **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. There are no sub-files, partials, or separate class files (except the `SWH_GitHub_Updater` class defined at the bottom of that same file).
@@ -185,22 +184,6 @@ When modifying this plugin, maintain these patterns:
 ---
 
 ## Development Workflow
-
-### Code Quality Tools
-
-```bash
-# Install dev dependencies
-composer install
-
-# Run PHP CodeSniffer (WordPress Coding Standards)
-vendor/bin/phpcs --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Auto-fix PHPCS issues
-vendor/bin/phpcbf --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Run PHPUnit tests (test files not yet present)
-vendor/bin/phpunit
-```
 
 ### Git Branching
 
