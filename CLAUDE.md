@@ -19,14 +19,12 @@ Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/he
 ```
 Simple-WP-Helpdesk/
 ├── CLAUDE.md                               # This file
+├── CHANGELOG.md
 ├── README.md                               # End-user documentation
-├── LICENSE                                 # License
-├── composer.json                           # Dev dependencies (PHPUnit, PHPCS, WPCS)
-├── composer.lock
-├── vendor/                                 # Composer dev tools (not distributed)
+├── LICENSE
+├── docs/                                   # User and developer documentation
 └── simple-wp-helpdesk/
-    ├── simple-wp-helpdesk.php              # Entire plugin — single file, 1710 lines
-    └── phpcs.xml                           # PHP CodeSniffer rules
+    └── simple-wp-helpdesk.php              # Entire plugin — single file
 ```
 
 > **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. There are no sub-files, partials, or separate class files (except the `SWH_GitHub_Updater` class defined at the bottom of that same file).
@@ -86,7 +84,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_retention_tickets_days`      | `0`                                | 0 = disabled                                 |
 | `swh_delete_on_uninstall`         | `no`                               | `yes` or `no`                                |
 | `swh_db_version`                  | *(current version)*                | Tracks upgrade state                         |
-| Email template keys (16 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
+| Email template keys (12 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
 | Frontend message keys (7 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
 
 ---
@@ -128,7 +126,7 @@ The `[submit_ticket]` shortcode has two modes determined by URL parameters:
 
 ## Email System
 
-16 email templates (subject + body), all customizable in Settings → Email Templates.
+12 email templates (subject + body), all customizable in Settings → Email Templates.
 
 **Template variables** available in all email body/subject fields:
 - `{name}` — Client name
@@ -186,22 +184,6 @@ When modifying this plugin, maintain these patterns:
 
 ## Development Workflow
 
-### Code Quality Tools
-
-```bash
-# Install dev dependencies
-composer install
-
-# Run PHP CodeSniffer (WordPress Coding Standards)
-vendor/bin/phpcs --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Auto-fix PHPCS issues
-vendor/bin/phpcbf --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Run PHPUnit tests (test files not yet present)
-vendor/bin/phpunit
-```
-
 ### Git Branching
 
 - Development branch: `dev`
@@ -216,6 +198,37 @@ vendor/bin/phpunit
 4. When adding new email templates, add both `_sub` and `_body` variants.
 5. When adding new cron events, register them in `swh_activate()` and clear them in `swh_deactivate()`.
 6. After modifying settings structure, bump the version string and add an upgrade path in `swh_run_upgrade_routine()` if needed.
+
+---
+
+## Release Process
+
+Follow these steps every time a new version is released:
+
+1. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
+   - Update the `Version:` field in the plugin header comment.
+   - Update `define( 'SWH_VERSION', 'X.Y' )`.
+
+2. **Update `CHANGELOG.md`** with a new versioned entry covering all changes.
+
+3. **Update any affected documentation** in `docs/` and `README.md`.
+
+4. **Build the release ZIP** — build locally but **do not commit it to git**. The ZIP is distributed exclusively as a GitHub Release asset:
+   ```bash
+   zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/
+   ```
+   The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level. The file is covered by `.gitignore` to prevent accidental commits.
+
+5. **Close any GitHub issues** that are addressed by the release.
+
+6. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
+
+7. **Create a GitHub Release**:
+   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.6`) as the updater strips it.
+   - **Attach `simple-wp-helpdesk.zip` as a release asset.** This is critical — without an attached asset the updater falls back to the raw source archive, which includes the entire repo and is unreliable.
+   - The updater checks `assets[0]->browser_download_url` before falling back to `zipball_url`.
+
+> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
 
 ---
 
@@ -237,7 +250,7 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 |------------------------|------------------------------------------------------------------|
 | General                | Priorities, statuses, defaults, auto-close days, upload size     |
 | Assignment & Routing   | Default assignee, fallback email, helpdesk portal page           |
-| Email Templates        | 16 subject+body templates with placeholder reference             |
+| Email Templates        | 12 subject+body templates with placeholder reference             |
 | Messages               | 7 user-facing success/error messages                             |
 | Anti-Spam              | Method selector + API keys for reCAPTCHA/Turnstile               |
 | Tools                  | Data retention, uninstall settings, GDPR purge, factory reset    |

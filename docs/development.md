@@ -10,52 +10,23 @@ Simple-WP-Helpdesk/
 ├── CLAUDE.md                            # AI assistant guidance
 ├── README.md
 ├── LICENSE
-├── composer.json                        # Dev dependencies (PHPUnit, PHPCS, WPCS)
-├── composer.lock
-├── simple-wp-helpdesk.zip               # Distribution archive
-├── vendor/                              # Composer dev tools (not distributed)
 ├── docs/                                # This documentation
 └── simple-wp-helpdesk/
-    ├── simple-wp-helpdesk.php           # Entire plugin — single file
-    └── phpcs.xml                        # PHP CodeSniffer ruleset
+    └── simple-wp-helpdesk.php           # Entire plugin — single file
 ```
 
 > All plugin logic lives in **one file**: `simple-wp-helpdesk/simple-wp-helpdesk.php`.
 
 ---
 
-## Setting Up
+## Getting Started
 
 ```bash
-# Clone the repository
 git clone https://github.com/seanmousseau/Simple-WP-Helpdesk.git
 cd Simple-WP-Helpdesk
-
-# Install dev dependencies
-composer install
 ```
 
----
-
-## Code Quality
-
-### PHP CodeSniffer (WordPress Coding Standards)
-
-```bash
-# Check for violations
-vendor/bin/phpcs --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-
-# Auto-fix fixable violations
-vendor/bin/phpcbf --standard=simple-wp-helpdesk/phpcs.xml simple-wp-helpdesk/simple-wp-helpdesk.php
-```
-
-### PHPUnit
-
-```bash
-vendor/bin/phpunit
-```
-
-> Note: Automated test coverage is in progress. Test files are not yet present.
+No build step is required. Drop the `simple-wp-helpdesk/` folder into your WordPress `wp-content/plugins/` directory and activate it from the WordPress dashboard.
 
 ---
 
@@ -101,7 +72,7 @@ When adding a new option:
    'swh_my_new_option' => 'default_value',
    ```
 2. Add the field to the appropriate settings tab in `swh_render_settings_page()`.
-3. Add it to the correct save handler (`swh_handle_settings_save()` or `swh_handle_tools_save()`).
+3. Add it to the correct save block inside `swh_render_settings_page()` — the main form handler (guarded by `swh_settings_nonce`) or the Tools form handler (guarded by `swh_tools_nonce`).
 
 ### New Email Template
 
@@ -142,20 +113,22 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 ---
 
-## Building a Release ZIP
+## Release Process
 
-```bash
-zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/ --exclude "simple-wp-helpdesk/phpcs.xml"
-```
+1. **Bump the version** in `simple-wp-helpdesk.php`:
+   - `Version:` in the plugin header comment
+   - `define( 'SWH_VERSION', 'X.Y' )`
 
-The resulting archive contains `simple-wp-helpdesk/simple-wp-helpdesk.php` and is ready for manual installation via the WordPress dashboard (**Plugins → Add New → Upload Plugin**) or for attachment to a GitHub release.
+2. **Update `CHANGELOG.md`** and any relevant `docs/` pages.
 
----
+3. **Build the release ZIP** — build locally but do not commit it (covered by `.gitignore`):
+   ```bash
+   zip -r simple-wp-helpdesk.zip simple-wp-helpdesk/
+   ```
+   > The ZIP must be named `simple-wp-helpdesk.zip` (not versioned) so WordPress treats it as an update to the existing plugin rather than a new install.
 
-## Versioning
+4. **Close any GitHub issues** addressed by the release.
 
-1. Update `Version:` in the plugin header comment inside `simple-wp-helpdesk.php`.
-2. Update `define( 'SWH_VERSION', 'X.Y' )`.
-3. If the settings schema changed, add an upgrade path in `swh_run_upgrade_routine()`.
-4. Add a version entry to `CHANGELOG.md`.
-5. Build and attach the release ZIP to the GitHub release. The tag name must match the `Version:` header for the auto-updater to work correctly.
+5. **Open a PR** from `dev` to `main`.
+
+6. **Create a GitHub Release** with a tag that **exactly matches** the `Version:` header (e.g. `1.6`, a `v` prefix is fine). **Attach `simple-wp-helpdesk.zip` as a release asset** — without an attached asset the auto-updater falls back to the raw source archive, which is unreliable.

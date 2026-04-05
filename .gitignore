@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Composer (if re-introduced)
+vendor/
+composer.lock
+
+# Release builds — ZIP locally, then upload as GitHub Release asset. Do not commit.
+releases/
+
+# WordPress debug log
+*.log
+debug.log

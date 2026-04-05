@@ -55,15 +55,23 @@ Customize the subject line and body of every email the plugin sends. Click **Res
 | `{admin_url}` | WordPress admin edit link (technicians only) |
 | `{autoclose_days}` | Configured auto-close threshold |
 
-**Email events (16 total):**
-- New ticket submitted
-- New ticket assigned to technician
-- Technician public reply
-- Client reply received
-- Status changed
+**Email events (12 templates, 8 client-facing + 4 admin-facing):**
+
+*Sent to client:*
+- New ticket received (confirmation)
+- Technician replied
+- Status changed (no reply)
+- Technician replied + status changed (combined)
+- Ticket resolved
+- Ticket re-opened
 - Ticket auto-closed
-- Ticket re-opened by client
-- ... and more
+- Ticket closed by client (confirmation)
+
+*Sent to technician/admin:*
+- New ticket submitted
+- Client replied
+- Client re-opened ticket
+- Client closed ticket
 
 ---
 
