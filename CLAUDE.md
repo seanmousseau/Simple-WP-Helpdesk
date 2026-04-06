@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.8
+- **Plugin Version:** 1.9.0
 - **WordPress Minimum:** 5.3+
 - **PHP Minimum:** 7.4+
 - **Author:** SM WP Plugins / seanmousseau
@@ -43,7 +43,7 @@ Simple-WP-Helpdesk/
 
 | Data Type         | WordPress Storage       | Key Meta Keys                                                                 |
 |-------------------|-------------------------|-------------------------------------------------------------------------------|
-| Tickets           | `helpdesk_ticket` CPT   | `_ticket_uid`, `_ticket_token`, `_ticket_url`, `_ticket_name`, `_ticket_email`, `_ticket_status`, `_ticket_priority`, `_ticket_assigned_to`, `_ticket_attachments`, `_resolved_timestamp` |
+| Tickets           | `helpdesk_ticket` CPT   | `_ticket_uid`, `_ticket_token`, `_ticket_token_created`, `_ticket_url`, `_ticket_name`, `_ticket_email`, `_ticket_status`, `_ticket_priority`, `_ticket_assigned_to`, `_ticket_attachments`, `_resolved_timestamp` |
 | Replies & Notes   | WP Comments on CPT      | `_is_internal_note`, `_is_user_reply`, `_attachments`                        |
 | Plugin Settings   | `wp_options`            | All keys prefixed with `swh_` (see Settings section below)                   |
 
@@ -93,10 +93,13 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_turnstile_secret_key`        | `''`                               |                                              |
 | `swh_retention_attachments_days`  | `0`                                | 0 = disabled                                 |
 | `swh_retention_tickets_days`      | `0`                                | 0 = disabled                                 |
+| `swh_token_expiration_days`       | `90`                               | Portal link TTL in days (0 = never)          |
+| `swh_restrict_to_assigned`        | `'no'`                             | Restrict technicians to assigned tickets     |
 | `swh_delete_on_uninstall`         | `no`                               | `yes` or `no`                                |
 | `swh_db_version`                  | *(current version)*                | Tracks upgrade state                         |
 | Email template keys (14 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
-| Frontend message keys (7 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
+| `swh_msg_err_expired`             | *(see defaults)*                   | Expired portal link error message            |
+| Frontend message keys (9 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
 
 ---
 
@@ -122,12 +125,17 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_autoclose_event`          | `swh_process_autoclose()`        | Cron: auto-close resolved tickets          |
 | `swh_retention_tickets_event`  | `swh_process_retention_tickets()`| Cron: delete old tickets                   |
 | `swh_retention_attachments_event` | `swh_process_retention_attachments()` | Cron: delete old attachments      |
+| `pre_get_comments`             | `swh_exclude_helpdesk_comments()`| Exclude helpdesk replies from frontend queries |
+| `load-post.php`                | `swh_restrict_ticket_edit()`     | Block technician access to unassigned tickets |
 
 ### Filters
 | Hook                                          | Function                        | Purpose                          |
 |-----------------------------------------------|---------------------------------|----------------------------------|
 | `manage_helpdesk_ticket_posts_columns`        | `swh_ticket_columns()`          | Defines admin list columns       |
 | `manage_edit-helpdesk_ticket_sortable_columns` | `swh_ticket_sortable_columns()` | Marks columns as sortable       |
+| `comment_feed_where`                          | `swh_exclude_helpdesk_from_feed()` | Exclude from RSS feeds       |
+| `the_posts`                                    | `swh_prime_ticket_meta_cache()`   | Batch-prime post meta cache  |
+| `manage_helpdesk_ticket_posts_custom_column`   | `swh_ticket_column_content()`     | Render ticket list columns   |
 
 ### Shortcode
 | Shortcode         | Function                  | Purpose                              |
@@ -153,7 +161,7 @@ The `[submit_ticket]` shortcode has two modes determined by URL parameters:
 
 All emails are sent through `swh_send_email()`, which is the single point of change for email behavior. It handles template parsing, HTML/plain-text formatting, and attachment links.
 
-12 email templates (subject + body), all customizable in Settings → Email Templates.
+14 email templates (subject + body), all customizable in Settings → Email Templates.
 
 **Email format** is controlled by the `swh_email_format` option (`html` or `plain`). HTML emails use `swh_wrap_html_email()` which produces a table-based layout with auto-linked URLs and attachment links. Plain-text emails append attachments as raw URLs.
 
