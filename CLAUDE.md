@@ -23,7 +23,7 @@ Simple-WP-Helpdesk/
 ├── README.md                               # End-user documentation
 ├── LICENSE
 ├── docs/                                   # User and developer documentation
-├── releases/                               # Release ZIP archives (vX.Y/)
+├── releases/                               # Release ZIP archives (vX.Y.Z/)
 └── simple-wp-helpdesk/
     ├── simple-wp-helpdesk.php              # Entire plugin — single file
     ├── assets/
@@ -219,6 +219,16 @@ When modifying this plugin, maintain these patterns:
 - Production branch: `main`
 - GitHub auto-updater checks GitHub releases; tag names must match the plugin `Version:` header.
 
+### Versioning
+
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (adopted after v1.8):
+
+- **MAJOR** (`X.0.0`): Breaking changes to data structures, hooks, or APIs that require manual migration.
+- **MINOR** (`0.X.0`): New features, settings, email templates, or non-breaking enhancements.
+- **PATCH** (`0.0.X`): Bug fixes, security patches, documentation corrections.
+
+The `CHANGELOG.md` follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Valid section headers are: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Always maintain the `[Unreleased]` section at the top and add comparison links at the bottom.
+
 ### Making Changes
 
 1. All plugin code lives in `simple-wp-helpdesk/simple-wp-helpdesk.php`. Do not create new PHP files unless there is a compelling reason (and even then, require them from the main file).
@@ -234,31 +244,39 @@ When modifying this plugin, maintain these patterns:
 
 Follow these steps every time a new version is released:
 
-1. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
+1. **Determine the version number** using [Semantic Versioning](https://semver.org/):
+   - Bug fix only → bump PATCH (`1.8.0` → `1.8.1`)
+   - New feature (backward-compatible) → bump MINOR (`1.8.1` → `1.9.0`)
+   - Breaking change → bump MAJOR (`1.9.0` → `2.0.0`)
+
+2. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
    - Update the `Version:` field in the plugin header comment.
-   - Update `define( 'SWH_VERSION', 'X.Y' )`.
+   - Update `define( 'SWH_VERSION', 'X.Y.Z' )`.
 
-2. **Update `CHANGELOG.md`** with a new versioned entry covering all changes.
+3. **Update `CHANGELOG.md`** following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
+   - Move items from `[Unreleased]` into a new `## [X.Y.Z] — YYYY-MM-DD` section.
+   - Use only these section headers: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+   - Add a comparison link at the bottom: `[X.Y.Z]: https://github.com/.../compare/PREV...X.Y.Z`.
 
-3. **Update any affected documentation** in `docs/` and `README.md`.
+4. **Update any affected documentation** in `docs/` and `README.md`.
 
-4. **Build the release ZIP** and commit it under `releases/vX.Y/`:
+5. **Build the release ZIP** and commit it under `releases/vX.Y.Z/`:
    ```bash
-   mkdir -p releases/vX.Y
-   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   mkdir -p releases/vX.Y.Z
+   zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/
    ```
    The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level.
 
-5. **Close any GitHub issues** that are addressed by the release.
+6. **Close any GitHub issues** that are addressed by the release.
 
-6. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
+7. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
 
-7. **Create a GitHub Release**:
-   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.6`) as the updater strips it.
+8. **Create a GitHub Release**:
+   - Tag name must **exactly match** the `Version:` header (e.g. `1.9.0`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.9.0`) as the updater strips it.
    - **Attach `simple-wp-helpdesk.zip` as a release asset.** This is critical — without an attached asset the updater falls back to the raw source archive, which includes the entire repo and is unreliable.
    - The updater checks `assets[0]->browser_download_url` before falling back to `zipball_url`.
 
-> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
+> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.9.0.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
 
 ---
 
