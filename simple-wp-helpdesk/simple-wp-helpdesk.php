@@ -1268,6 +1268,11 @@ function swh_exclude_helpdesk_comments( $query ) {
     if ( is_admin() ) {
         return $query;
     }
+    // Don't exclude when the query explicitly requests helpdesk replies (e.g. client portal).
+    $requested_type = isset( $query->query_vars['type'] ) ? $query->query_vars['type'] : '';
+    if ( 'helpdesk_reply' === $requested_type ) {
+        return $query;
+    }
     $types = isset( $query->query_vars['type__not_in'] ) ? $query->query_vars['type__not_in'] : array();
     if ( ! is_array( $types ) ) {
         $types = array( $types );
