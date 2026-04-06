@@ -306,8 +306,8 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 |------------------------|------------------------------------------------------------------|
 | General                | Priorities, statuses, defaults, auto-close days, upload size     |
 | Assignment & Routing   | Default assignee, fallback email, helpdesk portal page           |
-| Email Templates        | Email format toggle, 12 subject+body templates with placeholder reference |
-| Messages               | 7 user-facing success/error messages                             |
+| Email Templates        | Email format toggle, 14 subject+body templates with placeholder reference |
+| Messages               | 9 user-facing success/error messages                             |
 | Anti-Spam              | Method selector + API keys for reCAPTCHA/Turnstile               |
 | Tools                  | Data retention, uninstall settings, GDPR purge, factory reset    |
 
@@ -344,3 +344,5 @@ The `technician` role is created on activation with capabilities: `read`, `edit_
 - **i18n: all new UI strings must be wrapped** — use `__()`, `esc_html__()`, `esc_attr__()` with text domain `'simple-wp-helpdesk'`. Do NOT wrap admin-editable defaults (email templates, messages). JS strings go through `wp_localize_script()` in the `i18n` key of `swhConfig`.
 - **Anti-spam helper** — use `swh_check_antispam( $check_captcha )` for spam verification. Pass `true` for full CAPTCHA check, `false` for honeypot only.
 - **Rate-limiting uses `swh_get_client_ip()`** — never use `$_SERVER['REMOTE_ADDR']` directly. The helper handles Cloudflare and proxy headers.
+- **Token expiration grandfather clause** — tickets created before v1.9.0 have no `_ticket_token_created` meta. `swh_is_token_expired()` returns `false` for these (no expiration enforced). Only tokens generated after v1.9.0 are subject to TTL.
+- **Technician restriction only filters the list query** — it uses `pre_get_posts` for the admin list and `load-post.php` for direct access. Custom `WP_Query` calls in other code are NOT automatically filtered.
