@@ -1699,6 +1699,11 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
     update_post_meta( $post_id, '_ticket_priority', $new_priority );
     update_post_meta( $post_id, '_ticket_assigned_to', $assigned_to ? $assigned_to : '' );
 
+    // Clear WordPress post lock when ticket is reassigned so the new tech isn't blocked.
+    if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
+        delete_post_meta( $post_id, '_edit_lock' );
+    }
+
     // Send assignment notification when a ticket is newly assigned or reassigned.
     if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
         $assignee_user = get_userdata( $assigned_to );
