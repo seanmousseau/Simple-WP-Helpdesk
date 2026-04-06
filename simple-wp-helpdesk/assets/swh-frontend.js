@@ -2,11 +2,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof swhConfig === 'undefined') {
         return;
     }
+
+    function swhShowFileError(input, message) {
+        var existing = input.parentNode.querySelector('.swh-file-error');
+        if (existing) { existing.remove(); }
+        if (message) {
+            var div = document.createElement('div');
+            div.className = 'swh-file-error';
+            div.textContent = message;
+            input.parentNode.insertBefore(div, input.nextSibling);
+        }
+    }
+
     var maxBytes = swhConfig.maxMb * 1024 * 1024;
     document.querySelectorAll('.swh-file-input').forEach(function(input) {
         input.addEventListener('change', function() {
+            swhShowFileError(this, '');
             if (swhConfig.maxFiles > 0 && this.files.length > swhConfig.maxFiles) {
-                alert(swhConfig.i18n.maxFilesError.replace('%d', swhConfig.maxFiles));
+                swhShowFileError(this, swhConfig.i18n.maxFilesError.replace('%d', swhConfig.maxFiles));
                 this.value = '';
                 return;
             }
@@ -22,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             if (errorMsg !== '') {
-                alert(errorMsg);
+                swhShowFileError(this, errorMsg);
                 this.value = '';
             }
         });
