@@ -4,6 +4,19 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ---
 
+## [1.8] — 2026-04-06
+
+### Added
+- **Internationalization (i18n) (#43):** All ~85 hardcoded UI strings wrapped with WordPress i18n functions. Text domain `simple-wp-helpdesk` registered with `load_plugin_textdomain()`. JS alert strings localized via `wp_localize_script()`. `languages/` directory created for `.pot`/`.po`/`.mo` files.
+- **Client Ticket Lookup (#44):** "Resend my ticket links" form on the frontend allows clients to enter their email and receive links to all open tickets. 60-second rate limit per IP. Deliberately vague success message prevents email enumeration. New email template (`swh_em_user_lookup_sub`/`_body`) with `{ticket_links}` placeholder.
+- **Anti-Spam on Portal Forms (#41):** Reply form now supports honeypot, reCAPTCHA, and Turnstile. Reopen form supports honeypot. New `swh_check_antispam()` helper consolidates all spam verification logic. Existing ticket form refactored to use the helper.
+
+### Security
+- **CDN/Proxy-Aware Rate Limiting (#40):** New `swh_get_client_ip()` helper checks `HTTP_CF_CONNECTING_IP` (Cloudflare), `HTTP_X_FORWARDED_FOR` (first IP), then `REMOTE_ADDR`. Both rate-limit locations updated.
+- **Protected File Uploads (#42):** Attachments now upload to `uploads/swh-helpdesk/` with `.htaccess` deny and `index.php` guard. New `swh_serve_file()` proxy endpoint validates portal token or admin capability before streaming files. All attachment display and email links use proxy URLs. Existing attachments in `uploads/YYYY/MM/` continue to work.
+
+---
+
 ## [1.7] — 2026-04-05
 
 ### Added
