@@ -12,6 +12,33 @@ starting from the next release after 1.8.
 
 ---
 
+## [1.9.0] — 2026-04-06
+
+### Added
+- **Portal Token Expiration (#58):** Configurable portal link TTL (default 90 days, 0 = never). Expired links show a clear message directing clients to the lookup form. Tokens auto-rotate on each lookup resend, providing self-service link revocation.
+- **Persistent Rate Limiting (#62):** Rate limits now stored in `wp_options` instead of transients, surviving cache flushes and working across multi-server deployments. Global per-IP keying prevents distributed ticket attacks. Expired entries cleaned up via existing cron.
+- **Cron Job Locking (#52):** Transient-based locking prevents duplicate processing when cron fires multiple times simultaneously on high-traffic sites.
+- **Comment Isolation (#57):** Helpdesk replies now use `comment_type = 'helpdesk_reply'`, preventing leakage into WordPress comment widgets, RSS feeds, and sitewide comment counts. Includes one-time upgrade migration for existing comments.
+- **Meta Cache Priming (#53):** Admin ticket list and cron loops now batch-prime post meta via `update_meta_cache()`, eliminating N+1 query patterns.
+- **Restrict Technicians to Assigned Tickets (#60):** New "Restrict Technicians" checkbox in Assignment & Routing settings. When enabled, technicians only see tickets assigned to them. Admins always see all tickets. Direct URL access to unassigned tickets is also blocked.
+- **Inline File Validation Errors (#54):** Frontend file upload validation now shows inline error messages below the input instead of blocking browser `alert()` dialogs.
+
+### Fixed
+- **Missing `is_wp_error()` Checks (#49):** Added return value guards on `wp_insert_post()` and all 7 `wp_insert_comment()` call sites to prevent silent data corruption on insertion failure.
+- **Header Injection in File Proxy (#50):** `Content-Disposition` filename now strips `\r`, `\n`, `"`, and `;` characters to prevent HTTP header injection.
+- **Inconsistent `intval()` (#51):** Frontend portal ticket ID sanitization changed from `intval()` to `absint()` to match the pattern used everywhere else.
+- **Extra Closing `</div>` (#55):** Removed duplicate closing tag in the invalid-token error output that corrupted page DOM structure.
+
+### Security
+- **Token Expiration (#58):** Portal links no longer grant permanent access. Configurable TTL with auto-rotation on lookup.
+- **Header Injection (#50):** Defense-in-depth filename sanitization in file proxy endpoint.
+- **Persistent Rate Limiting (#62):** Rate limits survive cache flushes and work across load-balanced environments.
+
+### Changed
+- **Thorough Uninstall (#63):** "Delete data on uninstall" now also clears cron hooks, removes upload protection files/directory, deletes rate-limit options and transients, removes migration flags, and reassigns technician users to the default role before removing the role.
+
+---
+
 ## [1.8] — 2026-04-06
 
 ### Added
@@ -159,7 +186,8 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.8...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.9.0...HEAD
+[1.9.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.8...1.9.0
 [1.8]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.7...1.8
 [1.7]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.6...1.7
 [1.6]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.5...1.6
