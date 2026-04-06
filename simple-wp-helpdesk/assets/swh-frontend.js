@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.swh-file-input').forEach(function(input) {
         input.addEventListener('change', function() {
             if (swhConfig.maxFiles > 0 && this.files.length > swhConfig.maxFiles) {
-                alert('You may only attach up to ' + swhConfig.maxFiles + ' file(s) per upload.');
+                alert(swhConfig.i18n.maxFilesError.replace('%d', swhConfig.maxFiles));
                 this.value = '';
                 return;
             }
@@ -15,10 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 var file = this.files[i];
                 var ext = file.name.split('.').pop().toLowerCase();
                 if (swhConfig.allowedExts.indexOf(ext) === -1) {
-                    errorMsg += 'File "' + file.name + '" has an invalid type.\n';
+                    errorMsg += swhConfig.i18n.invalidType.replace('%s', file.name) + '\n';
                 }
                 if (file.size > maxBytes) {
-                    errorMsg += 'File "' + file.name + '" exceeds the ' + swhConfig.maxMb + 'MB size limit.\n';
+                    errorMsg += swhConfig.i18n.sizeExceeded.replace('%s', file.name).replace('%d', swhConfig.maxMb) + '\n';
                 }
             }
             if (errorMsg !== '') {
