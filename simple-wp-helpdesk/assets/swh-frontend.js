@@ -27,4 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    var toggleLink = document.getElementById('swh-toggle-lookup');
+    if (toggleLink) {
+        toggleLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            var form = document.getElementById('swh-lookup-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        });
+    }
 });

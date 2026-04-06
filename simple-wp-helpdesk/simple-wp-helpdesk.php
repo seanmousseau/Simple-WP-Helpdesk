@@ -53,6 +53,7 @@ function swh_activate() {
         wp_schedule_event( time() + 3600, 'hourly', 'swh_retention_attachments_event' );
     }
     swh_run_upgrade_routine();
+    swh_ensure_upload_protection();
 }
 
 register_deactivation_hook( __FILE__, 'swh_deactivate' );
@@ -114,6 +115,58 @@ function swh_uninstall() {
         delete_option( 'swh_delete_on_uninstall' );
         delete_option( 'swh_db_version' );
     }
+}
+
+add_action( 'init', 'swh_serve_file', 1 );
+function swh_serve_file() {
+    if ( ! isset( $_GET['swh_file'], $_GET['swh_ticket'], $_GET['token'] ) ) {
+        return;
+    }
+    $filename  = sanitize_file_name( wp_unslash( $_GET['swh_file'] ) );
+    $ticket_id = absint( $_GET['swh_ticket'] );
+    $token     = sanitize_text_field( wp_unslash( $_GET['token'] ) );
+
+    if ( ! $filename || ! $ticket_id ) {
+        wp_die( 'Invalid request.', 403 );
+    }
+
+    $post = get_post( $ticket_id );
+    if ( ! $post || 'helpdesk_ticket' !== $post->post_type ) {
+        wp_die( 'Invalid ticket.', 404 );
+    }
+
+    // Access check: valid portal token OR admin/technician capability.
+    $db_token   = get_post_meta( $ticket_id, '_ticket_token', true );
+    $has_access = false;
+    if ( $db_token && hash_equals( $db_token, $token ) ) {
+        $has_access = true;
+    } elseif ( current_user_can( 'edit_posts' ) ) {
+        $has_access = true;
+    }
+    if ( ! $has_access ) {
+        wp_die( 'Access denied.', 403 );
+    }
+
+    // Resolve file path within the protected upload directory.
+    $upload_dir = wp_get_upload_dir();
+    $file_path  = trailingslashit( $upload_dir['basedir'] ) . 'swh-helpdesk/' . $filename;
+
+    // Path traversal prevention.
+    $real_path    = realpath( $file_path );
+    $expected_dir = realpath( $upload_dir['basedir'] . '/swh-helpdesk' );
+    if ( ! $real_path || ! $expected_dir || strpos( $real_path, $expected_dir ) !== 0 ) {
+        wp_die( 'File not found.', 404 );
+    }
+
+    $filetype = wp_check_filetype( $filename );
+    $mimetype = $filetype['type'] ?: 'application/octet-stream';
+
+    header( 'Content-Type: ' . $mimetype );
+    header( 'Content-Disposition: inline; filename="' . $filename . '"' );
+    header( 'Content-Length: ' . filesize( $real_path ) );
+    // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+    readfile( $real_path );
+    exit;
 }
 
 add_action( 'init', 'swh_register_ticket_cpt' );
@@ -222,6 +275,10 @@ function swh_get_defaults() {
             'swh_msg_err_spam'              => 'Anti-spam verification failed. Please try again.',
             'swh_msg_err_missing'           => 'Please fill in all required fields.',
             'swh_msg_err_invalid'           => 'Invalid or expired ticket link.',
+            'swh_msg_success_lookup'        => 'If we have tickets on file for that email address, links have been sent.',
+            // Lookup email template.
+            'swh_em_user_lookup_sub'        => 'Your Open Tickets',
+            'swh_em_user_lookup_body'       => "Hi,\n\nHere are links to your open helpdesk tickets:\n\n{ticket_links}\n\nIf you did not request this, you can safely ignore this email.",
         );
     }
     return $defaults;
@@ -333,6 +390,59 @@ function swh_get_admin_email( $ticket_id = 0 ) {
     return get_option( 'admin_email' );
 }
 
+function swh_get_client_ip() {
+    if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+        return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+    }
+    if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+        $ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+        return trim( $ips[0] );
+    }
+    return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+}
+
+function swh_check_antispam( $check_captcha = true ) {
+    $method = get_option( 'swh_spam_method', 'honeypot' );
+    if ( 'honeypot' === $method && ! empty( $_POST['swh_website_url_hp'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        return true;
+    }
+    if ( ! $check_captcha ) {
+        return false;
+    }
+    if ( 'recaptcha' === $method ) {
+        $resp = wp_remote_post(
+            'https://www.google.com/recaptcha/api/siteverify',
+            array(
+                'body'    => array(
+                    'secret'   => get_option( 'swh_recaptcha_secret_key' ),
+                    'response' => isset( $_POST['g-recaptcha-response'] ) ? sanitize_text_field( wp_unslash( $_POST['g-recaptcha-response'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                ),
+                'timeout' => 10,
+            )
+        );
+        $json = json_decode( wp_remote_retrieve_body( $resp ) );
+        if ( empty( $json->success ) ) {
+            return true;
+        }
+    } elseif ( 'turnstile' === $method ) {
+        $resp = wp_remote_post(
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            array(
+                'body'    => array(
+                    'secret'   => get_option( 'swh_turnstile_secret_key' ),
+                    'response' => isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                ),
+                'timeout' => 10,
+            )
+        );
+        $json = json_decode( wp_remote_retrieve_body( $resp ) );
+        if ( empty( $json->success ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function swh_normalize_files_array( $files ) {
     $normalized = array();
     if ( isset( $files['name'] ) && is_array( $files['name'] ) ) {
@@ -349,6 +459,44 @@ function swh_normalize_files_array( $files ) {
         }
     }
     return $normalized;
+}
+
+function swh_custom_upload_dir( $dirs ) {
+    $dirs['subdir'] = '/swh-helpdesk';
+    $dirs['path']   = $dirs['basedir'] . '/swh-helpdesk';
+    $dirs['url']    = $dirs['baseurl'] . '/swh-helpdesk';
+    return $dirs;
+}
+
+function swh_ensure_upload_protection() {
+    $upload_dir = wp_get_upload_dir();
+    $dir        = $upload_dir['basedir'] . '/swh-helpdesk';
+    wp_mkdir_p( $dir );
+    $htaccess = trailingslashit( $dir ) . '.htaccess';
+    if ( ! file_exists( $htaccess ) ) {
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        file_put_contents( $htaccess, "Order deny,allow\nDeny from all\n" );
+    }
+    $index = trailingslashit( $dir ) . 'index.php';
+    if ( ! file_exists( $index ) ) {
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        file_put_contents( $index, "<?php\n// Silence is golden.\n" );
+    }
+}
+
+function swh_get_file_proxy_url( $url, $ticket_id ) {
+    $token = get_post_meta( $ticket_id, '_ticket_token', true );
+    if ( ! $token ) {
+        return $url;
+    }
+    return add_query_arg(
+        array(
+            'swh_file'   => rawurlencode( basename( $url ) ),
+            'swh_ticket' => $ticket_id,
+            'token'      => $token,
+        ),
+        site_url( '/' )
+    );
 }
 
 function swh_handle_multiple_uploads( $file_array ) {
@@ -379,9 +527,10 @@ function swh_handle_multiple_uploads( $file_array ) {
         'mimes'     => $allowed_mimes,
     );
     $uploaded_urls = array();
+    swh_ensure_upload_protection();
+    add_filter( 'upload_dir', 'swh_custom_upload_dir' );
     foreach ( $files as $file ) {
         if ( $file['size'] > $max_bytes ) {
-            // translators: %1$s = filename, %2$d = size limit in MB.
             error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', $file['name'], $max_size_mb ) );
             continue;
         }
@@ -392,6 +541,7 @@ function swh_handle_multiple_uploads( $file_array ) {
             error_log( 'SWH upload failed for "' . $file['name'] . '": ' . $movefile['error'] );
         }
     }
+    remove_filter( 'upload_dir', 'swh_custom_upload_dir' );
     return $uploaded_urls;
 }
 
@@ -850,7 +1000,7 @@ function swh_render_settings_page() {
                     </tr>
                 </table>
                 <hr>
-                <p><strong>Placeholders:</strong> <code>{name}</code>, <code>{email}</code>, <code>{ticket_id}</code>, <code>{title}</code>, <code>{status}</code>, <code>{priority}</code>, <code>{message}</code>, <code>{ticket_url}</code>, <code>{admin_url}</code>, <code>{autoclose_days}</code></p><hr>
+                <p><strong>Placeholders:</strong> <code>{name}</code>, <code>{email}</code>, <code>{ticket_id}</code>, <code>{title}</code>, <code>{status}</code>, <code>{priority}</code>, <code>{message}</code>, <code>{ticket_url}</code>, <code>{admin_url}</code>, <code>{autoclose_days}</code>, <code>{ticket_links}</code> (lookup only)</p><hr>
                 <h3>Emails Sent to Client</h3>
                 <table class="form-table">
                     <tr><th scope="row">New Ticket (Subject)</th><td><?php swh_field( 'swh_em_user_new_sub', $defs ); ?></td></tr>
@@ -869,6 +1019,8 @@ function swh_render_settings_page() {
                     <tr><th scope="row">Client Closed Ticket (Body)</th><td><?php swh_field( 'swh_em_user_closed_body', $defs, 'textarea' ); ?></td></tr>
                     <tr><th scope="row">Auto-Closed (Subject)</th><td><?php swh_field( 'swh_em_user_autoclose_sub', $defs ); ?></td></tr>
                     <tr><th scope="row">Auto-Closed (Body)</th><td><?php swh_field( 'swh_em_user_autoclose_body', $defs, 'textarea' ); ?></td></tr>
+                    <tr><th scope="row">Ticket Lookup (Subject)</th><td><?php swh_field( 'swh_em_user_lookup_sub', $defs ); ?></td></tr>
+                    <tr><th scope="row">Ticket Lookup (Body)</th><td><?php swh_field( 'swh_em_user_lookup_body', $defs, 'textarea' ); ?></td></tr>
                 </table><hr>
                 <h3>Emails Sent to Technician/Admin</h3>
                 <table class="form-table">
@@ -894,6 +1046,7 @@ function swh_render_settings_page() {
                     <tr><th scope="row">Error: Anti-Spam Failed</th><td><?php swh_field( 'swh_msg_err_spam', $defs ); ?></td></tr>
                     <tr><th scope="row">Error: Missing Fields</th><td><?php swh_field( 'swh_msg_err_missing', $defs ); ?></td></tr>
                     <tr><th scope="row">Error: Invalid Link</th><td><?php swh_field( 'swh_msg_err_invalid', $defs ); ?></td></tr>
+                    <tr><th scope="row">Success: Ticket Links Sent</th><td><?php swh_field( 'swh_msg_success_lookup', $defs ); ?></td></tr>
                 </table>
             </div>
 
@@ -1207,7 +1360,7 @@ function swh_status_meta_box_html( $post ) {
     ?>
         <p><strong>All Attachments:</strong><br>
         <?php foreach ( $all_attachments as $i => $url ) : ?>
-            <a href="<?php echo esc_url( $url ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( basename( $url ) ); ?></a>
+            <a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( basename( $url ) ); ?></a>
         <?php endforeach; ?></p>
     <?php endif; ?>
     <hr>
@@ -1264,7 +1417,7 @@ function swh_conversation_meta_box_html( $post ) {
             if ( ! empty( $attachments ) && is_array( $attachments ) ) {
                 echo '<div style="margin-top: 10px;">';
                 foreach ( $attachments as $url ) {
-                    echo '<a href="' . esc_url( $url ) . '" target="_blank" class="button button-small" style="margin-right:5px;">' . esc_html( basename( $url ) ) . '</a>';
+                    echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $post->ID ) ) . '" target="_blank" class="button button-small" style="margin-right:5px;">' . esc_html( basename( $url ) ) . '</a>';
                 }
                 echo '</div>';
             }
@@ -1464,13 +1617,17 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
     $status_changed = ( $update && $old_status !== $new_status );
     $is_resolving   = ( $resolved_status === $new_status );
     
+    $proxy_attach_urls = array_map( function( $url ) use ( $post_id ) {
+        return swh_get_file_proxy_url( $url, $post_id );
+    }, $attach_urls );
+
     if ( $data['email'] ) {
         if ( $just_replied && $status_changed && $is_resolving ) {
-            swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, $attach_urls );
+            swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, $proxy_attach_urls );
         } elseif ( $just_replied && $status_changed ) {
-            swh_send_email( $data['email'], 'swh_em_user_reply_status_sub', 'swh_em_user_reply_status_body', $data, $attach_urls );
+            swh_send_email( $data['email'], 'swh_em_user_reply_status_sub', 'swh_em_user_reply_status_body', $data, $proxy_attach_urls );
         } elseif ( $just_replied ) {
-            swh_send_email( $data['email'], 'swh_em_user_reply_sub', 'swh_em_user_reply_body', $data, $attach_urls );
+            swh_send_email( $data['email'], 'swh_em_user_reply_sub', 'swh_em_user_reply_body', $data, $proxy_attach_urls );
         } elseif ( $status_changed ) {
             $data['message'] = 'No additional notes provided.';
             if ( $is_resolving ) {
@@ -1534,7 +1691,7 @@ function swh_ticket_frontend() {
         );
 
         // Rate-limit frontend POST actions to one per 30 seconds per ticket + IP.
-        $rate_key = 'swh_rate_' . md5( $ticket_id . ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' ) );
+        $rate_key = 'swh_rate_' . md5( $ticket_id . swh_get_client_ip() );
         $is_post_action = isset( $_POST['swh_user_close_ticket_submit'] ) || isset( $_POST['swh_user_reopen_submit'] ) || isset( $_POST['swh_user_reply_submit'] );
         if ( $is_post_action && get_transient( $rate_key ) ) {
             echo '<div class="swh-alert swh-alert-error">Please wait a moment before submitting again.</div>';
@@ -1562,6 +1719,9 @@ function swh_ticket_frontend() {
             echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_closed', $defs['swh_msg_success_closed'] ) ) . '</div>';
             $data['status'] = $closed_status;
         } elseif ( $is_post_action && isset( $_POST['swh_user_reopen_submit'], $_POST['swh_reopen_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_reopen_nonce'] ) ), 'swh_user_reopen' ) ) {
+            if ( swh_check_antispam( false ) ) {
+                echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
+            } else {
             $reply_text = isset( $_POST['ticket_reopen_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reopen_text'] ) ) : '';
             // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             $has_files = ! empty( $_FILES['swh_reopen_attachments']['name'][0] );
@@ -1586,12 +1746,17 @@ function swh_ticket_frontend() {
                 }
                 $data['message'] = $reply_text ?: 'Attached file(s)';
                 $admin_email = swh_get_admin_email( $ticket_id );
-                swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data, $attach_urls );
+                $proxy_urls  = array_map( function( $u ) use ( $ticket_id ) { return swh_get_file_proxy_url( $u, $ticket_id ); }, $attach_urls );
+                swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data, $proxy_urls );
                 swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
                 echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reopen', $defs['swh_msg_success_reopen'] ) ) . '</div>';
                 $data['status'] = $reopened_status;
             }
+            } // end anti-spam else
         } elseif ( $is_post_action && isset( $_POST['swh_user_reply_submit'], $_POST['swh_reply_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_reply_nonce'] ) ), 'swh_user_reply' ) ) {
+            if ( swh_check_antispam( true ) ) {
+                echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
+            } else {
             $reply_text = isset( $_POST['ticket_reply_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reply_text'] ) ) : '';
             // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             $has_files = ! empty( $_FILES['swh_user_reply_attachments']['name'][0] );
@@ -1619,9 +1784,11 @@ function swh_ticket_frontend() {
                 }
                 $data['message'] = $reply_text ?: 'Attached file(s)';
                 $admin_email = swh_get_admin_email( $ticket_id );
-                swh_send_email( $admin_email, 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data, $attach_urls );
+                $proxy_urls  = array_map( function( $u ) use ( $ticket_id ) { return swh_get_file_proxy_url( $u, $ticket_id ); }, $attach_urls );
+                swh_send_email( $admin_email, 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data, $proxy_urls );
                 echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reply', $defs['swh_msg_success_reply'] ) ) . '</div>';
             }
+            } // end anti-spam else
         }
         ?>
         <div class="swh-card">
@@ -1636,7 +1803,7 @@ function swh_ticket_frontend() {
             if ( ! empty( $attachments ) && is_array( $attachments ) ) {
                 echo '<p><strong>Attachments:</strong><br>';
                 foreach ( $attachments as $url ) {
-                    echo '<a href="' . esc_url( $url ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa;">' . esc_html( basename( $url ) ) . '</a>';
+                    echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa;">' . esc_html( basename( $url ) ) . '</a>';
                 }
                 echo '</p>';
             }
@@ -1667,7 +1834,7 @@ function swh_ticket_frontend() {
                 if ( ! empty( $attach_urls ) && is_array( $attach_urls ) ) {
                     echo '<div style="margin-top: 10px;">';
                     foreach ( $attach_urls as $url ) {
-                        echo '<a href="' . esc_url( $url ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( basename( $url ) ) . '</a>';
+                        echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( basename( $url ) ) . '</a>';
                     }
                     echo '</div>';
                 }
@@ -1702,6 +1869,21 @@ function swh_ticket_frontend() {
                     <input type="file" name="swh_user_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
                     <small style="color:#666; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html( get_option( 'swh_max_upload_size', 5 ) ); ?>MB per file. Max files: <?php echo esc_html( get_option( 'swh_max_upload_count', 5 ) ); ?>.</small>
                 </div>
+                <?php
+                if ( 'honeypot' === $spam_method ) {
+                    echo '<div style="position: absolute; left: -9999px;"><label>Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
+                } elseif ( 'recaptcha' === $spam_method ) {
+                    $key = get_option( 'swh_recaptcha_site_key' );
+                    echo '<div id="swh-recaptcha-reply" style="margin-bottom: 15px;"></div>';
+                    wp_enqueue_script( 'google-recaptcha', 'https://www.google.com/recaptcha/api.js?onload=swhRecaptchaLoad&render=explicit', array(), null, true );
+                    wp_add_inline_script( 'google-recaptcha', 'window.swhRecaptchaLoad = function() { document.querySelectorAll("[id^=swh-recaptcha-]").forEach(function(el) { if(window.grecaptcha && !el.hasChildNodes()) { grecaptcha.render(el.id, {"sitekey": "' . esc_js( $key ) . '"}); } }); };', 'before' );
+                } elseif ( 'turnstile' === $spam_method ) {
+                    $key = get_option( 'swh_turnstile_site_key' );
+                    echo '<div id="swh-turnstile-reply" style="margin-bottom: 15px;"></div>';
+                    wp_enqueue_script( 'cf-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=swhTurnstileLoad&render=explicit', array(), null, true );
+                    wp_add_inline_script( 'cf-turnstile', 'window.swhTurnstileLoad = function() { document.querySelectorAll("[id^=swh-turnstile-]").forEach(function(el) { if(window.turnstile && !el.hasChildNodes()) { turnstile.render("#" + el.id, {sitekey: "' . esc_js( $key ) . '"}); } }); };', 'before' );
+                }
+                ?>
                 <div class="swh-form-group">
                     <input type="submit" name="swh_user_reply_submit" value="Send Reply" class="swh-btn">
                 </div>
@@ -1720,6 +1902,9 @@ function swh_ticket_frontend() {
                         <input type="file" name="swh_reopen_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
                         <small style="color:#721c24; display:block; margin-top:5px;">Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: <?php echo esc_html( get_option( 'swh_max_upload_size', 5 ) ); ?>MB. Max files: <?php echo esc_html( get_option( 'swh_max_upload_count', 5 ) ); ?>.</small>
                     </div>
+                    <?php if ( 'honeypot' === $spam_method ) : ?>
+                        <div style="position: absolute; left: -9999px;"><label>Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+                    <?php endif; ?>
                     <div class="swh-form-group">
                         <input type="submit" name="swh_user_reopen_submit" value="Re-open Ticket" class="swh-btn swh-btn-danger">
                     </div>
@@ -1738,7 +1923,7 @@ function swh_ticket_frontend() {
     $form_title   = '';
     $form_desc    = '';
     
-    $submit_rate_key    = 'swh_rate_submit_' . md5( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' );
+    $submit_rate_key    = 'swh_rate_submit_' . md5( swh_get_client_ip() );
     $submit_rate_passed = true;
     if ( isset( $_POST['swh_submit_ticket'] ) ) {
         if ( get_transient( $submit_rate_key ) ) {
@@ -1762,40 +1947,7 @@ function swh_ticket_frontend() {
         if ( ! in_array( $data['priority'], $priorities, true ) ) {
             $data['priority'] = $default_prio;
         }
-        $is_spam = false;
-        if ( 'honeypot' === $spam_method && ! empty( $_POST['swh_website_url_hp'] ) ) {
-            $is_spam = true;
-        } elseif ( 'recaptcha' === $spam_method ) {
-            $resp = wp_remote_post(
-                'https://www.google.com/recaptcha/api/siteverify',
-                array(
-                    'body'    => array(
-                        'secret'   => get_option( 'swh_recaptcha_secret_key' ),
-                        'response' => isset( $_POST['g-recaptcha-response'] ) ? sanitize_text_field( wp_unslash( $_POST['g-recaptcha-response'] ) ) : '',
-                    ),
-                    'timeout' => 10,
-                )
-            );
-            $json = json_decode( wp_remote_retrieve_body( $resp ) );
-            if ( empty( $json->success ) ) {
-                $is_spam = true;
-            }
-        } elseif ( 'turnstile' === $spam_method ) {
-            $resp = wp_remote_post(
-                'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-                array(
-                    'body'    => array(
-                        'secret'   => get_option( 'swh_turnstile_secret_key' ),
-                        'response' => isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '',
-                    ),
-                    'timeout' => 10,
-                )
-            );
-            $json = json_decode( wp_remote_retrieve_body( $resp ) );
-            if ( empty( $json->success ) ) {
-                $is_spam = true;
-            }
-        }
+        $is_spam = swh_check_antispam( true );
         
         if ( $is_spam ) {
             echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
@@ -1840,7 +1992,8 @@ function swh_ticket_frontend() {
                 }
                 swh_send_email( $data['email'], 'swh_em_user_new_sub', 'swh_em_user_new_body', $data );
                 $admin_email = swh_get_admin_email( $ticket_id );
-                swh_send_email( $admin_email, 'swh_em_admin_new_sub', 'swh_em_admin_new_body', $data, $attach_urls );
+                $proxy_urls  = array_map( function( $u ) use ( $ticket_id ) { return swh_get_file_proxy_url( $u, $ticket_id ); }, $attach_urls );
+                swh_send_email( $admin_email, 'swh_em_admin_new_sub', 'swh_em_admin_new_body', $data, $proxy_urls );
                 echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_new', $defs['swh_msg_success_new'] ) ) . '</div>';
             }
         } else {
@@ -1852,6 +2005,51 @@ function swh_ticket_frontend() {
             $form_prio  = isset( $_POST['ticket_priority'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_priority'] ) ) : $form_prio;
             $form_title = isset( $_POST['ticket_title'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_title'] ) ) : '';
             $form_desc  = isset( $_POST['ticket_desc'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_desc'] ) ) : '';
+        }
+    }
+
+    // Handle ticket lookup form.
+    if ( isset( $_POST['swh_ticket_lookup'], $_POST['swh_lookup_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_lookup_nonce'] ) ), 'swh_ticket_lookup' ) ) {
+        $lookup_rate_key = 'swh_rate_lookup_' . md5( swh_get_client_ip() );
+        if ( get_transient( $lookup_rate_key ) ) {
+            echo '<div class="swh-alert swh-alert-error">Please wait a moment before submitting again.</div>';
+        } elseif ( swh_check_antispam( false ) ) {
+            echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
+        } else {
+            set_transient( $lookup_rate_key, 1, 60 );
+            $lookup_email = isset( $_POST['swh_lookup_email'] ) ? sanitize_email( wp_unslash( $_POST['swh_lookup_email'] ) ) : '';
+            if ( $lookup_email ) {
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+                $lookup_tickets = get_posts(
+                    array(
+                        'post_type'      => 'helpdesk_ticket',
+                        'posts_per_page' => -1,
+                        'post_status'    => 'publish',
+                        'meta_query'     => array(
+                            'relation' => 'AND',
+                            array( 'key' => '_ticket_email', 'value' => $lookup_email ),
+                            array( 'key' => '_ticket_status', 'value' => $closed_status, 'compare' => '!=' ),
+                        ),
+                    )
+                );
+                if ( ! empty( $lookup_tickets ) ) {
+                    $ticket_links = '';
+                    foreach ( $lookup_tickets as $lt ) {
+                        $link = swh_get_secure_ticket_link( $lt->ID );
+                        if ( $link ) {
+                            $uid = get_post_meta( $lt->ID, '_ticket_uid', true );
+                            $ticket_links .= '- ' . $uid . ': ' . $lt->post_title . "\n  " . $link . "\n\n";
+                        }
+                    }
+                    $lookup_data = array(
+                        'email'        => $lookup_email,
+                        'ticket_links' => $ticket_links,
+                    );
+                    swh_send_email( $lookup_email, 'swh_em_user_lookup_sub', 'swh_em_user_lookup_body', $lookup_data );
+                }
+            }
+            // Always show the same message to prevent email enumeration.
+            echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_lookup', $defs['swh_msg_success_lookup'] ) ) . '</div>';
         }
     }
     ?>
@@ -1914,6 +2112,24 @@ function swh_ticket_frontend() {
             <input type="submit" name="swh_submit_ticket" value="Submit Ticket" class="swh-btn">
         </div>
     </form>
+    <div class="swh-lookup-section">
+        <p><a href="#" id="swh-toggle-lookup">Already submitted a ticket? Resend my ticket links</a></p>
+        <div id="swh-lookup-form" style="display:none;">
+            <form method="POST" action="">
+                <?php wp_nonce_field( 'swh_ticket_lookup', 'swh_lookup_nonce' ); ?>
+                <div class="swh-form-group">
+                    <label>Your Email Address:</label>
+                    <input type="email" name="swh_lookup_email" required class="swh-form-control">
+                </div>
+                <?php if ( 'honeypot' === $spam_method ) : ?>
+                    <div style="position: absolute; left: -9999px;"><label>Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+                <?php endif; ?>
+                <div class="swh-form-group">
+                    <input type="submit" name="swh_ticket_lookup" value="Send My Ticket Links" class="swh-btn">
+                </div>
+            </form>
+        </div>
+    </div>
     </div> <!-- End .swh-helpdesk-wrapper -->
     <?php
     return ob_get_clean();
