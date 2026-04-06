@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.7
+- **Plugin Version:** 1.8
 - **WordPress Minimum:** 5.3+
 - **PHP Minimum:** 7.4+
 - **Author:** SM WP Plugins / seanmousseau
@@ -26,10 +26,11 @@ Simple-WP-Helpdesk/
 ├── releases/                               # Release ZIP archives (vX.Y/)
 └── simple-wp-helpdesk/
     ├── simple-wp-helpdesk.php              # Entire plugin — single file
-    └── assets/
-        ├── swh-frontend.css                # Frontend shortcode styles
-        ├── swh-frontend.js                 # Frontend file-upload validation
-        └── swh-admin.js                    # Settings page JavaScript
+    ├── assets/
+    │   ├── swh-frontend.css                # Frontend shortcode styles
+    │   ├── swh-frontend.js                 # Frontend file-upload validation
+    │   └── swh-admin.js                    # Settings page JavaScript
+    └── languages/                          # i18n .pot/.po/.mo files
 ```
 
 > **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. The asset files in `assets/` contain only CSS/JS — no PHP logic lives there.
@@ -82,6 +83,9 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_fallback_email`              | `''`                               | Fallback alert email if no assignee          |
 | `swh_ticket_page_id`              | `0`                                | Page ID containing `[submit_ticket]` shortcode (for admin-created ticket portal links) |
 | `swh_email_format`                | `html`                             | `html` or `plain`                            |
+| `swh_em_user_lookup_sub`          | `Your Open Tickets`                | Lookup email subject                         |
+| `swh_em_user_lookup_body`         | *(see defaults)*                   | Lookup email body with `{ticket_links}`      |
+| `swh_msg_success_lookup`          | *(vague confirmation)*             | Lookup success message (anti-enumeration)    |
 | `swh_spam_method`                 | `honeypot`                         | `none`, `honeypot`, `recaptcha`, `turnstile` |
 | `swh_recaptcha_site_key`          | `''`                               |                                              |
 | `swh_recaptcha_secret_key`        | `''`                               |                                              |
@@ -104,6 +108,8 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `admin_init`                   | `swh_run_upgrade_routine()`      | Version-based upgrades & option init       |
 | `admin_init`                   | `swh_handle_settings_save()`     | Processes settings form submissions (redirects before output) |
 | `admin_init`                   | `swh_ensure_technician_caps()`   | One-time capability patch for technician role |
+| `init`                         | `swh_serve_file()`               | Proxy endpoint for protected file downloads |
+| `init`                         | `swh_load_textdomain()`          | Load plugin translations                   |
 | `init`                         | `swh_register_ticket_cpt()`      | Register `helpdesk_ticket` post type       |
 | `post_edit_form_tag`           | `swh_add_enctype_to_post_form()` | Adds `enctype="multipart/form-data"`       |
 | `admin_menu`                   | `swh_register_settings_page()`   | Adds Settings submenu under Tickets        |
@@ -134,7 +140,7 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 
 The `[submit_ticket]` shortcode has two modes determined by URL parameters:
 
-1. **Submission Form** (no URL params): Renders ticket creation form with anti-spam.
+1. **Submission Form** (no URL params): Renders ticket creation form with anti-spam. Includes a collapsible "Resend my ticket links" lookup form below.
 2. **Client Portal** (`?swh_ticket=POST_ID&token=TOKEN`): Validates cryptographic token, then displays ticket details and allows replies/re-open/close.
 
 **Token security:** Generated with `wp_generate_password(20, false)`, validated with `hash_equals()` (timing-attack safe).
@@ -308,3 +314,7 @@ The `technician` role is created on activation with capabilities: `read`, `edit_
 - **Admin-created tickets have no portal URL until `swh_ticket_page_id` is configured** — `swh_get_secure_ticket_link()` returns `false` if `_ticket_url` is empty. Check the return value before using it.
 - **`swh_get_defaults()` is the single source of truth** — all option defaults live here. Add new options here and they will automatically be registered by the upgrade routine, included in factory reset, and cleaned up on uninstall.
 - **`pre_get_posts` and `meta_key`** — setting `meta_key` on a query implicitly filters out posts that lack that meta. Only use it for explicit user-initiated sorts, not as a default.
+- **File uploads go to `uploads/swh-helpdesk/`** — protected by `.htaccess`. All attachment URLs must be displayed via `swh_get_file_proxy_url()` and served through `swh_serve_file()`. Never link directly to upload URLs.
+- **i18n: all new UI strings must be wrapped** — use `__()`, `esc_html__()`, `esc_attr__()` with text domain `'simple-wp-helpdesk'`. Do NOT wrap admin-editable defaults (email templates, messages). JS strings go through `wp_localize_script()` in the `i18n` key of `swhConfig`.
+- **Anti-spam helper** — use `swh_check_antispam( $check_captcha )` for spam verification. Pass `true` for full CAPTCHA check, `false` for honeypot only.
+- **Rate-limiting uses `swh_get_client_ip()`** — never use `$_SERVER['REMOTE_ADDR']` directly. The helper handles Cloudflare and proxy headers.
