@@ -1,0 +1,249 @@
+<?php if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+// ==============================================================================
+// TICKET HELPERS: File handling, uploads, comment exclusion filters.
+// ==============================================================================
+
+add_action( 'init', 'swh_serve_file', 1 );
+function swh_serve_file() {
+    if ( ! isset( $_GET['swh_file'], $_GET['swh_ticket'], $_GET['token'] ) ) {
+        return;
+    }
+    $filename  = sanitize_file_name( wp_unslash( $_GET['swh_file'] ) );
+    $ticket_id = absint( $_GET['swh_ticket'] );
+    $token     = sanitize_text_field( wp_unslash( $_GET['token'] ) );
+
+    if ( ! $filename || ! $ticket_id ) {
+        wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
+    }
+
+    $post = get_post( $ticket_id );
+    if ( ! $post || 'helpdesk_ticket' !== $post->post_type ) {
+        wp_die( esc_html__( 'Invalid ticket.', 'simple-wp-helpdesk' ), 404 );
+    }
+
+    // Access check: valid portal token OR admin/technician capability.
+    $db_token   = get_post_meta( $ticket_id, '_ticket_token', true );
+    $has_access = false;
+    if ( $db_token && hash_equals( $db_token, $token ) ) {
+        $has_access = true;
+    } elseif ( current_user_can( 'edit_posts' ) ) {
+        $has_access = true;
+    }
+    if ( ! $has_access ) {
+        wp_die( esc_html__( 'Access denied.', 'simple-wp-helpdesk' ), 403 );
+    }
+
+    if ( $has_access && ! current_user_can( 'edit_posts' ) && swh_is_token_expired( $ticket_id ) ) {
+        wp_die( esc_html__( 'This link has expired.', 'simple-wp-helpdesk' ), 403 );
+    }
+
+    // Resolve file path within the protected upload directory.
+    $upload_dir = wp_get_upload_dir();
+    $file_path  = trailingslashit( $upload_dir['basedir'] ) . 'swh-helpdesk/' . $filename;
+
+    // Path traversal prevention.
+    $real_path    = realpath( $file_path );
+    $expected_dir = realpath( $upload_dir['basedir'] . '/swh-helpdesk' );
+    if ( ! $real_path || ! $expected_dir || strpos( $real_path, $expected_dir ) !== 0 ) {
+        wp_die( esc_html__( 'File not found.', 'simple-wp-helpdesk' ), 404 );
+    }
+
+    $filetype = wp_check_filetype( $filename );
+    $mimetype = $filetype['type'] ?: 'application/octet-stream';
+
+    $filename = str_replace( array( "\r", "\n", '"', ';' ), '', $filename );
+    header( 'Content-Type: ' . $mimetype );
+    header( 'Content-Disposition: inline; filename="' . $filename . '"' );
+    header( 'Content-Length: ' . filesize( $real_path ) );
+    // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+    readfile( $real_path );
+    exit;
+}
+
+add_action( 'post_edit_form_tag', 'swh_add_enctype_to_post_form' );
+function swh_add_enctype_to_post_form() {
+    global $post;
+    if ( $post && 'helpdesk_ticket' === $post->post_type ) {
+        echo ' enctype="multipart/form-data"';
+    }
+}
+
+function swh_normalize_files_array( $files ) {
+    $normalized = array();
+    if ( isset( $files['name'] ) && is_array( $files['name'] ) ) {
+        foreach ( $files['name'] as $key => $name ) {
+            if ( $name ) {
+                $normalized[] = array(
+                    'name'     => $files['name'][ $key ],
+                    'type'     => $files['type'][ $key ],
+                    'tmp_name' => $files['tmp_name'][ $key ],
+                    'error'    => $files['error'][ $key ],
+                    'size'     => $files['size'][ $key ],
+                );
+            }
+        }
+    }
+    return $normalized;
+}
+
+function swh_custom_upload_dir( $dirs ) {
+    $dirs['subdir'] = '/swh-helpdesk';
+    $dirs['path']   = $dirs['basedir'] . '/swh-helpdesk';
+    $dirs['url']    = $dirs['baseurl'] . '/swh-helpdesk';
+    return $dirs;
+}
+
+function swh_ensure_upload_protection() {
+    $upload_dir = wp_get_upload_dir();
+    $dir        = $upload_dir['basedir'] . '/swh-helpdesk';
+    wp_mkdir_p( $dir );
+    $htaccess = trailingslashit( $dir ) . '.htaccess';
+    if ( ! file_exists( $htaccess ) ) {
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        file_put_contents( $htaccess, "Order deny,allow\nDeny from all\n" );
+    }
+    $index = trailingslashit( $dir ) . 'index.php';
+    if ( ! file_exists( $index ) ) {
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        file_put_contents( $index, "<?php\n// Silence is golden.\n" );
+    }
+}
+
+function swh_get_file_proxy_url( $url, $ticket_id ) {
+    $token = get_post_meta( $ticket_id, '_ticket_token', true );
+    if ( ! $token ) {
+        return $url;
+    }
+    return add_query_arg(
+        array(
+            'swh_file'   => rawurlencode( basename( $url ) ),
+            'swh_ticket' => $ticket_id,
+            'token'      => $token,
+        ),
+        site_url( '/' )
+    );
+}
+
+function swh_handle_multiple_uploads( $file_array ) {
+    $files = swh_normalize_files_array( $file_array );
+    if ( empty( $files ) ) {
+        return array();
+    }
+    $max_count = (int) get_option( 'swh_max_upload_count', 5 );
+    if ( $max_count > 0 && count( $files ) > $max_count ) {
+        $files = array_slice( $files, 0, $max_count );
+    }
+    if ( ! function_exists( 'wp_handle_upload' ) ) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+    }
+    $max_size_mb   = (int) get_option( 'swh_max_upload_size', 5 );
+    $max_bytes     = $max_size_mb * 1048576;
+    $allowed_mimes = array(
+        'jpg|jpeg|jpe' => 'image/jpeg',
+        'gif'          => 'image/gif',
+        'png'          => 'image/png',
+        'pdf'          => 'application/pdf',
+        'doc'          => 'application/msword',
+        'docx'         => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'txt'          => 'text/plain',
+    );
+    $overrides     = array(
+        'test_form' => false,
+        'mimes'     => $allowed_mimes,
+    );
+    $uploaded_urls = array();
+    swh_ensure_upload_protection();
+    add_filter( 'upload_dir', 'swh_custom_upload_dir' );
+    foreach ( $files as $file ) {
+        if ( $file['size'] > $max_bytes ) {
+            error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', $file['name'], $max_size_mb ) );
+            continue;
+        }
+        $movefile = wp_handle_upload( $file, $overrides );
+        if ( $movefile && ! isset( $movefile['error'] ) ) {
+            $uploaded_urls[] = $movefile['url'];
+        } elseif ( isset( $movefile['error'] ) ) {
+            error_log( 'SWH upload failed for "' . $file['name'] . '": ' . $movefile['error'] );
+        }
+    }
+    remove_filter( 'upload_dir', 'swh_custom_upload_dir' );
+    return $uploaded_urls;
+}
+
+function swh_delete_file_by_url( $url ) {
+    if ( empty( $url ) ) {
+        return;
+    }
+    $upload_dir = wp_get_upload_dir();
+    if ( strpos( $url, $upload_dir['baseurl'] ) !== 0 ) {
+        return;
+    }
+    $path = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $url );
+    if ( file_exists( $path ) ) {
+        wp_delete_file( $path );
+    }
+}
+
+function swh_delete_ticket_and_files( $ticket_id ) {
+    $main_atts = get_post_meta( $ticket_id, '_ticket_attachments', true );
+    if ( ! empty( $main_atts ) && is_array( $main_atts ) ) {
+        foreach ( $main_atts as $url ) {
+            swh_delete_file_by_url( $url );
+        }
+    }
+    $legacy_id = get_post_meta( $ticket_id, '_ticket_attachment_id', true );
+    if ( $legacy_id ) {
+        wp_delete_attachment( $legacy_id, true );
+    }
+    $legacy_url = get_post_meta( $ticket_id, '_ticket_attachment_url', true );
+    if ( $legacy_url ) {
+        swh_delete_file_by_url( $legacy_url );
+    }
+    $comments = get_comments( array( 'post_id' => $ticket_id ) );
+    foreach ( $comments as $c ) {
+        $c_atts = get_comment_meta( $c->comment_ID, '_attachments', true );
+        if ( ! empty( $c_atts ) && is_array( $c_atts ) ) {
+            foreach ( $c_atts as $url ) {
+                swh_delete_file_by_url( $url );
+            }
+        }
+        $legacy_c_url = get_comment_meta( $c->comment_ID, '_attachment_url', true );
+        if ( $legacy_c_url ) {
+            swh_delete_file_by_url( $legacy_c_url );
+        }
+    }
+    wp_delete_post( $ticket_id, true );
+}
+
+add_filter( 'comments_clauses', 'swh_exclude_helpdesk_comments', 10, 2 );
+function swh_exclude_helpdesk_comments( $clauses, $query ) {
+    global $wpdb;
+    // Don't exclude when querying a specific helpdesk ticket (admin editor, cron).
+    $post_id = isset( $query->query_vars['post_id'] ) ? (int) $query->query_vars['post_id'] : 0;
+    if ( $post_id && 'helpdesk_ticket' === get_post_type( $post_id ) ) {
+        return $clauses;
+    }
+    // Don't exclude when the query explicitly requests helpdesk replies (client portal).
+    $requested_type = isset( $query->query_vars['type'] ) ? $query->query_vars['type'] : '';
+    if ( 'helpdesk_reply' === $requested_type ) {
+        return $clauses;
+    }
+    // Exclude comments on helpdesk_ticket posts by post type — works regardless
+    // of whether comment_type was migrated.
+    $clauses['where'] .= $wpdb->prepare(
+        " AND {$wpdb->comments}.comment_post_ID NOT IN ( SELECT ID FROM {$wpdb->posts} WHERE post_type = %s )",
+        'helpdesk_ticket'
+    );
+    return $clauses;
+}
+
+add_filter( 'comment_feed_where', 'swh_exclude_helpdesk_from_feed', 10, 2 );
+function swh_exclude_helpdesk_from_feed( $where, $query ) {
+    global $wpdb;
+    $where .= $wpdb->prepare(
+        " AND {$wpdb->comments}.comment_post_ID NOT IN ( SELECT ID FROM {$wpdb->posts} WHERE post_type = %s )",
+        'helpdesk_ticket'
+    );
+    return $where;
+}

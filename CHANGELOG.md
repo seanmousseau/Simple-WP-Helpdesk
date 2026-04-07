@@ -12,6 +12,26 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.0.0] — 2026-04-07
+
+### Changed
+- **Modular File Structure (#61):** Refactored single-file architecture into `includes/`, `admin/`, and `frontend/` directories. Bootstrap file is now a thin loader (~55 lines). Admin files only loaded in admin context. No behavioral changes.
+- **Replaced GitHub Updater (#64):** Replaced custom `SWH_GitHub_Updater` class (~130 lines) with the [plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker) library. Gains retry with backoff, release asset detection, and GitHub API token support.
+
+### Added
+- **Conditional Email Template Blocks (#65):** Email templates now support `{if key}...{endif key}` syntax for conditionally including sections. Unreplaced placeholders are automatically cleaned up. Default templates updated to use conditionals for optional fields.
+- **`[helpdesk_portal]` Shortcode (#59):** New optional shortcode for placing the client portal on a dedicated page, separate from the submission form. The existing `[submit_ticket]` shortcode continues to work identically.
+- **WordPress-Compliant `readme.txt` (#75):** Added `readme.txt` following the WordPress plugin readme standard for proper plugin directory display.
+
+### Fixed
+- **Attachment Display in Emails (#76):** Attachment links in emails now show clean filenames (e.g., `photo.jpg`) instead of raw query parameters, in both HTML and plain-text formats.
+- **Settings Save Redirect (#77):** Settings save now correctly redirects back to the settings page and active tab instead of the ticket list.
+
+### Removed
+- `SWH_GitHub_Updater` class (replaced by plugin-update-checker library).
+
+---
+
 ## [1.9.0] — 2026-04-06
 
 ### Added

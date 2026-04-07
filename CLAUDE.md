@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.9.0
+- **Plugin Version:** 2.0.0
 - **WordPress Minimum:** 5.3+
 - **PHP Minimum:** 7.4+
 - **Author:** SM WP Plugins / seanmousseau
@@ -22,10 +22,26 @@ Simple-WP-Helpdesk/
 ├── CHANGELOG.md
 ├── README.md                               # End-user documentation
 ├── LICENSE
+├── .gitattributes
 ├── docs/                                   # User and developer documentation
 ├── releases/                               # Release ZIP archives (vX.Y.Z/)
 └── simple-wp-helpdesk/
-    ├── simple-wp-helpdesk.php              # Entire plugin — single file
+    ├── simple-wp-helpdesk.php              # Bootstrap: constants, requires, lifecycle hooks
+    ├── includes/
+    │   ├── helpers.php                     # Defaults, statuses, anti-spam, rate limiting
+    │   ├── class-installer.php             # Activation, deactivation, uninstall, upgrade, CPT
+    │   ├── class-email.php                 # Template parsing, email sending, HTML wrapping
+    │   ├── class-ticket.php                # File proxy, uploads, deletion, comment filters
+    │   └── class-cron.php                  # Auto-close, retention (tickets + attachments)
+    ├── admin/
+    │   ├── class-settings.php              # Settings page render + save handler
+    │   ├── class-ticket-editor.php         # Meta boxes, save_post, conversation UI
+    │   └── class-ticket-list.php           # Columns, sorting, filters, admin styles
+    ├── frontend/
+    │   ├── class-shortcode.php             # [submit_ticket] + [helpdesk_portal] shortcodes
+    │   └── class-portal.php                # Client portal view
+    ├── vendor/
+    │   └── plugin-update-checker/          # GitHub auto-updater library
     ├── assets/
     │   ├── swh-frontend.css                # Frontend shortcode styles
     │   ├── swh-frontend.js                 # Frontend file-upload validation
@@ -33,7 +49,7 @@ Simple-WP-Helpdesk/
     └── languages/                          # i18n .pot/.po/.mo files
 ```
 
-> **All plugin logic lives in one file:** `simple-wp-helpdesk/simple-wp-helpdesk.php`. The asset files in `assets/` contain only CSS/JS — no PHP logic lives there.
+> **Constants:** `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` are defined in the bootstrap file. Use these instead of `__FILE__` in module files.
 
 ---
 
@@ -138,9 +154,10 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `manage_helpdesk_ticket_posts_custom_column`   | `swh_ticket_column_content()`     | Render ticket list columns   |
 
 ### Shortcode
-| Shortcode         | Function                  | Purpose                              |
-|-------------------|---------------------------|--------------------------------------|
-| `[submit_ticket]` | `swh_ticket_frontend()`   | Frontend form + secure client portal |
+| Shortcode           | Function                           | Purpose                              |
+|---------------------|-------------------------------------|--------------------------------------|
+| `[submit_ticket]`   | `swh_ticket_frontend()`             | Frontend form + secure client portal (router) |
+| `[helpdesk_portal]` | `swh_helpdesk_portal_shortcode()`   | Standalone client portal (optional)  |
 
 ---
 
@@ -176,6 +193,8 @@ All emails are sent through `swh_send_email()`, which is the single point of cha
 - `{ticket_url}` — Secure client portal URL
 - `{admin_url}` — WP admin edit link
 - `{autoclose_days}` — Auto-close threshold setting
+
+**Conditional blocks:** Use `{if key}...{endif key}` to include content only when a placeholder has a value. Unreplaced placeholders are automatically cleaned up.
 
 **Email routing** (via `swh_get_admin_email()`):
 1. Assigned technician's email (if set)
@@ -239,12 +258,14 @@ The `CHANGELOG.md` follows the [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Making Changes
 
-1. All plugin code lives in `simple-wp-helpdesk/simple-wp-helpdesk.php`. Do not create new PHP files unless there is a compelling reason (and even then, require them from the main file).
-2. Follow existing function naming: prefix with `swh_`.
-3. Add new options to `swh_get_defaults()` — `swh_get_all_option_keys()` returns `array_keys( swh_get_defaults() )`, so no separate update is needed.
-4. When adding new email templates, add both `_sub` and `_body` variants.
-5. When adding new cron events, register them in `swh_activate()` and clear them in `swh_deactivate()`.
-6. After modifying settings structure, bump the version string and add an upgrade path in `swh_run_upgrade_routine()` if needed.
+1. Plugin code is organized into `includes/`, `admin/`, and `frontend/` directories. Place new code in the appropriate module file. The bootstrap (`simple-wp-helpdesk.php`) should remain a thin loader.
+2. Follow existing function naming: prefix with `swh_`. Classes use `SWH_` prefix.
+3. Use `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, and `SWH_PLUGIN_FILE` constants — never use `__FILE__` for path resolution in module files.
+4. Add new options to `swh_get_defaults()` in `includes/helpers.php` — `swh_get_all_option_keys()` returns `array_keys( swh_get_defaults() )`, so no separate update is needed.
+5. When adding new email templates, add both `_sub` and `_body` variants. Templates support `{if key}...{endif key}` conditional blocks.
+6. When adding new cron events, register them in `swh_activate()` and clear them in `swh_deactivate()`.
+7. After modifying settings structure, bump the version string and add an upgrade path in `swh_run_upgrade_routine()` if needed.
+8. Admin-only files are gated behind `is_admin()` in the bootstrap — do not add admin-only code to `includes/` files.
 
 ---
 
@@ -290,13 +311,13 @@ Follow these steps every time a new version is released:
 
 ## GitHub Auto-Updater
 
-Class `SWH_GitHub_Updater` (defined at end of main plugin file):
+Uses the [plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker) library (bundled in `vendor/plugin-update-checker/`):
 
-- Checks GitHub Releases API for new versions.
-- Caches result for 12 hours via WordPress transients.
-- Key: `swh_gh_release_v3_{VERSION}` (cache-busts on version change).
-- Handles nested folder flattening when GitHub zips include a subdirectory.
+- Initialized in the bootstrap file with `PucFactory::buildUpdateChecker()`.
+- Checks GitHub Releases API for new versions with automatic caching and retry.
 - Prioritizes pre-built `.zip` release assets over raw source archives.
+- Supports GitHub API token authentication via `setAuthentication()`.
+- Branch set to `main`.
 
 ---
 
