@@ -69,11 +69,18 @@ function swh_deactivate() {
 
 add_action( 'admin_init', 'swh_run_upgrade_routine' );
 function swh_run_upgrade_routine() {
-    // One-time migration: backfill comment_type for existing helpdesk comments.
-    // Runs independently of version check so it works even when swh_db_version
-    // was already bumped before the migration code was deployed.
-    if ( ! get_option( 'swh_comment_type_migrated' ) ) {
-        global $wpdb;
+    // Backfill comment_type for helpdesk comments that still have an empty type.
+    // The WHERE clause makes this idempotent — already-migrated rows are skipped.
+    // Runs on every admin load (not gated) to guarantee it works regardless of
+    // what swh_db_version or migration flags were set by prior deploys.
+    global $wpdb;
+    $needs_migration = $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->comments} c
+         INNER JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID
+         WHERE p.post_type = %s AND c.comment_type = ''",
+        'helpdesk_ticket'
+    ) );
+    if ( $needs_migration > 0 ) {
         $wpdb->query( $wpdb->prepare(
             "UPDATE {$wpdb->comments} c
              INNER JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID
@@ -82,7 +89,6 @@ function swh_run_upgrade_routine() {
             'helpdesk_reply',
             'helpdesk_ticket'
         ) );
-        update_option( 'swh_comment_type_migrated', '1' );
     }
 
     $db_version = get_option( 'swh_db_version', '0.0' );
