@@ -69,28 +69,20 @@ function swh_deactivate() {
 
 add_action( 'admin_init', 'swh_run_upgrade_routine' );
 function swh_run_upgrade_routine() {
-    // Backfill comment_type for helpdesk comments that still have an empty type.
-    // The WHERE clause makes this idempotent — already-migrated rows are skipped.
-    // Runs on every admin load (not gated) to guarantee it works regardless of
-    // what swh_db_version or migration flags were set by prior deploys.
-    global $wpdb;
-    $needs_migration = $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM {$wpdb->comments} c
-         INNER JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID
-         WHERE p.post_type = %s AND c.comment_type != %s",
-        'helpdesk_ticket',
-        'helpdesk_reply'
-    ) );
-    if ( $needs_migration > 0 ) {
+    // One-time migration: set comment_type on ALL comments attached to ticket posts.
+    // Uses a fresh flag name (v2) so previous broken migration flags don't block it.
+    // No WHERE on comment_type — catches NULL, empty, 'comment', or any other value.
+    if ( ! get_option( 'swh_comment_type_v2' ) ) {
+        global $wpdb;
         $wpdb->query( $wpdb->prepare(
             "UPDATE {$wpdb->comments} c
              INNER JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID
              SET c.comment_type = %s
-             WHERE p.post_type = %s AND c.comment_type != %s",
+             WHERE p.post_type = %s",
             'helpdesk_reply',
-            'helpdesk_ticket',
-            'helpdesk_reply'
+            'helpdesk_ticket'
         ) );
+        update_option( 'swh_comment_type_v2', '1' );
     }
 
     $db_version = get_option( 'swh_db_version', '0.0' );
@@ -156,6 +148,7 @@ function swh_uninstall() {
     // Delete migration flags.
     delete_option( 'swh_tech_caps_v2' );
     delete_option( 'swh_comment_type_migrated' );
+    delete_option( 'swh_comment_type_v2' );
     // Reassign technician users to default role before removing role.
     $techs = get_users( array( 'role' => 'technician' ) );
     foreach ( $techs as $tech ) {
