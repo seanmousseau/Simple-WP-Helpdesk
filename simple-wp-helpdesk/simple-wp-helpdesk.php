@@ -77,7 +77,10 @@ function swh_run_upgrade_routine() {
     foreach ( swh_get_defaults() as $key => $val ) {
         add_option( $key, $val );
     }
-    if ( version_compare( $db_version, '1.9.0', '<' ) ) {
+    // Backfill comment_type for existing helpdesk comments. Uses a one-time flag
+    // so it runs even if swh_db_version was already set to 1.9.0 before the
+    // migration code was deployed.
+    if ( ! get_option( 'swh_comment_type_migrated' ) ) {
         global $wpdb;
         $wpdb->query( $wpdb->prepare(
             "UPDATE {$wpdb->comments} c
@@ -87,6 +90,7 @@ function swh_run_upgrade_routine() {
             'helpdesk_reply',
             'helpdesk_ticket'
         ) );
+        update_option( 'swh_comment_type_migrated', '1' );
     }
     update_option( 'swh_db_version', SWH_VERSION );
 }
@@ -142,6 +146,7 @@ function swh_uninstall() {
     $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_swh\_%' OR option_name LIKE '_transient_timeout_swh\_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
     // Delete migration flags.
     delete_option( 'swh_tech_caps_v2' );
+    delete_option( 'swh_comment_type_migrated' );
     // Reassign technician users to default role before removing role.
     $techs = get_users( array( 'role' => 'technician' ) );
     foreach ( $techs as $tech ) {
