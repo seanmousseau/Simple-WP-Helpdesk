@@ -77,17 +77,19 @@ function swh_run_upgrade_routine() {
     $needs_migration = $wpdb->get_var( $wpdb->prepare(
         "SELECT COUNT(*) FROM {$wpdb->comments} c
          INNER JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID
-         WHERE p.post_type = %s AND c.comment_type = ''",
-        'helpdesk_ticket'
+         WHERE p.post_type = %s AND c.comment_type != %s",
+        'helpdesk_ticket',
+        'helpdesk_reply'
     ) );
     if ( $needs_migration > 0 ) {
         $wpdb->query( $wpdb->prepare(
             "UPDATE {$wpdb->comments} c
              INNER JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID
              SET c.comment_type = %s
-             WHERE p.post_type = %s AND c.comment_type = ''",
+             WHERE p.post_type = %s AND c.comment_type != %s",
             'helpdesk_reply',
-            'helpdesk_ticket'
+            'helpdesk_ticket',
+            'helpdesk_reply'
         ) );
     }
 
