@@ -26,6 +26,7 @@ starting from the next release after 1.8.
 ### Fixed
 - **Attachment Display in Emails (#76):** Attachment links in emails now show clean filenames (e.g., `photo.jpg`) instead of raw query parameters, in both HTML and plain-text formats.
 - **Settings Save Redirect (#77):** Settings save now correctly redirects back to the settings page and active tab instead of the ticket list.
+- **Client Reopen Blocked When No Text Provided:** Submitting the reopen form with an empty textarea and no attachments silently did nothing — no status change, no error. Reopen now always succeeds (consistent with close, which requires no explanation). Audit comment adapts: includes the reason if provided, otherwise logs `TICKET RE-OPENED BY CLIENT`.
 
 ### Removed
 - `SWH_GitHub_Updater` class (replaced by plugin-update-checker library).

@@ -85,41 +85,46 @@ function swh_render_client_portal() {
 			$reply_text = isset( $_POST['ticket_reopen_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reopen_text'] ) ) : '';
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			$has_files = ! empty( $_FILES['swh_reopen_attachments']['name'][0] );
-			if ( $reply_text || $has_files ) {
-				update_post_meta( $ticket_id, '_ticket_status', $reopened_status );
-				delete_post_meta( $ticket_id, '_resolved_timestamp' );
-				$comment_content = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
-				$comment_id      = wp_insert_comment(
-					array(
-						'comment_post_ID'      => $ticket_id,
-						'comment_author'       => $data['name'],
-						'comment_author_email' => $data['email'],
-						'comment_content'      => __( 'TICKET RE-OPENED:', 'simple-wp-helpdesk' ) . " \n" . $comment_content,
-						'comment_approved'     => 1,
-						'comment_type'         => 'helpdesk_reply',
-					)
-				);
-				if ( $comment_id ) {
-					update_comment_meta( $comment_id, '_is_user_reply', '1' );
-				}
-				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-				$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_reopen_attachments'] );
-				if ( $comment_id && ! empty( $attach_urls ) ) {
-					update_comment_meta( $comment_id, '_attachments', $attach_urls );
-				}
-				$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
-				$admin_email     = swh_get_admin_email( $ticket_id );
-				$proxy_urls      = array_map(
-					function ( $u ) use ( $ticket_id ) {
-						return swh_get_file_proxy_url( $u, $ticket_id );
-					},
-					$attach_urls
-				);
-				swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data, $proxy_urls );
-				swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
-				echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reopen', $defs['swh_msg_success_reopen'] ) ) . '</div>';
-				$data['status'] = $reopened_status;
+			update_post_meta( $ticket_id, '_ticket_status', $reopened_status );
+			delete_post_meta( $ticket_id, '_resolved_timestamp' );
+			if ( $reply_text ) {
+				$comment_content = __( 'TICKET RE-OPENED:', 'simple-wp-helpdesk' ) . " \n" . $reply_text;
+			} elseif ( $has_files ) {
+				$comment_content = __( 'TICKET RE-OPENED:', 'simple-wp-helpdesk' ) . ' ' . __( 'Attached file(s)', 'simple-wp-helpdesk' );
+			} else {
+				$comment_content = __( 'TICKET RE-OPENED BY CLIENT', 'simple-wp-helpdesk' );
 			}
+			$comment_id = wp_insert_comment(
+				array(
+					'comment_post_ID'      => $ticket_id,
+					'comment_author'       => $data['name'],
+					'comment_author_email' => $data['email'],
+					'comment_content'      => $comment_content,
+					'comment_approved'     => 1,
+					'comment_type'         => 'helpdesk_reply',
+				)
+			);
+			if ( $comment_id ) {
+				update_comment_meta( $comment_id, '_is_user_reply', '1' );
+			}
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_reopen_attachments'] );
+			if ( $comment_id && ! empty( $attach_urls ) ) {
+				update_comment_meta( $comment_id, '_attachments', $attach_urls );
+			}
+			// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- dynamic fallback intentional
+			$data['message'] = $reply_text ? $reply_text : ( $has_files ? __( 'Attached file(s)', 'simple-wp-helpdesk' ) : '' );
+			$admin_email     = swh_get_admin_email( $ticket_id );
+			$proxy_urls      = array_map(
+				function ( $u ) use ( $ticket_id ) {
+					return swh_get_file_proxy_url( $u, $ticket_id );
+				},
+				$attach_urls
+			);
+			swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data, $proxy_urls );
+			swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
+			echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reopen', $defs['swh_msg_success_reopen'] ) ) . '</div>';
+			$data['status'] = $reopened_status;
 		} // end anti-spam else
 	} elseif ( $is_post_action && isset( $_POST['swh_user_reply_submit'], $_POST['swh_reply_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_reply_nonce'] ) ), 'swh_user_reply' ) ) {
 		if ( swh_check_antispam( true ) ) {
