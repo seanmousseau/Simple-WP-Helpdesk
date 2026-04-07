@@ -1726,15 +1726,9 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
     if ( $assigned_to !== $old_assigned_to ) {
         delete_post_meta( $post_id, '_edit_lock' );
         set_transient( 'swh_lock_clear_' . $post_id, 1, 3 * MINUTE_IN_SECONDS );
-        if ( 'yes' === get_option( 'swh_restrict_to_assigned', 'no' ) ) {
-            $current_user = wp_get_current_user();
-            if ( in_array( 'technician', (array) $current_user->roles, true )
-                 && (int) $assigned_to !== $current_user->ID ) {
-                add_filter( 'redirect_post_location', function () {
-                    return admin_url( 'edit.php?post_type=helpdesk_ticket&swh_reassigned=1' );
-                } );
-            }
-        }
+        add_filter( 'redirect_post_location', function () {
+            return admin_url( 'edit.php?post_type=helpdesk_ticket&swh_reassigned=1' );
+        } );
     }
 
     // Send assignment notification when a ticket is newly assigned or reassigned.
