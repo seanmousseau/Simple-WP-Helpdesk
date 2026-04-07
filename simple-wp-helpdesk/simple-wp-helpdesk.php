@@ -10,7 +10,7 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 define( 'SWH_VERSION', '2.0.0' );
@@ -27,9 +27,9 @@ require_once SWH_PLUGIN_DIR . 'includes/class-cron.php';
 
 // Admin includes (only in admin context).
 if ( is_admin() ) {
-    require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
-    require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
-    require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
 }
 
 // Frontend includes.
@@ -47,9 +47,9 @@ require_once SWH_PLUGIN_DIR . 'vendor/plugin-update-checker/load-v5p6.php';
 use YahnisElsts\PluginUpdateChecker\v5p6\PucFactory;
 
 $swh_update_checker = PucFactory::buildUpdateChecker(
-    'https://github.com/seanmousseau/Simple-WP-Helpdesk/',
-    __FILE__,
-    'simple-wp-helpdesk'
+	'https://github.com/seanmousseau/Simple-WP-Helpdesk/',
+	__FILE__,
+	'simple-wp-helpdesk'
 );
 $swh_update_checker->setBranch( 'main' );
 $swh_update_checker->getVcsApi()->enableReleaseAssets();
