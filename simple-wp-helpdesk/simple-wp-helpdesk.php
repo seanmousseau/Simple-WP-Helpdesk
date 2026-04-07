@@ -1271,12 +1271,14 @@ function swh_render_settings_page() {
 
 add_filter( 'pre_get_comments', 'swh_exclude_helpdesk_comments' );
 function swh_exclude_helpdesk_comments( $query ) {
-    if ( is_admin() ) {
-        return $query;
-    }
     // Don't exclude when the query explicitly requests helpdesk replies (e.g. client portal).
     $requested_type = isset( $query->query_vars['type'] ) ? $query->query_vars['type'] : '';
     if ( 'helpdesk_reply' === $requested_type ) {
+        return $query;
+    }
+    // Don't exclude when querying a specific helpdesk ticket (admin editor, cron).
+    $post_id = isset( $query->query_vars['post_id'] ) ? (int) $query->query_vars['post_id'] : 0;
+    if ( $post_id && 'helpdesk_ticket' === get_post_type( $post_id ) ) {
         return $query;
     }
     $types = isset( $query->query_vars['type__not_in'] ) ? $query->query_vars['type__not_in'] : array();
