@@ -1464,6 +1464,17 @@ function swh_prime_ticket_meta_cache( $posts, $query ) {
     return $posts;
 }
 
+add_filter( 'get_post_metadata', 'swh_suppress_stale_edit_lock', 10, 4 );
+function swh_suppress_stale_edit_lock( $value, $post_id, $meta_key, $single ) {
+    if ( '_edit_lock' !== $meta_key ) {
+        return $value;
+    }
+    if ( get_transient( 'swh_lock_clear_' . $post_id ) ) {
+        return '';
+    }
+    return $value;
+}
+
 add_action( 'restrict_manage_posts', 'swh_ticket_filter_dropdowns' );
 function swh_ticket_filter_dropdowns( $post_type ) {
     if ( 'helpdesk_ticket' !== $post_type ) {
@@ -1709,16 +1720,16 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
     update_post_meta( $post_id, '_ticket_priority', $new_priority );
     update_post_meta( $post_id, '_ticket_assigned_to', $assigned_to ? $assigned_to : '' );
 
-    // When a technician reassigns a ticket away from themselves, clear the post lock
-    // and flag for redirect to the ticket list after save completes.
+    // When ticket is reassigned, clear the post lock and suppress lock reads for
+    // 3 minutes. A simple delete_post_meta is not enough because the previous
+    // editor's browser heartbeat can re-set the lock before the page reloads.
     if ( $assigned_to !== $old_assigned_to ) {
         delete_post_meta( $post_id, '_edit_lock' );
+        set_transient( 'swh_lock_clear_' . $post_id, 1, 3 * MINUTE_IN_SECONDS );
         if ( 'yes' === get_option( 'swh_restrict_to_assigned', 'no' ) ) {
             $current_user = wp_get_current_user();
             if ( in_array( 'technician', (array) $current_user->roles, true )
                  && (int) $assigned_to !== $current_user->ID ) {
-                // Use WordPress's redirect filter instead of exit to ensure
-                // the full save pipeline completes before redirecting.
                 add_filter( 'redirect_post_location', function () {
                     return admin_url( 'edit.php?post_type=helpdesk_ticket&swh_reassigned=1' );
                 } );
