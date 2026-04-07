@@ -1508,6 +1508,16 @@ function swh_admin_helpdesk_page_notice() {
     echo '</p></div>';
 }
 
+add_action( 'admin_notices', 'swh_reassigned_notice' );
+function swh_reassigned_notice() {
+    if ( ! isset( $_GET['swh_reassigned'] ) ) {
+        return;
+    }
+    echo '<div class="notice notice-success is-dismissible"><p>';
+    echo esc_html__( 'Ticket reassigned successfully.', 'simple-wp-helpdesk' );
+    echo '</p></div>';
+}
+
 add_action( 'add_meta_boxes', 'swh_add_ticket_meta_boxes' );
 function swh_add_ticket_meta_boxes() {
     add_meta_box( 'swh_ticket_status', __( 'Ticket Details', 'simple-wp-helpdesk' ), 'swh_status_meta_box_html', 'helpdesk_ticket', 'side', 'high' );
@@ -1699,9 +1709,37 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
     update_post_meta( $post_id, '_ticket_priority', $new_priority );
     update_post_meta( $post_id, '_ticket_assigned_to', $assigned_to ? $assigned_to : '' );
 
-    // Clear WordPress post lock when ticket is reassigned so the new tech isn't blocked.
-    if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
+    // When a technician reassigns a ticket away from themselves, clear the post lock
+    // and redirect to the ticket list so they don't hit the restriction guard on redirect.
+    if ( $assigned_to !== $old_assigned_to ) {
         delete_post_meta( $post_id, '_edit_lock' );
+        if ( 'yes' === get_option( 'swh_restrict_to_assigned', 'no' ) ) {
+            $current_user = wp_get_current_user();
+            if ( in_array( 'technician', (array) $current_user->roles, true )
+                 && (int) $assigned_to !== $current_user->ID ) {
+                // Finish sending the assignment email before redirecting.
+                $this_assigned_to = $assigned_to; // capture for email below
+                // Send assignment notification inline before redirect.
+                if ( $this_assigned_to ) {
+                    $assignee_user = get_userdata( $this_assigned_to );
+                    if ( $assignee_user && $assignee_user->user_email ) {
+                        $assign_data = array(
+                            'name'           => get_post_meta( $post_id, '_ticket_name', true ) ?: 'Client',
+                            'email'          => get_post_meta( $post_id, '_ticket_email', true ),
+                            'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ?: 'TKT-' . str_pad( $post_id, 4, '0', STR_PAD_LEFT ),
+                            'title'          => $post->post_title,
+                            'status'         => $new_status,
+                            'priority'       => $new_priority,
+                            'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
+                            'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
+                        );
+                        swh_send_email( $assignee_user->user_email, 'swh_em_admin_assigned_sub', 'swh_em_admin_assigned_body', $assign_data );
+                    }
+                }
+                wp_safe_redirect( admin_url( 'edit.php?post_type=helpdesk_ticket&swh_reassigned=1' ) );
+                exit;
+            }
+        }
     }
 
     // Send assignment notification when a ticket is newly assigned or reassigned.
