@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Simple WP Helpdesk is a WordPress plugin that implements a complete ticketing/helpdesk system. It uses no custom database tables, relying entirely on WordPress core data structures (posts, comments, post meta, comment meta, options).
 
-- **Plugin Version:** 1.8
+- **Plugin Version:** 1.9.0
 - **WordPress Minimum:** 5.3+
 - **PHP Minimum:** 7.4+
 - **Author:** SM WP Plugins / seanmousseau
@@ -23,7 +23,7 @@ Simple-WP-Helpdesk/
 ├── README.md                               # End-user documentation
 ├── LICENSE
 ├── docs/                                   # User and developer documentation
-├── releases/                               # Release ZIP archives (vX.Y/)
+├── releases/                               # Release ZIP archives (vX.Y.Z/)
 └── simple-wp-helpdesk/
     ├── simple-wp-helpdesk.php              # Entire plugin — single file
     ├── assets/
@@ -43,7 +43,7 @@ Simple-WP-Helpdesk/
 
 | Data Type         | WordPress Storage       | Key Meta Keys                                                                 |
 |-------------------|-------------------------|-------------------------------------------------------------------------------|
-| Tickets           | `helpdesk_ticket` CPT   | `_ticket_uid`, `_ticket_token`, `_ticket_url`, `_ticket_name`, `_ticket_email`, `_ticket_status`, `_ticket_priority`, `_ticket_assigned_to`, `_ticket_attachments`, `_resolved_timestamp` |
+| Tickets           | `helpdesk_ticket` CPT   | `_ticket_uid`, `_ticket_token`, `_ticket_token_created`, `_ticket_url`, `_ticket_name`, `_ticket_email`, `_ticket_status`, `_ticket_priority`, `_ticket_assigned_to`, `_ticket_attachments`, `_resolved_timestamp` |
 | Replies & Notes   | WP Comments on CPT      | `_is_internal_note`, `_is_user_reply`, `_attachments`                        |
 | Plugin Settings   | `wp_options`            | All keys prefixed with `swh_` (see Settings section below)                   |
 
@@ -93,10 +93,13 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_turnstile_secret_key`        | `''`                               |                                              |
 | `swh_retention_attachments_days`  | `0`                                | 0 = disabled                                 |
 | `swh_retention_tickets_days`      | `0`                                | 0 = disabled                                 |
+| `swh_token_expiration_days`       | `90`                               | Portal link TTL in days (0 = never)          |
+| `swh_restrict_to_assigned`        | `'no'`                             | Restrict technicians to assigned tickets     |
 | `swh_delete_on_uninstall`         | `no`                               | `yes` or `no`                                |
 | `swh_db_version`                  | *(current version)*                | Tracks upgrade state                         |
 | Email template keys (14 total)    | See `swh_get_defaults()`           | `swh_{event}_sub` / `swh_{event}_body`       |
-| Frontend message keys (7 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
+| `swh_msg_err_expired`             | *(see defaults)*                   | Expired portal link error message            |
+| Frontend message keys (9 total)   | See `swh_get_defaults()`           | `swh_success_new`, `swh_err_spam`, etc.      |
 
 ---
 
@@ -122,12 +125,17 @@ All options are prefixed `swh_`. Defaults are defined in `swh_get_defaults()` (u
 | `swh_autoclose_event`          | `swh_process_autoclose()`        | Cron: auto-close resolved tickets          |
 | `swh_retention_tickets_event`  | `swh_process_retention_tickets()`| Cron: delete old tickets                   |
 | `swh_retention_attachments_event` | `swh_process_retention_attachments()` | Cron: delete old attachments      |
+| `pre_get_comments`             | `swh_exclude_helpdesk_comments()`| Exclude helpdesk replies from frontend queries |
+| `load-post.php`                | `swh_restrict_ticket_edit()`     | Block technician access to unassigned tickets |
 
 ### Filters
 | Hook                                          | Function                        | Purpose                          |
 |-----------------------------------------------|---------------------------------|----------------------------------|
 | `manage_helpdesk_ticket_posts_columns`        | `swh_ticket_columns()`          | Defines admin list columns       |
 | `manage_edit-helpdesk_ticket_sortable_columns` | `swh_ticket_sortable_columns()` | Marks columns as sortable       |
+| `comment_feed_where`                          | `swh_exclude_helpdesk_from_feed()` | Exclude from RSS feeds       |
+| `the_posts`                                    | `swh_prime_ticket_meta_cache()`   | Batch-prime post meta cache  |
+| `manage_helpdesk_ticket_posts_custom_column`   | `swh_ticket_column_content()`     | Render ticket list columns   |
 
 ### Shortcode
 | Shortcode         | Function                  | Purpose                              |
@@ -153,7 +161,7 @@ The `[submit_ticket]` shortcode has two modes determined by URL parameters:
 
 All emails are sent through `swh_send_email()`, which is the single point of change for email behavior. It handles template parsing, HTML/plain-text formatting, and attachment links.
 
-12 email templates (subject + body), all customizable in Settings → Email Templates.
+14 email templates (subject + body), all customizable in Settings → Email Templates.
 
 **Email format** is controlled by the `swh_email_format` option (`html` or `plain`). HTML emails use `swh_wrap_html_email()` which produces a table-based layout with auto-linked URLs and attachment links. Plain-text emails append attachments as raw URLs.
 
@@ -219,6 +227,16 @@ When modifying this plugin, maintain these patterns:
 - Production branch: `main`
 - GitHub auto-updater checks GitHub releases; tag names must match the plugin `Version:` header.
 
+### Versioning
+
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (adopted after v1.8):
+
+- **MAJOR** (`X.0.0`): Breaking changes to data structures, hooks, or APIs that require manual migration.
+- **MINOR** (`0.X.0`): New features, settings, email templates, or non-breaking enhancements.
+- **PATCH** (`0.0.X`): Bug fixes, security patches, documentation corrections.
+
+The `CHANGELOG.md` follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Valid section headers are: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Always maintain the `[Unreleased]` section at the top and add comparison links at the bottom.
+
 ### Making Changes
 
 1. All plugin code lives in `simple-wp-helpdesk/simple-wp-helpdesk.php`. Do not create new PHP files unless there is a compelling reason (and even then, require them from the main file).
@@ -234,31 +252,39 @@ When modifying this plugin, maintain these patterns:
 
 Follow these steps every time a new version is released:
 
-1. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
+1. **Determine the version number** using [Semantic Versioning](https://semver.org/):
+   - Bug fix only → bump PATCH (`1.8.0` → `1.8.1`)
+   - New feature (backward-compatible) → bump MINOR (`1.8.1` → `1.9.0`)
+   - Breaking change → bump MAJOR (`1.9.0` → `2.0.0`)
+
+2. **Bump the version** in `simple-wp-helpdesk/simple-wp-helpdesk.php`:
    - Update the `Version:` field in the plugin header comment.
-   - Update `define( 'SWH_VERSION', 'X.Y' )`.
+   - Update `define( 'SWH_VERSION', 'X.Y.Z' )`.
 
-2. **Update `CHANGELOG.md`** with a new versioned entry covering all changes.
+3. **Update `CHANGELOG.md`** following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
+   - Move items from `[Unreleased]` into a new `## [X.Y.Z] — YYYY-MM-DD` section.
+   - Use only these section headers: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+   - Add a comparison link at the bottom: `[X.Y.Z]: https://github.com/.../compare/PREV...X.Y.Z`.
 
-3. **Update any affected documentation** in `docs/` and `README.md`.
+4. **Update any affected documentation** in `docs/` and `README.md`.
 
-4. **Build the release ZIP** and commit it under `releases/vX.Y/`:
+5. **Build the release ZIP** and commit it under `releases/vX.Y.Z/`:
    ```bash
-   mkdir -p releases/vX.Y
-   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
+   mkdir -p releases/vX.Y.Z
+   zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/
    ```
    The archive must contain `simple-wp-helpdesk/simple-wp-helpdesk.php` at the root level.
 
-5. **Close any GitHub issues** that are addressed by the release.
+6. **Close any GitHub issues** that are addressed by the release.
 
-6. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
+7. **Commit and push** all changes to the `dev` branch, then **open a PR** to `main`.
 
-7. **Create a GitHub Release**:
-   - Tag name must **exactly match** the `Version:` header (e.g. `1.6`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.6`) as the updater strips it.
+8. **Create a GitHub Release**:
+   - Tag name must **exactly match** the `Version:` header (e.g. `1.9.0`) — this is what `SWH_GitHub_Updater` compares against. A `v` prefix is fine (`v1.9.0`) as the updater strips it.
    - **Attach `simple-wp-helpdesk.zip` as a release asset.** This is critical — without an attached asset the updater falls back to the raw source archive, which includes the entire repo and is unreliable.
    - The updater checks `assets[0]->browser_download_url` before falling back to `zipball_url`.
 
-> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.5.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
+> **Why the ZIP must be named `simple-wp-helpdesk.zip`:** WordPress uses the ZIP filename as the plugin slug during installation. A versioned filename (e.g. `simple-wp-helpdesk-v1.9.0.zip`) would cause WordPress to treat it as a different plugin, breaking the upgrade path.
 
 ---
 
@@ -280,8 +306,8 @@ Class `SWH_GitHub_Updater` (defined at end of main plugin file):
 |------------------------|------------------------------------------------------------------|
 | General                | Priorities, statuses, defaults, auto-close days, upload size     |
 | Assignment & Routing   | Default assignee, fallback email, helpdesk portal page           |
-| Email Templates        | Email format toggle, 12 subject+body templates with placeholder reference |
-| Messages               | 7 user-facing success/error messages                             |
+| Email Templates        | Email format toggle, 14 subject+body templates with placeholder reference |
+| Messages               | 9 user-facing success/error messages                             |
 | Anti-Spam              | Method selector + API keys for reCAPTCHA/Turnstile               |
 | Tools                  | Data retention, uninstall settings, GDPR purge, factory reset    |
 
@@ -318,3 +344,5 @@ The `technician` role is created on activation with capabilities: `read`, `edit_
 - **i18n: all new UI strings must be wrapped** — use `__()`, `esc_html__()`, `esc_attr__()` with text domain `'simple-wp-helpdesk'`. Do NOT wrap admin-editable defaults (email templates, messages). JS strings go through `wp_localize_script()` in the `i18n` key of `swhConfig`.
 - **Anti-spam helper** — use `swh_check_antispam( $check_captcha )` for spam verification. Pass `true` for full CAPTCHA check, `false` for honeypot only.
 - **Rate-limiting uses `swh_get_client_ip()`** — never use `$_SERVER['REMOTE_ADDR']` directly. The helper handles Cloudflare and proxy headers.
+- **Token expiration grandfather clause** — tickets created before v1.9.0 have no `_ticket_token_created` meta. `swh_is_token_expired()` returns `false` for these (no expiration enforced). Only tokens generated after v1.9.0 are subject to TTL.
+- **Technician restriction only filters the list query** — it uses `pre_get_posts` for the admin list and `load-post.php` for direct access. Custom `WP_Query` calls in other code are NOT automatically filtered.

@@ -1,6 +1,41 @@
 # Changelog
 
-All notable changes to Simple WP Helpdesk are documented here.
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+starting from the next release after 1.8.
+
+---
+
+## [Unreleased]
+
+---
+
+## [1.9.0] — 2026-04-06
+
+### Added
+- **Portal Token Expiration (#58):** Configurable portal link TTL (default 90 days, 0 = never). Expired links show a clear message directing clients to the lookup form. Tokens auto-rotate on each lookup resend, providing self-service link revocation.
+- **Persistent Rate Limiting (#62):** Rate limits now stored in `wp_options` instead of transients, surviving cache flushes and working across multi-server deployments. Global per-IP keying prevents distributed ticket attacks. Expired entries cleaned up via existing cron.
+- **Cron Job Locking (#52):** Transient-based locking prevents duplicate processing when cron fires multiple times simultaneously on high-traffic sites.
+- **Comment Isolation (#57):** Helpdesk replies now use `comment_type = 'helpdesk_reply'`, preventing leakage into WordPress comment widgets, RSS feeds, and sitewide comment counts. Includes one-time upgrade migration for existing comments.
+- **Meta Cache Priming (#53):** Admin ticket list and cron loops now batch-prime post meta via `update_meta_cache()`, eliminating N+1 query patterns.
+- **Restrict Technicians to Assigned Tickets (#60):** New "Restrict Technicians" checkbox in Assignment & Routing settings. When enabled, technicians only see tickets assigned to them. Admins always see all tickets. Direct URL access to unassigned tickets is also blocked.
+- **Inline File Validation Errors (#54):** Frontend file upload validation now shows inline error messages below the input instead of blocking browser `alert()` dialogs.
+
+### Fixed
+- **Missing `is_wp_error()` Checks (#49):** Added return value guards on `wp_insert_post()` and all 7 `wp_insert_comment()` call sites to prevent silent data corruption on insertion failure.
+- **Header Injection in File Proxy (#50):** `Content-Disposition` filename now strips `\r`, `\n`, `"`, and `;` characters to prevent HTTP header injection.
+- **Inconsistent `intval()` (#51):** Frontend portal ticket ID sanitization changed from `intval()` to `absint()` to match the pattern used everywhere else.
+- **Extra Closing `</div>` (#55):** Removed duplicate closing tag in the invalid-token error output that corrupted page DOM structure.
+
+### Security
+- **Token Expiration (#58):** Portal links no longer grant permanent access. Configurable TTL with auto-rotation on lookup.
+- **Header Injection (#50):** Defense-in-depth filename sanitization in file proxy endpoint.
+- **Persistent Rate Limiting (#62):** Rate limits survive cache flushes and work across load-balanced environments.
+
+### Changed
+- **Thorough Uninstall (#63):** "Delete data on uninstall" now also clears cron hooks, removes upload protection files/directory, deletes rate-limit options and transients, removes migration flags, and reassigns technician users to the default role before removing the role.
 
 ---
 
@@ -31,7 +66,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 - **Missing `$_FILES` Check (#34):** Frontend ticket submission no longer triggers a PHP notice when no file attachment is included.
 - **Legacy Attachment Retention (#39):** The attachment retention cron now handles legacy single-URL string format and checks `_ticket_attachment_url` / `_ticket_attachment_id` meta keys, preventing orphaned files.
 
-### Improved
+### Changed
 - **Email Helper Refactor (#36):** All 14 `wp_mail()` call sites consolidated into a single `swh_send_email()` helper function, reducing ~100 lines of duplicate code and providing a single point of change for email behavior.
 - **Frontend CSS Scoped to Shortcode (#30):** `swh-frontend.css` is now enqueued only when the `[submit_ticket]` shortcode is rendered, eliminating an unnecessary HTTP request on all other pages.
 - **Frontend JS Extracted (#35):** Client-side file validation JavaScript extracted from inline `<script>` to `assets/swh-frontend.js` and loaded via `wp_enqueue_script()` with `wp_localize_script()` for CSP compliance.
@@ -52,7 +87,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 ### Fixed
 - **Plugin Header Version Mismatch:** `Version:` header comment now correctly reads `1.6`, matching `SWH_VERSION` (was showing `1.4` since v1.5).
 
-### Improved
+### Changed
 - **`wp_mail()` Failure Logging:** All email sends now check the return value and log failures via `error_log()` — consistent with the upload error logging added in v1.5.
 - **Real Attachment Filenames:** Attachments in both the admin conversation meta box and the frontend client portal now display the actual filename (via `basename()`) instead of generic "File 1", "File 2" labels.
 - **Enqueued Frontend CSS:** Frontend stylesheet extracted from inline `<style>` block to `assets/swh-frontend.css` and loaded via `wp_enqueue_style()` for browser caching and CSP compatibility.
@@ -80,7 +115,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 - **Multi-Handler Firing:** Sequential `if` blocks for the frontend portal (close / reopen / reply) could theoretically fire multiple handlers in one request. Converted to `if/elseif/elseif`.
 - **GitHub Auto-Updater:** Fully resolved the "No valid plugins were found" fatal error that persisted through v1.4.
 
-### Improved
+### Changed
 - **Single Source of Truth:** All option defaults now live exclusively in `swh_get_defaults()`. Hardcoded `add_option` calls removed from the upgrade routine.
 - **PRG Pattern:** All settings saves now perform a Post/Redirect/Get redirect, preventing double-submission on page refresh. Active tab is preserved via `?swh_tab=` query parameter.
 - **Input Validation:** Status, priority, and assignee values are validated against their allowed lists in `swh_save_ticket_data()` before being persisted.
@@ -97,7 +132,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ## [1.4] — 2026-03-13
 
-### Improved
+### Changed
 - **Smart Folder-Flattening:** The GitHub Updater now automatically detects plugin files nested inside a sub-directory within the release archive and extracts them correctly.
 - **Release Asset Priority:** The updater now prioritizes pre-built `.zip` release assets over raw GitHub source archives for cleaner, safer updates.
 - **Cache Busting:** Implemented cache-busting on the update checker transient so new releases are detected immediately without waiting for the 12-hour timeout.
@@ -116,7 +151,7 @@ All notable changes to Simple WP Helpdesk are documented here.
 ### Added
 - **GitHub Auto-Updater:** The plugin now checks its linked GitHub repository for new releases and delivers them directly to the WordPress dashboard, functioning identically to a wordpress.org-hosted plugin.
 
-### Optimized
+### Changed
 - **Background Cron Overhaul:** Auto-Close, Ticket Purge, and Attachment Purge tasks are now split into separate staggered hourly events with strict SQL-level micro-batching (1–2 items per run). Eliminates cURL error 28 timeouts on resource-restricted hosts.
 - **Centralized Defaults:** Default configuration values consolidated into a statically cached object, reducing memory usage on every page load and guaranteeing fallback text when settings have not been explicitly saved.
 
@@ -129,16 +164,14 @@ All notable changes to Simple WP Helpdesk are documented here.
 
 ## [1.1] — 2026-03-12
 
-### Improved
+### Changed
 - **Page Builder Compatibility:** Frontend shortcode now uses a fully scoped CSS architecture under `.swh-helpdesk-wrapper`, keeping form elements correctly aligned inside Elementor columns.
-
-### Updated
 - Modernized frontend UI with improved padding, focus states, badge designs, and alert box styling.
 - Replaced raw inline HTML tags around form inputs with structured `<div>` groups to prevent theme line-height layout conflicts.
 
 ---
 
-## [1.0] — 2026-03-12 — Initial Release
+## [1.0] — 2026-03-12
 
 ### Added
 - Custom Post Type (`helpdesk_ticket`) for native WordPress backend integration.
@@ -150,3 +183,17 @@ All notable changes to Simple WP Helpdesk are documented here.
 - GDPR client data purge tool and full uninstallation cleanup routines.
 - Anti-spam integrations: Honeypot, Google reCAPTCHA v2, Cloudflare Turnstile.
 - Micro-batched cron jobs to prevent server timeouts.
+
+---
+
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.9.0...HEAD
+[1.9.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.8...1.9.0
+[1.8]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.7...1.8
+[1.7]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.6...1.7
+[1.6]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.5...1.6
+[1.5]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.4...1.5
+[1.4]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.3...1.4
+[1.3]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.2...1.3
+[1.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.1...1.2
+[1.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.0...1.1
+[1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/releases/tag/1.0

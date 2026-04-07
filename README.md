@@ -1,69 +1,53 @@
 # Simple WP Helpdesk
 
-A comprehensive, lightweight ticketing system built natively for WordPress. No third-party services required — all client data stays on your own server.
+A lightweight, full-featured ticketing system built natively for WordPress. No third-party services required — all data stays on your server.
 
-**Version:** 1.5 &nbsp;|&nbsp; **Requires WordPress:** 5.3+ &nbsp;|&nbsp; **Requires PHP:** 7.2+
-
----
+**Version:** 1.9.0 &nbsp;|&nbsp; **WordPress:** 5.3+ &nbsp;|&nbsp; **PHP:** 7.4+
 
 ## Features
 
-- **Secure Client Portal** — Clients view and reply to tickets via unique cryptographic email links, no WordPress account needed.
-- **Customizable Workflows** — Define your own ticket statuses and priority levels.
-- **Email Templates** — 12 fully customizable email templates with dynamic placeholders.
-- **File Attachments** — Two-way multi-file uploads for clients and technicians, with configurable size limits and instant JavaScript validation.
-- **Internal Notes** — Technicians can leave private notes clients never see.
-- **Admin Ticket Creation** — Create tickets on behalf of clients directly from the WordPress dashboard, with optional confirmation email.
-- **Automation** — Background cron jobs auto-close resolved tickets after configurable inactivity.
-- **Data Retention & GDPR** — Auto-purge old attachments and tickets; GDPR-compliant per-email data deletion.
-- **Anti-Spam** — Built-in Honeypot, Google reCAPTCHA v2, and Cloudflare Turnstile support.
-- **Page Builder Friendly** — Scoped CSS keeps the frontend form correctly styled inside Elementor and similar builders.
-- **Automatic Updates** — Built-in GitHub auto-updater delivers new releases directly to your WordPress dashboard.
-
----
+- **Custom Post Type** for tickets — no custom database tables
+- **Frontend submission form** and **secure token-based client portal** via `[submit_ticket]` shortcode
+- **Tabbed settings panel** with 6 tabs (General, Assignment & Routing, Email Templates, Messages, Anti-Spam, Tools)
+- **Multi-file upload** with client-side validation and configurable size/count limits
+- **Technician role** with optional assignment restriction (`swh_restrict_to_assigned`)
+- **HTML and plain-text email notifications** — 14 fully customizable templates with dynamic placeholders
+- **Background automation** — auto-close resolved tickets and scheduled data retention
+- **Anti-spam** on all forms — honeypot, Google reCAPTCHA v2, and Cloudflare Turnstile
+- **CDN/proxy-aware rate limiting** via `swh_get_client_ip()`
+- **Protected file uploads** served through a proxy endpoint (no direct URL access)
+- **Token expiration** with configurable TTL and auto-rotation for portal links
+- **"Resend my ticket links"** client lookup form with anti-enumeration messaging
+- **Internationalization (i18n)** ready with full text-domain support
+- **GDPR tools** — per-email data purge, data retention policies, and full uninstall cleanup
+- **GitHub auto-updater** — new releases delivered directly to the WordPress dashboard
 
 ## Quick Start
 
 1. Download `simple-wp-helpdesk.zip` from the [latest release](https://github.com/seanmousseau/Simple-WP-Helpdesk/releases/latest).
-2. In WordPress, go to **Plugins → Add New → Upload Plugin** and install the ZIP.
-3. Activate the plugin. A **Tickets** menu item appears in the dashboard.
-4. Create a page (e.g., "Support") and add the shortcode `[submit_ticket]` to it.
-5. Go to **Tickets → Settings → Assignment & Routing** and set the **Helpdesk Page** to the page you just created.
-
-That's it — your helpdesk is live.
-
----
+2. In WordPress, go to **Plugins > Add New > Upload Plugin** and install the ZIP.
+3. Activate the plugin. A **Tickets** menu appears in the dashboard.
+4. Create a page (e.g., "Support") and add the shortcode `[submit_ticket]`.
+5. Go to **Tickets > Settings > Assignment & Routing** and set the **Helpdesk Page** to that page.
 
 ## Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [Installation](docs/installation.md) | Manual ZIP install, automatic updates, and uninstall |
-| [Configuration](docs/configuration.md) | All settings tabs explained |
-| [Usage](docs/usage.md) | Guide for clients and technicians |
-| [Security](docs/security.md) | Token auth, anti-spam, nonces, input handling |
-| [Development](docs/development.md) | Architecture, coding conventions, and release process |
+Detailed guides are available in the [`docs/`](docs/) folder:
 
----
+- [Installation](docs/installation.md) — install, update, and uninstall
+- [Configuration](docs/configuration.md) — all settings tabs explained
+- [Usage](docs/usage.md) — guide for clients and technicians
+- [Security](docs/security.md) — token auth, anti-spam, nonces, input handling
+- [Development](docs/development.md) — architecture, conventions, and release process
 
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
----
-
-## Known Issues
-
-- GitHub Auto-Update is broken in versions 1.4 and earlier. Upgrade to v1.5 for fully functional automatic updates.
-
----
-
 ## Contributing
 
-Bug reports, security disclosures, and feature requests are welcome — please open an issue on [GitHub](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues).
-
----
+Bug reports, security disclosures, and feature requests are welcome. Please open an issue on [GitHub](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues).
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+This project is licensed under the GNU General Public License v2.0. See [LICENSE](LICENSE) for details.
