@@ -69,17 +69,9 @@ function swh_deactivate() {
 
 add_action( 'admin_init', 'swh_run_upgrade_routine' );
 function swh_run_upgrade_routine() {
-    $db_version = get_option( 'swh_db_version', '0.0' );
-    if ( version_compare( $db_version, SWH_VERSION, '>=' ) ) {
-        return;
-    }
-    // Add any missing options without overwriting existing values.
-    foreach ( swh_get_defaults() as $key => $val ) {
-        add_option( $key, $val );
-    }
-    // Backfill comment_type for existing helpdesk comments. Uses a one-time flag
-    // so it runs even if swh_db_version was already set to 1.9.0 before the
-    // migration code was deployed.
+    // One-time migration: backfill comment_type for existing helpdesk comments.
+    // Runs independently of version check so it works even when swh_db_version
+    // was already bumped before the migration code was deployed.
     if ( ! get_option( 'swh_comment_type_migrated' ) ) {
         global $wpdb;
         $wpdb->query( $wpdb->prepare(
@@ -91,6 +83,15 @@ function swh_run_upgrade_routine() {
             'helpdesk_ticket'
         ) );
         update_option( 'swh_comment_type_migrated', '1' );
+    }
+
+    $db_version = get_option( 'swh_db_version', '0.0' );
+    if ( version_compare( $db_version, SWH_VERSION, '>=' ) ) {
+        return;
+    }
+    // Add any missing options without overwriting existing values.
+    foreach ( swh_get_defaults() as $key => $val ) {
+        add_option( $key, $val );
     }
     update_option( 'swh_db_version', SWH_VERSION );
 }
