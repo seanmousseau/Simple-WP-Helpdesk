@@ -1270,31 +1270,35 @@ function swh_render_settings_page() {
 // 4.5  ADMIN TICKET LIST — COLUMNS, SORTING & FILTERS
 // ==============================================================================
 
-add_filter( 'pre_get_comments', 'swh_exclude_helpdesk_comments' );
-function swh_exclude_helpdesk_comments( $query ) {
-    // Don't exclude when the query explicitly requests helpdesk replies (e.g. client portal).
-    $requested_type = isset( $query->query_vars['type'] ) ? $query->query_vars['type'] : '';
-    if ( 'helpdesk_reply' === $requested_type ) {
-        return $query;
-    }
+add_filter( 'comments_clauses', 'swh_exclude_helpdesk_comments', 10, 2 );
+function swh_exclude_helpdesk_comments( $clauses, $query ) {
+    global $wpdb;
     // Don't exclude when querying a specific helpdesk ticket (admin editor, cron).
     $post_id = isset( $query->query_vars['post_id'] ) ? (int) $query->query_vars['post_id'] : 0;
     if ( $post_id && 'helpdesk_ticket' === get_post_type( $post_id ) ) {
-        return $query;
+        return $clauses;
     }
-    $types = isset( $query->query_vars['type__not_in'] ) ? $query->query_vars['type__not_in'] : array();
-    if ( ! is_array( $types ) ) {
-        $types = array( $types );
+    // Don't exclude when the query explicitly requests helpdesk replies (client portal).
+    $requested_type = isset( $query->query_vars['type'] ) ? $query->query_vars['type'] : '';
+    if ( 'helpdesk_reply' === $requested_type ) {
+        return $clauses;
     }
-    $types[] = 'helpdesk_reply';
-    $query->query_vars['type__not_in'] = $types;
-    return $query;
+    // Exclude comments on helpdesk_ticket posts by post type — works regardless
+    // of whether comment_type was migrated.
+    $clauses['where'] .= $wpdb->prepare(
+        " AND {$wpdb->comments}.comment_post_ID NOT IN ( SELECT ID FROM {$wpdb->posts} WHERE post_type = %s )",
+        'helpdesk_ticket'
+    );
+    return $clauses;
 }
 
 add_filter( 'comment_feed_where', 'swh_exclude_helpdesk_from_feed', 10, 2 );
 function swh_exclude_helpdesk_from_feed( $where, $query ) {
     global $wpdb;
-    $where .= $wpdb->prepare( " AND {$wpdb->comments}.comment_type != %s", 'helpdesk_reply' );
+    $where .= $wpdb->prepare(
+        " AND {$wpdb->comments}.comment_post_ID NOT IN ( SELECT ID FROM {$wpdb->posts} WHERE post_type = %s )",
+        'helpdesk_ticket'
+    );
     return $where;
 }
 
