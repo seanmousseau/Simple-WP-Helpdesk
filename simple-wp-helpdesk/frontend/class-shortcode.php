@@ -114,16 +114,9 @@ function swh_render_submission_form() {
 				if ( ! empty( $attach_urls ) ) {
 					update_post_meta( $ticket_id, '_ticket_attachments', $attach_urls );
 				}
-				$token              = wp_generate_password( 20, false );
-				$data['ticket_id']  = 'TKT-' . str_pad( $ticket_id, 4, '0', STR_PAD_LEFT );
-				$data['ticket_url'] = swh_get_secure_ticket_link( $ticket_id ) ? swh_get_secure_ticket_link( $ticket_id ) : add_query_arg(
-					array(
-						'swh_ticket' => $ticket_id,
-						'token'      => $token,
-					),
-					get_permalink()
-				);
-				$data['admin_url']  = admin_url( 'post.php?post=' . $ticket_id . '&action=edit' );
+				$token             = wp_generate_password( 20, false );
+				$data['ticket_id'] = 'TKT-' . str_pad( $ticket_id, 4, '0', STR_PAD_LEFT );
+				$data['admin_url'] = admin_url( 'post.php?post=' . $ticket_id . '&action=edit' );
 				update_post_meta( $ticket_id, '_ticket_uid', $data['ticket_id'] );
 				update_post_meta( $ticket_id, '_ticket_name', $data['name'] );
 				update_post_meta( $ticket_id, '_ticket_email', $data['email'] );
@@ -132,6 +125,9 @@ function swh_render_submission_form() {
 				update_post_meta( $ticket_id, '_ticket_token', $token );
 				update_post_meta( $ticket_id, '_ticket_token_created', time() );
 				update_post_meta( $ticket_id, '_ticket_url', get_permalink() );
+				// Build ticket_url after token is in meta so swh_get_secure_ticket_link()
+				// can resolve the correct page (respects swh_ticket_page_id setting).
+				$data['ticket_url'] = swh_get_secure_ticket_link( $ticket_id );
 				$default_assignee = get_option( 'swh_default_assignee' );
 				if ( $default_assignee ) {
 					update_post_meta( $ticket_id, '_ticket_assigned_to', $default_assignee );
