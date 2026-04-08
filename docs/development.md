@@ -12,10 +12,26 @@ Simple-WP-Helpdesk/
 ├── LICENSE
 ├── docs/                                # This documentation
 └── simple-wp-helpdesk/
-    └── simple-wp-helpdesk.php           # Entire plugin — single file
+    ├── simple-wp-helpdesk.php           # Bootstrap: constants, requires, lifecycle hooks
+    ├── includes/
+    │   ├── helpers.php                  # Defaults, statuses, anti-spam, rate limiting
+    │   ├── class-installer.php          # Activation, deactivation, uninstall, upgrade, CPT
+    │   ├── class-email.php              # Template parsing, email sending, HTML wrapping
+    │   ├── class-ticket.php             # File proxy, uploads, deletion, comment filters
+    │   └── class-cron.php              # Auto-close, retention (tickets + attachments)
+    ├── admin/
+    │   ├── class-settings.php           # Settings page render + save handler
+    │   ├── class-ticket-editor.php      # Meta boxes, save_post, conversation UI
+    │   └── class-ticket-list.php        # Columns, sorting, filters, admin styles
+    ├── frontend/
+    │   ├── class-shortcode.php          # [submit_ticket] + [helpdesk_portal] shortcodes
+    │   └── class-portal.php             # Client portal view
+    ├── vendor/plugin-update-checker/    # GitHub auto-updater library
+    ├── assets/                          # CSS, JS
+    └── languages/                       # .pot/.po/.mo
 ```
 
-> All plugin logic lives in **one file**: `simple-wp-helpdesk/simple-wp-helpdesk.php`.
+The bootstrap file (`simple-wp-helpdesk.php`) is a thin loader (~55 lines). Admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
 
 ---
 
@@ -67,12 +83,12 @@ When adding a new option:
 
 ### New Option
 
-1. Add to `swh_get_defaults()`:
+1. Add to `swh_get_defaults()` in `includes/helpers.php`:
    ```php
    'swh_my_new_option' => 'default_value',
    ```
-2. Add the field to the appropriate settings tab in `swh_render_settings_page()`.
-3. Add it to the correct save block inside `swh_render_settings_page()` — the main form handler (guarded by `swh_settings_nonce`) or the Tools form handler (guarded by `swh_tools_nonce`).
+2. Add the field to the appropriate settings tab in `admin/class-settings.php`.
+3. Add it to the correct save block in `swh_handle_settings_save()` — the main form handler (guarded by `swh_settings_nonce`) or the Tools form handler (guarded by `swh_tools_nonce`).
 
 ### New Email Template
 
@@ -130,6 +146,6 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 4. **Close any GitHub issues** addressed by the release.
 
-5. **Open a PR** from `dev` to `main`.
+5. **Open a PR** from `release/vX.Y.Z` to `main`.
 
 6. **Create a GitHub Release** with a tag that **exactly matches** the `Version:` header (e.g. `1.6`, a `v` prefix is fine). **Attach `simple-wp-helpdesk.zip` as a release asset** — without an attached asset the auto-updater falls back to the raw source archive, which is unreliable.
