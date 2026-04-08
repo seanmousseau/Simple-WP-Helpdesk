@@ -27,7 +27,7 @@ Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are o
 |---------|-------------|
 | **Default Assignee** | Technician automatically assigned to every new ticket |
 | **Fallback Alert Email** | Receives new-ticket and client-reply notifications when no assignee is set |
-| **Helpdesk Page** | The WordPress page containing `[submit_ticket]`; used to build portal URLs for admin-created tickets |
+| **Helpdesk Page** | The page clients land on when clicking their portal link. Use the `[helpdesk_portal]` page if you have a dedicated portal, or the `[submit_ticket]` page for a combined layout. All portal links in emails point here. |
 
 **Email routing priority** (when sending admin notifications):
 1. The ticket's assigned technician
@@ -55,6 +55,18 @@ Customize the subject line and body of every email the plugin sends. Click **Res
 | `{ticket_url}` | Secure client portal link |
 | `{admin_url}` | WordPress admin edit link (technicians only) |
 | `{autoclose_days}` | Configured auto-close threshold |
+
+**Conditional blocks:**
+
+Wrap any template section in `{if key}...{endif key}` to include it only when that placeholder has a non-empty value:
+
+```
+{if message}
+Message: {message}
+{endif message}
+```
+
+Unreplaced placeholders are automatically removed from the final output.
 
 **Email events (14 templates, 8 client-facing + 6 admin-facing):**
 

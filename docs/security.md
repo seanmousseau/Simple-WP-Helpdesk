@@ -32,7 +32,9 @@ Three methods are available (configured in **Settings → Anti-Spam**):
 
 ## Frontend Rate Limiting
 
-All frontend form actions (submit reply, close ticket, re-open ticket) enforce a **30-second cooldown** per client via WordPress transients. This prevents accidental double-submissions and basic abuse.
+All frontend form actions (ticket submission, reply, close, re-open) enforce a **30-second cooldown** per action per client IP. Limits are stored in `wp_options` (not transients) so they survive object-cache flushes and work correctly across load-balanced environments.
+
+Each portal action type has its own rate limit key (`portal_close_`, `portal_reopen_`, `portal_reply_`), so closing a ticket does not block an immediate reopen attempt.
 
 ---
 
@@ -77,8 +79,9 @@ All user input is sanitized on the way in and escaped on the way out:
 - File uploads are processed exclusively through WordPress's `wp_handle_upload()`.
 - **Allowed MIME types:** JPEG, PNG, GIF, PDF, DOC, DOCX, TXT.
 - Upload size is enforced both client-side (JavaScript) and server-side (PHP).
-- Files are stored in the standard WordPress uploads directory.
-- Before deleting any file, the path is validated to confirm it starts with the uploads directory, preventing path traversal attacks.
+- Files are stored in a dedicated `/swh-helpdesk/` subdirectory inside the WordPress uploads folder, protected by an `.htaccess` file that denies all direct access.
+- Files are never served by direct URL — all downloads go through `swh_serve_file()`, which verifies the portal token before streaming the file.
+- Before deleting any file, the path is validated with `realpath()` to confirm it falls within the protected upload directory, preventing path traversal attacks.
 
 ---
 

@@ -25,7 +25,7 @@ When a technician marks your ticket as **Resolved**, a banner appears in the por
 
 ### Re-Opening a Ticket
 
-If a ticket is **Closed** but your issue is unresolved, the standard reply form is replaced with a **Re-Open Ticket** form. Submit it to alert the technicians.
+If a ticket is **Closed** but your issue is unresolved, the standard reply form is replaced with a **Re-Open Ticket** form. You can optionally explain why you need it re-opened, but submitting without a message is also accepted. The ticket status is updated and the support team is notified.
 
 ---
 
