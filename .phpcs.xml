@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<ruleset name="Simple WP Helpdesk">
+    <description>WordPress Coding Standards for Simple WP Helpdesk</description>
+
+    <!-- Scan the plugin directory only -->
+    <file>simple-wp-helpdesk/</file>
+
+    <!-- Exclude third-party code and static assets -->
+    <exclude-pattern>simple-wp-helpdesk/vendor/*</exclude-pattern>
+    <exclude-pattern>simple-wp-helpdesk/assets/*</exclude-pattern>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <!-- WordPress ruleset -->
+    <rule ref="WordPress">
+        <!-- Doc-comment requirements: not enforced for this project -->
+        <exclude name="Squiz.Commenting.FileComment.Missing"/>
+        <exclude name="Squiz.Commenting.FileComment.MissingPackageTag"/>
+        <exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+        <exclude name="Squiz.Commenting.FunctionComment.WrongStyle"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
+
+        <!-- "swh" / "SWH" are the plugin's registered prefixes; length is acceptable -->
+        <exclude name="WordPress.NamingConventions.PrefixAllGlobals.ShortPrefixPassed"/>
+
+        <!-- Slow DB / direct DB: intentional in installer, upgrader, and cron -->
+        <exclude name="WordPress.DB.SlowDBQuery"/>
+        <exclude name="WordPress.DB.DirectDatabaseQuery"/>
+    </rule>
+
+    <!-- Minimum supported WP/PHP versions -->
+    <config name="minimum_supported_wp_version" value="5.3"/>
+    <config name="testVersion" value="7.4-"/>
+
+    <!-- Plugin text domain -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="simple-wp-helpdesk"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Prefix all globals -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="swh"/>
+                <element value="SWH"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>

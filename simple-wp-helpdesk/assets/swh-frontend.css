@@ -21,3 +21,4 @@
 .swh-chat-tech { background-color: #e6f7ff; border-color: #0073aa; }
 .swh-lookup-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; }
 .swh-lookup-section a { color: #0073aa; text-decoration: underline; }
+.swh-file-error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 10px; border-radius: 4px; margin-top: 8px; font-size: 14px; white-space: pre-line; }

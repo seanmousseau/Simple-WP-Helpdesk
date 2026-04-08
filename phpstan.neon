@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - simple-wp-helpdesk/
+    excludePaths:
+        - simple-wp-helpdesk/vendor/
+    bootstrapFiles: []
+    # WordPress globals are not available in CLI context
+    universalObjectCratesClasses:
+        - wpdb
