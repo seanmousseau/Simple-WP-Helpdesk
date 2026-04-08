@@ -81,6 +81,10 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: WordPress-compliant readme.txt
 * Fixed: Attachment links in emails now show clean filenames instead of raw query parameters
 * Fixed: Settings save now redirects back to the correct settings page and tab
+* Fixed: Client reopen form silently did nothing when submitted without text or attachments
+* Fixed: Closing a ticket blocked immediate reopen due to shared rate limit key; each action now has its own key
+* Fixed: Changing Settings → Helpdesk Page had no effect on generated portal links; setting is now read directly
+* Fixed: New-ticket emails linked to the submission page instead of the configured portal page
 
 = 1.9.0 =
 * Added: Configurable portal token expiration (default 90 days) with auto-rotation on lookup
@@ -106,7 +110,7 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 == Upgrade Notice ==
 
 = 2.0.0 =
-Major refactor release. Modular file structure, improved email templates with conditional blocks, and several bug fixes. Includes all v1.9.0 security features. No breaking changes.
+Major refactor release. Modular file structure, improved email templates with conditional blocks, optional dedicated portal page, and several bug fixes including portal link routing and client reopen flow. Includes all v1.9.0 security features. No breaking changes.
 
 = 1.9.0 =
 Security hardening release. Adds token expiration, persistent rate limiting, and comment isolation. Recommended for all users.

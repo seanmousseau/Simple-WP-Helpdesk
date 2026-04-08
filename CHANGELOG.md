@@ -26,7 +26,10 @@ starting from the next release after 1.8.
 ### Fixed
 - **Attachment Display in Emails (#76):** Attachment links in emails now show clean filenames (e.g., `photo.jpg`) instead of raw query parameters, in both HTML and plain-text formats.
 - **Settings Save Redirect (#77):** Settings save now correctly redirects back to the settings page and active tab instead of the ticket list.
-- **Client Reopen Blocked When No Text Provided:** Submitting the reopen form with an empty textarea and no attachments silently did nothing — no status change, no error. Reopen now always succeeds (consistent with close, which requires no explanation). Audit comment adapts: includes the reason if provided, otherwise logs `TICKET RE-OPENED BY CLIENT`.
+- **Client Reopen — Silent Failure:** Submitting the reopen form with an empty textarea and no attachments silently did nothing — no status change, no error. Reopen now always succeeds (consistent with close, which requires no explanation). Audit comment adapts: includes the reason if provided, otherwise logs `TICKET RE-OPENED BY CLIENT`.
+- **Client Reopen — Rate Limit Conflict:** All three portal actions (close, reply, reopen) shared one rate limit key per ticket. Closing a ticket consumed the 30-second window, blocking an immediate reopen attempt. Each action now has its own key (`portal_close_`, `portal_reopen_`, `portal_reply_`).
+- **Helpdesk Page Setting Not Applied to Links:** `swh_get_secure_ticket_link()` read the stale `_ticket_url` post meta (written at ticket creation) instead of the live `swh_ticket_page_id` setting. Changing the page in Settings had no effect on generated portal links. The function now resolves the URL from the setting directly via `get_permalink()`, falling back to stored meta only when no page is configured.
+- **Wrong Portal URL in New-Ticket Emails:** `$data['ticket_url']` was built before `_ticket_token` was written to post meta, so `swh_get_secure_ticket_link()` always returned `false` and the fallback hardcoded `get_permalink()` (the `[submit_ticket]` page). The token is now stored first, so the correct portal page is used in all outbound emails.
 
 ### Removed
 - `SWH_GitHub_Updater` class (replaced by plugin-update-checker library).
