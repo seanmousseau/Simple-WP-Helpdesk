@@ -50,11 +50,19 @@ function swh_render_client_portal() {
 		'message'    => '',
 	);
 
-	// Rate-limit frontend POST actions to one per 30 seconds per ticket + IP.
-	$is_post_action = isset( $_POST['swh_user_close_ticket_submit'] ) || isset( $_POST['swh_user_reopen_submit'] ) || isset( $_POST['swh_user_reply_submit'] );
-	if ( $is_post_action && swh_is_rate_limited( 'portal_' . $ticket_id, 30 ) ) {
-		echo '<div class="swh-alert swh-alert-error">' . esc_html__( 'Please wait a moment before submitting again.', 'simple-wp-helpdesk' ) . '</div>';
-		$is_post_action = false;
+	// Rate-limit frontend POST actions to one per 30 seconds per action + ticket + IP.
+	// Each action type has its own key so that closing a ticket does not block the
+	// immediate reopen attempt (and vice-versa).
+	$is_close       = isset( $_POST['swh_user_close_ticket_submit'] );
+	$is_reopen      = isset( $_POST['swh_user_reopen_submit'] );
+	$is_reply       = isset( $_POST['swh_user_reply_submit'] );
+	$is_post_action = $is_close || $is_reopen || $is_reply;
+	if ( $is_post_action ) {
+		$rl_action = $is_close ? 'portal_close_' : ( $is_reopen ? 'portal_reopen_' : 'portal_reply_' );
+		if ( swh_is_rate_limited( $rl_action . $ticket_id, 30 ) ) {
+			echo '<div class="swh-alert swh-alert-error">' . esc_html__( 'Please wait a moment before submitting again.', 'simple-wp-helpdesk' ) . '</div>';
+			$is_post_action = false;
+		}
 	}
 
 	if ( $is_post_action && isset( $_POST['swh_user_close_ticket_submit'], $_POST['swh_close_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_close_nonce'] ) ), 'swh_user_close' ) ) {
