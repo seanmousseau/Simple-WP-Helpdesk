@@ -64,16 +64,20 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **`pre_get_posts` and `meta_key`** — setting it implicitly filters out posts lacking that meta.
 - **Technician restriction** — only filters list query (`pre_get_posts`) and direct access (`load-post.php`). Custom `WP_Query` is NOT filtered.
 - **Token expiration** — pre-v1.9.0 tickets without `_ticket_token_created` are grandfathered (no expiration).
-- **Portal URL** — `swh_get_secure_ticket_link()` returns `false` if `swh_ticket_page_id` unconfigured.
+- **Portal URL** — `swh_get_secure_ticket_link()` uses `swh_ticket_page_id` setting when set (via `get_permalink()`), falling back to `_ticket_url` post meta. Returns `false` if neither is available (token missing or no page configured and no stored meta).
+- **Portal URL ordering** — always store `_ticket_token` in meta *before* calling `swh_get_secure_ticket_link()`; calling it first returns `false` and the fallback URL may point to the wrong page.
+- **Rate limiting keys** — portal actions use per-action keys (`portal_close_`, `portal_reopen_`, `portal_reply_` + ticket_id). Never use a shared key across actions or close will block immediate reopen.
 
 ## Release Process
 
 1. Determine version using [SemVer](https://semver.org/).
 2. Bump `Version:` header and `SWH_VERSION` in `simple-wp-helpdesk.php`.
 3. Update `CHANGELOG.md` ([Keep a Changelog](https://keepachangelog.com/) format).
-4. Update `simple-wp-helpdesk/readme.txt` stable tag.
-5. Build ZIP: `zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/`
-6. PR to `main`, create GitHub Release with ZIP attached.
+4. Update `simple-wp-helpdesk/readme.txt` stable tag and changelog.
+5. Update `docs/` files for any changed behaviour or new features.
+6. Build ZIP: `zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/`
+7. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
+8. Create GitHub Release with ZIP attached as a release asset.
 
 > ZIP must be named `simple-wp-helpdesk.zip` — WordPress uses it as the plugin slug.
 
