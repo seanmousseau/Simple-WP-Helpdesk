@@ -263,7 +263,7 @@ function swh_render_settings_page() {
 					</tr>
 					<tr><th scope="row"><?php esc_html_e( 'Fallback Alert Email', 'simple-wp-helpdesk' ); ?></th><td><input type="email" name="swh_fallback_email" value="<?php echo esc_attr( get_option( 'swh_fallback_email' ) ); ?>" class="regular-text"></td></tr>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Helpdesk Page', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Portal URL for admin-created tickets', 'simple-wp-helpdesk' ); ?>)</small></th>
+						<th scope="row"><?php esc_html_e( 'Helpdesk Page', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Client portal destination', 'simple-wp-helpdesk' ); ?>)</small></th>
 						<td>
 							<?php
 							$pages        = get_pages( array( 'post_status' => 'publish' ) );
@@ -275,7 +275,7 @@ function swh_render_settings_page() {
 									<option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<p class="description"><?php esc_html_e( 'The page containing the [submit_ticket] shortcode. Used to generate the secure portal link for tickets created by admins.', 'simple-wp-helpdesk' ); ?></p>
+							<p class="description"><?php esc_html_e( 'The page clients visit to view their ticket. Use the page containing [helpdesk_portal] if you have a dedicated portal page, or the page containing [submit_ticket] if you use a combined layout. All secure portal links will point here.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
 				<tr>

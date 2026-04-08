@@ -96,18 +96,22 @@ function swh_get_priorities() {
 }
 
 function swh_get_secure_ticket_link( $ticket_id ) {
-	$base_url = get_post_meta( $ticket_id, '_ticket_url', true );
-	$token    = get_post_meta( $ticket_id, '_ticket_token', true );
-	if ( $base_url && $token ) {
-		return add_query_arg(
-			array(
-				'swh_ticket' => $ticket_id,
-				'token'      => $token,
-			),
-			$base_url
-		);
+	$token = get_post_meta( $ticket_id, '_ticket_token', true );
+	if ( ! $token ) {
+		return false;
 	}
-	return false;
+	$page_id  = (int) get_option( 'swh_ticket_page_id', 0 );
+	$base_url = $page_id ? get_permalink( $page_id ) : get_post_meta( $ticket_id, '_ticket_url', true );
+	if ( ! $base_url ) {
+		return false;
+	}
+	return add_query_arg(
+		array(
+			'swh_ticket' => $ticket_id,
+			'token'      => $token,
+		),
+		$base_url
+	);
 }
 
 function swh_is_token_expired( $ticket_id ) {
