@@ -5,7 +5,7 @@
 | Requirement | Minimum |
 |-------------|---------|
 | WordPress   | 5.3+    |
-| PHP         | 7.2+    |
+| PHP         | 7.4+    |
 
 ---
 
@@ -25,13 +25,26 @@ A **Tickets** menu item will now appear in the left-hand dashboard sidebar.
 
 ## Setting Up the Frontend
 
-Create a WordPress page (e.g., "Support") and add the following shortcode to its content:
+### Combined layout (simplest)
+
+Create a single WordPress page (e.g., "Support") and add:
 
 ```
 [submit_ticket]
 ```
 
-This page serves as both the ticket submission form and the secure client portal. Once the plugin is activated, go to **Tickets → Settings → Assignment & Routing** and select this page from the **Helpdesk Page** dropdown.
+This page handles both the ticket submission form and the client portal. Go to **Tickets → Settings → Assignment & Routing** and set **Helpdesk Page** to this page.
+
+### Separate form and portal pages
+
+Create two pages:
+
+| Page | Shortcode | Purpose |
+|------|-----------|---------|
+| e.g., "Submit a Ticket" | `[submit_ticket]` | Submission form and ticket lookup |
+| e.g., "My Tickets" | `[helpdesk_portal]` | Client portal only (no submission form) |
+
+Set **Helpdesk Page** to the portal page (`[helpdesk_portal]`). All secure portal links in emails will point there.
 
 ---
 
