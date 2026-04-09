@@ -60,8 +60,9 @@ $swh_update_checker->setBranch( 'main' );
 $swh_update_checker->getVcsApi()->enableReleaseAssets();
 
 // Plugin icon CDN URLs.
-define( 'SWH_ICON_1X', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-128x128.png' );
-define( 'SWH_ICON_2X', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-256x256.png' );
+define( 'SWH_ICON_1X',   'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-128x128.png' );
+define( 'SWH_ICON_2X',   'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-256x256.png' );
+define( 'SWH_MENU_ICON', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/favicon-32.png' );
 
 // Inject icons into the PUC plugin info response (View Details modal / plugins_api).
 add_filter( 'puc_request_info_result-simple-wp-helpdesk', 'swh_add_plugin_icons' );

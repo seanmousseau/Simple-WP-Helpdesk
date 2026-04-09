@@ -283,7 +283,7 @@ function swh_register_ticket_cpt() {
 			),
 			'public'          => false,
 			'show_ui'         => true,
-			'menu_icon'       => SWH_ICON_1X,
+			'menu_icon'       => SWH_MENU_ICON,
 			'supports'        => array( 'title', 'editor' ),
 			'capability_type' => 'post',
 		)
