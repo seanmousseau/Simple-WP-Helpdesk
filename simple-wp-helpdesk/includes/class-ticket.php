@@ -13,6 +13,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 // TICKET HELPERS: File handling, uploads, comment exclusion filters.
 // ==============================================================================
 
+/**
+ * Serves protected attachment files via token-based auth before WordPress bootstraps fully.
+ *
+ * @see swh_serve_file()
+ */
 add_action( 'init', 'swh_serve_file', 1 );
 /**
  * Serves a protected helpdesk attachment file via token-based or capability-based access.
@@ -81,6 +86,11 @@ function swh_serve_file() {
 	exit;
 }
 
+/**
+ * Adds multipart/form-data enctype to the post edit form for ticket posts.
+ *
+ * @see swh_add_enctype_to_post_form()
+ */
 add_action( 'post_edit_form_tag', 'swh_add_enctype_to_post_form' );
 /**
  * Adds multipart/form-data enctype to the post edit form for ticket posts.
@@ -299,6 +309,11 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 	wp_delete_post( $ticket_id, true );
 }
 
+/**
+ * Excludes helpdesk reply comments from standard WordPress comment queries.
+ *
+ * @see swh_exclude_helpdesk_comments()
+ */
 add_filter( 'comments_clauses', 'swh_exclude_helpdesk_comments', 10, 2 );
 /**
  * Excludes helpdesk reply comments from standard WordPress comment queries.
@@ -331,6 +346,11 @@ function swh_exclude_helpdesk_comments( $clauses, $query ) {
 	return $clauses;
 }
 
+/**
+ * Excludes helpdesk ticket comments from the site's comment RSS feed.
+ *
+ * @see swh_exclude_helpdesk_from_feed()
+ */
 add_filter( 'comment_feed_where', 'swh_exclude_helpdesk_from_feed', 10, 2 );
 /**
  * Excludes helpdesk ticket comments from the site's comment RSS feed.

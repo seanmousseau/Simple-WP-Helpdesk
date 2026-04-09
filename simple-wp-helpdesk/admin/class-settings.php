@@ -30,6 +30,11 @@ function swh_field( $name, $defs, $type = 'text' ) {
 
 // Frontend CSS and JS are enqueued inside swh_ticket_frontend() only when the shortcode is rendered.
 
+/**
+ * Enqueues admin CSS and JS on the helpdesk settings page.
+ *
+ * @see swh_enqueue_admin_assets()
+ */
 add_action( 'admin_enqueue_scripts', 'swh_enqueue_admin_assets' );
 /**
  * Enqueues admin CSS and JS on the helpdesk settings page.
@@ -45,6 +50,11 @@ function swh_enqueue_admin_assets( $hook ) {
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 }
 
+/**
+ * Registers the Helpdesk Settings submenu page.
+ *
+ * @see swh_register_settings_page()
+ */
 add_action( 'admin_menu', 'swh_register_settings_page' );
 /**
  * Registers the Helpdesk Settings submenu page under the Tickets post type menu.
@@ -55,6 +65,11 @@ function swh_register_settings_page() {
 	add_submenu_page( 'edit.php?post_type=helpdesk_ticket', __( 'Helpdesk Settings', 'simple-wp-helpdesk' ), __( 'Settings', 'simple-wp-helpdesk' ), 'manage_options', 'swh-settings', 'swh_render_settings_page' );
 }
 
+/**
+ * Processes the settings form POST on admin_init and saves options.
+ *
+ * @see swh_handle_settings_save()
+ */
 add_action( 'admin_init', 'swh_handle_settings_save' );
 /**
  * Processes the settings form submission and saves options, then redirects back.

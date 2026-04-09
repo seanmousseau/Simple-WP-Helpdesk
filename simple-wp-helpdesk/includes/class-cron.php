@@ -15,6 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 // BACKGROUND CRON TASKS (Micro-Batched to prevent cURL error 28)
 // ==============================================================================
 
+/**
+ * Processes the auto-close cron event: closes resolved tickets past the inactivity threshold.
+ *
+ * @see swh_process_autoclose()
+ */
 add_action( 'swh_autoclose_event', 'swh_process_autoclose' );
 /**
  * Auto-closes tickets that have been in Resolved status longer than the configured threshold.
@@ -107,6 +112,11 @@ function swh_process_autoclose() {
 	delete_transient( $lock_key );
 }
 
+/**
+ * Processes the attachment retention cron event: deletes files older than the threshold.
+ *
+ * @see swh_process_retention_attachments()
+ */
 add_action( 'swh_retention_attachments_event', 'swh_process_retention_attachments' );
 /**
  * Purges attachments from tickets and replies older than the retention threshold.
@@ -229,6 +239,11 @@ function swh_process_retention_attachments() {
 	delete_transient( $lock_key );
 }
 
+/**
+ * Processes the ticket retention cron event: permanently deletes old tickets and their files.
+ *
+ * @see swh_process_retention_tickets()
+ */
 add_action( 'swh_retention_tickets_event', 'swh_process_retention_tickets' );
 /**
  * Permanently deletes tickets (and their files) older than the retention threshold.

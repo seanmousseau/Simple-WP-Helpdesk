@@ -9,6 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Shows a warning notice when the Helpdesk Page setting is not configured.
+ *
+ * @see swh_admin_helpdesk_page_notice()
+ */
 add_action( 'admin_notices', 'swh_admin_helpdesk_page_notice' );
 /**
  * Displays an admin notice when the Helpdesk Page setting is not configured.
@@ -33,6 +38,11 @@ function swh_admin_helpdesk_page_notice() {
 	echo '</p></div>';
 }
 
+/**
+ * Shows a success notice after a ticket has been reassigned.
+ *
+ * @see swh_reassigned_notice()
+ */
 add_action( 'admin_notices', 'swh_reassigned_notice' );
 /**
  * Displays an admin notice after a ticket is successfully reassigned.
@@ -51,6 +61,11 @@ function swh_reassigned_notice() {
 	echo '</p></div>';
 }
 
+/**
+ * Registers the Ticket Details and Conversation & Reply meta boxes.
+ *
+ * @see swh_add_ticket_meta_boxes()
+ */
 add_action( 'add_meta_boxes', 'swh_add_ticket_meta_boxes' );
 /**
  * Registers the Ticket Details (side) and Conversation & Reply (normal) meta boxes.
@@ -230,6 +245,11 @@ function swh_conversation_meta_box_html( $post ) {
 	<?php
 }
 
+/**
+ * Handles ticket meta, replies, uploads, and email sending on post save.
+ *
+ * @see swh_save_ticket_data()
+ */
 add_action( 'save_post_helpdesk_ticket', 'swh_save_ticket_data', 10, 3 );
 /**
  * Handles saving ticket meta, reply comments, file uploads, and outbound emails on post save.

@@ -39,8 +39,11 @@ require_once SWH_PLUGIN_DIR . 'frontend/class-shortcode.php';
 require_once SWH_PLUGIN_DIR . 'frontend/class-portal.php';
 
 // Lifecycle hooks (must reference main plugin __FILE__).
+/** Runs on plugin activation: schedules cron events, registers CPT, seeds defaults. */
 register_activation_hook( __FILE__, 'swh_activate' );
+/** Runs on plugin deactivation: clears scheduled cron events. */
 register_deactivation_hook( __FILE__, 'swh_deactivate' );
+/** Runs on plugin uninstall: deletes all options, meta, and uploaded files when opted in. */
 register_uninstall_hook( __FILE__, 'swh_uninstall' );
 
 // GitHub updater (via plugin-update-checker library).

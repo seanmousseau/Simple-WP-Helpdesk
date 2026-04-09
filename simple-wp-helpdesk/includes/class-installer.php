@@ -66,6 +66,11 @@ function swh_deactivate() {
 	wp_clear_scheduled_hook( 'swh_daily_autoclose_event' );
 }
 
+/**
+ * Runs upgrade routines and option migrations on admin_init after a plugin update.
+ *
+ * @see swh_run_upgrade_routine()
+ */
 add_action( 'admin_init', 'swh_run_upgrade_routine' );
 /**
  * Runs database upgrade routines and option migrations when the plugin version advances.
@@ -137,6 +142,11 @@ function swh_run_upgrade_routine() {
 	update_option( 'swh_db_version', SWH_VERSION );
 }
 
+/**
+ * Ensures the Technician role has all required capabilities (one-time migration).
+ *
+ * @see swh_ensure_technician_caps()
+ */
 add_action( 'admin_init', 'swh_ensure_technician_caps' );
 /**
  * One-time migration to add missing capabilities to the Technician role.
@@ -227,6 +237,11 @@ function swh_uninstall() {
 	delete_option( 'swh_db_version' );
 }
 
+/**
+ * Loads the plugin text domain for translations.
+ *
+ * @see swh_load_textdomain()
+ */
 add_action( 'init', 'swh_load_textdomain' );
 /**
  * Loads the plugin text domain for translations.
@@ -237,6 +252,11 @@ function swh_load_textdomain() {
 	load_plugin_textdomain( 'simple-wp-helpdesk', false, dirname( plugin_basename( SWH_PLUGIN_FILE ) ) . '/languages' );
 }
 
+/**
+ * Registers the helpdesk_ticket custom post type.
+ *
+ * @see swh_register_ticket_cpt()
+ */
 add_action( 'init', 'swh_register_ticket_cpt' );
 /**
  * Registers the helpdesk_ticket custom post type.

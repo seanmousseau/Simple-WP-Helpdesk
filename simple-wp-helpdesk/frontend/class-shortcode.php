@@ -9,7 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/** Registers the [submit_ticket] shortcode: renders the submission form and portal router. */
 add_shortcode( 'submit_ticket', 'swh_ticket_frontend' );
+/** Registers the [helpdesk_portal] shortcode: renders the client portal on a dedicated page. */
 add_shortcode( 'helpdesk_portal', 'swh_helpdesk_portal_shortcode' );
 
 /**
