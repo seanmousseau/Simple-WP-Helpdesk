@@ -691,8 +691,58 @@ async def run():
         await wp_logout()
         await asyncio.sleep(0.5)
 
-        # ── [15] Cleanup ──────────────────────────────────────────────────────────
-        print("\n[15] Cleanup")
+        # ── [15] Plugin Icons ─────────────────────────────────────────────────────
+        print("\n[15] Plugin Icons")
+
+        CDN_BASE     = "https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh"
+        CDN_ICON_128 = f"{CDN_BASE}/icon-128x128.png"
+        CDN_ICON_256 = f"{CDN_BASE}/icon-256x256.png"
+
+        # Verify CDN assets are publicly reachable
+        for _label, _url in [("128x128", CDN_ICON_128), ("256x256", CDN_ICON_256)]:
+            try:
+                _req = urllib.request.Request(_url, method="HEAD")
+                with urllib.request.urlopen(_req, timeout=10) as _resp:  # nosemgrep
+                    _status = _resp.status
+            except Exception:
+                _status = 0
+            check(f"plugin icon: CDN {_label} reachable (HTTP 200)", _status == 200,
+                  f"HTTP {_status}")
+
+        # Verify the PUC filter hook is registered in the running WP instance
+        hook_ok = wpcli(
+            """eval 'echo has_filter("puc_request_info_result-simple-wp-helpdesk", "swh_add_plugin_icons") ? "yes" : "no";'"""
+        )
+        check("plugin icon: puc filter registered", hook_ok == "yes")
+
+        # Verify the filter injects the expected CDN icon URLs
+        icons_raw = wpcli(
+            """eval '$o = new stdClass(); $r = apply_filters("puc_request_info_result-simple-wp-helpdesk", $o); echo json_encode($r->icons ?? []);'"""
+        )
+        try:
+            _icons = json.loads(icons_raw) if icons_raw else {}
+        except (ValueError, json.JSONDecodeError):
+            _icons = {}
+        check("plugin icon: filter returns icons array", bool(_icons),
+              f"got: {icons_raw!r}")
+        check("plugin icon: 1x key → 128x128 CDN URL", _icons.get("1x") == CDN_ICON_128)
+        check("plugin icon: 2x key → 256x256 CDN URL", _icons.get("2x") == CDN_ICON_256)
+
+        # Plugins screen: icon should appear after a fresh update check
+        await wp_login(ADMIN_USER, ADMIN_PASS)
+        wpcli("eval 'wp_update_plugins();'")
+        await asyncio.sleep(1.0)
+        await navigate(f"{WP_ADMIN_URL}/plugins.php", wait=3.0)
+        plugins_html = await js("document.body.innerHTML") or ""
+        check("plugin icon: icon URL present on plugins screen",
+              CDN_ICON_128 in plugins_html or CDN_ICON_256 in plugins_html)
+        await screenshot("20_plugin_icons")
+
+        await wp_logout()
+        await asyncio.sleep(0.5)
+
+        # ── [16] Cleanup ──────────────────────────────────────────────────────────
+        print("\n[16] Cleanup")
 
         await wp_login(ADMIN_USER, ADMIN_PASS)
         await navigate(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket", wait=2.5)
