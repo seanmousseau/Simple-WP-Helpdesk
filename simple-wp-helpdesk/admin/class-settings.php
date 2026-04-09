@@ -22,6 +22,7 @@ function swh_enqueue_admin_assets( $hook ) {
 	if ( 'helpdesk_ticket_page_swh-settings' !== $hook ) {
 		return;
 	}
+	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 }
 

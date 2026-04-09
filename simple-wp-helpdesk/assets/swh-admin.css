@@ -1,0 +1,28 @@
+.swh-status-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.column-ticket_uid {
+	width: 100px;
+}
+
+.column-ticket_status {
+	width: 120px;
+}
+
+.column-ticket_priority {
+	width: 100px;
+}
+
+.column-ticket_assigned {
+	width: 140px;
+}
+
+.column-ticket_client {
+	width: 160px;
+}

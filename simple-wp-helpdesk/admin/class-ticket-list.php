@@ -3,20 +3,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-add_action( 'admin_head', 'swh_admin_list_styles' );
+add_action( 'admin_enqueue_scripts', 'swh_admin_list_styles' );
 function swh_admin_list_styles() {
 	$screen = get_current_screen();
 	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
 		return;
 	}
-	echo '<style>
-        .swh-status-badge { padding:3px 8px; border-radius:3px; font-size:12px; font-weight:600; display:inline-block; white-space:nowrap; }
-        .column-ticket_uid { width:100px; }
-        .column-ticket_status { width:120px; }
-        .column-ticket_priority { width:100px; }
-        .column-ticket_assigned { width:140px; }
-        .column-ticket_client { width:160px; }
-    </style>';
+	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array(), SWH_VERSION );
 }
 
 add_filter( 'manage_helpdesk_ticket_posts_columns', 'swh_ticket_columns' );
@@ -205,6 +198,7 @@ function swh_ticket_filter_dropdowns( $post_type ) {
 	$statuses = swh_get_statuses();
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; sanitized before use.
 	$current_status = isset( $_GET['swh_filter_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_status'] ) ) : '';
+	$current_status = esc_attr( $current_status );
 	echo '<select name="swh_filter_status"><option value="">' . esc_html__( 'All Statuses', 'simple-wp-helpdesk' ) . '</option>';
 	foreach ( $statuses as $s ) {
 		echo '<option value="' . esc_attr( $s ) . '"' . selected( $current_status, $s, false ) . '>' . esc_html( $s ) . '</option>';
@@ -214,6 +208,7 @@ function swh_ticket_filter_dropdowns( $post_type ) {
 	$priorities = swh_get_priorities();
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; sanitized before use.
 	$current_priority = isset( $_GET['swh_filter_priority'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_priority'] ) ) : '';
+	$current_priority = esc_attr( $current_priority );
 	echo '<select name="swh_filter_priority"><option value="">' . esc_html__( 'All Priorities', 'simple-wp-helpdesk' ) . '</option>';
 	foreach ( $priorities as $p ) {
 		echo '<option value="' . esc_attr( $p ) . '"' . selected( $current_priority, $p, false ) . '>' . esc_html( $p ) . '</option>';
