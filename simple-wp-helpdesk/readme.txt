@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.0.0
+Stable tag: 2.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -72,6 +72,18 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 2.1.0 =
+* Added: Ten extensibility hooks for customizing statuses, priorities, email headers, templates, file types, submission data, auto-close threshold, and rate limit TTL
+* Added: ARIA tab interface on settings page with full keyboard navigation (Arrow, Home, End keys)
+* Added: Explicit label associations on all admin and frontend form inputs
+* Added: ARIA live regions — role=log on conversation, role=status on success messages, role=alert on error messages
+* Added: aria-hidden on honeypot wrappers, aria-expanded on lookup toggle
+* Added: Dedicated swh-admin.css asset (extracted from inline PHP)
+* Added: Inline docblocks on all hook registrations and PHPDoc on all functions
+* Changed: var → const/let in JavaScript files; multi-line CSS rule format; normalised PHP brace style and indentation; HTML void element audit
+* Fixed: Focus styles restored (2px focus rings on form controls and buttons)
+* Fixed: PHPStan level-5 type errors resolved; PHPCS zero warnings
 
 = 2.0.0 =
 * Changed: Refactored single-file architecture into modular file structure with includes/, admin/, and frontend/ directories
