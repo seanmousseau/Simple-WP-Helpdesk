@@ -263,7 +263,7 @@ async def run():
                    {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False})
 
         # Reset any options that a previous failed run may have left dirty
-        wpcli("option delete swh_restrict_to_assigned 2>/dev/null || true")
+        wpcli("option delete swh_restrict_to_assigned")
 
         # ── [1] Admin Authentication ───────────────────────────────────────────
         print("[1] Admin Authentication")
