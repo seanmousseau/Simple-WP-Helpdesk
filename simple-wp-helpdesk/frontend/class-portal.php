@@ -35,14 +35,14 @@ function swh_render_client_portal() {
 
 	if ( ! $post || 'helpdesk_ticket' !== $post->post_type || ! hash_equals( $db_token, $token ) ) {
 		echo '<div class="swh-helpdesk-wrapper">';
-		echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_invalid', $defs['swh_msg_err_invalid'] ) ) . '</div>';
+		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( get_option( 'swh_msg_err_invalid', $defs['swh_msg_err_invalid'] ) ) . '</div>';
 		echo '</div>';
 		return;
 	}
 
 	if ( swh_is_token_expired( $ticket_id ) ) {
 		echo '<div class="swh-helpdesk-wrapper">';
-		echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_expired', $defs['swh_msg_err_expired'] ) ) . '</div>';
+		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( get_option( 'swh_msg_err_expired', $defs['swh_msg_err_expired'] ) ) . '</div>';
 		echo '</div>';
 		return;
 	}
@@ -69,7 +69,7 @@ function swh_render_client_portal() {
 	if ( $is_post_action ) {
 		$rl_action = $is_close ? 'portal_close_' : ( $is_reopen ? 'portal_reopen_' : 'portal_reply_' );
 		if ( swh_is_rate_limited( $rl_action . $ticket_id, 30 ) ) {
-			echo '<div class="swh-alert swh-alert-error">' . esc_html__( 'Please wait a moment before submitting again.', 'simple-wp-helpdesk' ) . '</div>';
+			echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html__( 'Please wait a moment before submitting again.', 'simple-wp-helpdesk' ) . '</div>';
 			$is_post_action = false;
 		}
 	}
@@ -93,11 +93,11 @@ function swh_render_client_portal() {
 		$admin_email = swh_get_admin_email( $ticket_id );
 		swh_send_email( $admin_email, 'swh_em_admin_closed_sub', 'swh_em_admin_closed_body', $data );
 		swh_send_email( $data['email'], 'swh_em_user_closed_sub', 'swh_em_user_closed_body', $data );
-		echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_closed', $defs['swh_msg_success_closed'] ) ) . '</div>';
+		echo '<div class="swh-alert swh-alert-success" role="status">' . esc_html( get_option( 'swh_msg_success_closed', $defs['swh_msg_success_closed'] ) ) . '</div>';
 		$data['status'] = $closed_status;
 	} elseif ( $is_post_action && isset( $_POST['swh_user_reopen_submit'], $_POST['swh_reopen_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_reopen_nonce'] ) ), 'swh_user_reopen' ) ) {
 		if ( swh_check_antispam( false ) ) {
-			echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
+			echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
 		} else {
 			$reply_text = isset( $_POST['ticket_reopen_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reopen_text'] ) ) : '';
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
@@ -140,12 +140,12 @@ function swh_render_client_portal() {
 			);
 			swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data, $proxy_urls );
 			swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
-			echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reopen', $defs['swh_msg_success_reopen'] ) ) . '</div>';
+			echo '<div class="swh-alert swh-alert-success" role="status">' . esc_html( get_option( 'swh_msg_success_reopen', $defs['swh_msg_success_reopen'] ) ) . '</div>';
 			$data['status'] = $reopened_status;
 		} // end anti-spam else
 	} elseif ( $is_post_action && isset( $_POST['swh_user_reply_submit'], $_POST['swh_reply_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_reply_nonce'] ) ), 'swh_user_reply' ) ) {
 		if ( swh_check_antispam( true ) ) {
-			echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
+			echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
 		} else {
 			$reply_text = isset( $_POST['ticket_reply_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reply_text'] ) ) : '';
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
@@ -184,7 +184,7 @@ function swh_render_client_portal() {
 					$attach_urls
 				);
 				swh_send_email( $admin_email, 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data, $proxy_urls );
-				echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_reply', $defs['swh_msg_success_reply'] ) ) . '</div>';
+				echo '<div class="swh-alert swh-alert-success" role="status">' . esc_html( get_option( 'swh_msg_success_reply', $defs['swh_msg_success_reply'] ) ) . '</div>';
 			}
 		} // end anti-spam else
 	}
@@ -262,13 +262,13 @@ function swh_render_client_portal() {
 		<form method="POST" action="" enctype="multipart/form-data">
 			<?php wp_nonce_field( 'swh_user_reply', 'swh_reply_nonce' ); ?>
 			<div class="swh-form-group">
-				<label><?php esc_html_e( 'Add a Reply:', 'simple-wp-helpdesk' ); ?></label>
-				<textarea name="ticket_reply_text" rows="4" class="swh-form-control"></textarea>
+				<label for="swh-reply-text"><?php esc_html_e( 'Add a Reply:', 'simple-wp-helpdesk' ); ?></label>
+				<textarea id="swh-reply-text" name="ticket_reply_text" rows="4" class="swh-form-control"></textarea>
 			</div>
 			<div class="swh-form-group">
-				<label><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></label>
-				<input type="file" name="swh_user_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
-				<small style="color:#666; display:block; margin-top:5px;">
+				<label for="swh-reply-attachments"><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></label>
+				<input type="file" id="swh-reply-attachments" name="swh_user_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
+				<small class="swh-text-muted" style="display:block; margin-top:5px;">
 				<?php
 					/* translators: 1: max upload size in MB, 2: max file count */
 					printf( esc_html__( 'Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: %1$sMB per file. Max files: %2$s.', 'simple-wp-helpdesk' ), esc_html( get_option( 'swh_max_upload_size', 5 ) ), esc_html( get_option( 'swh_max_upload_count', 5 ) ) );
@@ -277,7 +277,7 @@ function swh_render_client_portal() {
 			</div>
 			<?php
 			if ( 'honeypot' === $spam_method ) {
-				echo '<div style="position: absolute; left: -9999px;"><label>Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
+				echo '<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
 			} elseif ( 'recaptcha' === $spam_method ) {
 				$key = get_option( 'swh_recaptcha_site_key' );
 				echo '<div id="swh-recaptcha-reply" style="margin-bottom: 15px;"></div>';
@@ -297,18 +297,18 @@ function swh_render_client_portal() {
 			</div>
 		</form>
 	<?php else : ?>
-		<div class="swh-alert swh-alert-error">
+		<div class="swh-alert swh-alert-error" role="alert">
 			<p style="margin-top: 0; font-weight: bold;"><?php esc_html_e( 'This ticket is closed.', 'simple-wp-helpdesk' ); ?></p>
 			<form method="POST" action="" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'swh_user_reopen', 'swh_reopen_nonce' ); ?>
 				<div class="swh-form-group">
-					<label><?php esc_html_e( 'Explain why you need this re-opened:', 'simple-wp-helpdesk' ); ?></label>
-					<textarea name="ticket_reopen_text" rows="3" class="swh-form-control"></textarea>
+					<label for="swh-reopen-text"><?php esc_html_e( 'Explain why you need this re-opened:', 'simple-wp-helpdesk' ); ?></label>
+					<textarea id="swh-reopen-text" name="ticket_reopen_text" rows="3" class="swh-form-control"></textarea>
 				</div>
 				<div class="swh-form-group">
-					<label><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></label>
-					<input type="file" name="swh_reopen_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
-					<small style="color:#721c24; display:block; margin-top:5px;">
+					<label for="swh-reopen-attachments"><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></label>
+					<input type="file" id="swh-reopen-attachments" name="swh_reopen_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
+					<small class="swh-text-muted" style="display:block; margin-top:5px;">
 					<?php
 						/* translators: 1: max upload size in MB, 2: max file count */
 						printf( esc_html__( 'Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: %1$sMB. Max files: %2$s.', 'simple-wp-helpdesk' ), esc_html( get_option( 'swh_max_upload_size', 5 ) ), esc_html( get_option( 'swh_max_upload_count', 5 ) ) );
@@ -316,7 +316,7 @@ function swh_render_client_portal() {
 					</small>
 				</div>
 				<?php if ( 'honeypot' === $spam_method ) : ?>
-					<div style="position: absolute; left: -9999px;"><label>Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+					<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
 				<?php endif; ?>
 				<div class="swh-form-group">
 					<input type="submit" name="swh_user_reopen_submit" value="<?php esc_attr_e( 'Re-open Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn swh-btn-danger">
