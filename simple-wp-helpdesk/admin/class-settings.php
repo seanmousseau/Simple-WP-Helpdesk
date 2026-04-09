@@ -270,7 +270,7 @@ function swh_render_settings_page() {
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_email + rawurldecode constitutes sanitization.
 			$gdpr_email = isset( $_GET['swh_email'] ) ? sanitize_email( rawurldecode( wp_unslash( $_GET['swh_email'] ) ) ) : '';
 			/* translators: 1: number of tickets deleted, 2: email address */
-			echo '<div class="updated error notice is-dismissible"><p><strong>' . sprintf( esc_html__( 'Successfully deleted %1$s ticket(s) and all associated files for %2$s.', 'simple-wp-helpdesk' ), esc_html( $count ), esc_html( $gdpr_email ) ) . '</strong></p></div>';
+			echo '<div class="updated error notice is-dismissible"><p><strong>' . sprintf( esc_html__( 'Successfully deleted %1$s ticket(s) and all associated files for %2$s.', 'simple-wp-helpdesk' ), esc_html( (string) $count ), esc_html( $gdpr_email ) ) . '</strong></p></div>';
 		} elseif ( 'gdpr_fail' === $notice ) {
 			echo '<div class="notice notice-error is-dismissible"><p><strong>' . esc_html__( 'Please enter a valid email address.', 'simple-wp-helpdesk' ) . '</strong></p></div>';
 		}
@@ -329,7 +329,7 @@ function swh_render_settings_page() {
 							<select name="swh_ticket_page_id">
 								<option value="0"><?php echo '-- ' . esc_html__( 'Select a page', 'simple-wp-helpdesk' ) . ' --'; ?></option>
 								<?php foreach ( $pages as $page ) : ?>
-									<option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
+									<option value="<?php echo esc_attr( (string) $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
 								<?php endforeach; ?>
 							</select>
 							<p class="description"><?php esc_html_e( 'The page clients visit to view their ticket. Use the page containing [helpdesk_portal] if you have a dedicated portal page, or the page containing [submit_ticket] if you use a combined layout. All secure portal links will point here.', 'simple-wp-helpdesk' ); ?></p>

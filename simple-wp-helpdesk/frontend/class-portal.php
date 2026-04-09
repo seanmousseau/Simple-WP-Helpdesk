@@ -220,14 +220,14 @@ function swh_render_client_portal() {
 	);
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
-			if ( get_comment_meta( $comment->comment_ID, '_is_internal_note', true ) ) {
+			if ( get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true ) ) {
 				continue;
 			}
-			$is_user = get_comment_meta( $comment->comment_ID, '_is_user_reply', true );
+			$is_user = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 			/* translators: %s: technician name */
 			$author_name  = $is_user ? __( 'You', 'simple-wp-helpdesk' ) : sprintf( __( 'Technician (%s)', 'simple-wp-helpdesk' ), $comment->comment_author );
 			$bubble_class = $is_user ? 'swh-chat-user' : 'swh-chat-tech';
-			$attach_urls  = get_comment_meta( $comment->comment_ID, '_attachments', true );
+			$attach_urls  = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 
 			echo '<div class="swh-chat-bubble ' . esc_attr( $bubble_class ) . '">';
 			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_name ) . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(' . esc_html( $comment->comment_date ) . ')</span></strong>';

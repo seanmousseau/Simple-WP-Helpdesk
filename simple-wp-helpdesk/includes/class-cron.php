@@ -224,7 +224,7 @@ function swh_process_retention_attachments() {
 		)
 	);
 	foreach ( $comments as $comment ) {
-		$atts = get_comment_meta( $comment->comment_ID, '_attachments', true );
+		$atts = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) ) {
 			if ( ! is_array( $atts ) ) {
 				$atts = array( $atts );
@@ -232,7 +232,7 @@ function swh_process_retention_attachments() {
 			foreach ( $atts as $url ) {
 				swh_delete_file_by_url( $url );
 			}
-			delete_comment_meta( $comment->comment_ID, '_attachments' );
+			delete_comment_meta( (int) $comment->comment_ID, '_attachments' );
 			/* translators: %d: number of days for retention */
 			$new_content = $comment->comment_content . "\n\n*(" . sprintf( __( 'Attachments automatically purged after %d days', 'simple-wp-helpdesk' ), $days ) . ')*';
 			wp_update_comment(

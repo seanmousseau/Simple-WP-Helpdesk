@@ -58,7 +58,7 @@ function swh_serve_file() {
 		wp_die( esc_html__( 'Access denied.', 'simple-wp-helpdesk' ), 403 );
 	}
 
-	if ( $has_access && ! current_user_can( 'edit_posts' ) && swh_is_token_expired( $ticket_id ) ) {
+	if ( ! current_user_can( 'edit_posts' ) && swh_is_token_expired( $ticket_id ) ) {
 		wp_die( esc_html__( 'This link has expired.', 'simple-wp-helpdesk' ), 403 );
 	}
 
@@ -295,13 +295,13 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 	}
 	$comments = get_comments( array( 'post_id' => $ticket_id ) );
 	foreach ( $comments as $c ) {
-		$c_atts = get_comment_meta( $c->comment_ID, '_attachments', true );
+		$c_atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $c_atts ) && is_array( $c_atts ) ) {
 			foreach ( $c_atts as $url ) {
 				swh_delete_file_by_url( $url );
 			}
 		}
-		$legacy_c_url = get_comment_meta( $c->comment_ID, '_attachment_url', true );
+		$legacy_c_url = get_comment_meta( (int) $c->comment_ID, '_attachment_url', true );
 		if ( $legacy_c_url ) {
 			swh_delete_file_by_url( $legacy_c_url );
 		}

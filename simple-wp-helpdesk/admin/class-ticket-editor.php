@@ -130,7 +130,7 @@ function swh_status_meta_box_html( $post ) {
 	);
 	$reply_attachments = array();
 	foreach ( $comments as $c ) {
-		$atts = get_comment_meta( $c->comment_ID, '_attachments', true );
+		$atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) && is_array( $atts ) ) {
 			$reply_attachments = array_merge( $reply_attachments, $atts );
 		}
@@ -186,8 +186,8 @@ function swh_conversation_meta_box_html( $post ) {
 	echo '<div role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '" style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
-			$is_internal = get_comment_meta( $comment->comment_ID, '_is_internal_note', true );
-			$is_user     = get_comment_meta( $comment->comment_ID, '_is_user_reply', true );
+			$is_internal = get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true );
+			$is_user     = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 
 			if ( $is_internal ) {
 				/* translators: %s: comment author name */
@@ -205,7 +205,7 @@ function swh_conversation_meta_box_html( $post ) {
 			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_label ) . ' <span style="font-weight:normal; font-size: 0.8em; color: #666;">(' . esc_html( $comment->comment_date ) . ')</span></strong>';
 			echo nl2br( esc_html( $comment->comment_content ) );
 
-			$attachments = get_comment_meta( $comment->comment_ID, '_attachments', true );
+			$attachments = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 			if ( ! empty( $attachments ) && is_array( $attachments ) ) {
 				echo '<div style="margin-top: 10px;">';
 				foreach ( $attachments as $url ) {
@@ -323,11 +323,11 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	// Send assignment notification when a ticket is newly assigned or reassigned.
 	if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
 		$assignee_user = get_userdata( $assigned_to );
-		if ( $assignee_user && $assignee_user->user_email ) {
+		if ( $assignee_user->user_email ) {
 			$assign_data = array(
 				'name'           => get_post_meta( $post_id, '_ticket_name', true ) ? get_post_meta( $post_id, '_ticket_name', true ) : 'Client',
 				'email'          => get_post_meta( $post_id, '_ticket_email', true ),
-				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( $post_id, 4, '0', STR_PAD_LEFT ),
+				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
 				'title'          => $post->post_title,
 				'status'         => $new_status,
 				'priority'       => $new_priority,
@@ -352,7 +352,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
 	// For admin-created tickets that have no UID yet, bootstrap the ticket identity.
 	if ( ! get_post_meta( $post_id, '_ticket_uid', true ) ) {
-		$uid   = 'TKT-' . str_pad( $post_id, 4, '0', STR_PAD_LEFT );
+		$uid   = 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT );
 		$token = wp_generate_password( 20, false );
 		update_post_meta( $post_id, '_ticket_uid', $uid );
 		update_post_meta( $post_id, '_ticket_token', $token );

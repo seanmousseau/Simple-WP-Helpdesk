@@ -138,7 +138,7 @@ function swh_render_submission_form() {
 					'post_status'  => 'publish',
 				)
 			);
-			if ( $ticket_id && ! is_wp_error( $ticket_id ) ) {
+			if ( $ticket_id > 0 ) {
 				$attach_urls = array();
 				// phpcs:disable WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 				if ( ! empty( $_FILES['ticket_attachments']['name'][0] ) ) {
@@ -149,7 +149,7 @@ function swh_render_submission_form() {
 					update_post_meta( $ticket_id, '_ticket_attachments', $attach_urls );
 				}
 				$token             = wp_generate_password( 20, false );
-				$data['ticket_id'] = 'TKT-' . str_pad( $ticket_id, 4, '0', STR_PAD_LEFT );
+				$data['ticket_id'] = 'TKT-' . str_pad( (string) $ticket_id, 4, '0', STR_PAD_LEFT );
 				$data['admin_url'] = admin_url( 'post.php?post=' . $ticket_id . '&action=edit' );
 				update_post_meta( $ticket_id, '_ticket_uid', $data['ticket_id'] );
 				update_post_meta( $ticket_id, '_ticket_name', $data['name'] );
