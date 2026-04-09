@@ -1,8 +1,20 @@
 <?php
+/**
+ * Plugin lifecycle: activation, deactivation, uninstall, upgrade, CPT registration.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Runs on plugin activation: registers the Technician role, schedules cron events,
+ * runs the upgrade routine, and ensures the upload directory is protected.
+ *
+ * @return void
+ */
 function swh_activate() {
 	if ( ! get_role( 'technician' ) ) {
 		add_role(
@@ -40,6 +52,11 @@ function swh_activate() {
 	swh_ensure_upload_protection();
 }
 
+/**
+ * Runs on plugin deactivation: clears all scheduled cron events including legacy hook names.
+ *
+ * @return void
+ */
 function swh_deactivate() {
 	wp_clear_scheduled_hook( 'swh_autoclose_event' );
 	wp_clear_scheduled_hook( 'swh_retention_tickets_event' );
@@ -50,6 +67,14 @@ function swh_deactivate() {
 }
 
 add_action( 'admin_init', 'swh_run_upgrade_routine' );
+/**
+ * Runs database upgrade routines and option migrations when the plugin version advances.
+ *
+ * Hooked to admin_init so it runs automatically after updates. Also called directly
+ * from swh_activate() to handle fresh installs.
+ *
+ * @return void
+ */
 function swh_run_upgrade_routine() {
 	// One-time migration: set comment_type on ALL comments attached to ticket posts.
 	// Uses a fresh flag name (v2) so previous broken migration flags don't block it.
@@ -113,6 +138,13 @@ function swh_run_upgrade_routine() {
 }
 
 add_action( 'admin_init', 'swh_ensure_technician_caps' );
+/**
+ * One-time migration to add missing capabilities to the Technician role.
+ *
+ * Runs once on admin_init and marks itself complete with the swh_tech_caps_v2 option.
+ *
+ * @return void
+ */
 function swh_ensure_technician_caps() {
 	if ( get_option( 'swh_tech_caps_v2' ) ) {
 		return;
@@ -128,6 +160,12 @@ function swh_ensure_technician_caps() {
 	update_option( 'swh_tech_caps_v2', '1' );
 }
 
+/**
+ * Runs on plugin uninstall: deletes all tickets, files, options, cron events,
+ * and the Technician role if the delete-on-uninstall setting is enabled.
+ *
+ * @return void
+ */
 function swh_uninstall() {
 	if ( 'yes' !== get_option( 'swh_delete_on_uninstall' ) ) {
 		return;
@@ -148,14 +186,25 @@ function swh_uninstall() {
 	wp_clear_scheduled_hook( 'swh_retention_tickets_event' );
 	wp_clear_scheduled_hook( 'swh_retention_attachments_event' );
 	// Remove upload protection files and directory.
-	$upload_dir = wp_get_upload_dir();
-	$swh_dir    = trailingslashit( $upload_dir['basedir'] ) . 'swh-helpdesk';
-	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
-	@unlink( $swh_dir . '/.htaccess' );
-	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
-	@unlink( $swh_dir . '/index.php' );
-	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
-	@rmdir( $swh_dir );
+	// Paths are derived entirely from wp_get_upload_dir() + hardcoded suffixes — not user input.
+	$upload_dir   = wp_get_upload_dir();
+	$swh_dir      = trailingslashit( $upload_dir['basedir'] ) . 'swh-helpdesk';
+	$real_swh_dir = realpath( $swh_dir );
+	if ( $real_swh_dir ) {
+		$htaccess = $real_swh_dir . DIRECTORY_SEPARATOR . '.htaccess';
+		$index    = $real_swh_dir . DIRECTORY_SEPARATOR . 'index.php';
+		// Confirm files are within the expected directory before removing.
+		if ( str_starts_with( $htaccess, $real_swh_dir ) && file_exists( $htaccess ) ) {
+			// Path validated via realpath() + str_starts_with() — not user input. phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+			@unlink( $htaccess ); // nosemgrep: php.lang.security.unlink-use.unlink-use
+		}
+		if ( str_starts_with( $index, $real_swh_dir ) && file_exists( $index ) ) {
+			// Path validated via realpath() + str_starts_with() — not user input. phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+			@unlink( $index ); // nosemgrep: php.lang.security.unlink-use.unlink-use
+		}
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+		@rmdir( $real_swh_dir );
+	}
 	// Delete rate-limit options and transients.
 	global $wpdb;
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'swh\_rl\_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -179,11 +228,21 @@ function swh_uninstall() {
 }
 
 add_action( 'init', 'swh_load_textdomain' );
+/**
+ * Loads the plugin text domain for translations.
+ *
+ * @return void
+ */
 function swh_load_textdomain() {
 	load_plugin_textdomain( 'simple-wp-helpdesk', false, dirname( plugin_basename( SWH_PLUGIN_FILE ) ) . '/languages' );
 }
 
 add_action( 'init', 'swh_register_ticket_cpt' );
+/**
+ * Registers the helpdesk_ticket custom post type.
+ *
+ * @return void
+ */
 function swh_register_ticket_cpt() {
 	register_post_type(
 		'helpdesk_ticket',

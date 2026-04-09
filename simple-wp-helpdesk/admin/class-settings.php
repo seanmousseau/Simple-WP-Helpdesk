@@ -1,9 +1,22 @@
 <?php
+/**
+ * Settings page: render, save handler, asset enqueue, and field helper.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Renders a settings field (text input or textarea) with a reset-to-default link.
+/**
+ * Renders a settings field (text input or textarea) with a reset-to-default link.
+ *
+ * @param string               $name The option name / input name attribute.
+ * @param array<string, mixed> $defs The defaults array from swh_get_defaults().
+ * @param string               $type Field type: 'text' (default) or 'textarea'.
+ * @return void
+ */
 function swh_field( $name, $defs, $type = 'text' ) {
 	$val     = get_option( $name, isset( $defs[ $name ] ) ? $defs[ $name ] : '' );
 	$default = isset( $defs[ $name ] ) ? $defs[ $name ] : '';
@@ -18,6 +31,12 @@ function swh_field( $name, $defs, $type = 'text' ) {
 // Frontend CSS and JS are enqueued inside swh_ticket_frontend() only when the shortcode is rendered.
 
 add_action( 'admin_enqueue_scripts', 'swh_enqueue_admin_assets' );
+/**
+ * Enqueues admin CSS and JS on the helpdesk settings page.
+ *
+ * @param string $hook The current admin page hook suffix.
+ * @return void
+ */
 function swh_enqueue_admin_assets( $hook ) {
 	if ( 'helpdesk_ticket_page_swh-settings' !== $hook ) {
 		return;
@@ -27,11 +46,24 @@ function swh_enqueue_admin_assets( $hook ) {
 }
 
 add_action( 'admin_menu', 'swh_register_settings_page' );
+/**
+ * Registers the Helpdesk Settings submenu page under the Tickets post type menu.
+ *
+ * @return void
+ */
 function swh_register_settings_page() {
 	add_submenu_page( 'edit.php?post_type=helpdesk_ticket', __( 'Helpdesk Settings', 'simple-wp-helpdesk' ), __( 'Settings', 'simple-wp-helpdesk' ), 'manage_options', 'swh-settings', 'swh_render_settings_page' );
 }
 
 add_action( 'admin_init', 'swh_handle_settings_save' );
+/**
+ * Processes the settings form submission and saves options, then redirects back.
+ *
+ * Runs on admin_init. Handles both the main form and the Tools form (separate nonces).
+ * Never put redirect logic in the render callback.
+ *
+ * @return void
+ */
 function swh_handle_settings_save() {
 	// Only process on the settings page.
     // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -195,6 +227,13 @@ function swh_handle_settings_save() {
 	}
 }
 
+/**
+ * Renders the full Helpdesk Settings admin page HTML.
+ *
+ * Output only — do not place any redirect logic here. Use swh_handle_settings_save() instead.
+ *
+ * @return void
+ */
 function swh_render_settings_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Frontend shortcodes: [submit_ticket] form, ticket lookup, and [helpdesk_portal] routing.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -51,6 +57,9 @@ function swh_ticket_frontend() {
  * Renders the ticket submission form and ticket lookup form.
  *
  * This is the default view when no ticket/token URL parameters are present.
+ * Handles submission, validation, anti-spam, file uploads, and ticket lookup POST actions.
+ *
+ * @return void
  */
 function swh_render_submission_form() {
 	$defs            = swh_get_defaults();
@@ -233,7 +242,7 @@ function swh_render_submission_form() {
 		</div>
 		<div class="swh-form-group">
 			<label><?php esc_html_e( 'Problem Description:', 'simple-wp-helpdesk' ); ?></label>
-			<textarea name="ticket_desc" rows="5" required class="swh-form-control"><?php echo esc_textarea( $form_desc ); ?></textarea>
+			<textarea name="ticket_desc" rows="5" required class="swh-form-control"><?php echo esc_textarea( $form_desc ); // nosemgrep -- $form_desc sanitized via sanitize_textarea_field() before assignment; esc_textarea() applied at output. ?></textarea>
 		</div>
 		<div class="swh-form-group">
 			<label><?php esc_html_e( 'Attachments (Optional):', 'simple-wp-helpdesk' ); ?></label>

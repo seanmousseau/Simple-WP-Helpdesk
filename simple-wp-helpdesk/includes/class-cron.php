@@ -1,4 +1,12 @@
 <?php
+/**
+ * Background cron tasks: auto-close, attachment retention, and ticket retention.
+ *
+ * All tasks are micro-batched (1–2 tickets per run) to prevent cURL error 28 timeouts.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -8,6 +16,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ==============================================================================
 
 add_action( 'swh_autoclose_event', 'swh_process_autoclose' );
+/**
+ * Auto-closes tickets that have been in Resolved status longer than the configured threshold.
+ *
+ * Also purges expired rate-limit entries on each run. Processes 2 tickets per invocation.
+ * Uses a transient lock to prevent concurrent runs.
+ *
+ * @return void
+ */
 function swh_process_autoclose() {
 	// Clean up expired rate-limit entries.
 	global $wpdb;
@@ -92,6 +108,14 @@ function swh_process_autoclose() {
 }
 
 add_action( 'swh_retention_attachments_event', 'swh_process_retention_attachments' );
+/**
+ * Purges attachments from tickets and replies older than the retention threshold.
+ *
+ * Processes 1 ticket and 1 reply batch per invocation. Uses a transient lock.
+ * Appends a note to comment content when reply attachments are purged.
+ *
+ * @return void
+ */
 function swh_process_retention_attachments() {
 	$days = (int) get_option( 'swh_retention_attachments_days', 0 );
 	if ( $days <= 0 ) {
@@ -206,6 +230,13 @@ function swh_process_retention_attachments() {
 }
 
 add_action( 'swh_retention_tickets_event', 'swh_process_retention_tickets' );
+/**
+ * Permanently deletes tickets (and their files) older than the retention threshold.
+ *
+ * Processes 1 ticket per invocation. Uses a transient lock to prevent concurrent runs.
+ *
+ * @return void
+ */
 function swh_process_retention_tickets() {
 	$days = (int) get_option( 'swh_retention_tickets_days', 0 );
 	if ( $days <= 0 ) {

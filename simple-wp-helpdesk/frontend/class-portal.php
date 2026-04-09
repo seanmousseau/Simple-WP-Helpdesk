@@ -1,4 +1,10 @@
 <?php
+/**
+ * Client portal view: renders the single-ticket portal with reply, close, and reopen forms.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -8,7 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Called from the router (swh_ticket_frontend or swh_helpdesk_portal_shortcode)
  * inside an ob_start() context. Echoes HTML directly; the caller handles
- * ob_get_clean().
+ * ob_get_clean(). Validates the ticket token via hash_equals() before rendering.
+ *
+ * @return void
  */
 function swh_render_client_portal() {
 	$defs            = swh_get_defaults();
@@ -194,7 +202,7 @@ function swh_render_client_portal() {
 		if ( ! empty( $attachments ) && is_array( $attachments ) ) {
 			echo '<p><strong>' . esc_html__( 'Attachments:', 'simple-wp-helpdesk' ) . '</strong><br>';
 			foreach ( $attachments as $url ) {
-				echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa;">' . esc_html( basename( $url ) ) . '</a>';
+				echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa;">' . esc_html( basename( $url ) ) . '</a>'; // nosemgrep -- $url from post meta (not $_REQUEST); esc_url() + esc_html() applied.
 			}
 			echo '</p>';
 		}
@@ -227,7 +235,7 @@ function swh_render_client_portal() {
 			if ( ! empty( $attach_urls ) && is_array( $attach_urls ) ) {
 				echo '<div style="margin-top: 10px;">';
 				foreach ( $attach_urls as $url ) {
-					echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( basename( $url ) ) . '</a>';
+					echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( basename( $url ) ) . '</a>'; // nosemgrep -- $url from comment meta (not $_REQUEST); esc_url() + esc_html() applied.
 				}
 				echo '</div>';
 			}

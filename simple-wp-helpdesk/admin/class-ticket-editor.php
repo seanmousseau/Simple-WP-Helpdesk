@@ -1,9 +1,20 @@
 <?php
+/**
+ * Ticket editor: meta boxes, save handler, and conversation UI for the admin ticket edit screen.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 add_action( 'admin_notices', 'swh_admin_helpdesk_page_notice' );
+/**
+ * Displays an admin notice when the Helpdesk Page setting is not configured.
+ *
+ * @return void
+ */
 function swh_admin_helpdesk_page_notice() {
 	$screen = get_current_screen();
 	if ( ! $screen || false === strpos( $screen->id, 'helpdesk_ticket' ) ) {
@@ -23,6 +34,13 @@ function swh_admin_helpdesk_page_notice() {
 }
 
 add_action( 'admin_notices', 'swh_reassigned_notice' );
+/**
+ * Displays an admin notice after a ticket is successfully reassigned.
+ *
+ * Reads the `swh_reassigned` GET parameter set by the post-save redirect.
+ *
+ * @return void
+ */
 function swh_reassigned_notice() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET param set by server redirect; used only for display.
 	if ( ! isset( $_GET['swh_reassigned'] ) ) {
@@ -34,11 +52,25 @@ function swh_reassigned_notice() {
 }
 
 add_action( 'add_meta_boxes', 'swh_add_ticket_meta_boxes' );
+/**
+ * Registers the Ticket Details (side) and Conversation & Reply (normal) meta boxes.
+ *
+ * @return void
+ */
 function swh_add_ticket_meta_boxes() {
 	add_meta_box( 'swh_ticket_status', __( 'Ticket Details', 'simple-wp-helpdesk' ), 'swh_status_meta_box_html', 'helpdesk_ticket', 'side', 'high' );
 	add_meta_box( 'swh_ticket_conversation', __( 'Conversation & Reply', 'simple-wp-helpdesk' ), 'swh_conversation_meta_box_html', 'helpdesk_ticket', 'normal', 'high' );
 }
 
+/**
+ * Renders the Ticket Details side meta box.
+ *
+ * Displays ticket UID, client name/email, all attachments, assigned-to selector,
+ * priority selector, and status selector. Outputs a nonce field for save_post.
+ *
+ * @param WP_Post $post The current ticket post object.
+ * @return void
+ */
 function swh_status_meta_box_html( $post ) {
 	$defs     = swh_get_defaults();
 	$uid      = get_post_meta( $post->ID, '_ticket_uid', true );
@@ -119,6 +151,16 @@ function swh_status_meta_box_html( $post ) {
 	<?php
 }
 
+/**
+ * Renders the Conversation & Reply meta box.
+ *
+ * Shows all ticket comments (replies, internal notes, system messages) in a scrollable log,
+ * then two side-by-side textareas for adding a public reply or internal note.
+ * Attachments on individual replies are displayed as download links.
+ *
+ * @param WP_Post $post The current ticket post object.
+ * @return void
+ */
 function swh_conversation_meta_box_html( $post ) {
 	$comments = get_comments(
 		array(
@@ -189,6 +231,22 @@ function swh_conversation_meta_box_html( $post ) {
 }
 
 add_action( 'save_post_helpdesk_ticket', 'swh_save_ticket_data', 10, 3 );
+/**
+ * Handles saving ticket meta, reply comments, file uploads, and outbound emails on post save.
+ *
+ * Validates nonce and capability, then:
+ * - Updates status, priority, assignee (with whitelist validation).
+ * - Bootstraps UID/token for new admin-created tickets.
+ * - Inserts public reply comment and/or internal note comment.
+ * - Handles file uploads for reply attachments.
+ * - Sends appropriate email (reply, status change, resolved, reassignment, confirmation).
+ * - Sets/clears `_resolved_timestamp` when ticket enters/leaves resolved status.
+ *
+ * @param int     $post_id The ticket post ID.
+ * @param WP_Post $post    The ticket post object.
+ * @param bool    $update  True if this is an update, false for a new post.
+ * @return void
+ */
 function swh_save_ticket_data( $post_id, $post, $update ) {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 		return;

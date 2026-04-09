@@ -7,6 +7,8 @@
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
  * Author: SM WP Plugins
+ *
+ * @package Simple_WP_Helpdesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
