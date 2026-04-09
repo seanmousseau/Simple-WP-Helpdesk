@@ -1,4 +1,4 @@
-<img draggable="false" oncontextmenu="return false;" width="250" src="https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/logo.webp" alt="Simple WP Helpdesk" />
+<img width="250" src="https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/logo.webp" alt="Simple WP Helpdesk" />
 
 # Simple WP Helpdesk
 
