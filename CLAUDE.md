@@ -26,7 +26,8 @@ simple-wp-helpdesk/
 │   └── class-portal.php                # Client portal view
 ├── vendor/plugin-update-checker/       # GitHub auto-updater library
 ├── assets/ (CSS, JS)
-└── languages/ (.pot/.po/.mo)
+├── languages/ (.pot/.po/.mo)
+└── testing/                            # Test scripts and screenshots
 ```
 
 Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these instead of `__FILE__` in module files.
@@ -80,6 +81,13 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 8. Create GitHub Release with ZIP attached as a release asset.
 
 > ZIP must be named `simple-wp-helpdesk.zip` — WordPress uses it as the plugin slug.
+
+## Development Commands
+
+```bash
+# Static analysis (level 5, excludes vendor/)
+vendor/bin/phpstan analyse
+```
 
 ## GitHub Auto-Updater
 
