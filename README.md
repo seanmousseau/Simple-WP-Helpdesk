@@ -1,6 +1,4 @@
-<img draggable="false" oncontextmenu="return false;" width="250" src="https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/logo.webp" alt="logo" />
-
-# Simple WP Helpdesk
+<center><img draggable="false" oncontextmenu="return false;" width="250" src="https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/logo.webp" alt="logo" /></center>
 
 A lightweight, full-featured ticketing system built natively for WordPress. No third-party services required — all data stays on your server.
 
