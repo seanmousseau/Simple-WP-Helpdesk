@@ -2,18 +2,20 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
  * Author: SM WP Plugins
+ *
+ * @package Simple_WP_Helpdesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '2.0.0' );
+define( 'SWH_VERSION', '2.1.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -37,8 +39,11 @@ require_once SWH_PLUGIN_DIR . 'frontend/class-shortcode.php';
 require_once SWH_PLUGIN_DIR . 'frontend/class-portal.php';
 
 // Lifecycle hooks (must reference main plugin __FILE__).
+/** Runs on plugin activation: schedules cron events, registers CPT, seeds defaults. */
 register_activation_hook( __FILE__, 'swh_activate' );
+/** Runs on plugin deactivation: clears scheduled cron events. */
 register_deactivation_hook( __FILE__, 'swh_deactivate' );
+/** Runs on plugin uninstall: deletes all options, meta, and uploaded files when opted in. */
 register_uninstall_hook( __FILE__, 'swh_uninstall' );
 
 // GitHub updater (via plugin-update-checker library).

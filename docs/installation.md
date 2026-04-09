@@ -29,7 +29,7 @@ A **Tickets** menu item will now appear in the left-hand dashboard sidebar.
 
 Create a single WordPress page (e.g., "Support") and add:
 
-```
+```text
 [submit_ticket]
 ```
 

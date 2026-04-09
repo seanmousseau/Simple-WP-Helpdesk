@@ -1,7 +1,25 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+/**
+ * Ticket editor: meta boxes, save handler, and conversation UI for the admin ticket edit screen.
+ *
+ * @package Simple_WP_Helpdesk
+ */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Shows a warning notice when the Helpdesk Page setting is not configured.
+ *
+ * @see swh_admin_helpdesk_page_notice()
+ */
 add_action( 'admin_notices', 'swh_admin_helpdesk_page_notice' );
+/**
+ * Displays an admin notice when the Helpdesk Page setting is not configured.
+ *
+ * @return void
+ */
 function swh_admin_helpdesk_page_notice() {
 	$screen = get_current_screen();
 	if ( ! $screen || false === strpos( $screen->id, 'helpdesk_ticket' ) ) {
@@ -20,7 +38,19 @@ function swh_admin_helpdesk_page_notice() {
 	echo '</p></div>';
 }
 
+/**
+ * Shows a success notice after a ticket has been reassigned.
+ *
+ * @see swh_reassigned_notice()
+ */
 add_action( 'admin_notices', 'swh_reassigned_notice' );
+/**
+ * Displays an admin notice after a ticket is successfully reassigned.
+ *
+ * Reads the `swh_reassigned` GET parameter set by the post-save redirect.
+ *
+ * @return void
+ */
 function swh_reassigned_notice() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET param set by server redirect; used only for display.
 	if ( ! isset( $_GET['swh_reassigned'] ) ) {
@@ -31,12 +61,31 @@ function swh_reassigned_notice() {
 	echo '</p></div>';
 }
 
+/**
+ * Registers the Ticket Details and Conversation & Reply meta boxes.
+ *
+ * @see swh_add_ticket_meta_boxes()
+ */
 add_action( 'add_meta_boxes', 'swh_add_ticket_meta_boxes' );
+/**
+ * Registers the Ticket Details (side) and Conversation & Reply (normal) meta boxes.
+ *
+ * @return void
+ */
 function swh_add_ticket_meta_boxes() {
 	add_meta_box( 'swh_ticket_status', __( 'Ticket Details', 'simple-wp-helpdesk' ), 'swh_status_meta_box_html', 'helpdesk_ticket', 'side', 'high' );
 	add_meta_box( 'swh_ticket_conversation', __( 'Conversation & Reply', 'simple-wp-helpdesk' ), 'swh_conversation_meta_box_html', 'helpdesk_ticket', 'normal', 'high' );
 }
 
+/**
+ * Renders the Ticket Details side meta box.
+ *
+ * Displays ticket UID, client name/email, all attachments, assigned-to selector,
+ * priority selector, and status selector. Outputs a nonce field for save_post.
+ *
+ * @param WP_Post $post The current ticket post object.
+ * @return void
+ */
 function swh_status_meta_box_html( $post ) {
 	$defs     = swh_get_defaults();
 	$uid      = get_post_meta( $post->ID, '_ticket_uid', true );
@@ -62,10 +111,10 @@ function swh_status_meta_box_html( $post ) {
 	<div style="font-size: 16px; font-weight: bold; background: #f0f0f1; padding: 10px; text-align: center; margin-bottom: 15px;">
 		<?php echo $is_new_ticket ? esc_html__( 'New Ticket', 'simple-wp-helpdesk' ) : esc_html__( 'ID:', 'simple-wp-helpdesk' ) . ' ' . esc_html( $uid ); ?>
 	</div>
-	<p style="margin-bottom: 5px;"><strong><?php esc_html_e( 'Client Name:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<input type="text" name="ticket_client_name" value="<?php echo esc_attr( 'Unknown User' !== $name ? $name : '' ); ?>" placeholder="<?php esc_attr_e( 'Client name', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:8px;">
-	<p style="margin-bottom: 5px;"><strong><?php esc_html_e( 'Client Email:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<input type="email" name="ticket_client_email" value="<?php echo esc_attr( $email ); ?>" placeholder="client@example.com" style="width:100%; margin-bottom:8px;">
+	<p style="margin-bottom: 5px;"><label for="swh-client-name"><strong><?php esc_html_e( 'Client Name:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<input type="text" id="swh-client-name" name="ticket_client_name" value="<?php echo esc_attr( 'Unknown User' !== $name ? $name : '' ); ?>" placeholder="<?php esc_attr_e( 'Client name', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:8px;">
+	<p style="margin-bottom: 5px;"><label for="swh-client-email"><strong><?php esc_html_e( 'Client Email:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<input type="email" id="swh-client-email" name="ticket_client_email" value="<?php echo esc_attr( $email ); ?>" placeholder="client@example.com" style="width:100%; margin-bottom:8px;">
 	<?php if ( $is_new_ticket ) : ?>
 	<p><label><input type="checkbox" name="swh_send_client_email" value="1"> <?php esc_html_e( 'Send confirmation email to client', 'simple-wp-helpdesk' ); ?></label></p>
 	<?php elseif ( $email ) : ?>
@@ -81,7 +130,7 @@ function swh_status_meta_box_html( $post ) {
 	);
 	$reply_attachments = array();
 	foreach ( $comments as $c ) {
-		$atts = get_comment_meta( $c->comment_ID, '_attachments', true );
+		$atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) && is_array( $atts ) ) {
 			$reply_attachments = array_merge( $reply_attachments, $atts );
 		}
@@ -95,21 +144,21 @@ function swh_status_meta_box_html( $post ) {
 		<?php endforeach; ?></p>
 	<?php endif; ?>
 	<hr>
-	<p><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<select name="ticket_assigned_to" style="width: 100%; margin-bottom: 10px;">
+	<p><label for="swh-assigned-to"><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<select id="swh-assigned-to" name="ticket_assigned_to" style="width: 100%; margin-bottom: 10px;">
 		<option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
 		<?php foreach ( $techs as $t ) : ?>
 			<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( $assignee, $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
 		<?php endforeach; ?>
 	</select>
-	<p><strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<select name="ticket_priority" style="width: 100%; margin-bottom: 10px;">
+	<p><label for="swh-priority"><strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<select id="swh-priority" name="ticket_priority" style="width: 100%; margin-bottom: 10px;">
 		<?php foreach ( $priorities as $p ) : ?>
 			<option value="<?php echo esc_attr( $p ); ?>" <?php selected( $priority, $p ); ?>><?php echo esc_html( $p ); ?></option>
 		<?php endforeach; ?>
 	</select>
-	<p><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<select name="ticket_status" style="width: 100%;">
+	<p><label for="swh-status"><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<select id="swh-status" name="ticket_status" style="width: 100%;">
 		<?php foreach ( $statuses as $s ) : ?>
 			<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $status, $s ); ?>><?php echo esc_html( $s ); ?></option>
 		<?php endforeach; ?>
@@ -117,6 +166,16 @@ function swh_status_meta_box_html( $post ) {
 	<?php
 }
 
+/**
+ * Renders the Conversation & Reply meta box.
+ *
+ * Shows all ticket comments (replies, internal notes, system messages) in a scrollable log,
+ * then two side-by-side textareas for adding a public reply or internal note.
+ * Attachments on individual replies are displayed as download links.
+ *
+ * @param WP_Post $post The current ticket post object.
+ * @return void
+ */
 function swh_conversation_meta_box_html( $post ) {
 	$comments = get_comments(
 		array(
@@ -124,11 +183,11 @@ function swh_conversation_meta_box_html( $post ) {
 			'order'   => 'ASC',
 		)
 	);
-	echo '<div style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
+	echo '<div role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '" style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
-			$is_internal = get_comment_meta( $comment->comment_ID, '_is_internal_note', true );
-			$is_user     = get_comment_meta( $comment->comment_ID, '_is_user_reply', true );
+			$is_internal = get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true );
+			$is_user     = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 
 			if ( $is_internal ) {
 				/* translators: %s: comment author name */
@@ -146,7 +205,7 @@ function swh_conversation_meta_box_html( $post ) {
 			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_label ) . ' <span style="font-weight:normal; font-size: 0.8em; color: #666;">(' . esc_html( $comment->comment_date ) . ')</span></strong>';
 			echo nl2br( esc_html( $comment->comment_content ) );
 
-			$attachments = get_comment_meta( $comment->comment_ID, '_attachments', true );
+			$attachments = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 			if ( ! empty( $attachments ) && is_array( $attachments ) ) {
 				echo '<div style="margin-top: 10px;">';
 				foreach ( $attachments as $url ) {
@@ -163,18 +222,18 @@ function swh_conversation_meta_box_html( $post ) {
 	?>
 	<div style="display:flex; gap: 20px;">
 		<div style="flex:1;">
-			<h4 style="margin-top:0;"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></h4>
+			<h4 style="margin-top:0;"><label for="swh-tech-reply-text"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px;"><?php esc_html_e( 'This will be emailed to the client.', 'simple-wp-helpdesk' ); ?></p>
-			<textarea name="swh_tech_reply_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type reply here...', 'simple-wp-helpdesk' ); ?>"></textarea>
-			<p><strong><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></strong><br>
-			<input type="file" name="swh_tech_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
+			<textarea id="swh-tech-reply-text" name="swh_tech_reply_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type reply here...', 'simple-wp-helpdesk' ); ?>"></textarea>
+			<p><label for="swh-tech-reply-files"><strong><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></strong></label><br>
+			<input type="file" id="swh-tech-reply-files" name="swh_tech_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
 			<br><small style="color:#666;"><?php esc_html_e( 'Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT.', 'simple-wp-helpdesk' ); ?></small>
 			</p>
 		</div>
 		<div style="flex:1; background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba;">
-			<h4 style="margin-top:0; color: #856404;"><?php esc_html_e( 'Add Internal Note', 'simple-wp-helpdesk' ); ?></h4>
+			<h4 style="margin-top:0; color: #856404;"><label for="swh-tech-note-text"><?php esc_html_e( 'Add Internal Note', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px; color: #856404;"><?php esc_html_e( 'Hidden from client. For staff only.', 'simple-wp-helpdesk' ); ?></p>
-			<textarea name="swh_tech_note_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type private note here...', 'simple-wp-helpdesk' ); ?>"></textarea>
+			<textarea id="swh-tech-note-text" name="swh_tech_note_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type private note here...', 'simple-wp-helpdesk' ); ?>"></textarea>
 		</div>
 	</div>
 	<p class="description">
@@ -186,7 +245,28 @@ function swh_conversation_meta_box_html( $post ) {
 	<?php
 }
 
+/**
+ * Handles ticket meta, replies, uploads, and email sending on post save.
+ *
+ * @see swh_save_ticket_data()
+ */
 add_action( 'save_post_helpdesk_ticket', 'swh_save_ticket_data', 10, 3 );
+/**
+ * Handles saving ticket meta, reply comments, file uploads, and outbound emails on post save.
+ *
+ * Validates nonce and capability, then:
+ * - Updates status, priority, assignee (with whitelist validation).
+ * - Bootstraps UID/token for new admin-created tickets.
+ * - Inserts public reply comment and/or internal note comment.
+ * - Handles file uploads for reply attachments.
+ * - Sends appropriate email (reply, status change, resolved, reassignment, confirmation).
+ * - Sets/clears `_resolved_timestamp` when ticket enters/leaves resolved status.
+ *
+ * @param int     $post_id The ticket post ID.
+ * @param WP_Post $post    The ticket post object.
+ * @param bool    $update  True if this is an update, false for a new post.
+ * @return void
+ */
 function swh_save_ticket_data( $post_id, $post, $update ) {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 		return;
@@ -243,11 +323,11 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	// Send assignment notification when a ticket is newly assigned or reassigned.
 	if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
 		$assignee_user = get_userdata( $assigned_to );
-		if ( $assignee_user && $assignee_user->user_email ) {
+		if ( $assignee_user->user_email ) {
 			$assign_data = array(
 				'name'           => get_post_meta( $post_id, '_ticket_name', true ) ? get_post_meta( $post_id, '_ticket_name', true ) : 'Client',
 				'email'          => get_post_meta( $post_id, '_ticket_email', true ),
-				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( $post_id, 4, '0', STR_PAD_LEFT ),
+				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
 				'title'          => $post->post_title,
 				'status'         => $new_status,
 				'priority'       => $new_priority,
@@ -272,7 +352,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
 	// For admin-created tickets that have no UID yet, bootstrap the ticket identity.
 	if ( ! get_post_meta( $post_id, '_ticket_uid', true ) ) {
-		$uid   = 'TKT-' . str_pad( $post_id, 4, '0', STR_PAD_LEFT );
+		$uid   = 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT );
 		$token = wp_generate_password( 20, false );
 		update_post_meta( $post_id, '_ticket_uid', $uid );
 		update_post_meta( $post_id, '_ticket_token', $token );

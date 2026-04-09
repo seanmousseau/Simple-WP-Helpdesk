@@ -1,7 +1,22 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+/**
+ * Settings page: render, save handler, asset enqueue, and field helper.
+ *
+ * @package Simple_WP_Helpdesk
+ */
 
-// Renders a settings field (text input or textarea) with a reset-to-default link.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Renders a settings field (text input or textarea) with a reset-to-default link.
+ *
+ * @param string               $name The option name / input name attribute.
+ * @param array<string, mixed> $defs The defaults array from swh_get_defaults().
+ * @param string               $type Field type: 'text' (default) or 'textarea'.
+ * @return void
+ */
 function swh_field( $name, $defs, $type = 'text' ) {
 	$val     = get_option( $name, isset( $defs[ $name ] ) ? $defs[ $name ] : '' );
 	$default = isset( $defs[ $name ] ) ? $defs[ $name ] : '';
@@ -15,20 +30,55 @@ function swh_field( $name, $defs, $type = 'text' ) {
 
 // Frontend CSS and JS are enqueued inside swh_ticket_frontend() only when the shortcode is rendered.
 
+/**
+ * Enqueues admin CSS and JS on the helpdesk settings page.
+ *
+ * @see swh_enqueue_admin_assets()
+ */
 add_action( 'admin_enqueue_scripts', 'swh_enqueue_admin_assets' );
+/**
+ * Enqueues admin CSS and JS on the helpdesk settings page.
+ *
+ * @param string $hook The current admin page hook suffix.
+ * @return void
+ */
 function swh_enqueue_admin_assets( $hook ) {
 	if ( 'helpdesk_ticket_page_swh-settings' !== $hook ) {
 		return;
 	}
+	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 }
 
+/**
+ * Registers the Helpdesk Settings submenu page.
+ *
+ * @see swh_register_settings_page()
+ */
 add_action( 'admin_menu', 'swh_register_settings_page' );
+/**
+ * Registers the Helpdesk Settings submenu page under the Tickets post type menu.
+ *
+ * @return void
+ */
 function swh_register_settings_page() {
 	add_submenu_page( 'edit.php?post_type=helpdesk_ticket', __( 'Helpdesk Settings', 'simple-wp-helpdesk' ), __( 'Settings', 'simple-wp-helpdesk' ), 'manage_options', 'swh-settings', 'swh_render_settings_page' );
 }
 
+/**
+ * Processes the settings form POST on admin_init and saves options.
+ *
+ * @see swh_handle_settings_save()
+ */
 add_action( 'admin_init', 'swh_handle_settings_save' );
+/**
+ * Processes the settings form submission and saves options, then redirects back.
+ *
+ * Runs on admin_init. Handles both the main form and the Tools form (separate nonces).
+ * Never put redirect logic in the render callback.
+ *
+ * @return void
+ */
 function swh_handle_settings_save() {
 	// Only process on the settings page.
     // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -192,6 +242,13 @@ function swh_handle_settings_save() {
 	}
 }
 
+/**
+ * Renders the full Helpdesk Settings admin page HTML.
+ *
+ * Output only — do not place any redirect logic here. Use swh_handle_settings_save() instead.
+ *
+ * @return void
+ */
 function swh_render_settings_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
@@ -213,7 +270,7 @@ function swh_render_settings_page() {
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_email + rawurldecode constitutes sanitization.
 			$gdpr_email = isset( $_GET['swh_email'] ) ? sanitize_email( rawurldecode( wp_unslash( $_GET['swh_email'] ) ) ) : '';
 			/* translators: 1: number of tickets deleted, 2: email address */
-			echo '<div class="updated error notice is-dismissible"><p><strong>' . sprintf( esc_html__( 'Successfully deleted %1$s ticket(s) and all associated files for %2$s.', 'simple-wp-helpdesk' ), esc_html( $count ), esc_html( $gdpr_email ) ) . '</strong></p></div>';
+			echo '<div class="updated error notice is-dismissible"><p><strong>' . sprintf( esc_html__( 'Successfully deleted %1$s ticket(s) and all associated files for %2$s.', 'simple-wp-helpdesk' ), esc_html( (string) $count ), esc_html( $gdpr_email ) ) . '</strong></p></div>';
 		} elseif ( 'gdpr_fail' === $notice ) {
 			echo '<div class="notice notice-error is-dismissible"><p><strong>' . esc_html__( 'Please enter a valid email address.', 'simple-wp-helpdesk' ) . '</strong></p></div>';
 		}
@@ -224,19 +281,19 @@ function swh_render_settings_page() {
 	?>
 	<div class="wrap">
 		<h2><?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?></h2>
-		<h2 class="nav-tab-wrapper" id="swh-tabs">
-			<a href="#" class="nav-tab nav-tab-active" data-tab="tab-general"><?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-routing"><?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-emails"><?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-messages"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-spam"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-tools" style="color:#d63638;"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></a>
-		</h2>
+		<div class="nav-tab-wrapper" id="swh-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings Sections', 'simple-wp-helpdesk' ); ?>">
+			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-emails" data-tab="tab-emails" aria-selected="false" aria-controls="tab-emails" tabindex="-1"><?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
+		</div>
 		<form method="POST" action="">
 			<?php wp_nonce_field( 'swh_save_settings_action', 'swh_settings_nonce' ); ?>
 			<input type="hidden" name="swh_active_tab" id="swh_active_tab" value="tab-general">
 
-			<div id="tab-general" class="swh-tab-content">
+			<div id="tab-general" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-general" tabindex="0">
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Custom Priorities', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_ticket_priorities', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Default Priority', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_default_priority', $defs ); ?></td></tr>
@@ -272,7 +329,7 @@ function swh_render_settings_page() {
 							<select name="swh_ticket_page_id">
 								<option value="0"><?php echo '-- ' . esc_html__( 'Select a page', 'simple-wp-helpdesk' ) . ' --'; ?></option>
 								<?php foreach ( $pages as $page ) : ?>
-									<option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
+									<option value="<?php echo esc_attr( (string) $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
 								<?php endforeach; ?>
 							</select>
 							<p class="description"><?php esc_html_e( 'The page clients visit to view their ticket. Use the page containing [helpdesk_portal] if you have a dedicated portal page, or the page containing [submit_ticket] if you use a combined layout. All secure portal links will point here.', 'simple-wp-helpdesk' ); ?></p>

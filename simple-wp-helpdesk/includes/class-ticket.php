@@ -1,11 +1,33 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+/**
+ * Ticket helpers: file proxy, upload handling, comment exclusion filters.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // ==============================================================================
 // TICKET HELPERS: File handling, uploads, comment exclusion filters.
 // ==============================================================================
 
+/**
+ * Serves protected attachment files via token-based auth before WordPress bootstraps fully.
+ *
+ * @see swh_serve_file()
+ */
 add_action( 'init', 'swh_serve_file', 1 );
+/**
+ * Serves a protected helpdesk attachment file via token-based or capability-based access.
+ *
+ * Validates the request against the ticket token (hash_equals) or edit_posts capability.
+ * Enforces path traversal prevention with realpath() before reading the file.
+ * Hooked to init at priority 1 to fire before most other code.
+ *
+ * @return void Outputs file content and exits, or dies on access failure.
+ */
 function swh_serve_file() {
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- File proxy uses token-based auth (hash_equals) instead of nonces.
 	if ( ! isset( $_GET['swh_file'], $_GET['swh_ticket'], $_GET['token'] ) ) {
@@ -36,7 +58,7 @@ function swh_serve_file() {
 		wp_die( esc_html__( 'Access denied.', 'simple-wp-helpdesk' ), 403 );
 	}
 
-	if ( $has_access && ! current_user_can( 'edit_posts' ) && swh_is_token_expired( $ticket_id ) ) {
+	if ( ! current_user_can( 'edit_posts' ) && swh_is_token_expired( $ticket_id ) ) {
 		wp_die( esc_html__( 'This link has expired.', 'simple-wp-helpdesk' ), 403 );
 	}
 
@@ -64,7 +86,17 @@ function swh_serve_file() {
 	exit;
 }
 
+/**
+ * Adds multipart/form-data enctype to the post edit form for ticket posts.
+ *
+ * @see swh_add_enctype_to_post_form()
+ */
 add_action( 'post_edit_form_tag', 'swh_add_enctype_to_post_form' );
+/**
+ * Adds multipart/form-data enctype to the post edit form for ticket posts.
+ *
+ * @return void
+ */
 function swh_add_enctype_to_post_form() {
 	global $post;
 	if ( $post && 'helpdesk_ticket' === $post->post_type ) {
@@ -72,6 +104,12 @@ function swh_add_enctype_to_post_form() {
 	}
 }
 
+/**
+ * Normalizes a multi-file $_FILES sub-array into an array of individual file entries.
+ *
+ * @param array<string, mixed> $files A $_FILES entry for a file[] input (keys: name, type, tmp_name, error, size).
+ * @return array<int, array<string, mixed>> Array of per-file associative arrays.
+ */
 function swh_normalize_files_array( $files ) {
 	$normalized = array();
 	if ( isset( $files['name'] ) && is_array( $files['name'] ) ) {
@@ -90,6 +128,14 @@ function swh_normalize_files_array( $files ) {
 	return $normalized;
 }
 
+/**
+ * Redirects WordPress uploads to the protected swh-helpdesk subdirectory.
+ *
+ * Used as a temporary filter around wp_handle_upload() in swh_handle_multiple_uploads().
+ *
+ * @param array<string, string> $dirs The current upload directory info array.
+ * @return array<string, string> Modified upload directory info pointing to swh-helpdesk/.
+ */
 function swh_custom_upload_dir( $dirs ) {
 	$dirs['subdir'] = '/swh-helpdesk';
 	$dirs['path']   = $dirs['basedir'] . '/swh-helpdesk';
@@ -97,6 +143,13 @@ function swh_custom_upload_dir( $dirs ) {
 	return $dirs;
 }
 
+/**
+ * Creates the swh-helpdesk upload directory with an .htaccess and index.php guard.
+ *
+ * Safe to call on every activation and upload — creates files only if they don't exist.
+ *
+ * @return void
+ */
 function swh_ensure_upload_protection() {
 	$upload_dir = wp_get_upload_dir();
 	$dir        = $upload_dir['basedir'] . '/swh-helpdesk';
@@ -113,6 +166,16 @@ function swh_ensure_upload_protection() {
 	}
 }
 
+/**
+ * Converts a raw file URL into a token-authenticated proxy URL.
+ *
+ * The proxy URL routes through swh_serve_file() which validates access before serving.
+ * Returns the original URL unchanged if no token exists for the ticket.
+ *
+ * @param string $url       The raw upload file URL.
+ * @param int    $ticket_id The ticket post ID.
+ * @return string The proxy URL, or the original URL as a fallback.
+ */
 function swh_get_file_proxy_url( $url, $ticket_id ) {
 	$token = get_post_meta( $ticket_id, '_ticket_token', true );
 	if ( ! $token ) {
@@ -128,6 +191,15 @@ function swh_get_file_proxy_url( $url, $ticket_id ) {
 	);
 }
 
+/**
+ * Handles uploading one or more files from a $_FILES sub-array to the protected directory.
+ *
+ * Validates file count, size, and MIME type. Uses wp_handle_upload() with a temporary
+ * upload_dir filter to route files into swh-helpdesk/. Logs errors via error_log().
+ *
+ * @param array<string, mixed> $file_array The $_FILES sub-array for the file input.
+ * @return string[] Array of successfully uploaded file URLs.
+ */
 function swh_handle_multiple_uploads( $file_array ) {
 	$files = swh_normalize_files_array( $file_array );
 	if ( empty( $files ) ) {
@@ -176,6 +248,14 @@ function swh_handle_multiple_uploads( $file_array ) {
 	return $uploaded_urls;
 }
 
+/**
+ * Deletes a single file from the filesystem given its URL.
+ *
+ * Only deletes files within the configured uploads directory. No-ops on empty or external URLs.
+ *
+ * @param string $url The file URL to delete.
+ * @return void
+ */
 function swh_delete_file_by_url( $url ) {
 	if ( empty( $url ) ) {
 		return;
@@ -190,6 +270,14 @@ function swh_delete_file_by_url( $url ) {
 	}
 }
 
+/**
+ * Permanently deletes a ticket post and all associated files (main and reply attachments).
+ *
+ * Handles both the current multi-URL meta format and legacy single-URL meta keys.
+ *
+ * @param int $ticket_id The ticket post ID.
+ * @return void
+ */
 function swh_delete_ticket_and_files( $ticket_id ) {
 	$main_atts = get_post_meta( $ticket_id, '_ticket_attachments', true );
 	if ( ! empty( $main_atts ) && is_array( $main_atts ) ) {
@@ -207,13 +295,13 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 	}
 	$comments = get_comments( array( 'post_id' => $ticket_id ) );
 	foreach ( $comments as $c ) {
-		$c_atts = get_comment_meta( $c->comment_ID, '_attachments', true );
+		$c_atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $c_atts ) && is_array( $c_atts ) ) {
 			foreach ( $c_atts as $url ) {
 				swh_delete_file_by_url( $url );
 			}
 		}
-		$legacy_c_url = get_comment_meta( $c->comment_ID, '_attachment_url', true );
+		$legacy_c_url = get_comment_meta( (int) $c->comment_ID, '_attachment_url', true );
 		if ( $legacy_c_url ) {
 			swh_delete_file_by_url( $legacy_c_url );
 		}
@@ -221,7 +309,22 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 	wp_delete_post( $ticket_id, true );
 }
 
+/**
+ * Excludes helpdesk reply comments from standard WordPress comment queries.
+ *
+ * @see swh_exclude_helpdesk_comments()
+ */
 add_filter( 'comments_clauses', 'swh_exclude_helpdesk_comments', 10, 2 );
+/**
+ * Excludes helpdesk reply comments from standard WordPress comment queries.
+ *
+ * Does not exclude when querying a specific ticket post (admin editor, cron) or when
+ * the query explicitly requests helpdesk_reply type (client portal).
+ *
+ * @param string[]         $clauses SQL clause array from WP_Comment_Query.
+ * @param WP_Comment_Query $query   The comment query object.
+ * @return string[] Modified clauses.
+ */
 function swh_exclude_helpdesk_comments( $clauses, $query ) {
 	global $wpdb;
 	// Don't exclude when querying a specific helpdesk ticket (admin editor, cron).
@@ -243,7 +346,19 @@ function swh_exclude_helpdesk_comments( $clauses, $query ) {
 	return $clauses;
 }
 
+/**
+ * Excludes helpdesk ticket comments from the site's comment RSS feed.
+ *
+ * @see swh_exclude_helpdesk_from_feed()
+ */
 add_filter( 'comment_feed_where', 'swh_exclude_helpdesk_from_feed', 10, 2 );
+/**
+ * Excludes helpdesk ticket comments from the site's comment RSS feed.
+ *
+ * @param string           $where The WHERE clause for the comment feed query.
+ * @param WP_Comment_Query $query The comment query object (not used directly).
+ * @return string Modified WHERE clause.
+ */
 // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Hook signature requires $query; not needed here.
 function swh_exclude_helpdesk_from_feed( $where, $query ) {
 	global $wpdb;

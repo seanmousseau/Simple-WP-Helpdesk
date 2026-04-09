@@ -4,7 +4,7 @@
 
 ## Repository Structure
 
-```
+```text
 Simple-WP-Helpdesk/
 ├── CHANGELOG.md
 ├── CLAUDE.md                            # AI assistant guidance
