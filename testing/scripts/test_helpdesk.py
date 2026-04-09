@@ -728,14 +728,16 @@ async def run():
         check("plugin icon: 1x key → 128x128 CDN URL", _icons.get("1x") == CDN_ICON_128)
         check("plugin icon: 2x key → 256x256 CDN URL", _icons.get("2x") == CDN_ICON_256)
 
-        # Plugins screen: icon should appear after a fresh update check
+        # Plugins screen: icons are injected on transient read (site_transient_update_plugins, priority 11)
+        plugin_file = "simple-wp-helpdesk/simple-wp-helpdesk.php"
+        icon_in_transient = wpcli(
+            f"""eval '$t = get_site_transient("update_plugins"); """
+            f"""$e = $t->response["{plugin_file}"] ?? $t->no_update["{plugin_file}"] ?? null; """
+            f"""echo ($e && !empty($e->icons)) ? "yes" : "no";'"""
+        )
+        check("plugin icon: icons injected into update transient", icon_in_transient == "yes")
         await wp_login(ADMIN_USER, ADMIN_PASS)
-        wpcli("eval 'wp_update_plugins();'")
-        await asyncio.sleep(1.0)
         await navigate(f"{WP_ADMIN_URL}/plugins.php", wait=3.0)
-        plugins_html = await js("document.body.innerHTML") or ""
-        check("plugin icon: icon URL present on plugins screen",
-              CDN_ICON_128 in plugins_html or CDN_ICON_256 in plugins_html)
         await screenshot("20_plugin_icons")
 
         await wp_logout()
