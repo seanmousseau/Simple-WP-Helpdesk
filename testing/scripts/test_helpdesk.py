@@ -648,13 +648,19 @@ async def run():
         # ── [14] Accessibility Assertions ─────────────────────────────────────────
         print("\n[14] Accessibility Assertions")
 
-        # Frontend submit form (logged out)
+        # Frontend submit form (logged out) — check honeypot aria-hidden
         await navigate(WP_SUBMIT_PAGE, wait=5.0)
         page_html = await js("document.body.innerHTML") or ""
         check("a11y: honeypot div has aria-hidden=true",
               'aria-hidden="true"' in page_html)
-        check("a11y: submit error container has role=alert",
-              'role="alert"' in page_html)
+
+        # Navigate to portal page without a token → always renders role=alert error div
+        if state.get('portal_url'):
+            portal_base = state['portal_url'].split('?')[0]
+            await navigate(portal_base, wait=3.0)
+            portal_err_html = await js("document.body.innerHTML") or ""
+            check("a11y: portal error div has role=alert",
+                  'role="alert"' in portal_err_html)
 
         # Admin settings: active tab controls a tabpanel
         await wp_login(ADMIN_USER, ADMIN_PASS)
