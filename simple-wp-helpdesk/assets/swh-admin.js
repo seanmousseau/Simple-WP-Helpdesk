@@ -1,24 +1,24 @@
 document.addEventListener( 'DOMContentLoaded', function () {
-	const tabs         = document.querySelectorAll( '.nav-tab' );
+	const tabs         = document.querySelectorAll( '[role="tab"]' );
 	const contents     = document.querySelectorAll( '.swh-tab-content' );
 	const saveBtn      = document.getElementById( 'save-btn-container' );
 	const activeTabInput = document.getElementById( 'swh_active_tab' );
 
 	/**
-	 * Activates a settings tab by ID, hiding all others.
+	 * Activates a settings tab by panel ID, updating ARIA attributes, tabindex, and visibility.
 	 *
 	 * @param {string} tabId - The ID of the tab panel element to activate.
 	 */
 	function activateTab( tabId ) {
-		tabs.forEach( function ( t ) { t.classList.remove( 'nav-tab-active' ); } );
+		tabs.forEach( function ( t ) {
+			const isActive = t.dataset.tab === tabId;
+			t.classList.toggle( 'nav-tab-active', isActive );
+			t.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
+			t.setAttribute( 'tabindex', isActive ? '0' : '-1' );
+		} );
 		contents.forEach( function ( c ) { c.style.display = 'none'; } );
 		const tabEl = document.getElementById( tabId );
 		if ( tabEl ) { tabEl.style.display = 'block'; }
-		tabs.forEach( function ( t ) {
-			if ( t.dataset.tab === tabId ) {
-				t.classList.add( 'nav-tab-active' );
-			}
-		} );
 		if ( saveBtn ) { saveBtn.style.display = ( tabId === 'tab-tools' ) ? 'none' : 'block'; }
 		if ( activeTabInput ) { activeTabInput.value = tabId; }
 	}
@@ -39,6 +39,36 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		tab.addEventListener( 'click', function ( e ) {
 			e.preventDefault();
 			activateTab( tab.dataset.tab );
+			tab.focus();
+		} );
+	} );
+
+	/**
+	 * Handles arrow key, Home, and End keyboard navigation within the tablist.
+	 *
+	 * @param {KeyboardEvent} e - The keydown event.
+	 */
+	tabs.forEach( function ( tab ) {
+		tab.addEventListener( 'keydown', function ( e ) {
+			const tabArray = Array.from( tabs );
+			const idx      = tabArray.indexOf( e.target );
+			let nextIdx    = idx;
+
+			if ( e.key === 'ArrowRight' || e.key === 'ArrowDown' ) {
+				nextIdx = ( idx + 1 ) % tabArray.length;
+			} else if ( e.key === 'ArrowLeft' || e.key === 'ArrowUp' ) {
+				nextIdx = ( idx - 1 + tabArray.length ) % tabArray.length;
+			} else if ( e.key === 'Home' ) {
+				nextIdx = 0;
+			} else if ( e.key === 'End' ) {
+				nextIdx = tabArray.length - 1;
+			} else {
+				return;
+			}
+
+			e.preventDefault();
+			activateTab( tabArray[ nextIdx ].dataset.tab );
+			tabArray[ nextIdx ].focus();
 		} );
 	} );
 

@@ -281,19 +281,19 @@ function swh_render_settings_page() {
 	?>
 	<div class="wrap">
 		<h2><?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?></h2>
-		<h2 class="nav-tab-wrapper" id="swh-tabs">
-			<a href="#" class="nav-tab nav-tab-active" data-tab="tab-general"><?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-routing"><?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-emails"><?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-messages"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-spam"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></a>
-			<a href="#" class="nav-tab" data-tab="tab-tools" style="color:#d63638;"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></a>
-		</h2>
+		<div class="nav-tab-wrapper" id="swh-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings Sections', 'simple-wp-helpdesk' ); ?>">
+			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-emails" data-tab="tab-emails" aria-selected="false" aria-controls="tab-emails" tabindex="-1"><?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
+		</div>
 		<form method="POST" action="">
 			<?php wp_nonce_field( 'swh_save_settings_action', 'swh_settings_nonce' ); ?>
 			<input type="hidden" name="swh_active_tab" id="swh_active_tab" value="tab-general">
 
-			<div id="tab-general" class="swh-tab-content">
+			<div id="tab-general" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-general" tabindex="0">
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Custom Priorities', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_ticket_priorities', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Default Priority', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_default_priority', $defs ); ?></td></tr>

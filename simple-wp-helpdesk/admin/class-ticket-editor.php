@@ -111,10 +111,10 @@ function swh_status_meta_box_html( $post ) {
 	<div style="font-size: 16px; font-weight: bold; background: #f0f0f1; padding: 10px; text-align: center; margin-bottom: 15px;">
 		<?php echo $is_new_ticket ? esc_html__( 'New Ticket', 'simple-wp-helpdesk' ) : esc_html__( 'ID:', 'simple-wp-helpdesk' ) . ' ' . esc_html( $uid ); ?>
 	</div>
-	<p style="margin-bottom: 5px;"><strong><?php esc_html_e( 'Client Name:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<input type="text" name="ticket_client_name" value="<?php echo esc_attr( 'Unknown User' !== $name ? $name : '' ); ?>" placeholder="<?php esc_attr_e( 'Client name', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:8px;">
-	<p style="margin-bottom: 5px;"><strong><?php esc_html_e( 'Client Email:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<input type="email" name="ticket_client_email" value="<?php echo esc_attr( $email ); ?>" placeholder="client@example.com" style="width:100%; margin-bottom:8px;">
+	<p style="margin-bottom: 5px;"><label for="swh-client-name"><strong><?php esc_html_e( 'Client Name:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<input type="text" id="swh-client-name" name="ticket_client_name" value="<?php echo esc_attr( 'Unknown User' !== $name ? $name : '' ); ?>" placeholder="<?php esc_attr_e( 'Client name', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:8px;">
+	<p style="margin-bottom: 5px;"><label for="swh-client-email"><strong><?php esc_html_e( 'Client Email:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<input type="email" id="swh-client-email" name="ticket_client_email" value="<?php echo esc_attr( $email ); ?>" placeholder="client@example.com" style="width:100%; margin-bottom:8px;">
 	<?php if ( $is_new_ticket ) : ?>
 	<p><label><input type="checkbox" name="swh_send_client_email" value="1"> <?php esc_html_e( 'Send confirmation email to client', 'simple-wp-helpdesk' ); ?></label></p>
 	<?php elseif ( $email ) : ?>
@@ -144,21 +144,21 @@ function swh_status_meta_box_html( $post ) {
 		<?php endforeach; ?></p>
 	<?php endif; ?>
 	<hr>
-	<p><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<select name="ticket_assigned_to" style="width: 100%; margin-bottom: 10px;">
+	<p><label for="swh-assigned-to"><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<select id="swh-assigned-to" name="ticket_assigned_to" style="width: 100%; margin-bottom: 10px;">
 		<option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
 		<?php foreach ( $techs as $t ) : ?>
 			<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( $assignee, $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
 		<?php endforeach; ?>
 	</select>
-	<p><strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<select name="ticket_priority" style="width: 100%; margin-bottom: 10px;">
+	<p><label for="swh-priority"><strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<select id="swh-priority" name="ticket_priority" style="width: 100%; margin-bottom: 10px;">
 		<?php foreach ( $priorities as $p ) : ?>
 			<option value="<?php echo esc_attr( $p ); ?>" <?php selected( $priority, $p ); ?>><?php echo esc_html( $p ); ?></option>
 		<?php endforeach; ?>
 	</select>
-	<p><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong></p>
-	<select name="ticket_status" style="width: 100%;">
+	<p><label for="swh-status"><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<select id="swh-status" name="ticket_status" style="width: 100%;">
 		<?php foreach ( $statuses as $s ) : ?>
 			<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $status, $s ); ?>><?php echo esc_html( $s ); ?></option>
 		<?php endforeach; ?>
@@ -183,7 +183,7 @@ function swh_conversation_meta_box_html( $post ) {
 			'order'   => 'ASC',
 		)
 	);
-	echo '<div style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
+	echo '<div role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '" style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
 			$is_internal = get_comment_meta( $comment->comment_ID, '_is_internal_note', true );
@@ -222,18 +222,18 @@ function swh_conversation_meta_box_html( $post ) {
 	?>
 	<div style="display:flex; gap: 20px;">
 		<div style="flex:1;">
-			<h4 style="margin-top:0;"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></h4>
+			<h4 style="margin-top:0;"><label for="swh-tech-reply-text"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px;"><?php esc_html_e( 'This will be emailed to the client.', 'simple-wp-helpdesk' ); ?></p>
-			<textarea name="swh_tech_reply_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type reply here...', 'simple-wp-helpdesk' ); ?>"></textarea>
-			<p><strong><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></strong><br>
-			<input type="file" name="swh_tech_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
+			<textarea id="swh-tech-reply-text" name="swh_tech_reply_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type reply here...', 'simple-wp-helpdesk' ); ?>"></textarea>
+			<p><label for="swh-tech-reply-files"><strong><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></strong></label><br>
+			<input type="file" id="swh-tech-reply-files" name="swh_tech_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
 			<br><small style="color:#666;"><?php esc_html_e( 'Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT.', 'simple-wp-helpdesk' ); ?></small>
 			</p>
 		</div>
 		<div style="flex:1; background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba;">
-			<h4 style="margin-top:0; color: #856404;"><?php esc_html_e( 'Add Internal Note', 'simple-wp-helpdesk' ); ?></h4>
+			<h4 style="margin-top:0; color: #856404;"><label for="swh-tech-note-text"><?php esc_html_e( 'Add Internal Note', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px; color: #856404;"><?php esc_html_e( 'Hidden from client. For staff only.', 'simple-wp-helpdesk' ); ?></p>
-			<textarea name="swh_tech_note_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type private note here...', 'simple-wp-helpdesk' ); ?>"></textarea>
+			<textarea id="swh-tech-note-text" name="swh_tech_note_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type private note here...', 'simple-wp-helpdesk' ); ?>"></textarea>
 		</div>
 	</div>
 	<p class="description">
