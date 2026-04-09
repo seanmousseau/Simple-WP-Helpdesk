@@ -310,7 +310,7 @@ function swh_render_settings_page() {
 				</table>
 			</div>
 
-			<div id="tab-routing" class="swh-tab-content" style="display:none;">
+			<div id="tab-routing" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-routing" tabindex="0" style="display:none;">
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Default Assignee', 'simple-wp-helpdesk' ); ?></th>
 						<td><select name="swh_default_assignee"><option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
@@ -353,7 +353,7 @@ function swh_render_settings_page() {
 				</table>
 			</div>
 
-			<div id="tab-emails" class="swh-tab-content" style="display:none;">
+			<div id="tab-emails" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-emails" tabindex="0" style="display:none;">
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Email Format', 'simple-wp-helpdesk' ); ?></th>
@@ -406,7 +406,7 @@ function swh_render_settings_page() {
 				</table>
 			</div>
 
-			<div id="tab-messages" class="swh-tab-content" style="display:none;">
+			<div id="tab-messages" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-messages" tabindex="0" style="display:none;">
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Success: Ticket Created', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_new', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Success: Reply Added', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_reply', $defs ); ?></td></tr>
@@ -420,7 +420,7 @@ function swh_render_settings_page() {
 				</table>
 			</div>
 
-			<div id="tab-spam" class="swh-tab-content" style="display:none;">
+			<div id="tab-spam" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-spam" tabindex="0" style="display:none;">
 				<?php $spam_method = get_option( 'swh_spam_method', 'none' ); ?>
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Spam Prevention', 'simple-wp-helpdesk' ); ?></th><td><select name="swh_spam_method"><option value="none" <?php selected( $spam_method, 'none' ); ?>><?php esc_html_e( 'None', 'simple-wp-helpdesk' ); ?></option><option value="honeypot" <?php selected( $spam_method, 'honeypot' ); ?>><?php esc_html_e( 'Honeypot', 'simple-wp-helpdesk' ); ?></option><option value="recaptcha" <?php selected( $spam_method, 'recaptcha' ); ?>><?php esc_html_e( 'Google reCAPTCHA v2', 'simple-wp-helpdesk' ); ?></option><option value="turnstile" <?php selected( $spam_method, 'turnstile' ); ?>><?php esc_html_e( 'Cloudflare Turnstile', 'simple-wp-helpdesk' ); ?></option></select></td></tr>
@@ -433,7 +433,7 @@ function swh_render_settings_page() {
 			<p class="submit" id="save-btn-container"><input type="submit" name="swh_save_settings" class="button button-primary" value="<?php esc_attr_e( 'Save Changes', 'simple-wp-helpdesk' ); ?>"></p>
 		</form>
 
-		<div id="tab-tools" class="swh-tab-content" style="display:none;">
+		<div id="tab-tools" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-tools" tabindex="0" style="display:none;">
 			<h3><?php esc_html_e( 'Automated Data Retention', 'simple-wp-helpdesk' ); ?></h3>
 			<form method="POST" action="">
 				<?php wp_nonce_field( 'swh_save_tools_action', 'swh_tools_nonce' ); ?>

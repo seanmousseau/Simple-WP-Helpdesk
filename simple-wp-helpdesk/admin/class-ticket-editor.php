@@ -320,27 +320,9 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		);
 	}
 
-	// Send assignment notification when a ticket is newly assigned or reassigned.
-	if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
-		$assignee_user = get_userdata( $assigned_to );
-		if ( $assignee_user->user_email ) {
-			$assign_data = array(
-				'name'           => get_post_meta( $post_id, '_ticket_name', true ) ? get_post_meta( $post_id, '_ticket_name', true ) : 'Client',
-				'email'          => get_post_meta( $post_id, '_ticket_email', true ),
-				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
-				'title'          => $post->post_title,
-				'status'         => $new_status,
-				'priority'       => $new_priority,
-				'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
-				'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
-				'message'        => '',
-				'autoclose_days' => get_option( 'swh_autoclose_days', $defs['swh_autoclose_days'] ),
-			);
-			swh_send_email( $assignee_user->user_email, 'swh_em_assigned_sub', 'swh_em_assigned_body', $assign_data );
-		}
-	}
-
 	// Save editable client name/email (admin-created tickets or corrections).
+	// Must run before the bootstrap and assignment notification so meta is current
+	// when swh_get_secure_ticket_link() and email templates are called below.
 	$client_name  = isset( $_POST['ticket_client_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_client_name'] ) ) : '';
 	$client_email = isset( $_POST['ticket_client_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_client_email'] ) ) : '';
 	if ( $client_name ) {
@@ -351,6 +333,8 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	}
 
 	// For admin-created tickets that have no UID yet, bootstrap the ticket identity.
+	// Must run before the assignment notification so _ticket_token exists when
+	// swh_get_secure_ticket_link() is called to build the portal URL.
 	if ( ! get_post_meta( $post_id, '_ticket_uid', true ) ) {
 		$uid   = 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT );
 		$token = wp_generate_password( 20, false );
@@ -379,6 +363,27 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 				);
 				swh_send_email( $client_email, 'swh_em_user_new_sub', 'swh_em_user_new_body', $new_data );
 			}
+		}
+	}
+
+	// Send assignment notification when a ticket is newly assigned or reassigned.
+	// Token and client meta are now guaranteed to exist before this block runs.
+	if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
+		$assignee_user = get_userdata( $assigned_to );
+		if ( $assignee_user->user_email ) {
+			$assign_data = array(
+				'name'           => get_post_meta( $post_id, '_ticket_name', true ) ? get_post_meta( $post_id, '_ticket_name', true ) : 'Client',
+				'email'          => get_post_meta( $post_id, '_ticket_email', true ),
+				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
+				'title'          => $post->post_title,
+				'status'         => $new_status,
+				'priority'       => $new_priority,
+				'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
+				'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
+				'message'        => '',
+				'autoclose_days' => get_option( 'swh_autoclose_days', $defs['swh_autoclose_days'] ),
+			);
+			swh_send_email( $assignee_user->user_email, 'swh_em_assigned_sub', 'swh_em_assigned_body', $assign_data );
 		}
 	}
 

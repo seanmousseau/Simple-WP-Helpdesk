@@ -236,7 +236,9 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.9.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.9.0...v2.0.0
 [1.9.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.8...1.9.0
 [1.8]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.7...1.8
 [1.7]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.6...1.7

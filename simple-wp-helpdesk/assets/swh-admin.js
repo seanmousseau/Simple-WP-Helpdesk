@@ -80,7 +80,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	document.querySelectorAll( '.swh-reset-field' ).forEach( function ( btn ) {
 		btn.addEventListener( 'click', function ( e ) {
 			e.preventDefault();
-			const fieldName = this.previousElementSibling.getAttribute( 'data-field-name' );
+			const fieldName = this.previousElementSibling.previousElementSibling.getAttribute( 'data-field-name' );
 			const target    = document.querySelector( '[name="' + fieldName + '"]' );
 			if ( target ) { target.value = target.getAttribute( 'data-default' ); }
 		} );
