@@ -1,5 +1,7 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // ==============================================================================
 // BACKGROUND CRON TASKS (Micro-Batched to prevent cURL error 28)

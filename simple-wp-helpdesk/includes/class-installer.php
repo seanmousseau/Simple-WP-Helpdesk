@@ -1,5 +1,7 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 function swh_activate() {
 	if ( ! get_role( 'technician' ) ) {

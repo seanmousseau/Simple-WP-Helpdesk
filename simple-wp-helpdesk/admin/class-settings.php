@@ -1,5 +1,7 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // Renders a settings field (text input or textarea) with a reset-to-default link.
 function swh_field( $name, $defs, $type = 'text' ) {

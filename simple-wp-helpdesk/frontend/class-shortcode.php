@@ -1,6 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+	exit;
+}
 
 add_shortcode( 'submit_ticket', 'swh_ticket_frontend' );
 add_shortcode( 'helpdesk_portal', 'swh_helpdesk_portal_shortcode' );
@@ -128,7 +129,7 @@ function swh_render_submission_form() {
 				// Build ticket_url after token is in meta so swh_get_secure_ticket_link()
 				// can resolve the correct page (respects swh_ticket_page_id setting).
 				$data['ticket_url'] = swh_get_secure_ticket_link( $ticket_id );
-				$default_assignee = get_option( 'swh_default_assignee' );
+				$default_assignee   = get_option( 'swh_default_assignee' );
 				if ( $default_assignee ) {
 					update_post_meta( $ticket_id, '_ticket_assigned_to', $default_assignee );
 				}

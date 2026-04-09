@@ -1,5 +1,7 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 add_action( 'admin_notices', 'swh_admin_helpdesk_page_notice' );
 function swh_admin_helpdesk_page_notice() {
