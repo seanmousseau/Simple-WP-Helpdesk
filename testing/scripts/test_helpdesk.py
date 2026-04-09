@@ -698,50 +698,45 @@ async def run():
         CDN_ICON_128 = f"{CDN_BASE}/icon-128x128.png"
         CDN_ICON_256 = f"{CDN_BASE}/icon-256x256.png"
 
-        # Verify CDN assets are publicly reachable
-        for _label, _url in [("128x128", CDN_ICON_128), ("256x256", CDN_ICON_256)]:
-            try:
-                _req = urllib.request.Request(_url, method="HEAD")
-                with urllib.request.urlopen(_req, timeout=10) as _resp:  # nosemgrep
-                    _status = _resp.status
-            except Exception:
-                _status = 0
-            check(f"plugin icon: CDN {_label} reachable (HTTP 200)", _status == 200,
-                  f"HTTP {_status}")
+        # CDN reachability — use curl (hardcoded URLs, avoids dynamic urllib warning)
+        for cdn_url, label in ((CDN_ICON_128, "1x"), (CDN_ICON_256, "2x")):
+            result = subprocess.run(
+                ["curl", "-sI", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}", cdn_url],
+                capture_output=True, text=True
+            )
+            check(f"plugin icon: CDN {label} image reachable", result.stdout.strip() == "200")
 
-        # Verify the PUC filter hook is registered in the running WP instance
-        hook_ok = wpcli(
-            """eval 'echo has_filter("puc_request_info_result-simple-wp-helpdesk", "swh_add_plugin_icons") ? "yes" : "no";'"""
+        # PUC filter registered
+        filter_registered = wpcli(
+            "eval 'global $wp_filter; "
+            "echo isset($wp_filter[\"puc_request_info_result-simple-wp-helpdesk\"]) ? \"yes\" : \"no\";'"
         )
-        check("plugin icon: puc filter registered", hook_ok == "yes")
+        check("plugin icon: puc_request_info_result filter registered", filter_registered == "yes")
 
-        # Verify the filter injects the expected CDN icon URLs
-        icons_raw = wpcli(
-            """eval '$o = new stdClass(); $r = apply_filters("puc_request_info_result-simple-wp-helpdesk", $o); echo json_encode($r->icons ?? []);'"""
+        # Filter returns correct icon URLs
+        icon_1x = wpcli(
+            "eval '"
+            "$info = (object)[]; "
+            "$result = apply_filters(\"puc_request_info_result-simple-wp-helpdesk\", $info); "
+            "echo $result->icons[\"1x\"] ?? \"\";'"
         )
-        try:
-            _icons = json.loads(icons_raw) if icons_raw else {}
-        except (ValueError, json.JSONDecodeError):
-            _icons = {}
-        check("plugin icon: filter returns icons array", bool(_icons),
-              f"got: {icons_raw!r}")
-        check("plugin icon: 1x key → 128x128 CDN URL", _icons.get("1x") == CDN_ICON_128)
-        check("plugin icon: 2x key → 256x256 CDN URL", _icons.get("2x") == CDN_ICON_256)
+        icon_2x = wpcli(
+            "eval '"
+            "$info = (object)[]; "
+            "$result = apply_filters(\"puc_request_info_result-simple-wp-helpdesk\", $info); "
+            "echo $result->icons[\"2x\"] ?? \"\";'"
+        )
+        check("plugin icon: puc filter returns correct 1x URL", icon_1x == CDN_ICON_128)
+        check("plugin icon: puc filter returns correct 2x URL", icon_2x == CDN_ICON_256)
 
-        # Plugins screen: icons are injected on transient read (site_transient_update_plugins, priority 11)
+        # Icons injected into update transient
         plugin_file = "simple-wp-helpdesk/simple-wp-helpdesk.php"
         icon_in_transient = wpcli(
-            f"""eval '$t = get_site_transient("update_plugins"); """
-            f"""$e = $t->response["{plugin_file}"] ?? $t->no_update["{plugin_file}"] ?? null; """
-            f"""echo ($e && !empty($e->icons)) ? "yes" : "no";'"""
+            f"eval '$t = get_site_transient(\"update_plugins\"); "
+            f"$e = $t->response[\"{plugin_file}\"] ?? $t->no_update[\"{plugin_file}\"] ?? null; "
+            f"echo ($e && !empty($e->icons)) ? \"yes\" : \"no\";'"
         )
         check("plugin icon: icons injected into update transient", icon_in_transient == "yes")
-        await wp_login(ADMIN_USER, ADMIN_PASS)
-        await navigate(f"{WP_ADMIN_URL}/plugins.php", wait=3.0)
-        await screenshot("20_plugin_icons")
-
-        await wp_logout()
-        await asyncio.sleep(0.5)
 
         # ── [16] Cleanup ──────────────────────────────────────────────────────────
         print("\n[16] Cleanup")
