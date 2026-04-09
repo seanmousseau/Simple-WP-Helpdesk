@@ -283,7 +283,7 @@ function swh_register_ticket_cpt() {
 			),
 			'public'          => false,
 			'show_ui'         => true,
-			'menu_icon'       => 'dashicons-tickets-alt',
+			'menu_icon'       => SWH_ICON_1X,
 			'supports'        => array( 'title', 'editor' ),
 			'capability_type' => 'post',
 		)
