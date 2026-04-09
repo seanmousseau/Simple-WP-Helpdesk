@@ -205,12 +205,12 @@ function swh_uninstall() {
 		$index    = $real_swh_dir . DIRECTORY_SEPARATOR . 'index.php';
 		// Confirm files are within the expected directory before removing.
 		if ( str_starts_with( $htaccess, $real_swh_dir ) && file_exists( $htaccess ) ) {
-			// Path validated via realpath() + str_starts_with() — not user input. phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
-			@unlink( $htaccess ); // nosemgrep: php.lang.security.unlink-use.unlink-use
+			// Path validated via realpath() + str_starts_with() — not user input.
+			@unlink( $htaccess ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- path validated above. nosemgrep: php.lang.security.unlink-use.unlink-use
 		}
 		if ( str_starts_with( $index, $real_swh_dir ) && file_exists( $index ) ) {
-			// Path validated via realpath() + str_starts_with() — not user input. phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
-			@unlink( $index ); // nosemgrep: php.lang.security.unlink-use.unlink-use
+			// Path validated via realpath() + str_starts_with() — not user input.
+			@unlink( $index ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- path validated above. nosemgrep: php.lang.security.unlink-use.unlink-use
 		}
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
 		@rmdir( $real_swh_dir );

@@ -31,7 +31,7 @@ function swh_ticket_frontend() {
 	 * @since 2.1.0
 	 * @param string[] $exts Array of lowercase file extension strings.
 	 */
-	/** @var string[] $allowed_exts */
+	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
 	wp_localize_script(
 		'swh-frontend',
@@ -354,7 +354,7 @@ function swh_helpdesk_portal_shortcode() {
 
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
-	/** @var string[] $allowed_exts */
+	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
 	wp_localize_script(
 		'swh-frontend',
