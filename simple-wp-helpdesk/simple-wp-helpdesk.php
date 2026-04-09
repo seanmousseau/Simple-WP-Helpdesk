@@ -58,3 +58,21 @@ $swh_update_checker = PucFactory::buildUpdateChecker(
 );
 $swh_update_checker->setBranch( 'main' );
 $swh_update_checker->getVcsApi()->enableReleaseAssets();
+
+// Inject plugin icons into the update checker's plugin info response.
+add_filter( 'puc_request_info_result-simple-wp-helpdesk', 'swh_add_plugin_icons' );
+/**
+ * Add CDN-hosted icons to the plugin info returned by the update checker.
+ *
+ * @param object|null $info Plugin info object from PUC.
+ * @return object|null
+ */
+function swh_add_plugin_icons( $info ) {
+	if ( $info ) {
+		$info->icons = array(
+			'1x' => 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-128x128.png',
+			'2x' => 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-256x256.png',
+		);
+	}
+	return $info;
+}
