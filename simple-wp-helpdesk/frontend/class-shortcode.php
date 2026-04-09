@@ -25,13 +25,21 @@ add_shortcode( 'helpdesk_portal', 'swh_helpdesk_portal_shortcode' );
 function swh_ticket_frontend() {
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
+	/**
+	 * Filters the list of allowed file extensions for ticket attachments.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $exts Array of lowercase file extension strings.
+	 */
+	/** @var string[] $allowed_exts */
+	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
 	wp_localize_script(
 		'swh-frontend',
 		'swhConfig',
 		array(
 			'maxMb'       => (int) get_option( 'swh_max_upload_size', 5 ),
 			'maxFiles'    => (int) get_option( 'swh_max_upload_count', 5 ),
-			'allowedExts' => array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ),
+			'allowedExts' => $allowed_exts,
 			'i18n'        => array(
 				/* translators: %d: maximum number of files allowed */
 				'maxFilesError' => __( 'You may only attach up to %d file(s) per upload.', 'simple-wp-helpdesk' ),
@@ -108,6 +116,20 @@ function swh_render_submission_form() {
 		if ( $is_spam ) {
 			echo '<div class="swh-alert swh-alert-error">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
 		} elseif ( $data['name'] && $data['title'] && $data['message'] && $data['email'] ) {
+			/**
+			 * Filters the ticket submission data array before the ticket is created.
+			 *
+			 * @since 2.1.0
+			 * @param array<string, string> $data Sanitized submission fields: name, email, title, message, priority, status.
+			 */
+			$data = apply_filters( 'swh_submission_data', $data );
+			/**
+			 * Fires immediately before a new ticket is inserted.
+			 *
+			 * @since 2.1.0
+			 * @param array<string, string> $data Sanitized submission data.
+			 */
+			do_action( 'swh_pre_ticket_create', $data );
 			$ticket_id = wp_insert_post(
 				array(
 					'post_title'   => $data['title'],
@@ -153,6 +175,14 @@ function swh_render_submission_form() {
 					$attach_urls
 				);
 				swh_send_email( $admin_email, 'swh_em_admin_new_sub', 'swh_em_admin_new_body', $data, $proxy_urls );
+				/**
+				 * Fires after a new ticket has been created and all meta, emails, and attachments saved.
+				 *
+				 * @since 2.1.0
+				 * @param int                   $ticket_id The new ticket post ID.
+				 * @param array<string, string> $data      Submission data including ticket_id, ticket_url, email.
+				 */
+				do_action( 'swh_ticket_created', $ticket_id, $data );
 				echo '<div class="swh-alert swh-alert-success">' . esc_html( get_option( 'swh_msg_success_new', $defs['swh_msg_success_new'] ) ) . '</div>';
 			}
 		} else {
@@ -324,13 +354,15 @@ function swh_helpdesk_portal_shortcode() {
 
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
+	/** @var string[] $allowed_exts */
+	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
 	wp_localize_script(
 		'swh-frontend',
 		'swhConfig',
 		array(
 			'maxMb'       => (int) get_option( 'swh_max_upload_size', 5 ),
 			'maxFiles'    => (int) get_option( 'swh_max_upload_count', 5 ),
-			'allowedExts' => array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ),
+			'allowedExts' => $allowed_exts,
 			'i18n'        => array(
 				/* translators: %d: maximum number of files allowed */
 				'maxFilesError' => __( 'You may only attach up to %d file(s) per upload.', 'simple-wp-helpdesk' ),

@@ -40,7 +40,15 @@ function swh_parse_template( $template, $data ) {
 	$template = preg_replace( '/\{[a-zA-Z_]+\}/', '', $template );
 	// 4. Collapse runs of 3+ newlines down to 2.
 	$template = preg_replace( '/\n{3,}/', "\n\n", $template );
-	return trim( $template );
+	$template = trim( $template );
+	/**
+	 * Filters the fully-rendered email template string.
+	 *
+	 * @since 2.1.0
+	 * @param string               $template The rendered template output.
+	 * @param array<string, mixed> $data     The template data array.
+	 */
+	return apply_filters( 'swh_parse_template', $template, $data );
 }
 
 /**
@@ -65,7 +73,18 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	$format  = get_option( 'swh_email_format', 'html' );
 	if ( 'html' === $format ) {
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
-		$body      = swh_wrap_html_email( $body, $attachments );
+	}
+	/**
+	 * Filters the email headers array before sending.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $headers Array of header strings (e.g. 'Content-Type: text/html; charset=UTF-8').
+	 * @param string   $to      Recipient email address.
+	 * @param string   $subject Rendered email subject.
+	 */
+	$headers = apply_filters( 'swh_email_headers', $headers, $to, $subject );
+	if ( 'html' === $format ) {
+		$body = swh_wrap_html_email( $body, $attachments );
 	} elseif ( ! empty( $attachments ) ) {
 			$lines = array();
 		foreach ( $attachments as $url ) {

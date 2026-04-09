@@ -109,8 +109,15 @@ function swh_get_all_option_keys() {
  * @return string[] Trimmed status label strings.
  */
 function swh_get_statuses() {
-	$defs = swh_get_defaults();
-	return array_map( 'trim', explode( ',', get_option( 'swh_ticket_statuses', $defs['swh_ticket_statuses'] ) ) );
+	$defs     = swh_get_defaults();
+	$statuses = array_map( 'trim', explode( ',', get_option( 'swh_ticket_statuses', $defs['swh_ticket_statuses'] ) ) );
+	/**
+	 * Filters the list of available ticket statuses.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $statuses Array of status label strings.
+	 */
+	return apply_filters( 'swh_ticket_statuses', $statuses );
 }
 
 /**
@@ -119,8 +126,15 @@ function swh_get_statuses() {
  * @return string[] Trimmed priority label strings.
  */
 function swh_get_priorities() {
-	$defs = swh_get_defaults();
-	return array_map( 'trim', explode( ',', get_option( 'swh_ticket_priorities', $defs['swh_ticket_priorities'] ) ) );
+	$defs       = swh_get_defaults();
+	$priorities = array_map( 'trim', explode( ',', get_option( 'swh_ticket_priorities', $defs['swh_ticket_priorities'] ) ) );
+	/**
+	 * Filters the list of available ticket priorities.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $priorities Array of priority label strings.
+	 */
+	return apply_filters( 'swh_ticket_priorities', $priorities );
 }
 
 /**
@@ -253,6 +267,14 @@ function swh_check_antispam( $check_captcha = true ) {
  * @return bool True if rate-limited, false if the action is allowed.
  */
 function swh_is_rate_limited( $action, $ttl = 30 ) {
+	/**
+	 * Filters the rate-limit TTL (in seconds) for a given action.
+	 *
+	 * @since 2.1.0
+	 * @param int    $ttl    Lock duration in seconds.
+	 * @param string $action The action identifier being rate-limited.
+	 */
+	$ttl = (int) apply_filters( 'swh_rate_limit_ttl', $ttl, $action );
 	$key = 'swh_rl_' . md5( $action . '_' . swh_get_client_ip() );
 	$val = get_option( $key );
 	if ( false !== $val && (int) $val > time() ) {

@@ -42,6 +42,13 @@ function swh_process_autoclose() {
 
 	$defs = swh_get_defaults();
 	$days = (int) get_option( 'swh_autoclose_days', 3 );
+	/**
+	 * Filters the number of days before a resolved ticket is automatically closed.
+	 *
+	 * @since 2.1.0
+	 * @param int $days Number of inactivity days. 0 disables auto-close.
+	 */
+	$days = (int) apply_filters( 'swh_autoclose_threshold', $days );
 	if ( $days <= 0 ) {
 		return;
 	}
