@@ -691,8 +691,55 @@ async def run():
         await wp_logout()
         await asyncio.sleep(0.5)
 
-        # ── [15] Cleanup ──────────────────────────────────────────────────────────
-        print("\n[15] Cleanup")
+        # ── [15] Plugin Icons ─────────────────────────────────────────────────────
+        print("\n[15] Plugin Icons")
+
+        CDN_BASE     = "https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh"
+        CDN_ICON_128 = f"{CDN_BASE}/icon-128x128.png"
+        CDN_ICON_256 = f"{CDN_BASE}/icon-256x256.png"
+
+        # CDN reachability — use curl (hardcoded URLs, avoids dynamic urllib warning)
+        for cdn_url, label in ((CDN_ICON_128, "1x"), (CDN_ICON_256, "2x")):
+            result = subprocess.run(
+                ["curl", "-sI", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}", cdn_url],
+                capture_output=True, text=True
+            )
+            check(f"plugin icon: CDN {label} image reachable", result.stdout.strip() == "200")
+
+        # PUC filter registered
+        filter_registered = wpcli(
+            "eval 'global $wp_filter; "
+            "echo isset($wp_filter[\"puc_request_info_result-simple-wp-helpdesk\"]) ? \"yes\" : \"no\";'"
+        )
+        check("plugin icon: puc_request_info_result filter registered", filter_registered == "yes")
+
+        # Filter returns correct icon URLs
+        icon_1x = wpcli(
+            "eval '"
+            "$info = (object)[]; "
+            "$result = apply_filters(\"puc_request_info_result-simple-wp-helpdesk\", $info); "
+            "echo $result->icons[\"1x\"] ?? \"\";'"
+        )
+        icon_2x = wpcli(
+            "eval '"
+            "$info = (object)[]; "
+            "$result = apply_filters(\"puc_request_info_result-simple-wp-helpdesk\", $info); "
+            "echo $result->icons[\"2x\"] ?? \"\";'"
+        )
+        check("plugin icon: puc filter returns correct 1x URL", icon_1x == CDN_ICON_128)
+        check("plugin icon: puc filter returns correct 2x URL", icon_2x == CDN_ICON_256)
+
+        # Icons injected into update transient
+        plugin_file = "simple-wp-helpdesk/simple-wp-helpdesk.php"
+        icon_in_transient = wpcli(
+            f"eval '$t = get_site_transient(\"update_plugins\"); "
+            f"$e = $t->response[\"{plugin_file}\"] ?? $t->no_update[\"{plugin_file}\"] ?? null; "
+            f"echo ($e && !empty($e->icons)) ? \"yes\" : \"no\";'"
+        )
+        check("plugin icon: icons injected into update transient", icon_in_transient == "yes")
+
+        # ── [16] Cleanup ──────────────────────────────────────────────────────────
+        print("\n[16] Cleanup")
 
         await wp_login(ADMIN_USER, ADMIN_PASS)
         await navigate(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket", wait=2.5)
