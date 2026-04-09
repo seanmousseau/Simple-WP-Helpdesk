@@ -191,10 +191,12 @@ function swh_uninstall() {
 	foreach ( $tickets as $t ) {
 		swh_delete_ticket_and_files( $t->ID );
 	}
-	// Clear cron hooks (defensive; deactivation may have been skipped)..
+	// Clear cron hooks (defensive; deactivation may have been skipped).
 	wp_clear_scheduled_hook( 'swh_autoclose_event' );
 	wp_clear_scheduled_hook( 'swh_retention_tickets_event' );
 	wp_clear_scheduled_hook( 'swh_retention_attachments_event' );
+	wp_clear_scheduled_hook( 'swh_hourly_maintenance_event' );
+	wp_clear_scheduled_hook( 'swh_daily_autoclose_event' );
 	// Remove upload protection files and directory.
 	// Paths are derived entirely from wp_get_upload_dir() + hardcoded suffixes — not user input.
 	$upload_dir   = wp_get_upload_dir();

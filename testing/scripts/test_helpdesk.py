@@ -263,7 +263,7 @@ async def run():
                    {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False})
 
         # Reset any options that a previous failed run may have left dirty
-        wpcli("option delete swh_restrict_technicians 2>/dev/null || true")
+        wpcli("option delete swh_restrict_to_assigned")
 
         # ── [1] Admin Authentication ───────────────────────────────────────────
         print("[1] Admin Authentication")
@@ -582,8 +582,8 @@ async def run():
         href = await wp_login(ADMIN_USER, ADMIN_PASS)
 
         # Enable technician restriction setting
-        restriction_was = wpcli("option get swh_restrict_technicians 2>/dev/null")
-        wpcli("option update swh_restrict_technicians 1")
+        restriction_was = wpcli("option get swh_restrict_to_assigned 2>/dev/null")
+        wpcli("option update swh_restrict_to_assigned yes")
 
         # Verify tech2 (not assigned) cannot see test ticket in admin list
         await wp_logout()
@@ -600,10 +600,10 @@ async def run():
         await wp_logout()
         await asyncio.sleep(0.5)
         await wp_login(ADMIN_USER, ADMIN_PASS)
-        if restriction_was in ("", "0"):
-            wpcli("option delete swh_restrict_technicians 2>/dev/null")
+        if restriction_was in ("", "no"):
+            wpcli("option delete swh_restrict_to_assigned 2>/dev/null")
         else:
-            wpcli(f"option update swh_restrict_technicians {restriction_was}")
+            wpcli(f"option update swh_restrict_to_assigned {restriction_was}")
 
         # ── [12] Admin: Ticket List Filters ───────────────────────────────────
         print("\n[12] Admin: Ticket List Filters")
