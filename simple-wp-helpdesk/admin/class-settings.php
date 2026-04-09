@@ -280,7 +280,10 @@ function swh_render_settings_page() {
 	$techs = get_users( array( 'role__in' => array( 'administrator', 'technician' ) ) );
 	?>
 	<div class="wrap">
-		<h2><?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?></h2>
+		<h2>
+			<img src="<?php echo esc_url( SWH_ICON_1X ); ?>" alt="" style="width:32px;height:32px;vertical-align:middle;margin-right:6px;border-radius:4px;">
+			<?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?>
+		</h2>
 		<div class="nav-tab-wrapper" id="swh-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings Sections', 'simple-wp-helpdesk' ); ?>">
 			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
