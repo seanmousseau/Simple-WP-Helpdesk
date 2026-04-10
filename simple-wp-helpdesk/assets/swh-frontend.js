@@ -109,4 +109,60 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			toggleLink.setAttribute( 'aria-expanded', String( ! expanded ) );
 		} );
 	}
+
+	/**
+	 * XHR upload progress indicator for the ticket submission form.
+	 *
+	 * When the user submits a form with files selected, intercepts the submit,
+	 * shows a progress bar, and navigates to the server's redirect URL on completion.
+	 */
+	const ticketForm = document.getElementById( 'swh-ticket-form' );
+	if ( ticketForm ) {
+		ticketForm.addEventListener( 'submit', function ( e ) {
+			const fileInput = ticketForm.querySelector( '.swh-file-input' );
+			if ( ! fileInput || fileInput.files.length === 0 ) {
+				return; // No files — let the browser handle the submit normally.
+			}
+			e.preventDefault();
+
+			const submitBtn = ticketForm.querySelector( '[type="submit"]' );
+			const origText  = submitBtn ? submitBtn.value : '';
+			if ( submitBtn ) {
+				submitBtn.disabled = true;
+				submitBtn.value    = 'Uploading\u2026';
+			}
+
+			const wrap      = document.createElement( 'div' );
+			wrap.className  = 'swh-progress-bar';
+			const fill      = document.createElement( 'div' );
+			fill.className  = 'swh-progress-fill';
+			fill.style.width = '0%';
+			wrap.appendChild( fill );
+			ticketForm.appendChild( wrap );
+
+			const xhr = new XMLHttpRequest();
+			xhr.open( 'POST', ticketForm.action || window.location.href );
+
+			xhr.upload.addEventListener( 'progress', function ( ev ) {
+				if ( ev.lengthComputable ) {
+					fill.style.width = Math.round( ( ev.loaded / ev.total ) * 100 ) + '%';
+				}
+			} );
+
+			xhr.onload = function () {
+				fill.style.width = '100%';
+				window.location.replace( xhr.responseURL || window.location.href );
+			};
+
+			xhr.onerror = function () {
+				wrap.remove();
+				if ( submitBtn ) {
+					submitBtn.disabled = false;
+					submitBtn.value    = origText;
+				}
+			};
+
+			xhr.send( new FormData( ticketForm ) );
+		} );
+	}
 } );

@@ -278,7 +278,7 @@ function swh_render_submission_form( $atts = array() ) {
 		}
 	}
 	?>
-	<form method="POST" action="" enctype="multipart/form-data">
+	<form id="swh-ticket-form" method="POST" action="" enctype="multipart/form-data">
 		<?php wp_nonce_field( 'swh_create_ticket', 'swh_ticket_nonce' ); ?>
 		<div class="swh-form-group">
 			<label for="swh-name"><?php esc_html_e( 'Your Name:', 'simple-wp-helpdesk' ); ?></label>
