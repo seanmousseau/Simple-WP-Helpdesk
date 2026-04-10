@@ -46,9 +46,18 @@ add_action( 'admin_enqueue_scripts', 'swh_enqueue_admin_assets' );
  * @return void
  */
 function swh_enqueue_admin_assets( $hook ) {
-	if ( 'helpdesk_ticket_page_swh-settings' !== $hook ) {
+	$is_settings = ( 'helpdesk_ticket_page_swh-settings' === $hook );
+	$is_editor   = in_array( $hook, array( 'post.php', 'post-new.php' ), true );
+
+	if ( $is_editor ) {
+		$screen    = get_current_screen();
+		$is_editor = $screen && 'helpdesk_ticket' === $screen->post_type;
+	}
+
+	if ( ! $is_settings && ! $is_editor ) {
 		return;
 	}
+
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 }
@@ -221,7 +230,8 @@ function swh_handle_settings_save() {
 			update_option( 'swh_restrict_to_assigned', 'no' );
 		}
 		$active_tab = isset( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
-		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall' );
+		// Options excluded from the generic save loop (handled separately or by the Tools form).
+		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses' );
 
 		foreach ( $options_list as $opt ) {
 			if ( in_array( $opt, $tools_only, true ) || ! isset( $_POST[ $opt ] ) ) {

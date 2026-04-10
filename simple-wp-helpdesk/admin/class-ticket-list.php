@@ -373,12 +373,20 @@ function swh_handle_bulk_status( $redirect_to, $action, $post_ids ) {
 	if ( null === $status ) {
 		return $redirect_to;
 	}
-	$count = 0;
+	$defs            = swh_get_defaults();
+	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+	$count           = 0;
 	foreach ( $post_ids as $post_id ) {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			continue;
 		}
+		$old_status = get_post_meta( (int) $post_id, '_ticket_status', true );
 		update_post_meta( (int) $post_id, '_ticket_status', $status );
+		if ( $resolved_status === $status && $old_status !== $status ) {
+			update_post_meta( (int) $post_id, '_resolved_timestamp', time() );
+		} elseif ( $resolved_status === $old_status && $resolved_status !== $status ) {
+			delete_post_meta( (int) $post_id, '_resolved_timestamp' );
+		}
 		++$count;
 	}
 	return add_query_arg(
