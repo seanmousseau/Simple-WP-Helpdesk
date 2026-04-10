@@ -236,6 +236,24 @@ function swh_handle_settings_save() {
 			}
 			update_option( $opt, $val );
 		}
+		// Save canned responses (structured option, not part of $options_list).
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
+		$raw_titles = isset( $_POST['swh_canned_titles'] ) ? (array) $_POST['swh_canned_titles'] : array();
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
+		$raw_bodies = isset( $_POST['swh_canned_bodies'] ) ? (array) $_POST['swh_canned_bodies'] : array();
+		$canned     = array();
+		foreach ( $raw_titles as $ci => $raw_title ) {
+			$ctitle = sanitize_text_field( wp_unslash( $raw_title ) );
+			$cbody  = isset( $raw_bodies[ $ci ] ) ? wp_kses_post( wp_unslash( $raw_bodies[ $ci ] ) ) : '';
+			if ( '' !== $ctitle ) {
+				$canned[] = array(
+					'title' => $ctitle,
+					'body'  => $cbody,
+				);
+			}
+		}
+		update_option( 'swh_canned_responses', $canned );
+
 		wp_safe_redirect(
 			add_query_arg(
 				array(
@@ -298,6 +316,7 @@ function swh_render_settings_page() {
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-emails" data-tab="tab-emails" aria-selected="false" aria-controls="tab-emails" tabindex="-1"><?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-canned" data-tab="tab-canned" aria-selected="false" aria-controls="tab-canned" tabindex="-1"><?php esc_html_e( 'Canned Responses', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
 		</div>
 		<form method="POST" action="">
@@ -340,7 +359,16 @@ function swh_render_settings_page() {
 							<select name="swh_ticket_page_id">
 								<option value="0"><?php echo '-- ' . esc_html__( 'Select a page', 'simple-wp-helpdesk' ) . ' --'; ?></option>
 								<?php foreach ( $pages as $page ) : ?>
-									<option value="<?php echo esc_attr( (string) $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
+									<?php
+									$shortcode_hints = array();
+									foreach ( array( '[submit_ticket]', '[helpdesk_portal]' ) as $tag ) {
+										if ( false !== strpos( $page->post_content, $tag ) ) {
+											$shortcode_hints[] = $tag;
+										}
+									}
+									$page_label = $page->post_title . ( $shortcode_hints ? ' — ' . implode( ' ', $shortcode_hints ) : '' );
+									?>
+									<option value="<?php echo esc_attr( (string) $page->ID ); ?>" <?php selected( $current_page, $page->ID ); ?>><?php echo esc_html( $page_label ); ?></option>
 								<?php endforeach; ?>
 							</select>
 							<p class="description"><?php esc_html_e( 'The page clients visit to view their ticket. Use the page containing [helpdesk_portal] if you have a dedicated portal page, or the page containing [submit_ticket] if you use a combined layout. All secure portal links will point here.', 'simple-wp-helpdesk' ); ?></p>
@@ -441,6 +469,30 @@ function swh_render_settings_page() {
 					<tr><th scope="row"><?php esc_html_e( 'Turnstile Secret Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_secret_key" value="<?php echo esc_attr( get_option( 'swh_turnstile_secret_key' ) ); ?>" class="regular-text"></td></tr>
 				</table>
 			</div>
+			<div id="tab-canned" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-canned" tabindex="0" style="display:none;">
+				<p class="description"><?php esc_html_e( 'Pre-written reply templates. Select one in the ticket editor to insert it into the reply field.', 'simple-wp-helpdesk' ); ?></p>
+				<div id="swh-canned-list">
+				<?php
+				$canned_responses = get_option( 'swh_canned_responses', array() );
+				if ( ! is_array( $canned_responses ) ) {
+					$canned_responses = array();
+				}
+				foreach ( $canned_responses as $canned_item ) :
+				?>
+					<div class="swh-canned-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
+						<div style="flex:1;">
+							<input type="text" name="swh_canned_titles[]" value="<?php echo esc_attr( isset( $canned_item['title'] ) ? $canned_item['title'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Response title…', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">
+							<textarea name="swh_canned_bodies[]" rows="3" class="large-text" style="width:100%;"><?php echo esc_textarea( isset( $canned_item['body'] ) ? $canned_item['body'] : '' ); ?></textarea>
+						</div>
+						<div>
+							<button type="button" class="button swh-remove-canned"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button>
+						</div>
+					</div>
+				<?php endforeach; ?>
+				</div>
+				<p><button type="button" id="swh-add-canned" class="button"><?php esc_html_e( '+ Add Response', 'simple-wp-helpdesk' ); ?></button></p>
+			</div>
+
 			<p class="submit" id="save-btn-container"><input type="submit" name="swh_save_settings" class="button button-primary" value="<?php esc_attr_e( 'Save Changes', 'simple-wp-helpdesk' ); ?>"></p>
 		</form>
 
