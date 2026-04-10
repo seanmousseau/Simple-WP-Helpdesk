@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.4.1
+Stable tag: 2.4.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,10 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 2.4.2 =
+* Fixed: Correct icon now shown in expanded admin sidebar menu (favicon-32.png restored as SWH_MENU_ICON)
+* Changed: Plugin icons now bundled in assets/ instead of loaded from external CDN
 
 = 2.4.1 =
 * Fixed: Original filenames with spaces now preserved correctly in attachment meta (sanitize_file_name replaced with sanitize_text_field)
