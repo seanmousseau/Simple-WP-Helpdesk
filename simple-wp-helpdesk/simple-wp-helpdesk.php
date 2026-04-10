@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 2.2.0
+ * Version: 2.3.0
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '2.2.0' );
+define( 'SWH_VERSION', '2.3.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -65,20 +65,50 @@ $swh_update_checker = PucFactory::buildUpdateChecker(
 $swh_update_checker->setBranch( 'main' );
 $swh_update_checker->getVcsApi()->enableReleaseAssets();
 
-// Inject plugin icons into the update checker's plugin info response.
+// Inject icons into the PUC plugin info response (View Details modal / plugins_api).
 add_filter( 'puc_request_info_result-simple-wp-helpdesk', 'swh_add_plugin_icons' );
 /**
  * Add CDN-hosted icons to the plugin info returned by the update checker.
  *
- * @param object|null $info Plugin info object from PUC.
- * @return object|null
+ * @param \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null $info Plugin info object from PUC.
+ * @return \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null
+ *
+ * @phpstan-param \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null $info
+ * @phpstan-return \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null
  */
 function swh_add_plugin_icons( $info ) {
 	if ( $info ) {
 		$info->icons = array(
-			'1x' => 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-128x128.png',
-			'2x' => 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-256x256.png',
+			'1x' => SWH_ICON_1X,
+			'2x' => SWH_ICON_2X,
 		);
 	}
 	return $info;
+}
+
+// Inject icons into the update transient so they appear on the Plugins list screen.
+// PUC hooks site_transient_update_plugins at priority 10 (on read) to inject its entry.
+// We run at priority 11 so our icons are added after PUC has populated the entry.
+add_filter( 'site_transient_update_plugins', 'swh_inject_plugin_icons_into_update_transient', 11 );
+/**
+ * Ensure icon URLs are present in the update transient for both updated and current states.
+ *
+ * @param object $transient The update_plugins site transient.
+ * @return object
+ */
+function swh_inject_plugin_icons_into_update_transient( $transient ) {
+	if ( empty( $transient->checked ) ) {
+		return $transient;
+	}
+	$plugin_file = plugin_basename( SWH_PLUGIN_FILE );
+	$icons       = array(
+		'1x' => SWH_ICON_1X,
+		'2x' => SWH_ICON_2X,
+	);
+	foreach ( array( 'response', 'no_update' ) as $key ) {
+		if ( isset( $transient->{$key}[ $plugin_file ] ) ) {
+			$transient->{$key}[ $plugin_file ]->icons = $icons;
+		}
+	}
+	return $transient;
 }

@@ -223,7 +223,11 @@ function swh_process_retention_attachments() {
 			),
 		)
 	);
+	$comments = is_array( $comments ) ? $comments : array();
 	foreach ( $comments as $comment ) {
+		if ( ! $comment instanceof WP_Comment ) {
+			continue;
+		}
 		$atts = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) ) {
 			if ( ! is_array( $atts ) ) {

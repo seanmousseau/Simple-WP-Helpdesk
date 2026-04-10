@@ -129,25 +129,38 @@ function swh_status_meta_box_html( $post ) {
 	<?php endif; ?>
 	<?php
 	$main_attachments  = get_post_meta( $post->ID, '_ticket_attachments', true ) ? get_post_meta( $post->ID, '_ticket_attachments', true ) : array();
+	$main_orignames    = get_post_meta( $post->ID, '_swh_attachment_orignames', true );
+	$main_orignames    = is_array( $main_orignames ) ? $main_orignames : array();
 	$comments          = get_comments(
 		array(
 			'post_id' => $post->ID,
 			'order'   => 'ASC',
 		)
 	);
+	$comments          = is_array( $comments ) ? $comments : array();
 	$reply_attachments = array();
+	$reply_orignames   = array();
 	foreach ( $comments as $c ) {
+		if ( ! $c instanceof WP_Comment ) {
+			continue;
+		}
 		$atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) && is_array( $atts ) ) {
 			$reply_attachments = array_merge( $reply_attachments, $atts );
 		}
+		$c_names = get_comment_meta( (int) $c->comment_ID, '_swh_reply_orignames', true );
+		if ( ! empty( $c_names ) && is_array( $c_names ) ) {
+			$reply_orignames = array_merge( $reply_orignames, $c_names );
+		}
 	}
 	$all_attachments = array_merge( $main_attachments, $reply_attachments );
+	$all_orignames   = array_merge( $main_orignames, $reply_orignames );
 	if ( ! empty( $all_attachments ) ) :
 		?>
 		<p><strong><?php esc_html_e( 'All Attachments:', 'simple-wp-helpdesk' ); ?></strong><br>
-		<?php foreach ( $all_attachments as $i => $url ) : ?>
-			<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( basename( $url ) ); ?></a>
+		<?php foreach ( $all_attachments as $url ) : ?>
+			<?php $label = ! empty( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url ); ?>
+			<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( $label ); ?></a>
 		<?php endforeach; ?></p>
 	<?php endif; ?>
 	<hr>
@@ -191,9 +204,13 @@ function swh_conversation_meta_box_html( $post ) {
 			'order'   => 'ASC',
 		)
 	);
+	$comments = is_array( $comments ) ? $comments : array();
 	echo '<div role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '" style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
+			if ( ! $comment instanceof WP_Comment ) {
+				continue;
+			}
 			$is_internal = get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true );
 			$is_user     = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 
@@ -235,7 +252,7 @@ function swh_conversation_meta_box_html( $post ) {
 			<?php
 			$swh_canned = get_option( 'swh_canned_responses', array() );
 			if ( is_array( $swh_canned ) && ! empty( $swh_canned ) ) :
-			?>
+				?>
 			<p style="margin-bottom:6px;">
 				<label for="swh-canned-select" style="font-size:12px; font-weight:600;"><?php esc_html_e( 'Insert Canned Response:', 'simple-wp-helpdesk' ); ?></label><br>
 				<select id="swh-canned-select" style="max-width:300px; margin-right:6px; margin-top:3px;">
@@ -475,10 +492,14 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '0' );
 		}
 
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_tech_reply_attachments'] );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$tech_orignames = null;
+		$attach_urls    = swh_handle_multiple_uploads( $_FILES['swh_tech_reply_attachments'], $tech_orignames );
 		if ( $comment_id && ! empty( $attach_urls ) ) {
 			update_comment_meta( $comment_id, '_attachments', $attach_urls );
+			if ( ! empty( $tech_orignames ) ) {
+				update_comment_meta( $comment_id, '_swh_reply_orignames', $tech_orignames );
+			}
 		}
 		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 	}

@@ -32,14 +32,23 @@ function swh_parse_template( $template, $data ) {
 		},
 		$template
 	);
+	if ( null === $template ) {
+		$template = '';
+	}
 	// 2. Replace placeholders with data values.
 	foreach ( $data as $key => $value ) {
 		$template = str_replace( '{' . $key . '}', $value, $template );
 	}
 	// 3. Clean up any unreplaced placeholders.
 	$template = preg_replace( '/\{[a-zA-Z_]+\}/', '', $template );
+	if ( null === $template ) {
+		$template = '';
+	}
 	// 4. Collapse runs of 3+ newlines down to 2.
 	$template = preg_replace( '/\n{3,}/', "\n\n", $template );
+	if ( null === $template ) {
+		$template = '';
+	}
 	$template = trim( $template );
 	/**
 	 * Filters the fully-rendered email template string.
@@ -88,8 +97,9 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	} elseif ( ! empty( $attachments ) ) {
 			$lines = array();
 		foreach ( $attachments as $url ) {
-			parse_str( wp_parse_url( $url, PHP_URL_QUERY ) ?? '', $qs );
-			$name    = ! empty( $qs['swh_file'] ) ? rawurldecode( $qs['swh_file'] ) : basename( $url );
+			$query_string = wp_parse_url( $url, PHP_URL_QUERY );
+			parse_str( is_string( $query_string ) ? $query_string : '', $qs );
+			$name    = ! empty( $qs['swh_file'] ) && is_string( $qs['swh_file'] ) ? rawurldecode( $qs['swh_file'] ) : basename( $url );
 			$lines[] = $name . ' — ' . $url;
 		}
 			$body .= "\n\nAttachments:\n" . implode( "\n", $lines );
@@ -121,8 +131,9 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
 	if ( ! empty( $attachments ) ) {
 		$attachment_html = '<p style="margin-top:15px;"><strong>Attachments:</strong><br>';
 		foreach ( $attachments as $url ) {
-			parse_str( wp_parse_url( $url, PHP_URL_QUERY ) ?? '', $qs );
-			$label            = ! empty( $qs['swh_file'] ) ? rawurldecode( $qs['swh_file'] ) : basename( $url );
+			$query_string = wp_parse_url( $url, PHP_URL_QUERY );
+			parse_str( is_string( $query_string ) ? $query_string : '', $qs );
+			$label            = ! empty( $qs['swh_file'] ) && is_string( $qs['swh_file'] ) ? rawurldecode( $qs['swh_file'] ) : basename( $url );
 			$attachment_html .= '<a href="' . esc_url( $url ) . '" style="color:#0073aa;">' . esc_html( $label ) . '</a><br>';
 		}
 		$attachment_html .= '</p>';

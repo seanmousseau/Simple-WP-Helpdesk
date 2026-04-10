@@ -248,9 +248,9 @@ function swh_handle_settings_save() {
 		}
 		// Save canned responses (structured option, not part of $options_list).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
-		$raw_titles = isset( $_POST['swh_canned_titles'] ) ? (array) $_POST['swh_canned_titles'] : array();
+		$raw_titles = isset( $_POST['swh_canned_titles'] ) ? (array) wp_unslash( $_POST['swh_canned_titles'] ) : array();
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
-		$raw_bodies = isset( $_POST['swh_canned_bodies'] ) ? (array) $_POST['swh_canned_bodies'] : array();
+		$raw_bodies = isset( $_POST['swh_canned_bodies'] ) ? (array) wp_unslash( $_POST['swh_canned_bodies'] ) : array();
 		$canned     = array();
 		foreach ( $raw_titles as $ci => $raw_title ) {
 			$ctitle = sanitize_text_field( wp_unslash( $raw_title ) );
@@ -364,6 +364,7 @@ function swh_render_settings_page() {
 						<td>
 							<?php
 							$pages        = get_pages( array( 'post_status' => 'publish' ) );
+							$pages        = is_array( $pages ) ? $pages : array();
 							$current_page = (int) get_option( 'swh_ticket_page_id', 0 );
 							?>
 							<select name="swh_ticket_page_id">
@@ -371,9 +372,9 @@ function swh_render_settings_page() {
 								<?php foreach ( $pages as $page ) : ?>
 									<?php
 									$shortcode_hints = array();
-									foreach ( array( '[submit_ticket]', '[helpdesk_portal]' ) as $tag ) {
-										if ( false !== strpos( $page->post_content, $tag ) ) {
-											$shortcode_hints[] = $tag;
+									foreach ( array( 'submit_ticket' => '[submit_ticket]', 'helpdesk_portal' => '[helpdesk_portal]' ) as $shortcode => $label ) {
+										if ( has_shortcode( $page->post_content, $shortcode ) ) {
+											$shortcode_hints[] = $label;
 										}
 									}
 									$page_label = $page->post_title . ( $shortcode_hints ? ' — ' . implode( ' ', $shortcode_hints ) : '' );
@@ -488,7 +489,7 @@ function swh_render_settings_page() {
 					$canned_responses = array();
 				}
 				foreach ( $canned_responses as $canned_item ) :
-				?>
+					?>
 					<div class="swh-canned-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
 						<div style="flex:1;">
 							<input type="text" name="swh_canned_titles[]" value="<?php echo esc_attr( isset( $canned_item['title'] ) ? $canned_item['title'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Response title…', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">

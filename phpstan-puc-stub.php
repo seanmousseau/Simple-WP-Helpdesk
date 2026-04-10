@@ -23,3 +23,12 @@ if ( ! class_exists( PucFactory::class ) ) {
 		}
 	}
 }
+
+namespace YahnisElsts\PluginUpdateChecker\v5p6\Plugin;
+
+if ( ! class_exists( PluginInfo::class ) ) {
+	class PluginInfo {
+		/** @var array<string, string> */
+		public $icons = array();
+	}
+}

@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.2.0
+Stable tag: 2.3.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,24 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 2.3.0 =
+* Added: My Tickets Dashboard — portal without token shows open ticket table for logged-in users or lookup form for guests
+* Added: Original attachment filenames preserved and displayed as link labels in portal and admin sidebar
+* Added: XHR upload progress bar on ticket submission form
+* Added: CSAT satisfaction prompt (1–5 stars) shown to client after closing a ticket; rating stored in _ticket_csat meta
+* Added: Humanised timestamps in portal conversation history ("3 hours ago", "Yesterday", etc.)
+* Added: [submit_ticket] / [helpdesk_portal] shortcode attributes: show_priority, default_priority, default_status, show_lookup
+* Added: Playwright/pytest browser test suite (34 end-to-end scenarios)
+* Changed: Resolved → Close CTA redesigned as a prominent two-part block (primary CTA + de-emphasised reply link)
+* Changed: PHPStan analysis level raised from 6 to 8 (zero errors; added non-object and foreach guards)
+* Fixed: Shortcode detection in page dropdown now uses has_shortcode() for reliable attribute-aware matching
+* Fixed: Canned response Insert button non-functional in ticket editor (swh-admin.js not enqueued on post.php)
+* Fixed: Canned responses not cleaned up on factory reset or plugin uninstall
+* Fixed: Bulk status change now syncs _resolved_timestamp meta
+* Fixed: wp_unslash() applied to canned response POST inputs before sanitization
+* Fixed: Duplicate icon constant define block removed
+
 
 = 2.2.0 =
 * Added: Bulk "Set Status" action on ticket list for all configured statuses with confirmation notice
