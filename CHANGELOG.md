@@ -12,6 +12,16 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.4.2] — 2026-04-10
+
+### Fixed
+- **Admin menu icon (#234):** Correct icon now shown when the sidebar is expanded — `SWH_MENU_ICON` restored to `favicon-32.png` (had regressed to `icon-128x128.png`).
+
+### Changed
+- **Bundled icons:** Plugin icons (`favicon-32.png`, `icon-128x128.png`, `icon-256x256.png`) are now served from the plugin package (`assets/`) instead of an external CDN, removing the outbound HTTP dependency and improving offline/staging compatibility.
+
+---
+
 ## [2.4.1] — 2026-04-10
 
 ### Fixed
@@ -300,7 +310,8 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.1...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.2...HEAD
+[2.4.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.2.0...v2.3.0

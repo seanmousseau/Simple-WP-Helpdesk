@@ -713,19 +713,16 @@ def test_14_accessibility(page: Page):
 def test_15_plugin_icons(page: Page):  # noqa: ARG001 — page unused but kept for consistent signature
     print("\n[15] Plugin Icons")
 
-    CDN_BASE     = "https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh"
-    CDN_ICON_128 = f"{CDN_BASE}/icon-128x128.png"
-    CDN_ICON_256 = f"{CDN_BASE}/icon-256x256.png"
+    # Resolve expected URLs from the constants defined in the plugin.
+    icon_1x_expected = wpcli("eval 'echo SWH_ICON_1X;'")
+    icon_2x_expected = wpcli("eval 'echo SWH_ICON_2X;'")
 
-    for cdn_url, label in ((CDN_ICON_128, "1x"), (CDN_ICON_256, "2x")):
-        if not shutil.which("curl"):
-            print(f"  ⚠️  plugin icon: CDN {label} image reachable — skipped (curl not found)")
-            continue
-        result = subprocess.run(
-            ["curl", "-sI", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}", cdn_url],
-            capture_output=True, text=True
+    # Verify the bundled asset files exist on disk via WP-CLI.
+    for filename, label in (("icon-128x128.png", "1x"), ("icon-256x256.png", "2x"), ("favicon-32.png", "menu")):
+        exists = wpcli(
+            f"eval 'echo file_exists(WP_PLUGIN_DIR . \"/simple-wp-helpdesk/assets/{filename}\") ? \"yes\" : \"no\";'"
         )
-        check(f"plugin icon: CDN {label} image reachable", result.stdout.strip() == "200")
+        check(f"plugin icon: {label} asset file exists on disk ({filename})", exists == "yes")
 
     filter_registered = wpcli(
         "eval 'global $wp_filter; "
@@ -745,8 +742,8 @@ def test_15_plugin_icons(page: Page):  # noqa: ARG001 — page unused but kept f
         '$result = apply_filters("puc_request_info_result-simple-wp-helpdesk", $info); '
         'echo $result->icons["2x"] ?? "";\'',
     )
-    check("plugin icon: puc filter returns correct 1x URL", icon_1x == CDN_ICON_128)
-    check("plugin icon: puc filter returns correct 2x URL", icon_2x == CDN_ICON_256)
+    check("plugin icon: puc filter returns correct 1x URL", icon_1x == icon_1x_expected)
+    check("plugin icon: puc filter returns correct 2x URL", icon_2x == icon_2x_expected)
 
     wpcli("eval 'wp_update_plugins();'")
     plugin_file = "simple-wp-helpdesk/simple-wp-helpdesk.php"
