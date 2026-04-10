@@ -12,6 +12,31 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.3.0] — 2026-04-10
+
+### Added
+- **My Tickets Dashboard (#111):** Portal page without a ticket token now shows a table of open tickets for logged-in WordPress users (with secure links) or the ticket lookup form for guests — replacing the previous "No ticket specified" error box.
+- **Original Attachment Filenames (#112):** Uploaded files now display their original filename as the link label (stored as `_swh_attachment_orignames` / `_swh_reply_orignames` meta), instead of the server-mangled name.
+- **XHR Upload Progress Indicator (#113):** A progress bar (`swh-progress-bar`) appears during file attachment uploads on the ticket submission form, with the submit button disabled until the upload completes.
+- **CSAT Prompt on Ticket Close (#116):** After a client closes a ticket via the portal, a 1–5 star satisfaction widget is shown. Ratings are stored in `_ticket_csat` post meta via an AJAX handler. Clients can skip to dismiss.
+- **Humanized Timestamps (#117):** Reply timestamps in the client portal now display as relative strings ("3 hours ago", "Yesterday", etc.) using a `<time datetime>` element; the absolute date is preserved in the `title` tooltip.
+- **`[submit_ticket]` Shortcode Attributes (#119):** Both `[submit_ticket]` and `[helpdesk_portal]` shortcodes now accept `show_priority` (yes/no), `default_priority`, `default_status`, and `show_lookup` (yes/no) attributes for per-page customisation.
+- **Playwright/pytest Test Suite:** Full browser-based end-to-end suite covering 28 scenarios via pytest-playwright. Scenarios cover: admin auth, plugin verification, ticket submission, admin management, client portal, status transitions, internal notes, access control, bulk actions, settings persistence, canned responses, multi-technician workflow, admin search/filters, file attachments, portal token security, XSS escaping, subscriber access control, and rate limiting. Run with `pytest testing/scripts/test_helpdesk_pw.py`.
+
+### Changed
+- **Resolved → Close CTA Layout (#118, #120):** On the portal, the "Close Ticket" prompt for resolved tickets is now a prominent two-part block: a primary CTA card with the Close button and a de-emphasised "Still need help? Reply below ↓" link, replacing the previous single alert box.
+- **PHPStan Level 6 → 8 (#143, #144):** Static analysis level raised to 8. Added `is_array()` / `instanceof WP_Comment` guards on all `get_comments()` / `get_pages()` calls; null guards on `preg_replace*` / `ob_get_clean` / `wp_parse_url` return values.
+
+### Fixed
+- **Shortcode Detection — `has_shortcode()` (#186):** Page dropdown in Settings now uses WordPress's `has_shortcode()` for reliable detection (handles shortcode attributes), replacing the previous `strpos` loop.
+- **Canned Response Insert in Ticket Editor (#182):** `swh-admin.js` was not enqueued on `post.php` / `post-new.php`, causing the canned response Insert button to be non-functional in the ticket editor.
+- **Canned Response Cleanup on Reset/Uninstall (#182):** `swh_canned_responses` was not registered in `swh_get_defaults()`, so factory reset and plugin uninstall did not clean up saved canned responses.
+- **Bulk Status Change — `_resolved_timestamp` Sync (#182):** Bulk status updates now sync `_resolved_timestamp` meta (set when a ticket enters resolved, cleared on re-open) to match the behaviour of `swh_save_ticket_data()`.
+- **Canned Response Input Sanitization (#182):** `wp_unslash()` now applied to canned response title and body POST arrays before `sanitize_text_field()`.
+- **Duplicate Icon Constants:** Duplicate `SWH_ICON_1X` / `SWH_ICON_2X` / `SWH_MENU_ICON` define block introduced by a rebase conflict removed from the plugin bootstrap.
+
+---
+
 ## [2.2.0] — 2026-04-09
 
 ### Added
@@ -255,6 +280,8 @@ starting from the next release after 1.8.
 ---
 
 [Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.1.0...HEAD
+[2.3.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.8...1.9.0
