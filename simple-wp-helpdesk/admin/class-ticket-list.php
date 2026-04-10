@@ -317,6 +317,107 @@ function swh_suppress_stale_edit_lock( $value, $post_id, $meta_key, $single ) {
 }
 
 /**
+ * Hooks into bulk_actions-edit-helpdesk_ticket to add per-status bulk actions.
+ *
+ * @since 2.2.0
+ * @see swh_bulk_actions_tickets()
+ */
+add_filter( 'bulk_actions-edit-helpdesk_ticket', 'swh_bulk_actions_tickets' );
+/**
+ * Adds a "Set Status: {Status}" bulk action for each configured ticket status.
+ *
+ * @since 2.2.0
+ * @param array<string, string> $actions Existing bulk action definitions.
+ * @return array<string, string> Modified bulk action definitions.
+ */
+function swh_bulk_actions_tickets( $actions ) {
+	foreach ( swh_get_statuses() as $status ) {
+		$slug             = sanitize_title( $status );
+		$actions[ 'swh_status_' . $slug ] = sprintf(
+			/* translators: %s: ticket status label */
+			__( 'Set Status: %s', 'simple-wp-helpdesk' ),
+			$status
+		);
+	}
+	return $actions;
+}
+
+/**
+ * Hooks into handle_bulk_actions-edit-helpdesk_ticket to process status bulk actions.
+ *
+ * @since 2.2.0
+ * @see swh_handle_bulk_status()
+ */
+add_filter( 'handle_bulk_actions-edit-helpdesk_ticket', 'swh_handle_bulk_status', 10, 3 );
+/**
+ * Processes a bulk "Set Status" action, updating _ticket_status meta on each selected ticket.
+ *
+ * @since 2.2.0
+ * @param string   $redirect_to The URL to redirect to after the action.
+ * @param string   $action      The bulk action being processed.
+ * @param int[]    $post_ids    Array of post IDs included in the bulk action.
+ * @return string The redirect URL, with result query args appended when handled.
+ */
+function swh_handle_bulk_status( $redirect_to, $action, $post_ids ) {
+	if ( 0 !== strpos( $action, 'swh_status_' ) ) {
+		return $redirect_to;
+	}
+	$slug     = substr( $action, strlen( 'swh_status_' ) );
+	$status   = null;
+	foreach ( swh_get_statuses() as $s ) {
+		if ( sanitize_title( $s ) === $slug ) {
+			$status = $s;
+			break;
+		}
+	}
+	if ( null === $status ) {
+		return $redirect_to;
+	}
+	$count = 0;
+	foreach ( $post_ids as $post_id ) {
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			continue;
+		}
+		update_post_meta( (int) $post_id, '_ticket_status', $status );
+		++$count;
+	}
+	return add_query_arg(
+		array(
+			'swh_bulk_updated' => $count,
+			'swh_bulk_status'  => rawurlencode( $status ),
+		),
+		$redirect_to
+	);
+}
+
+/**
+ * Hooks into admin_notices to display a confirmation message after a bulk status update.
+ *
+ * @since 2.2.0
+ * @see swh_bulk_status_notice()
+ */
+add_action( 'admin_notices', 'swh_bulk_status_notice' );
+/**
+ * Renders an admin notice confirming how many tickets were updated by a bulk status action.
+ *
+ * @since 2.2.0
+ * @return void
+ */
+function swh_bulk_status_notice() {
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only GET params set by server redirect; used only for display.
+	if ( empty( $_GET['swh_bulk_updated'] ) ) {
+		return;
+	}
+	$count  = absint( $_GET['swh_bulk_updated'] );
+	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['swh_bulk_status'] ) ) ) : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
+	echo '<div class="updated notice is-dismissible"><p>';
+	/* translators: 1: number of tickets updated, 2: new status label */
+	echo sprintf( esc_html__( '%1$s ticket(s) updated to status: %2$s', 'simple-wp-helpdesk' ), esc_html( (string) $count ), '<strong>' . esc_html( $status ) . '</strong>' );
+	echo '</p></div>';
+}
+
+/**
  * Hooks into restrict_manage_posts to render Status and Priority filter dropdowns.
  *
  * @since 2.0.0

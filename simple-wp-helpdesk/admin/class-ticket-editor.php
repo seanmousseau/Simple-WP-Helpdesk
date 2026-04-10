@@ -232,6 +232,21 @@ function swh_conversation_meta_box_html( $post ) {
 		<div style="flex:1;">
 			<h4 style="margin-top:0;"><label for="swh-tech-reply-text"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px;"><?php esc_html_e( 'This will be emailed to the client.', 'simple-wp-helpdesk' ); ?></p>
+			<?php
+			$swh_canned = get_option( 'swh_canned_responses', array() );
+			if ( is_array( $swh_canned ) && ! empty( $swh_canned ) ) :
+			?>
+			<p style="margin-bottom:6px;">
+				<label for="swh-canned-select" style="font-size:12px; font-weight:600;"><?php esc_html_e( 'Insert Canned Response:', 'simple-wp-helpdesk' ); ?></label><br>
+				<select id="swh-canned-select" style="max-width:300px; margin-right:6px; margin-top:3px;">
+					<option value=""><?php esc_html_e( '— Select a response —', 'simple-wp-helpdesk' ); ?></option>
+					<?php foreach ( $swh_canned as $swh_cr_item ) : ?>
+						<option value="<?php echo esc_attr( isset( $swh_cr_item['body'] ) ? $swh_cr_item['body'] : '' ); ?>"><?php echo esc_html( isset( $swh_cr_item['title'] ) ? $swh_cr_item['title'] : '' ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="button" id="swh-canned-insert" class="button button-small"><?php esc_html_e( 'Insert', 'simple-wp-helpdesk' ); ?></button>
+			</p>
+			<?php endif; ?>
 			<textarea id="swh-tech-reply-text" name="swh_tech_reply_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type reply here...', 'simple-wp-helpdesk' ); ?>"></textarea>
 			<p><label for="swh-tech-reply-files"><strong><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></strong></label><br>
 			<input type="file" id="swh-tech-reply-files" name="swh_tech_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
