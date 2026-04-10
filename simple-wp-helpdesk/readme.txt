@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.1.0
+Stable tag: 2.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -19,7 +19,8 @@ Simple WP Helpdesk is a full-featured helpdesk and ticketing system that runs en
 * Custom Post Type for tickets — no custom database tables
 * Frontend submission form and secure token-based client portal via `[submit_ticket]` shortcode
 * Optional `[helpdesk_portal]` shortcode for standalone portal pages
-* Tabbed settings panel with 6 tabs (General, Assignment & Routing, Email Templates, Messages, Anti-Spam, Tools)
+* Tabbed settings panel with 7 tabs (General, Assignment & Routing, Email Templates, Messages, Anti-Spam, Canned Responses, Tools)
+* Bulk "Set Status" action on the ticket list — update multiple tickets at once
 * Multi-file upload with client-side validation and configurable size/count limits
 * Technician role with optional assignment restriction
 * HTML and plain-text email notifications — 14 fully customizable templates with dynamic placeholders and conditional blocks
@@ -72,6 +73,15 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 2.2.0 =
+* Added: Bulk "Set Status" action on ticket list for all configured statuses with confirmation notice
+* Added: Shortcode annotations in Helpdesk Page dropdown (shows [submit_ticket] / [helpdesk_portal] where found)
+* Added: Canned Responses — manage reply templates in Settings; insert picker in ticket editor
+* Added: Plugin branding icons in admin menu, Settings header, and WordPress update UI
+* Changed: PHPStan analysis level raised from 5 to 6 (zero errors)
+* Fixed: CDN icon constants (SWH_ICON_1X, SWH_ICON_2X, SWH_MENU_ICON) were used but never defined at runtime
+* Fixed: CDP test transient priming and curl availability guard
 
 = 2.1.0 =
 * Added: Ten extensibility hooks for customizing statuses, priorities, email headers, templates, file types, submission data, auto-close threshold, and rate limit TTL
