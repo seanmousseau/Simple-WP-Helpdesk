@@ -20,6 +20,12 @@ define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
 
+// CDN-hosted brand assets.
+define( 'SWH_CDN_BASE', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh' );
+define( 'SWH_ICON_1X', SWH_CDN_BASE . '/icon-128x128.png' );
+define( 'SWH_ICON_2X', SWH_CDN_BASE . '/icon-256x256.png' );
+define( 'SWH_MENU_ICON', SWH_ICON_1X );
+
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';

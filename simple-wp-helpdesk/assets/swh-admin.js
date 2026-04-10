@@ -1,3 +1,13 @@
+/**
+ * Simple WP Helpdesk — admin settings page interactions.
+ *
+ * Handles ARIA tab switching, keyboard navigation, and reset-to-default
+ * links on the Helpdesk Settings page.
+ *
+ * @since 2.1.0
+ * @package Simple_WP_Helpdesk
+ */
+
 document.addEventListener( 'DOMContentLoaded', function () {
 	const tabs         = document.querySelectorAll( '[role="tab"]' );
 	const contents     = document.querySelectorAll( '.swh-tab-content' );

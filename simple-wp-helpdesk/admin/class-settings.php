@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Renders a settings field (text input or textarea) with a reset-to-default link.
  *
+ * @since 2.0.0
  * @param string               $name The option name / input name attribute.
  * @param array<string, mixed> $defs The defaults array from swh_get_defaults().
  * @param string               $type Field type: 'text' (default) or 'textarea'.
@@ -31,14 +32,16 @@ function swh_field( $name, $defs, $type = 'text' ) {
 // Frontend CSS and JS are enqueued inside swh_ticket_frontend() only when the shortcode is rendered.
 
 /**
- * Enqueues admin CSS and JS on the helpdesk settings page.
+ * Hooks into admin_enqueue_scripts to enqueue admin CSS and JS.
  *
+ * @since 2.0.0
  * @see swh_enqueue_admin_assets()
  */
 add_action( 'admin_enqueue_scripts', 'swh_enqueue_admin_assets' );
 /**
  * Enqueues admin CSS and JS on the helpdesk settings page.
  *
+ * @since 2.0.0
  * @param string $hook The current admin page hook suffix.
  * @return void
  */
@@ -51,14 +54,16 @@ function swh_enqueue_admin_assets( $hook ) {
 }
 
 /**
- * Registers the Helpdesk Settings submenu page.
+ * Hooks into admin_menu to register the Helpdesk Settings submenu page.
  *
+ * @since 2.0.0
  * @see swh_register_settings_page()
  */
 add_action( 'admin_menu', 'swh_register_settings_page' );
 /**
  * Registers the Helpdesk Settings submenu page under the Tickets post type menu.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_register_settings_page() {
@@ -66,8 +71,9 @@ function swh_register_settings_page() {
 }
 
 /**
- * Processes the settings form POST on admin_init and saves options.
+ * Hooks into admin_init to process the settings form POST and save options.
  *
+ * @since 2.0.0
  * @see swh_handle_settings_save()
  */
 add_action( 'admin_init', 'swh_handle_settings_save' );
@@ -77,6 +83,7 @@ add_action( 'admin_init', 'swh_handle_settings_save' );
  * Runs on admin_init. Handles both the main form and the Tools form (separate nonces).
  * Never put redirect logic in the render callback.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_handle_settings_save() {
@@ -247,6 +254,7 @@ function swh_handle_settings_save() {
  *
  * Output only — do not place any redirect logic here. Use swh_handle_settings_save() instead.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_render_settings_page() {

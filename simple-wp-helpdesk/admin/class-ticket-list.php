@@ -10,14 +10,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Enqueues the admin stylesheet on the ticket list screen.
+ * Hooks into admin_enqueue_scripts to enqueue the admin stylesheet on the ticket list screen.
  *
+ * @since 2.1.0
  * @see swh_admin_list_styles()
  */
 add_action( 'admin_enqueue_scripts', 'swh_admin_list_styles' );
 /**
  * Enqueues the admin stylesheet on the helpdesk ticket list screen.
  *
+ * @since 2.1.0
  * @return void
  */
 function swh_admin_list_styles() {
@@ -29,14 +31,16 @@ function swh_admin_list_styles() {
 }
 
 /**
- * Defines the columns for the helpdesk ticket list table.
+ * Hooks into manage_helpdesk_ticket_posts_columns to define the ticket list table columns.
  *
+ * @since 2.0.0
  * @see swh_ticket_columns()
  */
 add_filter( 'manage_helpdesk_ticket_posts_columns', 'swh_ticket_columns' );
 /**
  * Defines the columns shown in the helpdesk ticket list table.
  *
+ * @since 2.0.0
  * @param string[] $columns Default column definitions.
  * @return string[] Modified column definitions.
  */
@@ -54,8 +58,9 @@ function swh_ticket_columns( $columns ) {
 }
 
 /**
- * Outputs the content for each custom column in the ticket list table.
+ * Hooks into manage_helpdesk_ticket_posts_custom_column to render custom column content.
  *
+ * @since 2.0.0
  * @see swh_ticket_column_content()
  */
 add_action( 'manage_helpdesk_ticket_posts_custom_column', 'swh_ticket_column_content', 10, 2 );
@@ -65,6 +70,7 @@ add_action( 'manage_helpdesk_ticket_posts_custom_column', 'swh_ticket_column_con
  * Handles: ticket_uid, ticket_status (colored badge), ticket_priority,
  * ticket_assigned, and ticket_client columns.
  *
+ * @since 2.0.0
  * @param string $column  The column slug being rendered.
  * @param int    $post_id The current ticket post ID.
  * @return void
@@ -123,14 +129,16 @@ function swh_ticket_column_content( $column, $post_id ) {
 }
 
 /**
- * Registers ticket_uid and ticket_status as sortable list-table columns.
+ * Hooks into manage_edit-helpdesk_ticket_sortable_columns to register sortable columns.
  *
+ * @since 2.0.0
  * @see swh_ticket_sortable_columns()
  */
 add_filter( 'manage_edit-helpdesk_ticket_sortable_columns', 'swh_ticket_sortable_columns' );
 /**
  * Registers ticket_uid and ticket_status as sortable columns.
  *
+ * @since 2.0.0
  * @param string[] $columns Existing sortable column definitions.
  * @return string[] Modified sortable column definitions.
  */
@@ -141,8 +149,9 @@ function swh_ticket_sortable_columns( $columns ) {
 }
 
 /**
- * Modifies the admin ticket list query for sorting, filtering, and technician restriction.
+ * Hooks into pre_get_posts to modify the ticket list query for sorting, filtering, and restriction.
  *
+ * @since 2.0.0
  * @see swh_ticket_list_query()
  */
 add_action( 'pre_get_posts', 'swh_ticket_list_query' );
@@ -151,6 +160,7 @@ add_action( 'pre_get_posts', 'swh_ticket_list_query' );
  *
  * Also restricts technicians to their assigned tickets when `swh_restrict_to_assigned` is enabled.
  *
+ * @since 2.0.0
  * @param WP_Query $query The current query object.
  * @return void
  */
@@ -213,8 +223,9 @@ function swh_ticket_list_query( $query ) {
 }
 
 /**
- * Blocks technicians from accessing ticket edit screens they are not assigned to.
+ * Hooks into load-post.php to block technicians from accessing unassigned ticket edit screens.
  *
+ * @since 2.0.0
  * @see swh_restrict_ticket_edit()
  */
 add_action( 'load-post.php', 'swh_restrict_ticket_edit' );
@@ -223,6 +234,7 @@ add_action( 'load-post.php', 'swh_restrict_ticket_edit' );
  *
  * Only active when `swh_restrict_to_assigned` is enabled. Calls wp_die() on unauthorized access.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_restrict_ticket_edit() {
@@ -248,8 +260,9 @@ function swh_restrict_ticket_edit() {
 }
 
 /**
- * Primes post meta cache for all tickets in the admin list query to prevent N+1 queries.
+ * Hooks into the_posts to prime post meta cache for all tickets and prevent N+1 queries.
  *
+ * @since 2.0.0
  * @see swh_prime_ticket_meta_cache()
  */
 add_filter( 'the_posts', 'swh_prime_ticket_meta_cache', 10, 2 );
@@ -258,6 +271,7 @@ add_filter( 'the_posts', 'swh_prime_ticket_meta_cache', 10, 2 );
  *
  * Prevents N+1 queries when column content callbacks read post meta per row.
  *
+ * @since 2.0.0
  * @param WP_Post[] $posts Array of post objects from the query.
  * @param WP_Query  $query The current query object.
  * @return WP_Post[] Unmodified posts array.
@@ -271,8 +285,9 @@ function swh_prime_ticket_meta_cache( $posts, $query ) {
 }
 
 /**
- * Suppresses the post edit lock for tickets recently reassigned.
+ * Hooks into get_post_metadata to suppress the edit lock for recently reassigned tickets.
  *
+ * @since 2.0.0
  * @see swh_suppress_stale_edit_lock()
  */
 add_filter( 'get_post_metadata', 'swh_suppress_stale_edit_lock', 10, 4 );
@@ -283,6 +298,7 @@ add_filter( 'get_post_metadata', 'swh_suppress_stale_edit_lock', 10, 4 );
  * the page reloads. A transient set during save short-circuits `_edit_lock` reads
  * for 3 minutes, preventing the "Currently Editing" notice from appearing.
  *
+ * @since 2.0.0
  * @param mixed  $value    The metadata value (null = not yet filtered).
  * @param int    $post_id  The post ID.
  * @param string $meta_key The meta key being read.
@@ -301,14 +317,16 @@ function swh_suppress_stale_edit_lock( $value, $post_id, $meta_key, $single ) {
 }
 
 /**
- * Renders Status and Priority filter dropdowns above the ticket list table.
+ * Hooks into restrict_manage_posts to render Status and Priority filter dropdowns.
  *
+ * @since 2.0.0
  * @see swh_ticket_filter_dropdowns()
  */
 add_action( 'restrict_manage_posts', 'swh_ticket_filter_dropdowns' );
 /**
  * Renders Status and Priority filter dropdowns above the ticket list table.
  *
+ * @since 2.0.0
  * @param string $post_type The current post type (only renders for helpdesk_ticket).
  * @return void
  */
