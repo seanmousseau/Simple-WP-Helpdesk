@@ -102,6 +102,9 @@ _results = {"pass_count": 0, "failures": []}
 # Shared state carried between test sections (ticket_id, portal_url, tech1_wp_id)
 state = {}
 
+# Set at run start so check() can capture failure screenshots without a page parameter
+_page: "Page | None" = None
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -136,6 +139,9 @@ def check(name: str, ok, detail: str = ""):
         msg = f"❌  {name}" + (f" — {detail}" if detail else "")
         print(f"  {msg}")
         _results["failures"].append(msg)
+        if _page is not None:
+            safe = name[:50].replace(" ", "_").replace(":", "").replace("/", "")
+            screenshot(_page, f"fail_{safe}")
 
 
 def expect_email(recipient: str, description: str):
@@ -634,7 +640,52 @@ def test_15_plugin_icons(page: Page):  # noqa: ARG001 — page unused but kept f
     check("plugin icon: icons injected into update transient", icon_in_transient == "yes")
 
 
-def test_16_cleanup(page: Page):
+def test_16_honeypot_spam(page: Page):
+    print("\n[16] Anti-Spam: Honeypot Rejection")
+
+    # Enable honeypot for this test regardless of the site's current setting
+    original_spam_method = wpcli("option get swh_spam_method 2>/dev/null") or "none"
+    wpcli("option update swh_spam_method honeypot")
+    wpcli("cache flush")  # clear object cache so the updated option is served immediately
+
+    before_count = wpcli("post list --post_type=helpdesk_ticket --post_status=any --format=count")
+
+    wp_logout(page)
+    # Append a unique query param so full-page caches (e.g. SWIS Performance)
+    # serve a fresh page, not a cached copy that pre-dates the option update.
+    fresh_url = f"{WP_SUBMIT_PAGE}?swh_test={int(time.time())}"
+    page.goto(fresh_url)
+    page.wait_for_load_state("load")
+
+    hp_field = page.locator('[name="swh_website_url_hp"]')
+    check("spam: honeypot field rendered in form", hp_field.count() > 0)
+
+    if hp_field.count() > 0:
+        # Fill all legitimate fields so only the honeypot triggers the rejection
+        page.fill('[name="ticket_name"]', CLIENT1_NAME)
+        page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
+        page.fill('[name="ticket_title"]', "Honeypot Spam Test")
+        page.fill('[name="ticket_desc"]', "This submission should be rejected by the honeypot.")
+        # Set the hidden honeypot field — real users never see or fill this
+        page.evaluate("document.querySelector('[name=\"swh_website_url_hp\"]').value = 'bot'")
+        page.click('[name="swh_submit_ticket"]')
+        page.wait_for_load_state("load")
+
+        check("spam: honeypot triggers rejection (no success message)",
+              "swh-alert-success" not in page.content())
+        after_count = wpcli("post list --post_type=helpdesk_ticket --post_status=any --format=count")
+        check("spam: no ticket created when honeypot filled",
+              before_count == after_count,
+              f"count before={before_count} after={after_count}")
+
+    # Restore original spam method
+    if original_spam_method in ("", "none"):
+        wpcli("option delete swh_spam_method 2>/dev/null")
+    else:
+        wpcli(f"option update swh_spam_method {original_spam_method}")
+
+
+def test_17_cleanup(page: Page):
     print("\n[16] Cleanup")
 
     wp_login(page, ADMIN_USER, ADMIN_PASS)
@@ -690,26 +741,12 @@ SECTIONS = [
     test_13_ticket_lookup,
     test_14_accessibility,
     test_15_plugin_icons,
-    test_16_cleanup,
+    test_16_honeypot_spam,
+    test_17_cleanup,
 ]
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    context = browser.new_context(viewport={"width": 1440, "height": 900})
-    page = context.new_page()
 
-    print(f"WP site : {WP_URL}\n")
-
-    # Reset any options that a previous failed run may have left dirty
-    wpcli("option delete swh_restrict_to_assigned")
-
-    try:
-        for section in SECTIONS:
-            section(page)
-    finally:
-        browser.close()
-
-    # ── Summary ────────────────────────────────────────────────────────────────
+def _print_summary():
     pass_count = _results["pass_count"]
     failures   = _results["failures"]
     total = pass_count + len(failures)
@@ -732,3 +769,36 @@ with sync_playwright() as p:
 
     if failures:
         sys.exit(1)
+
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    context = browser.new_context(viewport={"width": 1440, "height": 900})
+    page = context.new_page()
+    _page = page  # expose to check() for failure screenshots
+
+    print(f"WP site : {WP_URL}\n")
+
+    # Reset any options that a previous failed run may have left dirty
+    wpcli("option delete swh_restrict_to_assigned")
+
+    try:
+        for section in SECTIONS:
+            try:
+                section(page)
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                safe = section.__name__[:40].replace(" ", "_")
+                check(f"{section.__name__}: unexpected error", False, str(e))
+                screenshot(page, f"error_{safe}")
+    except KeyboardInterrupt:
+        print("\nInterrupted — running cleanup...")
+        try:
+            test_17_cleanup(page)
+        except Exception:
+            pass
+    finally:
+        browser.close()
+
+    _print_summary()
