@@ -283,9 +283,22 @@ function swh_register_ticket_cpt() {
 			),
 			'public'          => false,
 			'show_ui'         => true,
-			'menu_icon'       => 'dashicons-tickets-alt',
+			'menu_icon'       => SWH_MENU_ICON,
 			'supports'        => array( 'title', 'editor' ),
 			'capability_type' => 'post',
 		)
 	);
+}
+
+add_action( 'admin_head', 'swh_menu_icon_style' );
+/**
+ * Correct vertical alignment of the PNG menu icon.
+ *
+ * WordPress sets padding-top: 6px on .wp-menu-image img for SVG icons,
+ * which pushes PNG images too low. Reset it for our CPT menu item only.
+ *
+ * @return void
+ */
+function swh_menu_icon_style() {
+	echo '<style>#menu-posts-helpdesk_ticket .wp-menu-image img { padding-top: 0 !important; }</style>';
 }
