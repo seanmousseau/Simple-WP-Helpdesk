@@ -12,6 +12,17 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.4.0] — 2026-04-10
+
+### Changed
+- **Plugin Author Attribution:** Author changed from "SM WP Plugins" to "Sean Mousseau" with `Author URI` linking to the GitHub repository — the author name now appears as a hyperlink on the Plugins list screen.
+- **Plugin Details Modal — Description:** The "View Details" modal now shows the full feature list with formatted HTML instead of the bare plugin header one-liner. Injected via `puc_request_info_result` filter since PUC does not reliably parse the readme.txt `== Description ==` section from a GitHub release ZIP.
+
+### Fixed
+- **readme.txt Changelog Whitespace:** Removed extra blank line between the 2.3.0 and 2.2.0 changelog sections that was causing extra whitespace in the modal Changelog tab.
+
+---
+
 ## [2.3.0] — 2026-04-10
 
 ### Added
