@@ -24,7 +24,7 @@ define( 'SWH_PLUGIN_FILE', __FILE__ );
 define( 'SWH_CDN_BASE', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh' );
 define( 'SWH_ICON_1X', SWH_CDN_BASE . '/icon-128x128.png' );
 define( 'SWH_ICON_2X', SWH_CDN_BASE . '/icon-256x256.png' );
-define( 'SWH_MENU_ICON', SWH_ICON_1X );
+define( 'SWH_MENU_ICON', SWH_CDN_BASE . '/favicon-32-png.png' );
 
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
@@ -64,11 +64,6 @@ $swh_update_checker = PucFactory::buildUpdateChecker(
 );
 $swh_update_checker->setBranch( 'main' );
 $swh_update_checker->getVcsApi()->enableReleaseAssets();
-
-// Plugin icon CDN URLs.
-define( 'SWH_ICON_1X',   'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-128x128.png' );
-define( 'SWH_ICON_2X',   'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/icon-256x256.png' );
-define( 'SWH_MENU_ICON', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/favicon-32-png.png' );
 
 // Inject icons into the PUC plugin info response (View Details modal / plugins_api).
 add_filter( 'puc_request_info_result-simple-wp-helpdesk', 'swh_add_plugin_icons' );
