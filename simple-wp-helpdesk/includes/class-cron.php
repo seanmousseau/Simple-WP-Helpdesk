@@ -1,11 +1,34 @@
-<?php if ( ! defined( 'ABSPATH' ) ) {
-	exit; }
+<?php
+/**
+ * Background cron tasks: auto-close, attachment retention, and ticket retention.
+ *
+ * All tasks are micro-batched (1–2 tickets per run) to prevent cURL error 28 timeouts.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // ==============================================================================
 // BACKGROUND CRON TASKS (Micro-Batched to prevent cURL error 28)
 // ==============================================================================
 
+/**
+ * Processes the auto-close cron event: closes resolved tickets past the inactivity threshold.
+ *
+ * @see swh_process_autoclose()
+ */
 add_action( 'swh_autoclose_event', 'swh_process_autoclose' );
+/**
+ * Auto-closes tickets that have been in Resolved status longer than the configured threshold.
+ *
+ * Also purges expired rate-limit entries on each run. Processes 2 tickets per invocation.
+ * Uses a transient lock to prevent concurrent runs.
+ *
+ * @return void
+ */
 function swh_process_autoclose() {
 	// Clean up expired rate-limit entries.
 	global $wpdb;
@@ -19,6 +42,13 @@ function swh_process_autoclose() {
 
 	$defs = swh_get_defaults();
 	$days = (int) get_option( 'swh_autoclose_days', 3 );
+	/**
+	 * Filters the number of days before a resolved ticket is automatically closed.
+	 *
+	 * @since 2.1.0
+	 * @param int $days Number of inactivity days. 0 disables auto-close.
+	 */
+	$days = (int) apply_filters( 'swh_autoclose_threshold', $days );
 	if ( $days <= 0 ) {
 		return;
 	}
@@ -89,7 +119,20 @@ function swh_process_autoclose() {
 	delete_transient( $lock_key );
 }
 
+/**
+ * Processes the attachment retention cron event: deletes files older than the threshold.
+ *
+ * @see swh_process_retention_attachments()
+ */
 add_action( 'swh_retention_attachments_event', 'swh_process_retention_attachments' );
+/**
+ * Purges attachments from tickets and replies older than the retention threshold.
+ *
+ * Processes 1 ticket and 1 reply batch per invocation. Uses a transient lock.
+ * Appends a note to comment content when reply attachments are purged.
+ *
+ * @return void
+ */
 function swh_process_retention_attachments() {
 	$days = (int) get_option( 'swh_retention_attachments_days', 0 );
 	if ( $days <= 0 ) {
@@ -181,7 +224,7 @@ function swh_process_retention_attachments() {
 		)
 	);
 	foreach ( $comments as $comment ) {
-		$atts = get_comment_meta( $comment->comment_ID, '_attachments', true );
+		$atts = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) ) {
 			if ( ! is_array( $atts ) ) {
 				$atts = array( $atts );
@@ -189,7 +232,7 @@ function swh_process_retention_attachments() {
 			foreach ( $atts as $url ) {
 				swh_delete_file_by_url( $url );
 			}
-			delete_comment_meta( $comment->comment_ID, '_attachments' );
+			delete_comment_meta( (int) $comment->comment_ID, '_attachments' );
 			/* translators: %d: number of days for retention */
 			$new_content = $comment->comment_content . "\n\n*(" . sprintf( __( 'Attachments automatically purged after %d days', 'simple-wp-helpdesk' ), $days ) . ')*';
 			wp_update_comment(
@@ -203,7 +246,19 @@ function swh_process_retention_attachments() {
 	delete_transient( $lock_key );
 }
 
+/**
+ * Processes the ticket retention cron event: permanently deletes old tickets and their files.
+ *
+ * @see swh_process_retention_tickets()
+ */
 add_action( 'swh_retention_tickets_event', 'swh_process_retention_tickets' );
+/**
+ * Permanently deletes tickets (and their files) older than the retention threshold.
+ *
+ * Processes 1 ticket per invocation. Uses a transient lock to prevent concurrent runs.
+ *
+ * @return void
+ */
 function swh_process_retention_tickets() {
 	$days = (int) get_option( 'swh_retention_tickets_days', 0 );
 	if ( $days <= 0 ) {

@@ -8,7 +8,7 @@ Simple WP Helpdesk is built with WordPress security best practices. This documen
 
 Access to ticket details is controlled by a **cryptographic token** appended to each ticket's URL:
 
-```
+```text
 https://yoursite.com/support/?swh_ticket=123&token=AbCdEfGhIjKlMnOpQrSt
 ```
 

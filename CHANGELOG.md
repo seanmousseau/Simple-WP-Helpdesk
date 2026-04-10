@@ -12,6 +12,32 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.1.0] — 2026-04-09
+
+### Added
+- **Extensibility Hooks (#171):** Ten new `apply_filters()` / `do_action()` hooks for customizing plugin behaviour without modifying core files: `swh_ticket_statuses`, `swh_ticket_priorities`, `swh_rate_limit_ttl`, `swh_allowed_file_types`, `swh_submission_data`, `swh_pre_ticket_create`, `swh_ticket_created`, `swh_email_headers`, `swh_parse_template`, `swh_autoclose_threshold`.
+- **ARIA Tab Interface on Settings Page (#161):** Settings navigation upgraded from `<a>` links to fully keyboard-navigable ARIA tab widgets (`role="tab"`, `role="tabpanel"`, `aria-selected`, `aria-controls`, `aria-labelledby`). Supports Arrow, Home, and End key navigation.
+- **Accessible Form Labels (#163, #165):** All admin ticket editor fields and frontend submission form inputs now have explicit `<label for>` / `id` associations.
+- **ARIA Live Regions (#162, #166):** Conversation log has `role="log"`; success messages use `role="status"` (polite); error messages use `role="alert"` (assertive).
+- **Screen-Reader Honeypot (#159):** Honeypot wrapper divs now carry `aria-hidden="true"` so assistive technologies skip invisible fields.
+- **`aria-expanded` on Lookup Toggle (#159):** The "Resend my ticket links" toggle link exposes its open/closed state to assistive technologies via `aria-expanded`.
+- **`swh-admin.css` Asset (#149):** Admin badge and column styles extracted from inline PHP into a dedicated enqueued stylesheet.
+- **Inline Docs on All Hook Registrations (#164, #169):** All `add_action()`, `add_filter()`, `add_shortcode()`, and `register_*_hook()` calls have inline docblock comments.
+- **PHPDoc on All Functions (#154, #155, #157):** Complete `@param`, `@return`, and `@since` docblocks added to all functions and file-level docblocks across all 11 PHP files.
+
+### Changed
+- **JavaScript Modernisation (#150, #153):** All `var` declarations replaced with `const`/`let` in `swh-admin.js` and `swh-frontend.js`.
+- **CSS Formatting (#149):** Both `swh-frontend.css` and `swh-admin.css` use consistent multi-line rule format.
+- **PHP Code Style (#151, #152):** ABSPATH guard brace style normalised; mixed indentation corrected across all module files via `phpcbf`.
+- **HTML Audit (#156):** Self-closing void elements, attribute quoting, and `echo` chain indentation normalised.
+
+### Fixed
+- **Focus Styles (#167, #168):** Removed `outline: none` from `.swh-form-control:focus`; added compliant 2px focus rings on form controls and buttons in both frontend and admin stylesheets.
+- **PHPStan Level-5 Type Errors (#phase-17):** Resolved 27 type errors introduced by stricter analysis — `comment_ID` casts, `str_pad` string coercion, redundant truthiness guards, and `is_wp_error` check on `wp_insert_post` return.
+- **PHPCS Zero Warnings (#158):** All PHP_CodeSniffer warnings resolved; `phpcs:ignore` directives moved to the correct lines; `@var` type annotations converted to non-docblock style.
+
+---
+
 ## [2.0.0] — 2026-04-07
 
 ### Changed
@@ -210,7 +236,9 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.9.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.8...1.9.0
 [1.8]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.7...1.8
 [1.7]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/1.6...1.7

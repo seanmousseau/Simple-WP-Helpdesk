@@ -1,0 +1,51 @@
+.swh-status-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.column-ticket_uid {
+	width: 100px;
+}
+
+.column-ticket_status {
+	width: 120px;
+}
+
+.column-ticket_priority {
+	width: 100px;
+}
+
+.column-ticket_assigned {
+	width: 140px;
+}
+
+.column-ticket_client {
+	width: 160px;
+}
+
+/* ARIA tab buttons: match WordPress nav-tab link appearance. */
+button.nav-tab {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-family: inherit;
+	font-size: 14px;
+	line-height: inherit;
+	margin: 0;
+	padding: 4px 10px;
+	text-decoration: none;
+}
+
+button.nav-tab:focus {
+	outline: 2px solid #005fcc;
+	outline-offset: 2px;
+	box-shadow: none;
+}
+
+.swh-tab-tools {
+	color: #d63638;
+}

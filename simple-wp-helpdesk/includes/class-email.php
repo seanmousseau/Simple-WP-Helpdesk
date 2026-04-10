@@ -1,8 +1,24 @@
 <?php
+/**
+ * Email utilities: template parsing, HTML wrapping, and email dispatch.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Parses a template string by processing conditional blocks and replacing placeholders.
+ *
+ * Steps: evaluate {if key}...{endif key} blocks, replace {placeholder} tokens,
+ * clean up unreplaced placeholders, and collapse excess newlines.
+ *
+ * @param string               $template The raw template string.
+ * @param array<string, mixed> $data     Key-value pairs for placeholder substitution.
+ * @return string The fully rendered template string.
+ */
 function swh_parse_template( $template, $data ) {
 	// 1. Process conditional blocks: {if key}...{endif key}
 	$template = preg_replace_callback(
@@ -24,9 +40,31 @@ function swh_parse_template( $template, $data ) {
 	$template = preg_replace( '/\{[a-zA-Z_]+\}/', '', $template );
 	// 4. Collapse runs of 3+ newlines down to 2.
 	$template = preg_replace( '/\n{3,}/', "\n\n", $template );
-	return trim( $template );
+	$template = trim( $template );
+	/**
+	 * Filters the fully-rendered email template string.
+	 *
+	 * @since 2.1.0
+	 * @param string               $template The rendered template output.
+	 * @param array<string, mixed> $data     The template data array.
+	 */
+	return apply_filters( 'swh_parse_template', $template, $data );
 }
 
+/**
+ * Sends a helpdesk email using a stored template key pair.
+ *
+ * Fetches the subject and body templates from options, parses them with $data,
+ * and wraps the body in HTML if the email format is set to HTML.
+ * Logs wp_mail() failures via error_log().
+ *
+ * @param string               $to          Recipient email address.
+ * @param string               $subject_key Option key for the subject template.
+ * @param string               $body_key    Option key for the body template.
+ * @param array<string, mixed> $data        Template data for placeholder substitution.
+ * @param string[]             $attachments Optional. Array of attachment file proxy URLs.
+ * @return void
+ */
 function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = array() ) {
 	$defs    = swh_get_defaults();
 	$subject = swh_parse_template( get_option( $subject_key, isset( $defs[ $subject_key ] ) ? $defs[ $subject_key ] : '' ), $data );
@@ -35,7 +73,18 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	$format  = get_option( 'swh_email_format', 'html' );
 	if ( 'html' === $format ) {
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
-		$body      = swh_wrap_html_email( $body, $attachments );
+	}
+	/**
+	 * Filters the email headers array before sending.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $headers Array of header strings (e.g. 'Content-Type: text/html; charset=UTF-8').
+	 * @param string   $to      Recipient email address.
+	 * @param string   $subject Rendered email subject.
+	 */
+	$headers = apply_filters( 'swh_email_headers', $headers, $to, $subject );
+	if ( 'html' === $format ) {
+		$body = swh_wrap_html_email( $body, $attachments );
 	} elseif ( ! empty( $attachments ) ) {
 			$lines = array();
 		foreach ( $attachments as $url ) {
@@ -51,6 +100,15 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	}
 }
 
+/**
+ * Wraps a plain-text email body in a styled HTML email table layout.
+ *
+ * Converts newlines to <br>, auto-links bare URLs, and appends an attachment list.
+ *
+ * @param string   $body        The plain-text email body.
+ * @param string[] $attachments Optional. Array of attachment file proxy URLs.
+ * @return string A complete HTML email document string.
+ */
 function swh_wrap_html_email( $body, $attachments = array() ) {
 	$html_body = nl2br( esc_html( $body ) );
 	// Auto-link URLs that are not already inside HTML tags.
@@ -79,6 +137,14 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
 		. '</td></tr></table></body></html>';
 }
 
+/**
+ * Returns the best notification email address for a given ticket.
+ *
+ * Priority: assigned technician → default assignee setting → fallback email setting → admin_email.
+ *
+ * @param int $ticket_id Optional. Ticket post ID. Default 0 (skips assigned-tech lookup).
+ * @return string The resolved email address.
+ */
 function swh_get_admin_email( $ticket_id = 0 ) {
 	if ( $ticket_id ) {
 		$assigned = get_post_meta( $ticket_id, '_ticket_assigned_to', true );

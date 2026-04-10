@@ -60,7 +60,7 @@ Customize the subject line and body of every email the plugin sends. Click **Res
 
 Wrap any template section in `{if key}...{endif key}` to include it only when that placeholder has a non-empty value:
 
-```
+```text
 {if message}
 Message: {message}
 {endif message}

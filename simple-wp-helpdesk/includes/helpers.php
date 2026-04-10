@@ -1,8 +1,21 @@
 <?php
+/**
+ * Global helpers: defaults, statuses, anti-spam, rate limiting, and ticket link utilities.
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Returns the plugin's complete default option values.
+ *
+ * Result is cached per request via a static variable to avoid repeated calls.
+ *
+ * @return array<string, mixed> Associative array of option keys to their default values.
+ */
 function swh_get_defaults() {
 	static $defaults = null;
 	if ( null === $defaults ) {
@@ -80,21 +93,59 @@ function swh_get_defaults() {
 	return $defaults;
 }
 
+/**
+ * Returns all plugin option keys managed by defaults (excludes swh_db_version).
+ *
+ * @return string[] List of option key names.
+ */
 function swh_get_all_option_keys() {
 	// swh_db_version is managed separately and excluded from bulk operations.
 	return array_keys( swh_get_defaults() );
 }
 
+/**
+ * Returns the configured list of ticket statuses.
+ *
+ * @return string[] Trimmed status label strings.
+ */
 function swh_get_statuses() {
-	$defs = swh_get_defaults();
-	return array_map( 'trim', explode( ',', get_option( 'swh_ticket_statuses', $defs['swh_ticket_statuses'] ) ) );
+	$defs     = swh_get_defaults();
+	$statuses = array_map( 'trim', explode( ',', get_option( 'swh_ticket_statuses', $defs['swh_ticket_statuses'] ) ) );
+	/**
+	 * Filters the list of available ticket statuses.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $statuses Array of status label strings.
+	 */
+	return apply_filters( 'swh_ticket_statuses', $statuses );
 }
 
+/**
+ * Returns the configured list of ticket priorities.
+ *
+ * @return string[] Trimmed priority label strings.
+ */
 function swh_get_priorities() {
-	$defs = swh_get_defaults();
-	return array_map( 'trim', explode( ',', get_option( 'swh_ticket_priorities', $defs['swh_ticket_priorities'] ) ) );
+	$defs       = swh_get_defaults();
+	$priorities = array_map( 'trim', explode( ',', get_option( 'swh_ticket_priorities', $defs['swh_ticket_priorities'] ) ) );
+	/**
+	 * Filters the list of available ticket priorities.
+	 *
+	 * @since 2.1.0
+	 * @param string[] $priorities Array of priority label strings.
+	 */
+	return apply_filters( 'swh_ticket_priorities', $priorities );
 }
 
+/**
+ * Builds a secure client portal URL for a ticket using its token.
+ *
+ * Uses the configured helpdesk page ID if set; falls back to the stored _ticket_url meta.
+ * Returns false if the ticket has no token or no base URL is available.
+ *
+ * @param int $ticket_id The ticket post ID.
+ * @return string|false The full portal URL with token, or false on failure.
+ */
 function swh_get_secure_ticket_link( $ticket_id ) {
 	$token = get_post_meta( $ticket_id, '_ticket_token', true );
 	if ( ! $token ) {
@@ -114,6 +165,15 @@ function swh_get_secure_ticket_link( $ticket_id ) {
 	);
 }
 
+/**
+ * Checks whether a ticket's portal token has exceeded its configured TTL.
+ *
+ * Tickets created before v1.9.0 (without _ticket_token_created) are grandfathered
+ * and never considered expired. A TTL of 0 also disables expiration.
+ *
+ * @param int $ticket_id The ticket post ID.
+ * @return bool True if the token is expired, false otherwise.
+ */
 function swh_is_token_expired( $ticket_id ) {
 	$days = (int) get_option( 'swh_token_expiration_days', 90 );
 	if ( 0 === $days ) {
@@ -126,6 +186,14 @@ function swh_is_token_expired( $ticket_id ) {
 	return ( time() - $created ) > ( $days * DAY_IN_SECONDS );
 }
 
+/**
+ * Returns the client IP address, respecting Cloudflare and reverse proxy headers.
+ *
+ * Checks CF-Connecting-IP, X-Forwarded-For, then REMOTE_ADDR in order.
+ * Never accesses REMOTE_ADDR directly.
+ *
+ * @return string The client IP address, or empty string if unavailable.
+ */
 function swh_get_client_ip() {
 	if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
 		return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
@@ -137,6 +205,14 @@ function swh_get_client_ip() {
 	return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 }
 
+/**
+ * Runs the configured anti-spam check (honeypot, reCAPTCHA, or Turnstile).
+ *
+ * Returns true if spam is detected (i.e., the submission should be blocked).
+ *
+ * @param bool $check_captcha Whether to check CAPTCHA (skip on lookup forms that have no CAPTCHA).
+ * @return bool True if the submission is spam, false if it is legitimate.
+ */
 function swh_check_antispam( $check_captcha = true ) {
 	$method = get_option( 'swh_spam_method', 'honeypot' );
 	if ( 'honeypot' === $method && ! empty( $_POST['swh_website_url_hp'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -179,7 +255,26 @@ function swh_check_antispam( $check_captcha = true ) {
 	return false;
 }
 
+/**
+ * Checks and sets a rate-limit lock keyed by action name and client IP.
+ *
+ * Returns true if the client is currently rate-limited. When not limited,
+ * sets the lock and returns false. Portal actions use per-action keys
+ * (portal_close_, portal_reopen_, portal_reply_) to prevent interference.
+ *
+ * @param string $action A unique action identifier (e.g. 'portal_reply_42').
+ * @param int    $ttl    Lock duration in seconds. Default 30.
+ * @return bool True if rate-limited, false if the action is allowed.
+ */
 function swh_is_rate_limited( $action, $ttl = 30 ) {
+	/**
+	 * Filters the rate-limit TTL (in seconds) for a given action.
+	 *
+	 * @since 2.1.0
+	 * @param int    $ttl    Lock duration in seconds.
+	 * @param string $action The action identifier being rate-limited.
+	 */
+	$ttl = (int) apply_filters( 'swh_rate_limit_ttl', $ttl, $action );
 	$key = 'swh_rl_' . md5( $action . '_' . swh_get_client_ip() );
 	$val = get_option( $key );
 	if ( false !== $val && (int) $val > time() ) {

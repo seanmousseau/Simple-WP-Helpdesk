@@ -19,3 +19,10 @@ composer.lock
 # WordPress debug log
 *.log
 debug.log
+
+# Test suite — secrets and output
+testing/.env
+testing/screenshots/
+
+# Remember plugin (session memory, generated at runtime)
+.remember/
