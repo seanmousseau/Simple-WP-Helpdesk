@@ -244,6 +244,16 @@ def _clear_rate_limits():
     wpcli("cache flush")  # swh_is_rate_limited() uses get_option() which checks object cache first
 
 
+def _php_str(val: str) -> str:
+    """Escape a string for safe embedding inside a PHP single-quoted literal in a WP-CLI eval.
+
+    Escapes backslashes then single quotes so the value can be placed as 'val'
+    inside PHP code without breaking the string literal or the surrounding shell
+    double-quote context.
+    """
+    return val.replace('\\', '\\\\').replace("'", "\\'")
+
+
 def _navigate_admin_list(page: Page):
     """Navigate to the admin ticket list and wait for the table to render."""
     page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket")
@@ -1552,7 +1562,12 @@ def test_33_csat_prompt(page: Page):
 
     ticket_id = state.get('ticket_id')
     if ticket_id:
-        wpcli(f"eval \"update_post_meta({ticket_id}, '_ticket_status', 'Resolved');\"")
+        resolved_status = wpcli("option get swh_resolved_status").strip() or "Resolved"
+        _clear_rate_limits()  # portal_close_<id> lock is still active from the first close
+        wpcli(
+            f"eval \"update_post_meta({ticket_id}, '_ticket_status', "
+            f"'{_php_str(resolved_status)}');\""
+        )
         fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({ticket_id});"')
         if fresh_url and "swh_ticket=" in fresh_url:
             state['portal_url'] = fresh_url
@@ -1669,7 +1684,9 @@ def test_34_my_tickets_dashboard(page: Page):
             original_status = wpcli(
                 f"eval \"echo get_post_meta({ticket_id}, '_ticket_status', true);\""
             ).strip()
-            wpcli(f"eval \"update_post_meta({ticket_id}, '_ticket_status', '{closed_status}');\"")
+            wpcli(
+                f"eval \"update_post_meta({ticket_id}, '_ticket_status', '{_php_str(closed_status)}');\""
+            )
             try:
                 render_closed = wpcli(
                     f"eval \"wp_set_current_user({sub_id}); ob_start(); swh_render_portal_no_token(); echo ob_get_clean();\""
@@ -1697,7 +1714,9 @@ def test_34_my_tickets_dashboard(page: Page):
                         wpcli(f"user delete {no_tickets_id} --yes 2>/dev/null")
             finally:
                 # Restore original ticket status
-                wpcli(f"eval \"update_post_meta({ticket_id}, '_ticket_status', '{original_status}');\"")
+                wpcli(
+                    f"eval \"update_post_meta({ticket_id}, '_ticket_status', '{_php_str(original_status)}');\""
+                )
     finally:
         wp_login(page, ADMIN_USER, ADMIN_PASS)
         if created_new and sub_id.isdigit():
@@ -1788,10 +1807,11 @@ def test_36_shortcode_attrs(page: Page):
         test_priority = avail_priorities[-1].strip() if avail_priorities else ''
 
         if test_priority:
+            safe_priority = test_priority.replace('"', '&quot;').replace("'", "&#039;")
             pid3 = wpcli(
                 "post create --post_type=page --post_status=publish "
                 "--post_title='SWH Attr Test DefPriority' "
-                f'--post_content=\'[submit_ticket default_priority="{test_priority}" show_priority="yes"]\' '
+                f'--post_content=\'[submit_ticket default_priority="{safe_priority}" show_priority="yes"]\' '
                 "--porcelain"
             )
             if pid3.isdigit():
@@ -1821,10 +1841,11 @@ def test_36_shortcode_attrs(page: Page):
         test_status = avail_statuses[1].strip() if len(avail_statuses) > 1 else ''
 
         if test_status:
+            safe_status = test_status.replace('"', '&quot;').replace("'", "&#039;")
             pid4 = wpcli(
                 "post create --post_type=page --post_status=publish "
                 "--post_title='SWH Attr Test DefStatus' "
-                f'--post_content=\'[submit_ticket default_status="{test_status}"]\' '
+                f'--post_content=\'[submit_ticket default_status="{safe_status}"]\' '
                 "--porcelain"
             )
             if pid4.isdigit():

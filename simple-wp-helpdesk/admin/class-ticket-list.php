@@ -392,7 +392,7 @@ function swh_handle_bulk_status( $redirect_to, $action, $post_ids ) {
 	return add_query_arg(
 		array(
 			'swh_bulk_updated' => $count,
-			'swh_bulk_status'  => rawurlencode( $status ),
+			'swh_bulk_status'  => $status,
 		),
 		$redirect_to
 	);
@@ -416,9 +416,8 @@ function swh_bulk_status_notice() {
 	if ( empty( $_GET['swh_bulk_updated'] ) ) {
 		return;
 	}
-	$count = absint( $_GET['swh_bulk_updated'] );
-	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_text_field( wp_unslash() ) wraps the value; rawurldecode() is applied before sanitization.
-	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['swh_bulk_status'] ) ) ) : '';
+	$count  = absint( $_GET['swh_bulk_updated'] );
+	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_bulk_status'] ) ) : '';
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	echo '<div class="updated notice is-dismissible"><p>';
 	/* translators: 1: number of tickets updated, 2: new status label */
