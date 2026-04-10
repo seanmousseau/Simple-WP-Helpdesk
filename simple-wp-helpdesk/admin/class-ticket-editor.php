@@ -135,8 +135,12 @@ function swh_status_meta_box_html( $post ) {
 			'order'   => 'ASC',
 		)
 	);
+	$comments          = is_array( $comments ) ? $comments : array();
 	$reply_attachments = array();
 	foreach ( $comments as $c ) {
+		if ( ! $c instanceof WP_Comment ) {
+			continue;
+		}
 		$atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) && is_array( $atts ) ) {
 			$reply_attachments = array_merge( $reply_attachments, $atts );
@@ -191,9 +195,13 @@ function swh_conversation_meta_box_html( $post ) {
 			'order'   => 'ASC',
 		)
 	);
+	$comments = is_array( $comments ) ? $comments : array();
 	echo '<div role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '" style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
+			if ( ! $comment instanceof WP_Comment ) {
+				continue;
+			}
 			$is_internal = get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true );
 			$is_user     = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 

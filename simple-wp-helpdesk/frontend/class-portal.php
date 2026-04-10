@@ -218,8 +218,12 @@ function swh_render_client_portal() {
 			'type'    => 'helpdesk_reply',
 		)
 	);
+	$comments = is_array( $comments ) ? $comments : array();
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
+			if ( ! $comment instanceof WP_Comment ) {
+				continue;
+			}
 			if ( get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true ) ) {
 				continue;
 			}

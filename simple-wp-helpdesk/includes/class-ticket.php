@@ -233,7 +233,7 @@ function swh_handle_multiple_uploads( $file_array ) {
 	foreach ( $files as $file ) {
 		if ( $file['size'] > $max_bytes ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs oversized uploads for admin troubleshooting.
-			error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', $file['name'], $max_size_mb ) );
+			error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', isset( $file['name'] ) ? $file['name'] : '', $max_size_mb ) );
 			continue;
 		}
 		$movefile = wp_handle_upload( $file, $overrides );
@@ -241,7 +241,7 @@ function swh_handle_multiple_uploads( $file_array ) {
 			$uploaded_urls[] = $movefile['url'];
 		} elseif ( isset( $movefile['error'] ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs upload failures for admin troubleshooting.
-			error_log( 'SWH upload failed for "' . $file['name'] . '": ' . $movefile['error'] );
+			error_log( 'SWH upload failed for "' . ( isset( $file['name'] ) ? $file['name'] : '' ) . '": ' . $movefile['error'] );
 		}
 	}
 	remove_filter( 'upload_dir', 'swh_custom_upload_dir' );
@@ -294,7 +294,11 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 		swh_delete_file_by_url( $legacy_url );
 	}
 	$comments = get_comments( array( 'post_id' => $ticket_id ) );
+	$comments = is_array( $comments ) ? $comments : array();
 	foreach ( $comments as $c ) {
+		if ( ! $c instanceof WP_Comment ) {
+			continue;
+		}
 		$c_atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $c_atts ) && is_array( $c_atts ) ) {
 			foreach ( $c_atts as $url ) {

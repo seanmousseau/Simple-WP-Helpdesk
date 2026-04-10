@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 2.2.0
+ * Version: 2.3.0
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '2.2.0' );
+define( 'SWH_VERSION', '2.3.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -70,8 +70,11 @@ add_filter( 'puc_request_info_result-simple-wp-helpdesk', 'swh_add_plugin_icons'
 /**
  * Add CDN-hosted icons to the plugin info returned by the update checker.
  *
- * @param object|null $info Plugin info object from PUC.
- * @return object|null
+ * @param \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null $info Plugin info object from PUC.
+ * @return \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null
+ *
+ * @phpstan-param \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null $info
+ * @phpstan-return \YahnisElsts\PluginUpdateChecker\v5p6\Plugin\PluginInfo|null
  */
 function swh_add_plugin_icons( $info ) {
 	if ( $info ) {

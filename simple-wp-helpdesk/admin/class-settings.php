@@ -364,6 +364,7 @@ function swh_render_settings_page() {
 						<td>
 							<?php
 							$pages        = get_pages( array( 'post_status' => 'publish' ) );
+							$pages        = is_array( $pages ) ? $pages : array();
 							$current_page = (int) get_option( 'swh_ticket_page_id', 0 );
 							?>
 							<select name="swh_ticket_page_id">
@@ -371,9 +372,9 @@ function swh_render_settings_page() {
 								<?php foreach ( $pages as $page ) : ?>
 									<?php
 									$shortcode_hints = array();
-									foreach ( array( '[submit_ticket]', '[helpdesk_portal]' ) as $tag ) {
-										if ( false !== strpos( $page->post_content, $tag ) ) {
-											$shortcode_hints[] = $tag;
+									foreach ( array( 'submit_ticket' => '[submit_ticket]', 'helpdesk_portal' => '[helpdesk_portal]' ) as $shortcode => $label ) {
+										if ( has_shortcode( $page->post_content, $shortcode ) ) {
+											$shortcode_hints[] = $label;
 										}
 									}
 									$page_label = $page->post_title . ( $shortcode_hints ? ' — ' . implode( ' ', $shortcode_hints ) : '' );
