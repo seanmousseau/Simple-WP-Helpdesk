@@ -2,7 +2,7 @@ includes:
     - /home/sean/.config/composer/vendor/szepeviktor/phpstan-wordpress/extension.neon
 
 parameters:
-    level: 5
+    level: 6
     paths:
         - simple-wp-helpdesk/
     excludePaths:
