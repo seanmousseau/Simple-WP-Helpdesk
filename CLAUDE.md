@@ -4,7 +4,7 @@
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 2.0.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 2.3.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 
 ## Repository Structure
 
@@ -68,6 +68,10 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **Portal URL** — `swh_get_secure_ticket_link()` uses `swh_ticket_page_id` setting when set (via `get_permalink()`), falling back to `_ticket_url` post meta. Returns `false` if neither is available (token missing or no page configured and no stored meta).
 - **Portal URL ordering** — always store `_ticket_token` in meta *before* calling `swh_get_secure_ticket_link()`; calling it first returns `false` and the fallback URL may point to the wrong page.
 - **Rate limiting keys** — portal actions use per-action keys (`portal_close_`, `portal_reopen_`, `portal_reply_` + ticket_id). Never use a shared key across actions or close will block immediate reopen.
+- **Original filenames** — upload filenames are stored in two parallel meta keys: `_swh_attachment_orignames` (new-ticket uploads, keyed by URL) and `_swh_reply_orignames` (reply uploads, keyed by comment ID then URL). Fall back to `basename($url)` if missing (pre-v2.3.0 tickets).
+- **CSAT meta** — satisfaction rating stored as `_ticket_csat` (integer 1–5) on the ticket post. Not set if client skips the prompt. AJAX handler registered on `wp_ajax_nopriv_swh_submit_csat`.
+- **My Tickets dashboard** — portal URL without a token shows a ticket table for logged-in WP users (matching `_ticket_email`) or the lookup form for guests. The `swh_render_lookup_form()` helper is shared between the submission shortcode and this view.
+- **Shortcode attributes** — `[submit_ticket]` and `[helpdesk_portal]` accept `show_priority`, `default_priority`, `default_status`, `show_lookup`. Both shortcodes share the same `swh_submit_ticket_shortcode()` handler.
 
 ## Release Process
 
@@ -85,7 +89,7 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 ## Development Commands
 
 ```bash
-# Static analysis (level 6, excludes vendor/)
+# Static analysis (level 8, excludes vendor/)
 vendor/bin/phpstan analyse
 
 # Full Playwright test suite (34 tests, ~4 min)
@@ -172,6 +176,7 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 - **Bulk action key format** — `sanitize_title('In Progress')` → `in-progress` → action value `swh_status_in-progress`
 - **`expect_navigation()`** — wrap JS-triggered form submits in `with page.expect_navigation():` to avoid race between evaluate and `page.content()`
 - **Canned response persistence check** — use `el.value` via `page.evaluate()`, not `inner_text()` (input values aren't in innerText)
+- **File upload form POST** — a page caching plugin fires an immediate GET after the file POST, overwriting the success HTML in the DOM. Use `expect_navigation()` + `wait_for_load_state("load")` to let it settle, then verify success via WP-CLI meta rather than `page.content()`
 
 ### Environment variables (testing/.env)
 
@@ -192,7 +197,7 @@ SUBSCRIBER_USER, SUBSCRIBER_PASS (optional)
 
 | Tool | Command | Notes |
 |------|---------|-------|
-| PHPStan | `vendor/bin/phpstan analyse` | Level 6, WP stubs via `szepeviktor/phpstan-wordpress` |
+| PHPStan | `vendor/bin/phpstan analyse` | Level 8, WP stubs via `szepeviktor/phpstan-wordpress` |
 | Semgrep | MCP tool `semgrep_scan` | Security scanning; configured via `semgrep@claude-plugins-official` plugin |
 
 ### LSP (Language Intelligence)

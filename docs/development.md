@@ -54,8 +54,8 @@ The plugin uses only WordPress core data structures:
 
 | Data | Storage | Key Meta |
 |------|---------|----------|
-| Tickets | `helpdesk_ticket` Custom Post Type | `_ticket_uid`, `_ticket_token`, `_ticket_status`, `_ticket_priority`, `_ticket_email`, etc. |
-| Replies & Notes | WP Comments on the CPT | `_is_internal_note`, `_is_user_reply`, `_attachments` |
+| Tickets | `helpdesk_ticket` Custom Post Type | `_ticket_uid`, `_ticket_token`, `_ticket_status`, `_ticket_priority`, `_ticket_email`, `_ticket_attachments`, `_swh_attachment_orignames`, `_ticket_csat`, etc. |
+| Replies & Notes | WP Comments on the CPT | `_is_internal_note`, `_is_user_reply`, `_swh_reply_orignames` |
 | Settings | `wp_options` | All keys prefixed with `swh_` |
 
 ### Function Naming
