@@ -80,22 +80,41 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 3. Update `CHANGELOG.md` ([Keep a Changelog](https://keepachangelog.com/) format).
 4. Update `simple-wp-helpdesk/readme.txt` stable tag and changelog.
 5. Update `docs/` files for any changed behaviour or new features.
-6. Build ZIP: `zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/`
-7. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
-8. Create GitHub Release with ZIP attached as a release asset.
+6. **Run full test suite** (all four must pass — see Test Suite below).
+7. Build ZIP: `zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/`
+8. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
+9. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
+10. Create GitHub Release with ZIP attached as a release asset.
 
 > ZIP must be named `simple-wp-helpdesk.zip` — WordPress uses it as the plugin slug.
+
+## Test Suite
+
+The full test suite must pass before any release. Run in order:
+
+### 1. PHPCS — WordPress Coding Standards
+```bash
+phpcs          # zero errors/warnings required
+phpcbf         # auto-fix if needed, then re-run phpcs
+```
+
+### 2. PHPStan — Static Analysis (level 8)
+```bash
+vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+```
+
+### 3. Playwright — End-to-end (34 tests, ~4 min)
+```bash
+source testing/.venv/bin/activate
+pytest testing/scripts/test_helpdesk_pw.py -v
+```
+
+### 4. CodeRabbit — AI code review (on PR)
+Run `/review` after opening the PR. Address all actionable findings before merge.
 
 ## Development Commands
 
 ```bash
-# Static analysis (level 8, excludes vendor/)
-vendor/bin/phpstan analyse
-
-# Full Playwright test suite (34 tests, ~4 min)
-source testing/.venv/bin/activate
-pytest testing/scripts/test_helpdesk_pw.py -v
-
 # Quick smoke check (auth, submit, locate)
 pytest testing/scripts/test_helpdesk_pw.py -m smoke
 
