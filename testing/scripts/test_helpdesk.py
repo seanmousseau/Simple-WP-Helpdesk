@@ -19,6 +19,7 @@ import asyncio
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -700,6 +701,9 @@ async def run():
 
         # CDN reachability — use curl (hardcoded URLs, avoids dynamic urllib warning)
         for cdn_url, label in ((CDN_ICON_128, "1x"), (CDN_ICON_256, "2x")):
+            if not shutil.which("curl"):
+                check(f"plugin icon: CDN {label} image reachable", False, "curl not found in PATH")
+                continue
             result = subprocess.run(
                 ["curl", "-sI", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}", cdn_url],
                 capture_output=True, text=True
@@ -730,6 +734,8 @@ async def run():
         check("plugin icon: puc filter returns correct 2x URL", icon_2x == CDN_ICON_256)
 
         # Icons injected into update transient
+        # Prime the transient so response/no_update buckets are populated.
+        wpcli("eval 'wp_update_plugins();'")
         plugin_file = "simple-wp-helpdesk/simple-wp-helpdesk.php"
         icon_in_transient = wpcli(
             f"eval '$t = get_site_transient(\"update_plugins\"); "
