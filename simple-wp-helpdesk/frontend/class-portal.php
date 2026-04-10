@@ -93,8 +93,8 @@ function swh_render_client_portal() {
 		$admin_email = swh_get_admin_email( $ticket_id );
 		swh_send_email( $admin_email, 'swh_em_admin_closed_sub', 'swh_em_admin_closed_body', $data );
 		swh_send_email( $data['email'], 'swh_em_user_closed_sub', 'swh_em_user_closed_body', $data );
-		$csat_nonce  = wp_create_nonce( 'swh_csat_' . $ticket_id );
-		$close_msg   = esc_html( get_option( 'swh_msg_success_closed', $defs['swh_msg_success_closed'] ) );
+		$csat_nonce = wp_create_nonce( 'swh_csat_' . $ticket_id );
+		$close_msg  = esc_html( get_option( 'swh_msg_success_closed', $defs['swh_msg_success_closed'] ) );
 		echo '<div id="swh-csat" class="swh-alert swh-alert-info" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '" data-success="' . esc_attr( $close_msg ) . '">';
 		echo '<p style="margin:0 0 10px 0;"><strong>' . esc_html__( 'How was your support experience?', 'simple-wp-helpdesk' ) . '</strong></p>';
 		echo '<div class="swh-csat-stars">';
@@ -137,9 +137,10 @@ function swh_render_client_portal() {
 			if ( $comment_id ) {
 				update_comment_meta( $comment_id, '_is_user_reply', '1' );
 			}
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			$reopen_orignames = null;
-			$attach_urls      = swh_handle_multiple_uploads( $_FILES['swh_reopen_attachments'], $reopen_orignames );
+			// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_reopen_attachments'], $reopen_orignames );
 			if ( $comment_id && ! empty( $attach_urls ) ) {
 				update_comment_meta( $comment_id, '_attachments', $attach_urls );
 				if ( ! empty( $reopen_orignames ) ) {
@@ -187,9 +188,10 @@ function swh_render_client_portal() {
 				if ( $comment_id ) {
 					update_comment_meta( $comment_id, '_is_user_reply', '1' );
 				}
-				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 				$reply_orignames = null;
-				$attach_urls     = swh_handle_multiple_uploads( $_FILES['swh_user_reply_attachments'], $reply_orignames );
+				// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+				$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_user_reply_attachments'], $reply_orignames );
 				if ( $comment_id && ! empty( $attach_urls ) ) {
 					update_comment_meta( $comment_id, '_attachments', $attach_urls );
 					if ( ! empty( $reply_orignames ) ) {
@@ -248,14 +250,15 @@ function swh_render_client_portal() {
 			if ( get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true ) ) {
 				continue;
 			}
-			$is_user      = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
+			$is_user = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 			/* translators: %s: technician name */
 			$author_name  = $is_user ? __( 'You', 'simple-wp-helpdesk' ) : sprintf( __( 'Technician (%s)', 'simple-wp-helpdesk' ), $comment->comment_author );
 			$bubble_class = $is_user ? 'swh-chat-user' : 'swh-chat-tech';
 			$attach_urls  = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 			$reply_names  = get_comment_meta( (int) $comment->comment_ID, '_swh_reply_orignames', true );
 			$reply_names  = is_array( $reply_names ) ? $reply_names : array();
-			$comment_ts   = strtotime( $comment->comment_date ) ?: time();
+			$parsed_ts    = strtotime( $comment->comment_date );
+			$comment_ts   = false !== $parsed_ts ? $parsed_ts : time();
 			$comment_iso  = gmdate( 'c', $comment_ts );
 
 			echo '<div class="swh-chat-bubble ' . esc_attr( $bubble_class ) . '">';
@@ -371,8 +374,8 @@ function swh_render_portal_no_token() {
 	echo '<div class="swh-helpdesk-wrapper">';
 
 	if ( is_user_logged_in() ) {
-		$current_user = wp_get_current_user();
-		$defs         = swh_get_defaults();
+		$current_user  = wp_get_current_user();
+		$defs          = swh_get_defaults();
 		$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
 
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -412,10 +415,11 @@ function swh_render_portal_no_token() {
 			echo '</tr></thead>';
 			echo '<tbody>';
 			foreach ( $tickets as $ticket ) {
-				$uid    = get_post_meta( $ticket->ID, '_ticket_uid', true );
-				$status = get_post_meta( $ticket->ID, '_ticket_status', true );
-				$link   = swh_get_secure_ticket_link( $ticket->ID );
-				$ts     = strtotime( $ticket->post_modified ) ?: time();
+				$uid       = get_post_meta( $ticket->ID, '_ticket_uid', true );
+				$status    = get_post_meta( $ticket->ID, '_ticket_status', true );
+				$link      = swh_get_secure_ticket_link( $ticket->ID );
+				$parsed_ts = strtotime( $ticket->post_modified );
+				$ts        = false !== $parsed_ts ? $parsed_ts : time();
 				echo '<tr class="swh-ticket-row">';
 				echo '<td>' . esc_html( $uid ) . '</td>';
 				echo '<td>' . esc_html( $ticket->post_title ) . '</td>';
@@ -457,7 +461,7 @@ function swh_render_lookup_form() {
 		} else {
 			$lookup_email = isset( $_POST['swh_lookup_email'] ) ? sanitize_email( wp_unslash( $_POST['swh_lookup_email'] ) ) : '';
 			if ( $lookup_email ) {
-				$closed_status  = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+				$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
 				// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				$lookup_tickets = get_posts(
 					array(

@@ -253,8 +253,8 @@ function swh_handle_settings_save() {
 		$raw_bodies = isset( $_POST['swh_canned_bodies'] ) ? (array) wp_unslash( $_POST['swh_canned_bodies'] ) : array();
 		$canned     = array();
 		foreach ( $raw_titles as $ci => $raw_title ) {
-			$ctitle = sanitize_text_field( wp_unslash( $raw_title ) );
-			$cbody  = isset( $raw_bodies[ $ci ] ) ? wp_kses_post( wp_unslash( $raw_bodies[ $ci ] ) ) : '';
+			$ctitle = sanitize_text_field( $raw_title );
+			$cbody  = isset( $raw_bodies[ $ci ] ) ? wp_kses_post( $raw_bodies[ $ci ] ) : '';
 			if ( '' !== $ctitle ) {
 				$canned[] = array(
 					'title' => $ctitle,
@@ -372,7 +372,10 @@ function swh_render_settings_page() {
 								<?php foreach ( $pages as $page ) : ?>
 									<?php
 									$shortcode_hints = array();
-									foreach ( array( 'submit_ticket' => '[submit_ticket]', 'helpdesk_portal' => '[helpdesk_portal]' ) as $shortcode => $label ) {
+									foreach ( array(
+										'submit_ticket'   => '[submit_ticket]',
+										'helpdesk_portal' => '[helpdesk_portal]',
+									) as $shortcode => $label ) {
 										if ( has_shortcode( $page->post_content, $shortcode ) ) {
 											$shortcode_hints[] = $label;
 										}

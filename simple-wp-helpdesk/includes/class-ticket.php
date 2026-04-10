@@ -199,7 +199,7 @@ function swh_get_file_proxy_url( $url, $ticket_id ) {
  *
  * Pass a reference as $orig_names to receive a url→original_name map for display purposes.
  *
- * @param array<string, mixed>      $file_array  The $_FILES sub-array for the file input.
+ * @param array<string, mixed>       $file_array  The $_FILES sub-array for the file input.
  * @param array<string, string>|null $orig_names  Optional. Populated with url→original_name map on return.
  * @param-out array<string, string> $orig_names
  * @return string[] Array of successfully uploaded file URLs.
@@ -231,10 +231,10 @@ function swh_handle_multiple_uploads( $file_array, &$orig_names = null ) {
 		'test_form' => false,
 		'mimes'     => $allowed_mimes,
 	);
-	/** @var string[] $uploaded_urls */
+	/* @var string[] $uploaded_urls */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$uploaded_urls = array();
-	/** @var array<string, string> $url_name_map */
-	$url_name_map  = array();
+	/* @var array<string, string> $url_name_map */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
+	$url_name_map = array();
 	swh_ensure_upload_protection();
 	add_filter( 'upload_dir', 'swh_custom_upload_dir' );
 	foreach ( $files as $file ) {
@@ -243,12 +243,12 @@ function swh_handle_multiple_uploads( $file_array, &$orig_names = null ) {
 			error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', isset( $file['name'] ) ? $file['name'] : '', $max_size_mb ) );
 			continue;
 		}
-		$original_name = isset( $file['name'] ) ? sanitize_file_name( $file['name'] ) : '';
+		$original_name = isset( $file['name'] ) ? sanitize_text_field( $file['name'] ) : '';
 		$movefile      = wp_handle_upload( $file, $overrides );
 		if ( $movefile && ! isset( $movefile['error'] ) && isset( $movefile['url'] ) && is_string( $movefile['url'] ) ) {
-			$file_url                    = $movefile['url'];
-			$uploaded_urls[]             = $file_url;
-			$url_name_map[ $file_url ]   = $original_name;
+			$file_url                  = $movefile['url'];
+			$uploaded_urls[]           = $file_url;
+			$url_name_map[ $file_url ] = $original_name;
 		} elseif ( isset( $movefile['error'] ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs upload failures for admin troubleshooting.
 			error_log( 'SWH upload failed for "' . $original_name . '": ' . $movefile['error'] );

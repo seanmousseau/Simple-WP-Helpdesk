@@ -78,7 +78,8 @@ function swh_ticket_frontend( $atts = array() ) {
 		swh_render_submission_form( $atts );
 	}
 
-	return ob_get_clean() ?: '';
+	$buf = ob_get_clean();
+	return false !== $buf ? $buf : '';
 }
 
 /**
@@ -91,19 +92,19 @@ function swh_ticket_frontend( $atts = array() ) {
  * @return void
  */
 function swh_render_submission_form( $atts = array() ) {
-	$defs          = swh_get_defaults();
-	$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
-	$priorities    = swh_get_priorities();
-	$default_prio    = ! empty( $atts['default_priority'] ) && in_array( $atts['default_priority'], $priorities, true )
+	$defs           = swh_get_defaults();
+	$closed_status  = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+	$priorities     = swh_get_priorities();
+	$default_prio   = ! empty( $atts['default_priority'] ) && in_array( $atts['default_priority'], $priorities, true )
 		? $atts['default_priority']
 		: get_option( 'swh_default_priority', $defs['swh_default_priority'] );
-	$valid_statuses  = array_keys( swh_get_statuses() );
-	$default_status  = ! empty( $atts['default_status'] ) && in_array( $atts['default_status'], $valid_statuses, true )
+	$valid_statuses = swh_get_statuses();
+	$default_status = ! empty( $atts['default_status'] ) && in_array( $atts['default_status'], $valid_statuses, true )
 		? $atts['default_status']
 		: get_option( 'swh_default_status', $defs['swh_default_status'] );
-	$show_priority   = ( ! isset( $atts['show_priority'] ) || 'no' !== strtolower( $atts['show_priority'] ) );
-	$show_lookup     = ( ! isset( $atts['show_lookup'] ) || 'no' !== strtolower( $atts['show_lookup'] ) );
-	$spam_method     = get_option( 'swh_spam_method', 'none' );
+	$show_priority  = ( ! isset( $atts['show_priority'] ) || 'no' !== strtolower( $atts['show_priority'] ) );
+	$show_lookup    = ( ! isset( $atts['show_lookup'] ) || 'no' !== strtolower( $atts['show_lookup'] ) );
+	$spam_method    = get_option( 'swh_spam_method', 'none' );
 	?>
 	<div class="swh-helpdesk-wrapper">
 	<?php
@@ -189,7 +190,8 @@ function swh_render_submission_form( $atts = array() ) {
 				update_post_meta( $ticket_id, '_ticket_url', get_permalink() );
 				// Build ticket_url after token is in meta so swh_get_secure_ticket_link()
 				// can resolve the correct page (respects swh_ticket_page_id setting).
-				$data['ticket_url'] = swh_get_secure_ticket_link( $ticket_id ) ?: '';
+				$secure_url         = swh_get_secure_ticket_link( $ticket_id );
+				$data['ticket_url'] = false !== $secure_url ? $secure_url : '';
 				$default_assignee   = get_option( 'swh_default_assignee' );
 				if ( $default_assignee ) {
 					update_post_meta( $ticket_id, '_ticket_assigned_to', $default_assignee );
@@ -401,7 +403,8 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 	if ( ! isset( $_GET['swh_ticket'], $_GET['token'] ) ) {
 		ob_start();
 		swh_render_portal_no_token();
-		return ob_get_clean() ?: '';
+		$buf = ob_get_clean();
+		return false !== $buf ? $buf : '';
 	}
 	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
@@ -425,5 +428,6 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 
 	ob_start();
 	swh_render_client_portal();
-	return ob_get_clean() ?: '';
+	$buf = ob_get_clean();
+	return false !== $buf ? $buf : '';
 }

@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.3.0
+Stable tag: 2.4.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -74,6 +74,16 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 == Changelog ==
 
+= 2.4.1 =
+* Fixed: Original filenames with spaces now preserved correctly in attachment meta (sanitize_file_name replaced with sanitize_text_field)
+* Fixed: Backslashes in canned response titles/bodies no longer stripped on save (removed redundant wp_unslash in settings handler)
+* Fixed: default_status shortcode attribute now correctly applied (array_keys wrapper removed from status validation)
+
+= 2.4.0 =
+* Changed: Plugin author updated to Sean Mousseau with link to GitHub repository
+* Changed: Plugin details modal now shows full feature list instead of the bare plugin header description
+* Fixed: Extra blank line between changelog versions removed from readme.txt
+
 = 2.3.0 =
 * Added: My Tickets Dashboard — portal without token shows open ticket table for logged-in users or lookup form for guests
 * Added: Original attachment filenames preserved and displayed as link labels in portal and admin sidebar
@@ -90,7 +100,6 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Fixed: Bulk status change now syncs _resolved_timestamp meta
 * Fixed: wp_unslash() applied to canned response POST inputs before sanitization
 * Fixed: Duplicate icon constant define block removed
-
 
 = 2.2.0 =
 * Added: Bulk "Set Status" action on ticket list for all configured statuses with confirmation notice
@@ -148,6 +157,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 2.4.0 =
+Cosmetic release: author attribution corrected, plugin details modal now shows the full feature description.
 
 = 2.0.0 =
 Major refactor release. Modular file structure, improved email templates with conditional blocks, optional dedicated portal page, and several bug fixes including portal link routing and client reopen flow. Includes all v1.9.0 security features. No breaking changes.

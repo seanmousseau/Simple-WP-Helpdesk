@@ -12,6 +12,26 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.4.1] — 2026-04-10
+
+### Fixed
+- **Original Attachment Filenames (#231):** Filenames with spaces are now preserved correctly — `sanitize_file_name()` (which converts spaces to hyphens) replaced with `sanitize_text_field()` when storing the `_swh_attachment_orignames` map in `swh_handle_multiple_uploads()`.
+- **Canned Response Backslashes (#213):** Backslashes in canned response titles and bodies are no longer stripped on save — removed redundant inner `wp_unslash()` calls in the settings handler (outer `wp_unslash()` on the POST array already handles unslashing).
+- **`default_status` Shortcode Attribute (#212):** `[submit_ticket default_status="In Progress"]` now correctly applies the specified status — removed erroneous `array_keys()` wrapper that returned numeric indices instead of status name strings.
+
+---
+
+## [2.4.0] — 2026-04-10
+
+### Changed
+- **Plugin Author Attribution:** Author changed from "SM WP Plugins" to "Sean Mousseau" with `Author URI` linking to the GitHub repository — the author name now appears as a hyperlink on the Plugins list screen.
+- **Plugin Details Modal — Description:** The "View Details" modal now shows the full feature list with formatted HTML instead of the bare plugin header one-liner. Injected via `puc_request_info_result` filter since PUC does not reliably parse the readme.txt `== Description ==` section from a GitHub release ZIP.
+
+### Fixed
+- **readme.txt Changelog Whitespace:** Removed extra blank line between the 2.3.0 and 2.2.0 changelog sections that was causing extra whitespace in the modal Changelog tab.
+
+---
+
 ## [2.3.0] — 2026-04-10
 
 ### Added
@@ -280,7 +300,9 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.1...HEAD
+[2.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.0...v2.4.1
+[2.4.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.0.0...v2.1.0

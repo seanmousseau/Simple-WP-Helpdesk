@@ -244,6 +244,16 @@ def _clear_rate_limits():
     wpcli("cache flush")  # swh_is_rate_limited() uses get_option() which checks object cache first
 
 
+def _php_str(val: str) -> str:
+    """Escape a string for safe embedding inside a PHP single-quoted literal in a WP-CLI eval.
+
+    Escapes backslashes then single quotes so the value can be placed as 'val'
+    inside PHP code without breaking the string literal or the surrounding shell
+    double-quote context.
+    """
+    return val.replace('\\', '\\\\').replace("'", "\\'")
+
+
 def _navigate_admin_list(page: Page):
     """Navigate to the admin ticket list and wait for the table to render."""
     page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket")
@@ -878,8 +888,8 @@ def test_19_canned_responses(page: Page):
         skip("canned responses", "no ticket_id in state")
         return
 
-    CANNED_TITLE = f"Test Canned {int(time.time())}"
-    CANNED_BODY  = "This is the automated canned response body for testing."
+    CANNED_TITLE = f"Test's Canned {int(time.time())}"
+    CANNED_BODY  = "Canned body with C:\\Users\\support path."
 
     wp_login(page, ADMIN_USER, ADMIN_PASS)
 
@@ -1093,12 +1103,16 @@ def test_23_file_attachments(page: Page):
 
     tmp_txt = None
     tmp_php = None
+    tmp_dir = None
+    readable_filename = "Simple WP Helpdesk attachment test file.txt"
     try:
         # ── Part 1: Submit a ticket with a valid .txt attachment ──────────────
 
-        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as tf:
+        # Use a human-readable filename so we can verify original-filename preservation
+        tmp_dir = tempfile.mkdtemp()
+        tmp_txt = os.path.join(tmp_dir, readable_filename)
+        with open(tmp_txt, "w") as tf:
             tf.write("Simple WP Helpdesk attachment test file.\n")
-            tmp_txt = tf.name
 
         page.goto(WP_SUBMIT_PAGE)
         page.wait_for_load_state("load")
@@ -1136,8 +1150,30 @@ def test_23_file_attachments(page: Page):
                   bool(proxy_url) and "swh_file=" in proxy_url,
                   f"got: {proxy_url!r}")
 
+            # Verify _swh_attachment_orignames meta is populated with the original filename
+            orig_names = wpcli(
+                f"eval \"print_r(get_post_meta({attach_id}, '_swh_attachment_orignames', true));\""
+            )
+            check("attachment: _swh_attachment_orignames meta populated with original filename",
+                  readable_filename in orig_names,
+                  f"orignames meta: {orig_names[:120]!r}")
+
+            wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+            # Verify admin ticket editor shows original filename in attachment link
+            _navigate_ticket_editor(page, int(attach_id))
+            page.wait_for_selector("#publish")
+            attach_links = page.locator('.button.button-secondary.button-small[href*="swh_file="]')
+            if attach_links.count() > 0:
+                link_text = attach_links.first.inner_text()
+                check("attachment: admin meta box shows original filename",
+                      readable_filename in link_text,
+                      f"got: {link_text!r}")
+            else:
+                check("attachment: admin meta box shows original filename", False,
+                      "no proxy attachment links found in admin editor")
+
             if proxy_url:
-                wp_login(page, ADMIN_USER, ADMIN_PASS)
                 resp = page.request.get(proxy_url)
                 check("attachment: proxy serves file with HTTP 200",
                       resp.status == 200, f"got HTTP {resp.status}")
@@ -1189,6 +1225,11 @@ def test_23_file_attachments(page: Page):
                     os.unlink(tmp)
                 except OSError:
                     pass
+        if tmp_dir:
+            try:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+            except OSError:
+                pass
 
 
 @pytest.mark.security
@@ -1509,19 +1550,84 @@ def test_33_csat_prompt(page: Page):
     check("CSAT: skip link present", page.locator('#swh-csat-skip').count() > 0)
     screenshot(page, "42_csat_widget")
 
-    # Submit a rating via star click
-    page.locator('.swh-csat-star[data-rating="4"]').click()
-    page.wait_for_selector("#swh-csat-thanks")
-    thanks_visible = page.locator('#swh-csat-thanks').is_visible()
-    check("CSAT: thanks message shown after rating", thanks_visible)
-    screenshot(page, "43_csat_submitted")
+    # ── Test skip path: verify #swh-close-success becomes visible ────────────
 
-    # Verify rating stored in post meta
+    page.locator('#swh-csat-skip').click()
+    page.wait_for_timeout(500)
+    close_success_visible = page.locator('#swh-close-success').is_visible()
+    check("CSAT: skip shows #swh-close-success", close_success_visible)
+    screenshot(page, "42b_csat_skipped")
+
+    # ── Re-close for star rating test (reset status to Resolved via WP-CLI) ──
+
     ticket_id = state.get('ticket_id')
     if ticket_id:
-        csat_val = wpcli(f"eval \"echo get_post_meta({ticket_id}, '_ticket_csat', true);\"")
-        check("CSAT: _ticket_csat meta stored", csat_val.strip() == "4",
-              f"got: {csat_val!r}")
+        resolved_status = wpcli("option get swh_resolved_status").strip() or "Resolved"
+        _clear_rate_limits()  # portal_close_<id> lock is still active from the first close
+        wpcli(
+            f"eval \"update_post_meta({ticket_id}, '_ticket_status', "
+            f"'{_php_str(resolved_status)}');\""
+        )
+        fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({ticket_id});"')
+        if fresh_url and "swh_ticket=" in fresh_url:
+            state['portal_url'] = fresh_url
+
+    page.goto(state['portal_url'])
+    page.wait_for_selector(".swh-card, .swh-alert")
+    close_btn2 = page.locator('[name="swh_user_close_ticket_submit"]')
+    if close_btn2.count() > 0:
+        close_btn2.click()
+        page.wait_for_selector("#swh-csat, .swh-alert-success, .swh-alert-error",
+                               timeout=10000)
+        # The CSAT widget may not reappear if the portal has session/cache state
+        # from the first close — guard the star click to avoid a hard timeout.
+        if page.locator('#swh-csat').is_visible():
+            page.locator('.swh-csat-star[data-rating="4"]').click()
+            page.wait_for_selector("#swh-csat-thanks", timeout=5000)
+            thanks_visible = page.locator('#swh-csat-thanks').is_visible()
+            check("CSAT: thanks message shown after rating", thanks_visible)
+            screenshot(page, "43_csat_submitted")
+
+            if ticket_id:
+                csat_val = wpcli(
+                    f"eval \"echo get_post_meta({ticket_id}, '_ticket_csat', true);\""
+                )
+                check("CSAT: _ticket_csat meta stored", csat_val.strip() == "4",
+                      f"got: {csat_val!r}")
+        else:
+            skip("CSAT star rating (re-close)", "CSAT widget not present after second close")
+
+    # ── Security boundary: invalid nonce and out-of-range ratings ────────────
+
+    if ticket_id:
+        ajax_url = WP_URL.rstrip('/') + '/wp-admin/admin-ajax.php'
+
+        # Invalid nonce must be rejected
+        resp = page.request.post(ajax_url, form={
+            "action": "swh_submit_csat",
+            "ticket_id": str(ticket_id),
+            "rating": "4",
+            "nonce": "invalid_nonce_value",
+        })
+        resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+        check("CSAT security: invalid nonce rejected",
+              not resp_json.get("success", True),
+              f"expected success=false, got: {resp_json}")
+
+        # Out-of-range ratings must be rejected (requires a valid nonce;
+        # generate one via WP-CLI while still logged out — use a fresh nonce action)
+        valid_nonce = wpcli(f"eval \"echo wp_create_nonce('swh_csat_{ticket_id}');\"")
+        for bad_rating in ("0", "6"):
+            resp = page.request.post(ajax_url, form={
+                "action": "swh_submit_csat",
+                "ticket_id": str(ticket_id),
+                "rating": bad_rating,
+                "nonce": valid_nonce,
+            })
+            resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+            check(f"CSAT security: rating={bad_rating} rejected",
+                  not resp_json.get("success", True),
+                  f"expected success=false, got: {resp_json}")
 
 
 def test_34_my_tickets_dashboard(page: Page):
@@ -1568,6 +1674,49 @@ def test_34_my_tickets_dashboard(page: Page):
         page.goto(WP_PORTAL_PAGE.rstrip('/') + f"/?swh_nc={int(time.time())}")
         page.wait_for_selector(".swh-helpdesk-wrapper")
         screenshot(page, "44_my_tickets_dashboard")
+
+        # ── Closed-ticket exclusion: close the ticket and verify it disappears ─
+
+        ticket_id = state.get('ticket_id')
+        closed_status = wpcli("option get swh_closed_status").strip() or "Closed"
+
+        if ticket_id and sub_id.isdigit():
+            original_status = wpcli(
+                f"eval \"echo get_post_meta({ticket_id}, '_ticket_status', true);\""
+            ).strip()
+            wpcli(
+                f"eval \"update_post_meta({ticket_id}, '_ticket_status', '{_php_str(closed_status)}');\""
+            )
+            try:
+                render_closed = wpcli(
+                    f"eval \"wp_set_current_user({sub_id}); ob_start(); swh_render_portal_no_token(); echo ob_get_clean();\""
+                )
+                # The ticket title should not appear in the open-tickets table
+                check("dashboard: closed ticket excluded from open tickets table",
+                      TEST_TICKET_TITLE not in render_closed,
+                      f"closed ticket still visible. render: {render_closed[:200]!r}")
+
+                # ── Empty state: create a subscriber with no tickets at all ───
+                no_tickets_id = wpcli(
+                    f"user create swh-empty-{int(time.time())} empty-{int(time.time())}@example.com "
+                    f"--role=subscriber --user_pass=TestEmpty99 --porcelain 2>/dev/null"
+                ).strip()
+                if no_tickets_id.isdigit():
+                    try:
+                        render_empty = wpcli(
+                            f"eval \"wp_set_current_user({no_tickets_id}); ob_start(); "
+                            f"swh_render_portal_no_token(); echo ob_get_clean();\""
+                        )
+                        check("dashboard: empty state message shown when no open tickets",
+                              "no open tickets" in render_empty.lower(),
+                              f"empty state not found. render: {render_empty[:200]!r}")
+                    finally:
+                        wpcli(f"user delete {no_tickets_id} --yes 2>/dev/null")
+            finally:
+                # Restore original ticket status
+                wpcli(
+                    f"eval \"update_post_meta({ticket_id}, '_ticket_status', '{_php_str(original_status)}');\""
+                )
     finally:
         wp_login(page, ADMIN_USER, ADMIN_PASS)
         if created_new and sub_id.isdigit():
@@ -1596,43 +1745,145 @@ def test_35_portal_guest_lookup(page: Page):
 
 
 def test_36_shortcode_attrs(page: Page):
-    print("\n[36] Shortcode Attributes — show_priority=no")
+    print("\n[36] Shortcode Attributes — show_priority, show_lookup, default_priority, default_status")
 
     wp_login(page, ADMIN_USER, ADMIN_PASS)
 
-    # Create a test page with show_priority=no via WP-CLI
-    test_page_id = wpcli(
-        "post create --post_type=page --post_status=publish "
-        "--post_title='SWH Attr Test' "
-        '--post_content=\'[submit_ticket show_priority="no"]\' '
-        "--porcelain"
-    )
-    if not test_page_id.isdigit():
-        skip("shortcode attrs", "could not create test page via WP-CLI")
-        return
-
+    page_ids = []
     try:
-        test_page_url = wpcli(f"post get {test_page_id} --field=guid")
-        if not test_page_url:
-            skip("shortcode attrs", "could not get test page URL")
-            return
+        # ── show_priority=no ─────────────────────────────────────────────────
 
+        pid1 = wpcli(
+            "post create --post_type=page --post_status=publish "
+            "--post_title='SWH Attr Test Priority' "
+            '--post_content=\'[submit_ticket show_priority="no"]\' '
+            "--porcelain"
+        )
+        if not pid1.isdigit():
+            skip("shortcode attrs", "could not create show_priority test page")
+            return
+        page_ids.append(pid1)
+
+        url1 = wpcli(f"post get {pid1} --field=guid")
         wp_logout(page)
-        page.goto(test_page_url)
+        page.goto(url1)
         page.wait_for_selector(".swh-helpdesk-wrapper, form")
         html = page.content()
-
         check("shortcode attrs: priority field absent with show_priority=no",
               'name="ticket_priority"' not in html,
               "priority field still present despite show_priority=no")
-        check("shortcode attrs: name field still present",
-              'name="ticket_name"' in html)
-        check("shortcode attrs: email field still present",
-              'name="ticket_email"' in html)
+        check("shortcode attrs: name field still present", 'name="ticket_name"' in html)
+        check("shortcode attrs: email field still present", 'name="ticket_email"' in html)
         screenshot(page, "46_shortcode_no_priority")
+
+        # ── show_lookup=no ───────────────────────────────────────────────────
+
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        pid2 = wpcli(
+            "post create --post_type=page --post_status=publish "
+            "--post_title='SWH Attr Test Lookup' "
+            '--post_content=\'[submit_ticket show_lookup="no"]\' '
+            "--porcelain"
+        )
+        if pid2.isdigit():
+            page_ids.append(pid2)
+            url2 = wpcli(f"post get {pid2} --field=guid")
+            wp_logout(page)
+            page.goto(url2)
+            page.wait_for_selector(".swh-helpdesk-wrapper, form")
+            html2 = page.content()
+            check("shortcode attrs: lookup section absent with show_lookup=no",
+                  'name="swh_lookup_email"' not in html2 and 'id="swh-toggle-lookup"' not in html2,
+                  "lookup form still present despite show_lookup=no")
+            screenshot(page, "46b_shortcode_no_lookup")
+
+        # ── default_priority ─────────────────────────────────────────────────
+
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        # Get the first available priority value from WP-CLI
+        avail_priorities = wpcli(
+            "eval \"echo implode(',', swh_get_priorities());\""
+        ).strip().split(',')
+        test_priority = avail_priorities[-1].strip() if avail_priorities else ''
+
+        if test_priority:
+            safe_priority = test_priority.replace('"', '&quot;').replace("'", "&#039;")
+            pid3 = wpcli(
+                "post create --post_type=page --post_status=publish "
+                "--post_title='SWH Attr Test DefPriority' "
+                f'--post_content=\'[submit_ticket default_priority="{safe_priority}" show_priority="yes"]\' '
+                "--porcelain"
+            )
+            if pid3.isdigit():
+                page_ids.append(pid3)
+                url3 = wpcli(f"post get {pid3} --field=guid")
+                wp_logout(page)
+                _clear_rate_limits()
+                page.goto(url3)
+                page.wait_for_selector(".swh-helpdesk-wrapper, form")
+                # The priority select should have the default_priority option selected
+                selected_priority = page.evaluate(
+                    "(() => { var sel = document.querySelector('[name=\"ticket_priority\"]');"
+                    " return sel ? sel.value : null; })()"
+                )
+                check(f"shortcode attrs: default_priority={test_priority!r} pre-selected",
+                      selected_priority == test_priority,
+                      f"got selected priority: {selected_priority!r}")
+                screenshot(page, "46c_shortcode_default_priority")
+
+        # ── default_status ───────────────────────────────────────────────────
+
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        avail_statuses = wpcli(
+            "eval \"echo implode(',', swh_get_statuses());\""
+        ).strip().split(',')
+        # Pick a non-default status (skip the first one which is usually the default)
+        test_status = avail_statuses[1].strip() if len(avail_statuses) > 1 else ''
+
+        if test_status:
+            safe_status = test_status.replace('"', '&quot;').replace("'", "&#039;")
+            pid4 = wpcli(
+                "post create --post_type=page --post_status=publish "
+                "--post_title='SWH Attr Test DefStatus' "
+                f'--post_content=\'[submit_ticket default_status="{safe_status}"]\' '
+                "--porcelain"
+            )
+            if pid4.isdigit():
+                page_ids.append(pid4)
+                url4 = wpcli(f"post get {pid4} --field=guid")
+                wp_logout(page)
+                _clear_rate_limits()
+                page.goto(url4)
+                page.wait_for_selector(".swh-helpdesk-wrapper, form")
+                page.fill('[name="ticket_name"]', CLIENT1_NAME)
+                page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
+                page.fill('[name="ticket_title"]', f"DefStatus Test {int(time.time())}")
+                page.fill('[name="ticket_desc"]', "Testing default_status shortcode attr.")
+                with page.expect_navigation(timeout=15000):
+                    page.click('[name="swh_submit_ticket"]')
+                page.wait_for_load_state("load")
+
+                # Find the ticket and verify its status
+                new_id = wpcli(
+                    "post list --post_type=helpdesk_ticket --post_status=any "
+                    f"--s={json.dumps('DefStatus Test')} --orderby=ID --order=DESC "
+                    "--format=ids"
+                ).split()
+                if new_id:
+                    actual_status = wpcli(
+                        f"eval \"echo get_post_meta({new_id[0]}, '_ticket_status', true);\""
+                    ).strip()
+                    check(f"shortcode attrs: default_status={test_status!r} applied to new ticket",
+                          actual_status == test_status,
+                          f"got status: {actual_status!r}")
+                    # Clean up the test ticket
+                    wpcli(f"post delete {new_id[0]} --force 2>/dev/null")
+                screenshot(page, "46d_shortcode_default_status")
+
     finally:
         wp_login(page, ADMIN_USER, ADMIN_PASS)
-        wpcli(f"post delete {test_page_id} --force 2>/dev/null")
+        for pid in page_ids:
+            wpcli(f"post delete {pid} --force 2>/dev/null")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

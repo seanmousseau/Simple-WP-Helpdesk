@@ -30,5 +30,8 @@ if ( ! class_exists( PluginInfo::class ) ) {
 	class PluginInfo {
 		/** @var array<string, string> */
 		public $icons = array();
+
+		/** @var array<string, string> */
+		public $sections = array();
 	}
 }
