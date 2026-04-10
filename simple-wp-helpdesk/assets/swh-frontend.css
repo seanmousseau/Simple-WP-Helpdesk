@@ -173,3 +173,39 @@
 .swh-text-muted {
 	color: #767676;
 }
+
+.swh-cta-primary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 15px;
+	background-color: #d4edda;
+	border: 1px solid #c3e6cb;
+	border-left: 4px solid #28a745;
+	border-radius: 4px;
+	padding: 15px;
+	margin-bottom: 10px;
+}
+
+.swh-cta-primary-content h4 {
+	margin: 0 0 4px 0;
+	color: #155724;
+}
+
+.swh-cta-primary-content p {
+	margin: 0;
+	font-size: 13px;
+	color: #155724;
+}
+
+.swh-cta-secondary {
+	margin: 0 0 20px 0;
+	font-size: 13px;
+	color: #555;
+}
+
+.swh-cta-secondary a {
+	color: #0073aa;
+	text-decoration: underline;
+}

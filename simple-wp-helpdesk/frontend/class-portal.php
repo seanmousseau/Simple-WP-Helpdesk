@@ -125,9 +125,13 @@ function swh_render_client_portal() {
 				update_comment_meta( $comment_id, '_is_user_reply', '1' );
 			}
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-			$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_reopen_attachments'] );
+			$reopen_orignames = null;
+			$attach_urls      = swh_handle_multiple_uploads( $_FILES['swh_reopen_attachments'], $reopen_orignames );
 			if ( $comment_id && ! empty( $attach_urls ) ) {
 				update_comment_meta( $comment_id, '_attachments', $attach_urls );
+				if ( ! empty( $reopen_orignames ) ) {
+					update_comment_meta( $comment_id, '_swh_reply_orignames', $reopen_orignames );
+				}
 			}
 			// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- dynamic fallback intentional
 			$data['message'] = $reply_text ? $reply_text : ( $has_files ? __( 'Attached file(s)', 'simple-wp-helpdesk' ) : '' );
@@ -171,9 +175,13 @@ function swh_render_client_portal() {
 					update_comment_meta( $comment_id, '_is_user_reply', '1' );
 				}
 				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-				$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_user_reply_attachments'] );
+				$reply_orignames = null;
+				$attach_urls     = swh_handle_multiple_uploads( $_FILES['swh_user_reply_attachments'], $reply_orignames );
 				if ( $comment_id && ! empty( $attach_urls ) ) {
 					update_comment_meta( $comment_id, '_attachments', $attach_urls );
+					if ( ! empty( $reply_orignames ) ) {
+						update_comment_meta( $comment_id, '_swh_reply_orignames', $reply_orignames );
+					}
 				}
 				$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 				$admin_email     = swh_get_admin_email( $ticket_id );
@@ -227,19 +235,24 @@ function swh_render_client_portal() {
 			if ( get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true ) ) {
 				continue;
 			}
-			$is_user = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
+			$is_user      = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
 			/* translators: %s: technician name */
 			$author_name  = $is_user ? __( 'You', 'simple-wp-helpdesk' ) : sprintf( __( 'Technician (%s)', 'simple-wp-helpdesk' ), $comment->comment_author );
 			$bubble_class = $is_user ? 'swh-chat-user' : 'swh-chat-tech';
 			$attach_urls  = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
+			$reply_names  = get_comment_meta( (int) $comment->comment_ID, '_swh_reply_orignames', true );
+			$reply_names  = is_array( $reply_names ) ? $reply_names : array();
+			$comment_ts   = strtotime( $comment->comment_date ) ?: time();
+			$comment_iso  = gmdate( 'c', $comment_ts );
 
 			echo '<div class="swh-chat-bubble ' . esc_attr( $bubble_class ) . '">';
-			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_name ) . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(' . esc_html( $comment->comment_date ) . ')</span></strong>';
+			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_name ) . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(<time class="swh-timestamp" datetime="' . esc_attr( $comment_iso ) . '" title="' . esc_attr( $comment->comment_date ) . '">' . esc_html( $comment->comment_date ) . '</time>)</span></strong>';
 			echo nl2br( esc_html( $comment->comment_content ) );
 			if ( ! empty( $attach_urls ) && is_array( $attach_urls ) ) {
 				echo '<div style="margin-top: 10px;">';
 				foreach ( $attach_urls as $url ) {
-					echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( basename( $url ) ) . '</a>'; // nosemgrep -- $url from comment meta (not $_REQUEST); esc_url() + esc_html() applied.
+					$label = ! empty( $reply_names[ $url ] ) ? $reply_names[ $url ] : basename( $url );
+					echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( $label ) . '</a>'; // nosemgrep -- $url from comment meta (not $_REQUEST); esc_url() + esc_html() applied.
 				}
 				echo '</div>';
 			}
@@ -251,16 +264,17 @@ function swh_render_client_portal() {
 	?>
 	</div>
 	<?php if ( $resolved_status === $data['status'] ) : ?>
-		<div class="swh-alert swh-alert-info">
-			<div>
-				<h4 style="margin: 0 0 5px 0; color: #005980;"><?php esc_html_e( 'Is your issue fully resolved?', 'simple-wp-helpdesk' ); ?></h4>
-				<p style="margin: 0; font-size: 13px; color: #005980;"><?php esc_html_e( 'Click the button to close this ticket, or use the form below to reply if you still need help.', 'simple-wp-helpdesk' ); ?></p>
+		<div class="swh-cta-primary">
+			<div class="swh-cta-primary-content">
+				<h4><?php esc_html_e( '&#10003; Your issue is resolved?', 'simple-wp-helpdesk' ); ?></h4>
+				<p><?php esc_html_e( 'Mark this ticket as closed once your issue is fully resolved.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 			<form method="POST" action="" style="margin:0;">
 				<?php wp_nonce_field( 'swh_user_close', 'swh_close_nonce' ); ?>
-				<input type="submit" name="swh_user_close_ticket_submit" value="<?php esc_attr_e( 'Yes, Close Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn">
+				<input type="submit" name="swh_user_close_ticket_submit" value="<?php esc_attr_e( 'Close Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn">
 			</form>
 		</div>
+		<p class="swh-cta-secondary"><?php esc_html_e( 'Still need help?', 'simple-wp-helpdesk' ); ?> <a href="#swh-reply-text"><?php esc_html_e( 'Reply below &#8595;', 'simple-wp-helpdesk' ); ?></a></p>
 	<?php endif; ?>
 	<?php if ( $closed_status !== $data['status'] ) : ?>
 		<form method="POST" action="" enctype="multipart/form-data">

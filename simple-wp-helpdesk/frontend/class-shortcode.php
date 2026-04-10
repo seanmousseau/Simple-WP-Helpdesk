@@ -139,14 +139,18 @@ function swh_render_submission_form() {
 				)
 			);
 			if ( $ticket_id > 0 ) {
-				$attach_urls = array();
+				$attach_urls  = array();
+				$attach_names = null;
 				// phpcs:disable WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 				if ( ! empty( $_FILES['ticket_attachments']['name'][0] ) ) {
-					$attach_urls = swh_handle_multiple_uploads( $_FILES['ticket_attachments'] );
+					$attach_urls = swh_handle_multiple_uploads( $_FILES['ticket_attachments'], $attach_names );
 				// phpcs:enable WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 				}
 				if ( ! empty( $attach_urls ) ) {
 					update_post_meta( $ticket_id, '_ticket_attachments', $attach_urls );
+					if ( ! empty( $attach_names ) ) {
+						update_post_meta( $ticket_id, '_swh_attachment_orignames', $attach_names );
+					}
 				}
 				$token             = wp_generate_password( 20, false );
 				$data['ticket_id'] = 'TKT-' . str_pad( (string) $ticket_id, 4, '0', STR_PAD_LEFT );

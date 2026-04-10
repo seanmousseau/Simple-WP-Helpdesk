@@ -197,10 +197,14 @@ function swh_get_file_proxy_url( $url, $ticket_id ) {
  * Validates file count, size, and MIME type. Uses wp_handle_upload() with a temporary
  * upload_dir filter to route files into swh-helpdesk/. Logs errors via error_log().
  *
- * @param array<string, mixed> $file_array The $_FILES sub-array for the file input.
+ * Pass a reference as $orig_names to receive a url→original_name map for display purposes.
+ *
+ * @param array<string, mixed>      $file_array  The $_FILES sub-array for the file input.
+ * @param array<string, string>|null $orig_names  Optional. Populated with url→original_name map on return.
+ * @param-out array<string, string> $orig_names
  * @return string[] Array of successfully uploaded file URLs.
  */
-function swh_handle_multiple_uploads( $file_array ) {
+function swh_handle_multiple_uploads( $file_array, &$orig_names = null ) {
 	$files = swh_normalize_files_array( $file_array );
 	if ( empty( $files ) ) {
 		return array();
@@ -227,7 +231,10 @@ function swh_handle_multiple_uploads( $file_array ) {
 		'test_form' => false,
 		'mimes'     => $allowed_mimes,
 	);
+	/** @var string[] $uploaded_urls */
 	$uploaded_urls = array();
+	/** @var array<string, string> $url_name_map */
+	$url_name_map  = array();
 	swh_ensure_upload_protection();
 	add_filter( 'upload_dir', 'swh_custom_upload_dir' );
 	foreach ( $files as $file ) {
@@ -236,15 +243,19 @@ function swh_handle_multiple_uploads( $file_array ) {
 			error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', isset( $file['name'] ) ? $file['name'] : '', $max_size_mb ) );
 			continue;
 		}
-		$movefile = wp_handle_upload( $file, $overrides );
-		if ( $movefile && ! isset( $movefile['error'] ) ) {
-			$uploaded_urls[] = $movefile['url'];
+		$original_name = isset( $file['name'] ) ? sanitize_file_name( $file['name'] ) : '';
+		$movefile      = wp_handle_upload( $file, $overrides );
+		if ( $movefile && ! isset( $movefile['error'] ) && isset( $movefile['url'] ) && is_string( $movefile['url'] ) ) {
+			$file_url                    = $movefile['url'];
+			$uploaded_urls[]             = $file_url;
+			$url_name_map[ $file_url ]   = $original_name;
 		} elseif ( isset( $movefile['error'] ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs upload failures for admin troubleshooting.
-			error_log( 'SWH upload failed for "' . ( isset( $file['name'] ) ? $file['name'] : '' ) . '": ' . $movefile['error'] );
+			error_log( 'SWH upload failed for "' . $original_name . '": ' . $movefile['error'] );
 		}
 	}
 	remove_filter( 'upload_dir', 'swh_custom_upload_dir' );
+	$orig_names = $url_name_map;
 	return $uploaded_urls;
 }
 

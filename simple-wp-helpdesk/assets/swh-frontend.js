@@ -68,6 +68,34 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	} );
 
 	/**
+	 * Replaces .swh-timestamp text content with a human-relative string ("3 hours ago", etc.).
+	 * The ISO8601 datetime attribute preserves machine-readable time; absolute date stays in title.
+	 */
+	document.querySelectorAll( '.swh-timestamp' ).forEach( function ( el ) {
+		const iso  = el.getAttribute( 'datetime' );
+		if ( ! iso ) { return; }
+		const then = new Date( iso ).getTime();
+		const now  = Date.now();
+		const diff = Math.floor( ( now - then ) / 1000 );
+		let label;
+		if ( diff < 60 ) {
+			label = 'just now';
+		} else if ( diff < 3600 ) {
+			const m = Math.floor( diff / 60 );
+			label = m + ' minute' + ( m === 1 ? '' : 's' ) + ' ago';
+		} else if ( diff < 86400 ) {
+			const h = Math.floor( diff / 3600 );
+			label = h + ' hour' + ( h === 1 ? '' : 's' ) + ' ago';
+		} else if ( diff < 172800 ) {
+			label = 'Yesterday';
+		} else {
+			const d = Math.floor( diff / 86400 );
+			label = d + ' days ago';
+		}
+		el.textContent = label;
+	} );
+
+	/**
 	 * Toggles the ticket lookup form visibility and updates aria-expanded on the trigger link.
 	 */
 	const toggleLink = document.getElementById( 'swh-toggle-lookup' );
