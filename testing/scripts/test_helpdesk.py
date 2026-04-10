@@ -702,7 +702,7 @@ async def run():
         # CDN reachability — use curl (hardcoded URLs, avoids dynamic urllib warning)
         for cdn_url, label in ((CDN_ICON_128, "1x"), (CDN_ICON_256, "2x")):
             if not shutil.which("curl"):
-                check(f"plugin icon: CDN {label} image reachable", False, "curl not found in PATH")
+                print(f"  ⚠️  plugin icon: CDN {label} image reachable — skipped (curl not found in PATH)")
                 continue
             result = subprocess.run(
                 ["curl", "-sI", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}", cdn_url],
