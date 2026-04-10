@@ -492,9 +492,10 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '0' );
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$tech_orignames = null;
-		$attach_urls    = swh_handle_multiple_uploads( $_FILES['swh_tech_reply_attachments'], $tech_orignames );
+		// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_tech_reply_attachments'], $tech_orignames );
 		if ( $comment_id && ! empty( $attach_urls ) ) {
 			update_comment_meta( $comment_id, '_attachments', $attach_urls );
 			if ( ! empty( $tech_orignames ) ) {

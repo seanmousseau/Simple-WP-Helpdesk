@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.4.0
+Stable tag: 2.4.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,11 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 2.4.1 =
+* Fixed: Original filenames with spaces now preserved correctly in attachment meta (sanitize_file_name replaced with sanitize_text_field)
+* Fixed: Backslashes in canned response titles/bodies no longer stripped on save (removed redundant wp_unslash in settings handler)
+* Fixed: default_status shortcode attribute now correctly applied (array_keys wrapper removed from status validation)
 
 = 2.4.0 =
 * Changed: Plugin author updated to Sean Mousseau with link to GitHub repository

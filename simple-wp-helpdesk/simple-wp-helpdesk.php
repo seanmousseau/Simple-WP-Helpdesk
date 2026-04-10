@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 2.4.0
+ * Version: 2.4.1
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '2.4.0' );
+define( 'SWH_VERSION', '2.4.1' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -79,7 +79,7 @@ add_filter( 'puc_request_info_result-simple-wp-helpdesk', 'swh_add_plugin_icons'
  */
 function swh_add_plugin_icons( $info ) {
 	if ( $info ) {
-		$info->icons = array(
+		$info->icons                   = array(
 			'1x' => SWH_ICON_1X,
 			'2x' => SWH_ICON_2X,
 		);
