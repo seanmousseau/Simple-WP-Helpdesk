@@ -347,7 +347,7 @@ def test_03_ticket_submission(page: Page):
     if sel.count() > 0:
         page.evaluate("document.querySelector('[name=\"ticket_priority\"]').selectedIndex = 0")
     page.click('[name="swh_submit_ticket"]')
-    page.wait_for_load_state("load")
+    page.wait_for_selector(".swh-alert-success, .swh-alert-error")
 
     check("submit ticket1: success message shown",
           "swh-alert-success" in page.content(), "no .swh-alert-success found")
@@ -518,7 +518,7 @@ def test_08_client_portal(page: Page):
 
     page.fill('[name="ticket_reply_text"]', TEST_CLIENT_REPLY)
     page.click('[name="swh_user_reply_submit"]')
-    page.wait_for_load_state("load")
+    page.wait_for_selector(".swh-alert-success, .swh-alert-error")
     html = page.content()
     check("portal: client reply success message", "swh-alert-success" in html)
     check("a11y: reply success div has role=status", 'role="status"' in html)
@@ -576,19 +576,21 @@ def test_10_portal_close_reopen(page: Page):
     close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
     if close_btn.count() > 0:
         close_btn.click()
-        page.wait_for_load_state("load")
-        check("portal: close ticket success", "swh-alert-success" in page.content())
+        # After close, the CSAT widget shows (swh-alert-info) — success is hidden until skip/rating.
+        page.wait_for_selector("#swh-csat, .swh-alert-success, .swh-alert-error")
+        check("portal: close ticket shows CSAT or success",
+              "swh-csat" in page.content() or "swh-alert-success" in page.content())
         expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client")
         expect_email(TECH1_EMAIL, "ticket closed notification to assigned technician (tech1)")
         screenshot(page, "14_ticket_closed_portal")
 
         page.goto(state['portal_url'])
-        page.wait_for_load_state("load")
+        page.wait_for_selector(".swh-card, .swh-alert")
         reopen_ta = page.locator('[name="ticket_reopen_text"]')
         if reopen_ta.count() > 0:
             reopen_ta.fill("I still need help with this issue.")
         page.click('[name="swh_user_reopen_submit"]')
-        page.wait_for_load_state("load")
+        page.wait_for_selector(".swh-alert-success, .swh-alert-error")
         check("portal: reopen success", "swh-alert-success" in page.content())
         screenshot(page, "15_ticket_reopened_portal")
         expect_email(TECH1_EMAIL, "ticket re-opened notification to assigned technician (tech1)")

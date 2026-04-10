@@ -74,7 +74,7 @@ def page(browser):
 # ── Pre-suite setup ───────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="session", autouse=True)
-def _suite_init(page):
+def _suite_init(page, request):
     """Wire _page into the test module and reset dirty options before the suite."""
     import test_helpdesk_pw as t
     t._page = page
@@ -89,6 +89,22 @@ def _suite_init(page):
              f" --path={wp_path} --allow-root 2>/dev/null"],
             capture_output=True, timeout=15
         )
+
+    def _cleanup():
+        """Trash tickets created during the run and log out — runs even on KeyboardInterrupt."""
+        for key in ("ticket_id", "ticket2_id", "xss_ticket_id"):
+            pid = t.state.get(key)
+            if pid:
+                try:
+                    t.wpcli(f"post delete {pid} --force 2>/dev/null")
+                except Exception:
+                    pass
+        try:
+            t.wp_logout(page)
+        except Exception:
+            pass
+
+    request.addfinalizer(_cleanup)
 
 
 # ── Soft-fail: surface check() failures as pytest failures ────────────────────
