@@ -16,12 +16,18 @@ You will receive an email confirmation containing a secure tracking link unique 
 ### Viewing and Replying to a Ticket
 
 1. Open the confirmation email and click the secure tracking link.
-2. Your private ticket portal shows the current status, priority, and the full conversation history.
+2. Your private ticket portal shows the current status, priority, and the full conversation history. Reply timestamps display as relative times ("3 hours ago", "Yesterday", etc.) with the exact date shown on hover.
 3. To reply, type your message in the reply box, optionally attach files, and click **Send Reply**.
+
+### My Tickets Dashboard
+
+If you visit the helpdesk portal page without a ticket link and are logged in to WordPress, you will see a table of your open tickets with direct links. If you are not logged in, you will see the **Resend my ticket links** lookup form — enter your email address to have your secure links resent.
 
 ### Closing a Ticket
 
-When a technician marks your ticket as **Resolved**, a banner appears in the portal with a **Close Ticket** button. Click it to formally close the ticket and notify the team.
+When a technician marks your ticket as **Resolved**, a prominent **Close Ticket** block appears at the top of the portal. Click **Close Ticket** to formally close the ticket and notify the team. If you still need help, use the **Still need help? Reply below** link to send another reply instead.
+
+After closing, you may be shown a 1–5 star satisfaction prompt. Rating is optional — click **Skip** to dismiss it.
 
 ### Re-Opening a Ticket
 
