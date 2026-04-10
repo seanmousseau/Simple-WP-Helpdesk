@@ -111,6 +111,59 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	/**
+	 * CSAT star widget — shown after a client closes a ticket.
+	 *
+	 * Reads ticket_id, nonce, and ajaxurl from data attributes on #swh-csat.
+	 * On star click: submits rating via AJAX, shows #swh-csat-thanks.
+	 * On skip: hides widget, shows #swh-close-success.
+	 */
+	const csatBox = document.getElementById( 'swh-csat' );
+	if ( csatBox ) {
+		const stars      = csatBox.querySelectorAll( '.swh-csat-star' );
+		const skipLink   = document.getElementById( 'swh-csat-skip' );
+		const thanksBox  = document.getElementById( 'swh-csat-thanks' );
+		const successBox = document.getElementById( 'swh-close-success' );
+
+		stars.forEach( function ( btn ) {
+			btn.addEventListener( 'mouseenter', function () {
+				const hovered = parseInt( btn.getAttribute( 'data-rating' ), 10 );
+				stars.forEach( function ( s ) {
+					s.classList.toggle( 'swh-csat-star--active', parseInt( s.getAttribute( 'data-rating' ), 10 ) <= hovered );
+				} );
+			} );
+		} );
+
+		csatBox.addEventListener( 'mouseleave', function () {
+			stars.forEach( function ( s ) { s.classList.remove( 'swh-csat-star--active' ); } );
+		} );
+
+		stars.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function () {
+				const rating   = btn.getAttribute( 'data-rating' );
+				const ticketId = csatBox.getAttribute( 'data-ticket' );
+				const nonce    = csatBox.getAttribute( 'data-nonce' );
+				const ajaxUrl  = csatBox.getAttribute( 'data-ajaxurl' );
+				const body     = 'action=swh_submit_csat&ticket_id=' + encodeURIComponent( ticketId ) +
+					'&rating=' + encodeURIComponent( rating ) + '&nonce=' + encodeURIComponent( nonce );
+				const xhr2 = new XMLHttpRequest();
+				xhr2.open( 'POST', ajaxUrl );
+				xhr2.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+				xhr2.send( body );
+				csatBox.style.display = 'none';
+				if ( thanksBox ) { thanksBox.style.display = ''; }
+			} );
+		} );
+
+		if ( skipLink ) {
+			skipLink.addEventListener( 'click', function ( e ) {
+				e.preventDefault();
+				csatBox.style.display = 'none';
+				if ( successBox ) { successBox.style.display = ''; }
+			} );
+		}
+	}
+
+	/**
 	 * XHR upload progress indicator for the ticket submission form.
 	 *
 	 * When the user submits a form with files selected, intercepts the submit,

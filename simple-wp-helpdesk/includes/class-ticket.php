@@ -362,6 +362,38 @@ function swh_exclude_helpdesk_comments( $clauses, $query ) {
 }
 
 /**
+ * Handles the AJAX request to submit a CSAT satisfaction rating after a ticket is closed.
+ *
+ * @see swh_submit_csat_ajax()
+ */
+add_action( 'wp_ajax_swh_submit_csat', 'swh_submit_csat_ajax' );
+add_action( 'wp_ajax_nopriv_swh_submit_csat', 'swh_submit_csat_ajax' );
+/**
+ * Saves a CSAT rating (1–5) to ticket post meta after the client closes a ticket.
+ *
+ * Verifies a per-ticket nonce before writing. Responds with JSON.
+ *
+ * @return void Outputs JSON and exits.
+ */
+function swh_submit_csat_ajax() {
+	$ticket_id = isset( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+	$rating    = isset( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
+	$nonce     = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+
+	if ( ! $ticket_id || $rating < 1 || $rating > 5 || ! wp_verify_nonce( $nonce, 'swh_csat_' . $ticket_id ) ) {
+		wp_send_json_error( array( 'message' => 'Invalid request.' ), 400 );
+	}
+
+	$post = get_post( $ticket_id );
+	if ( ! $post || 'helpdesk_ticket' !== $post->post_type ) {
+		wp_send_json_error( array( 'message' => 'Invalid ticket.' ), 400 );
+	}
+
+	update_post_meta( $ticket_id, '_ticket_csat', $rating );
+	wp_send_json_success();
+}
+
+/**
  * Excludes helpdesk ticket comments from the site's comment RSS feed.
  *
  * @see swh_exclude_helpdesk_from_feed()
