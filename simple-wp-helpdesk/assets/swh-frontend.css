@@ -250,3 +250,27 @@
 	outline: 2px solid #0073aa;
 	outline-offset: 2px;
 }
+
+.swh-ticket-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 20px;
+	font-size: 14px;
+}
+
+.swh-ticket-table th,
+.swh-ticket-table td {
+	padding: 10px 12px;
+	text-align: left;
+	border-bottom: 1px solid #ddd;
+}
+
+.swh-ticket-table th {
+	font-weight: 600;
+	background: #f9f9f9;
+	color: #333;
+}
+
+.swh-ticket-row:hover {
+	background: #f5f5f5;
+}

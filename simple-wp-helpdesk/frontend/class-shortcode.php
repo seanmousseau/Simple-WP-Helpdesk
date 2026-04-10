@@ -394,13 +394,15 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 		'helpdesk_portal'
 	);
 
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET params used for routing only; form actions verified via nonces.
-	if ( ! isset( $_GET['swh_ticket'], $_GET['token'] ) ) {
-		return '<div class="swh-helpdesk-wrapper"><div class="swh-alert swh-alert-error" role="alert">' . esc_html__( 'No ticket specified.', 'simple-wp-helpdesk' ) . '</div></div>';
-	}
-
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET params used for routing only; form actions verified via nonces.
+	if ( ! isset( $_GET['swh_ticket'], $_GET['token'] ) ) {
+		ob_start();
+		swh_render_portal_no_token();
+		return ob_get_clean() ?: '';
+	}
 	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
 	wp_localize_script(

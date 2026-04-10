@@ -358,3 +358,164 @@ function swh_render_client_portal() {
 	</div> <!-- End .swh-helpdesk-wrapper -->
 	<?php
 }
+
+/**
+ * Renders the portal no-token view.
+ *
+ * Logged-in WP users see a table of their open tickets with secure links.
+ * Guests see the ticket lookup form so they can request their links by email.
+ *
+ * @return void
+ */
+function swh_render_portal_no_token() {
+	echo '<div class="swh-helpdesk-wrapper">';
+
+	if ( is_user_logged_in() ) {
+		$current_user = wp_get_current_user();
+		$defs         = swh_get_defaults();
+		$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		$tickets = get_posts(
+			array(
+				'post_type'      => 'helpdesk_ticket',
+				'posts_per_page' => -1,
+				'post_status'    => 'publish',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => '_ticket_email',
+						'value' => $current_user->user_email,
+					),
+					array(
+						'key'     => '_ticket_status',
+						'value'   => $closed_status,
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+
+		echo '<h3 style="margin-top:0;">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h3>';
+
+		if ( empty( $tickets ) ) {
+			echo '<p>' . esc_html__( 'You have no open tickets.', 'simple-wp-helpdesk' ) . '</p>';
+		} else {
+			echo '<table class="swh-ticket-table">';
+			echo '<thead><tr>';
+			echo '<th>' . esc_html__( 'Ticket #', 'simple-wp-helpdesk' ) . '</th>';
+			echo '<th>' . esc_html__( 'Summary', 'simple-wp-helpdesk' ) . '</th>';
+			echo '<th>' . esc_html__( 'Status', 'simple-wp-helpdesk' ) . '</th>';
+			echo '<th>' . esc_html__( 'Last Updated', 'simple-wp-helpdesk' ) . '</th>';
+			echo '<th></th>';
+			echo '</tr></thead>';
+			echo '<tbody>';
+			foreach ( $tickets as $ticket ) {
+				$uid    = get_post_meta( $ticket->ID, '_ticket_uid', true );
+				$status = get_post_meta( $ticket->ID, '_ticket_status', true );
+				$link   = swh_get_secure_ticket_link( $ticket->ID );
+				$ts     = strtotime( $ticket->post_modified ) ?: time();
+				echo '<tr class="swh-ticket-row">';
+				echo '<td>' . esc_html( $uid ) . '</td>';
+				echo '<td>' . esc_html( $ticket->post_title ) . '</td>';
+				echo '<td><span class="swh-badge swh-badge-open">' . esc_html( $status ) . '</span></td>';
+				echo '<td><time class="swh-timestamp" datetime="' . esc_attr( gmdate( 'c', $ts ) ) . '" title="' . esc_attr( $ticket->post_modified ) . '">' . esc_html( $ticket->post_modified ) . '</time></td>';
+				echo '<td>';
+				if ( $link ) {
+					echo '<a href="' . esc_url( $link ) . '" class="swh-btn" style="padding:6px 12px; font-size:13px;">' . esc_html__( 'View', 'simple-wp-helpdesk' ) . '</a>';
+				}
+				echo '</td>';
+				echo '</tr>';
+			}
+			echo '</tbody></table>';
+		}
+	} else {
+		swh_render_lookup_form();
+	}
+
+	echo '</div>';
+}
+
+/**
+ * Renders the ticket lookup form (request links by email).
+ *
+ * Extracted as a standalone function so it can be rendered both inside the
+ * [submit_ticket] shortcode and in the portal no-token view for guests.
+ *
+ * @return void
+ */
+function swh_render_lookup_form() {
+	$defs        = swh_get_defaults();
+	$spam_method = get_option( 'swh_spam_method', 'none' );
+
+	if ( isset( $_POST['swh_ticket_lookup'], $_POST['swh_lookup_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_lookup_nonce'] ) ), 'swh_ticket_lookup' ) ) {
+		if ( swh_is_rate_limited( 'lookup', 60 ) ) {
+			echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html__( 'Please wait a moment before submitting again.', 'simple-wp-helpdesk' ) . '</div>';
+		} elseif ( swh_check_antispam( false ) ) {
+			echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( get_option( 'swh_msg_err_spam', $defs['swh_msg_err_spam'] ) ) . '</div>';
+		} else {
+			$lookup_email = isset( $_POST['swh_lookup_email'] ) ? sanitize_email( wp_unslash( $_POST['swh_lookup_email'] ) ) : '';
+			if ( $lookup_email ) {
+				$closed_status  = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+				// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				$lookup_tickets = get_posts(
+					array(
+						'post_type'      => 'helpdesk_ticket',
+						'posts_per_page' => -1,
+						'post_status'    => 'publish',
+						'meta_query'     => array(
+							'relation' => 'AND',
+							array(
+								'key'   => '_ticket_email',
+								'value' => $lookup_email,
+							),
+							array(
+								'key'     => '_ticket_status',
+								'value'   => $closed_status,
+								'compare' => '!=',
+							),
+						),
+					)
+				);
+				// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				if ( ! empty( $lookup_tickets ) ) {
+					$ticket_links = '';
+					foreach ( $lookup_tickets as $lt ) {
+						$new_token = wp_generate_password( 20, false );
+						update_post_meta( $lt->ID, '_ticket_token', $new_token );
+						update_post_meta( $lt->ID, '_ticket_token_created', time() );
+						$link = swh_get_secure_ticket_link( $lt->ID );
+						if ( $link ) {
+							$uid           = get_post_meta( $lt->ID, '_ticket_uid', true );
+							$ticket_links .= '- ' . $uid . ': ' . $lt->post_title . "\n  " . $link . "\n\n";
+						}
+					}
+					$lookup_data = array(
+						'email'        => $lookup_email,
+						'ticket_links' => $ticket_links,
+					);
+					swh_send_email( $lookup_email, 'swh_em_user_lookup_sub', 'swh_em_user_lookup_body', $lookup_data );
+				}
+			}
+			// Always show the same message to prevent email enumeration.
+			echo '<div class="swh-alert swh-alert-success" role="status">' . esc_html( get_option( 'swh_msg_success_lookup', $defs['swh_msg_success_lookup'] ) ) . '</div>';
+		}
+	}
+	?>
+	<p><?php esc_html_e( 'Enter your email address to receive links to your open tickets.', 'simple-wp-helpdesk' ); ?></p>
+	<form method="POST" action="">
+		<?php wp_nonce_field( 'swh_ticket_lookup', 'swh_lookup_nonce' ); ?>
+		<div class="swh-form-group">
+			<label for="swh-lookup-email"><?php esc_html_e( 'Your Email Address:', 'simple-wp-helpdesk' ); ?></label>
+			<input type="email" id="swh-lookup-email" name="swh_lookup_email" required class="swh-form-control">
+		</div>
+		<?php if ( 'honeypot' === $spam_method ) : ?>
+			<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+		<?php endif; ?>
+		<div class="swh-form-group">
+			<input type="submit" name="swh_ticket_lookup" value="<?php esc_attr_e( 'Send My Ticket Links', 'simple-wp-helpdesk' ); ?>" class="swh-btn">
+		</div>
+	</form>
+	<?php
+}
