@@ -20,9 +20,27 @@ add_shortcode( 'helpdesk_portal', 'swh_helpdesk_portal_shortcode' );
  * Acts as a thin router: enqueues assets, then delegates to either the
  * client-portal view or the submission-form view.
  *
+ * Supported attributes:
+ *   show_priority    yes|no  — whether to display the priority field (default: yes)
+ *   default_priority string  — pre-select a specific priority value
+ *   default_status   string  — override the new-ticket status on submission
+ *   show_lookup      yes|no  — whether to show the "Resend my ticket links" section (default: yes)
+ *
+ * @param array<string, string>|string $atts Shortcode attributes.
  * @return string Shortcode HTML output.
  */
-function swh_ticket_frontend() {
+function swh_ticket_frontend( $atts = array() ) {
+	$atts = shortcode_atts(
+		array(
+			'show_priority'    => 'yes',
+			'default_priority' => '',
+			'default_status'   => '',
+			'show_lookup'      => 'yes',
+		),
+		is_array( $atts ) ? $atts : array(),
+		'submit_ticket'
+	);
+
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
 	/**
@@ -57,7 +75,7 @@ function swh_ticket_frontend() {
 	if ( isset( $_GET['swh_ticket'], $_GET['token'] ) ) {
 		swh_render_client_portal();
 	} else {
-		swh_render_submission_form();
+		swh_render_submission_form( $atts );
 	}
 
 	return ob_get_clean() ?: '';
@@ -69,16 +87,22 @@ function swh_ticket_frontend() {
  * This is the default view when no ticket/token URL parameters are present.
  * Handles submission, validation, anti-spam, file uploads, and ticket lookup POST actions.
  *
+ * @param array<string, string> $atts Shortcode attributes from shortcode_atts().
  * @return void
  */
-function swh_render_submission_form() {
-	$defs            = swh_get_defaults();
-	$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
-	$reopened_status = get_option( 'swh_reopened_status', $defs['swh_reopened_status'] );
-	$default_status  = get_option( 'swh_default_status', $defs['swh_default_status'] );
-	$priorities      = swh_get_priorities();
-	$default_prio    = get_option( 'swh_default_priority', $defs['swh_default_priority'] );
+function swh_render_submission_form( $atts = array() ) {
+	$defs          = swh_get_defaults();
+	$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+	$priorities    = swh_get_priorities();
+	$default_prio    = ! empty( $atts['default_priority'] ) && in_array( $atts['default_priority'], $priorities, true )
+		? $atts['default_priority']
+		: get_option( 'swh_default_priority', $defs['swh_default_priority'] );
+	$valid_statuses  = array_keys( swh_get_statuses() );
+	$default_status  = ! empty( $atts['default_status'] ) && in_array( $atts['default_status'], $valid_statuses, true )
+		? $atts['default_status']
+		: get_option( 'swh_default_status', $defs['swh_default_status'] );
+	$show_priority   = ( ! isset( $atts['show_priority'] ) || 'no' !== strtolower( $atts['show_priority'] ) );
+	$show_lookup     = ( ! isset( $atts['show_lookup'] ) || 'no' !== strtolower( $atts['show_lookup'] ) );
 	$spam_method     = get_option( 'swh_spam_method', 'none' );
 	?>
 	<div class="swh-helpdesk-wrapper">
@@ -264,6 +288,7 @@ function swh_render_submission_form() {
 			<label for="swh-email"><?php esc_html_e( 'Your Email:', 'simple-wp-helpdesk' ); ?></label>
 			<input type="email" id="swh-email" name="ticket_email" required class="swh-form-control" value="<?php echo esc_attr( $form_email ); ?>">
 		</div>
+		<?php if ( $show_priority ) : ?>
 		<div class="swh-form-group">
 			<label for="swh-priority"><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></label>
 			<select id="swh-priority" name="ticket_priority" class="swh-form-control">
@@ -272,6 +297,7 @@ function swh_render_submission_form() {
 				<?php endforeach; ?>
 			</select>
 		</div>
+		<?php endif; ?>
 		<div class="swh-form-group">
 			<label for="swh-title"><?php esc_html_e( 'Problem Summary (Title):', 'simple-wp-helpdesk' ); ?></label>
 			<input type="text" id="swh-title" name="ticket_title" required class="swh-form-control" value="<?php echo esc_attr( $form_title ); ?>">
@@ -320,6 +346,7 @@ function swh_render_submission_form() {
 			<input type="submit" name="swh_submit_ticket" value="<?php esc_attr_e( 'Submit Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn">
 		</div>
 	</form>
+	<?php if ( $show_lookup ) : ?>
 	<div class="swh-lookup-section">
 		<p><a href="#" id="swh-toggle-lookup" aria-expanded="false" aria-controls="swh-lookup-form"><?php esc_html_e( 'Already submitted a ticket? Resend my ticket links', 'simple-wp-helpdesk' ); ?></a></p>
 		<div id="swh-lookup-form" style="display:none;">
@@ -338,6 +365,7 @@ function swh_render_submission_form() {
 			</form>
 		</div>
 	</div>
+	<?php endif; ?>
 	</div> <!-- End .swh-helpdesk-wrapper -->
 	<?php
 }
@@ -348,9 +376,24 @@ function swh_render_submission_form() {
  * Provides a dedicated portal page. If no ticket/token params are present,
  * displays a message. Otherwise renders the client portal view.
  *
+ * Supports the same attributes as [submit_ticket]: show_priority, default_priority,
+ * default_status, show_lookup.
+ *
+ * @param array<string, string>|string $atts Shortcode attributes.
  * @return string Shortcode HTML output.
  */
-function swh_helpdesk_portal_shortcode() {
+function swh_helpdesk_portal_shortcode( $atts = array() ) {
+	$atts = shortcode_atts(
+		array(
+			'show_priority'    => 'yes',
+			'default_priority' => '',
+			'default_status'   => '',
+			'show_lookup'      => 'yes',
+		),
+		is_array( $atts ) ? $atts : array(),
+		'helpdesk_portal'
+	);
+
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET params used for routing only; form actions verified via nonces.
 	if ( ! isset( $_GET['swh_ticket'], $_GET['token'] ) ) {
 		return '<div class="swh-helpdesk-wrapper"><div class="swh-alert swh-alert-error" role="alert">' . esc_html__( 'No ticket specified.', 'simple-wp-helpdesk' ) . '</div></div>';
