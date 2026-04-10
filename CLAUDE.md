@@ -94,8 +94,8 @@ The full test suite must pass before any release. Run in order:
 
 ### 1. PHPCS — WordPress Coding Standards
 ```bash
-phpcs          # zero errors/warnings required
-phpcbf         # auto-fix if needed, then re-run phpcs
+vendor/bin/phpcs          # zero errors/warnings required
+vendor/bin/phpcbf         # auto-fix if needed, then re-run phpcs
 ```
 
 ### 2. PHPStan — Static Analysis (level 8)
