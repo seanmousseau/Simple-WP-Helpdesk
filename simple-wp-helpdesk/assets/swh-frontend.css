@@ -225,6 +225,17 @@
 	transition: width 0.2s ease;
 }
 
+@keyframes swh-progress-slide {
+	0%   { transform: translateX( -100% ); }
+	100% { transform: translateX( 400% ); }
+}
+
+.swh-progress-bar--indeterminate .swh-progress-fill {
+	width: 25%;
+	transition: none;
+	animation: swh-progress-slide 1.4s ease-in-out infinite;
+}
+
 .swh-csat-stars {
 	display: flex;
 	gap: 4px;

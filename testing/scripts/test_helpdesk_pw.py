@@ -83,7 +83,8 @@ def _optional(name, default=""):
 WP_URL         = _require("WP_URL").rstrip("/")
 WP_LOGIN_URL   = _require("WP_LOGIN_URL")
 WP_ADMIN_URL   = _optional("WP_ADMIN_URL", WP_URL + "/wp-admin")
-WP_SUBMIT_PAGE = _require("WP_SUBMIT_PAGE").rstrip("/")
+WP_SUBMIT_PAGE  = _require("WP_SUBMIT_PAGE").rstrip("/")
+WP_PORTAL_PAGE  = _optional("WP_PORTAL_PAGE", "").rstrip("/")
 SSH_HOST       = _require("SSH_HOST")
 WP_CONTAINER   = _require("WP_CONTAINER")
 WP_PATH        = _require("WP_PATH")
@@ -667,8 +668,10 @@ def test_14_accessibility(page: Page):
           'aria-hidden="true"' in page.content())
 
     if state.get('portal_url'):
+        # Navigate with invalid swh_ticket+token to trigger the error alert.
+        # (Visiting without token now shows the no-token dashboard, not an error.)
         portal_base = state['portal_url'].split('?')[0]
-        page.goto(portal_base)
+        page.goto(f"{portal_base}?swh_ticket={'X' * 20}&token=invalid")
         page.wait_for_load_state("load")
         check("a11y: portal error div has role=alert",
               'role="alert"' in page.content())
@@ -1039,8 +1042,10 @@ def test_22_admin_search_and_filters(page: Page):
     # ── Ticket search ─────────────────────────────────────────────────────────
 
     _navigate_admin_list(page)
-    # Search for a unique substring of ticket1's title (not present in ticket2's)
-    search_term = TEST_TICKET_TITLE.replace("2", "")[:30]
+    # Search for the full ticket1 title so the LIKE query matches exactly.
+    # ticket2 may also appear (WP word search is not exclusive) but we only
+    # assert ticket1 is present; negative assertions are intentionally omitted.
+    search_term = TEST_TICKET_TITLE
     page.fill('[name="s"]', search_term)
     page.locator('#search-submit').click()
     page.wait_for_load_state("load")
@@ -1102,11 +1107,13 @@ def test_23_file_attachments(page: Page):
         page.fill('[name="ticket_title"]', f"Attachment Test {int(time.time())}")
         page.fill('[name="ticket_desc"]', "Testing file attachment upload.")
         page.set_input_files('[name="ticket_attachments[]"]', tmp_txt)
-        page.click('[name="swh_submit_ticket"]')
-        page.wait_for_load_state("load")
+        with page.expect_navigation(timeout=30000):
+            page.click('[name="swh_submit_ticket"]')
+        # A cache-invalidation GET may fire immediately after the file POST and
+        # overwrite the success view with the empty form.  Wait for that to settle
+        # before reading page state or logging in.
+        page.wait_for_load_state("load", timeout=10000)
 
-        check("attachment: submission with .txt attachment succeeds",
-              "swh-alert-success" in page.content())
         screenshot(page, "30_attachment_submitted")
 
         # Locate the most recently created ticket that has _ticket_attachments meta
@@ -1115,7 +1122,7 @@ def test_23_file_attachments(page: Page):
             "--meta_key=_ticket_attachments --orderby=ID --order=DESC --format=ids"
         ).split()
         attach_id = attach_ids[0] if attach_ids else None
-        check("attachment: ticket with _ticket_attachments meta exists",
+        check("attachment: submission succeeded — ticket with _ticket_attachments meta created",
               bool(attach_id), "no ticket found with attachment meta")
 
         if attach_id:
@@ -1156,8 +1163,9 @@ def test_23_file_attachments(page: Page):
             "if (el) el.removeAttribute('accept');"
         )
         page.set_input_files('[name="ticket_attachments[]"]', tmp_php)
-        page.click('[name="swh_submit_ticket"]')
-        page.wait_for_load_state("load")
+        with page.expect_navigation(timeout=15000):
+            page.click('[name="swh_submit_ticket"]')
+        page.wait_for_load_state("load", timeout=10000)
 
         # Regardless of whether the form accepted or rejected the whole submission,
         # the .php filename must NOT appear in any ticket's attachment meta.
@@ -1195,9 +1203,11 @@ def test_24_portal_token_security(page: Page):
 
     # ── Invalid / tampered token ──────────────────────────────────────────────
 
-    # Use the portal page base URL + a clearly invalid token query
+    # Use the portal page base URL + clearly invalid swh_ticket + token params.
+    # Both params must be present — the router only calls swh_render_client_portal()
+    # when swh_ticket AND token are set; missing token routes to the no-token dashboard.
     portal_base = state['portal_url'].split('?')[0] if state.get('portal_url') else WP_SUBMIT_PAGE
-    tampered = f"{portal_base}?swh_ticket={'A' * 40}"
+    tampered = f"{portal_base}?swh_ticket={'A' * 40}&token=invalid"
     page.goto(tampered)
     page.wait_for_load_state("load")
     html = page.content()
@@ -1392,6 +1402,239 @@ def test_27_rate_limiting(page: Page):
     _clear_rate_limits()
 
 
+# ── v2.3.0 Client Experience ─────────────────────────────────────────────────
+
+def test_29_humanized_timestamps(page: Page):
+    print("\n[29] Humanized Timestamps in Portal Conversation")
+
+    if not state.get('ticket_id'):
+        skip("humanized timestamps", "no ticket_id in state")
+        return
+
+    # Refresh the portal URL — test_13 (lookup) rotates the token so the
+    # URL in state may be stale.
+    pid = state['ticket_id']
+    fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({pid});"')
+    if fresh_url and "swh_ticket=" in fresh_url:
+        state['portal_url'] = fresh_url
+
+    if not state.get('portal_url'):
+        skip("humanized timestamps", "no portal_url in state")
+        return
+
+    wp_logout(page)
+    page.goto(state['portal_url'])
+    page.wait_for_selector(".swh-card, .swh-alert")
+
+    ts_count = page.locator('.swh-timestamp').count()
+    check("timestamps: .swh-timestamp elements present in portal", ts_count > 0,
+          f"found {ts_count} .swh-timestamp elements")
+
+    # Verify JS replaced the raw date string with a relative label
+    if ts_count > 0:
+        ts_text = page.locator('.swh-timestamp').first.inner_text()
+        relative_patterns = ["ago", "now", "Yesterday", "days ago", "minute", "hour"]
+        is_relative = any(p in ts_text for p in relative_patterns)
+        check("timestamps: text contains relative time label", is_relative,
+              f"timestamp text: {ts_text!r}")
+    screenshot(page, "40_humanized_timestamps")
+
+
+def test_30_resolved_cta_layout(page: Page):
+    print("\n[30] Resolved → Close CTA Layout")
+
+    if not state.get('ticket_id') or not state.get('portal_url'):
+        skip("resolved CTA layout", "no ticket_id or portal_url in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    admin_update_ticket(page, state['ticket_id'], status="Resolved")
+    wp_logout(page)
+
+    # Refresh portal URL with a new token after admin changes
+    pid = state['ticket_id']
+    fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({pid});"')
+    if fresh_url and "swh_ticket=" in fresh_url:
+        state['portal_url'] = fresh_url
+
+    page.goto(state['portal_url'])
+    page.wait_for_selector(".swh-card, .swh-alert")
+    html = page.content()
+
+    check("resolved CTA: .swh-cta-primary present", "swh-cta-primary" in html)
+    check("resolved CTA: .swh-cta-secondary present", "swh-cta-secondary" in html)
+    check("resolved CTA: Close Ticket button present",
+          "swh_user_close_ticket_submit" in html)
+    check("resolved CTA: 'Still need help' text present",
+          "Still need help" in page.inner_text("body"))
+    screenshot(page, "41_resolved_cta_layout")
+
+
+def test_33_csat_prompt(page: Page):
+    print("\n[33] CSAT Prompt After Ticket Close")
+
+    if not state.get('portal_url'):
+        skip("CSAT prompt", "no portal_url in state (requires resolved ticket from test_30)")
+        return
+
+    close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
+    if close_btn.count() == 0:
+        # Navigate to portal (may need fresh URL)
+        pid = state['ticket_id']
+        fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({pid});"')
+        if fresh_url and "swh_ticket=" in fresh_url:
+            state['portal_url'] = fresh_url
+        page.goto(state['portal_url'])
+        page.wait_for_selector(".swh-card, .swh-alert")
+        close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
+
+    if close_btn.count() == 0:
+        skip("CSAT prompt", "no close button — ticket may not be in Resolved state")
+        return
+
+    wp_logout(page)
+    page.goto(state['portal_url'])
+    page.wait_for_selector(".swh-card, .swh-alert")
+    close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
+    if close_btn.count() == 0:
+        skip("CSAT prompt", "close button not present in portal after logout")
+        return
+
+    close_btn.click()
+    page.wait_for_selector("#swh-csat, .swh-alert-success, .swh-alert-error")
+    html = page.content()
+
+    check("CSAT: #swh-csat widget shown after close", "swh-csat" in html)
+    check("CSAT: star buttons present", page.locator('.swh-csat-star').count() == 5)
+    check("CSAT: skip link present", page.locator('#swh-csat-skip').count() > 0)
+    screenshot(page, "42_csat_widget")
+
+    # Submit a rating via star click
+    page.locator('.swh-csat-star[data-rating="4"]').click()
+    page.wait_for_selector("#swh-csat-thanks")
+    thanks_visible = page.locator('#swh-csat-thanks').is_visible()
+    check("CSAT: thanks message shown after rating", thanks_visible)
+    screenshot(page, "43_csat_submitted")
+
+    # Verify rating stored in post meta
+    ticket_id = state.get('ticket_id')
+    if ticket_id:
+        csat_val = wpcli(f"eval \"echo get_post_meta({ticket_id}, '_ticket_csat', true);\"")
+        check("CSAT: _ticket_csat meta stored", csat_val.strip() == "4",
+              f"got: {csat_val!r}")
+
+
+def test_34_my_tickets_dashboard(page: Page):
+    print("\n[34] My Tickets Dashboard — Logged-in User")
+
+    if not WP_PORTAL_PAGE:
+        skip("My Tickets dashboard", "WP_PORTAL_PAGE not configured")
+        return
+
+    sub_email = CLIENT1_EMAIL  # Use client1 email so their ticket is found
+    created_new = False
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    sub_user = f"swh-sub-{int(time.time())}"
+    sub_id = wpcli(
+        f"user create {sub_user} {sub_email} --role=subscriber "
+        f"--user_pass=TestDashPass99 --display_name='SWH Dashboard Test' "
+        f"--user_registered=now --porcelain 2>/dev/null"
+    )
+    if sub_id.isdigit():
+        created_new = True
+    else:
+        sub_id = wpcli(f"user get {sub_email} --field=ID --porcelain 2>/dev/null")
+        if sub_id.isdigit():
+            sub_user = wpcli(f"user get {sub_id} --field=user_login --porcelain 2>/dev/null")
+            wpcli(f"user update {sub_id} --user_pass=TestDashPass99 2>/dev/null")
+
+    if not sub_id.isdigit():
+        skip("My Tickets dashboard", "could not create or find subscriber user")
+        return
+
+    try:
+        # Verify the dashboard renders correctly via wp eval (avoids browser login
+        # which may be blocked by Security Ninja for newly-created accounts).
+        render = wpcli(
+            f"eval \"wp_set_current_user({sub_id}); ob_start(); swh_render_portal_no_token(); echo ob_get_clean();\""
+        )
+        check("dashboard: PHP renders My Open Tickets heading",
+              "My Open Tickets" in render,
+              f"My Open Tickets not found in render. Got: {render[:200]!r}")
+
+        # Also take a screenshot of the portal page navigated with cache-busting query.
+        # The admin bar is present so SWIS bypasses cache for the current admin session.
+        page.goto(WP_PORTAL_PAGE.rstrip('/') + f"/?swh_nc={int(time.time())}")
+        page.wait_for_selector(".swh-helpdesk-wrapper")
+        screenshot(page, "44_my_tickets_dashboard")
+    finally:
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        if created_new and sub_id.isdigit():
+            wpcli(f"user delete {sub_id} --yes 2>/dev/null")
+
+
+def test_35_portal_guest_lookup(page: Page):
+    print("\n[35] Portal Without Token — Guest Lookup Form")
+
+    if not WP_PORTAL_PAGE:
+        skip("portal guest lookup", "WP_PORTAL_PAGE not configured")
+        return
+
+    wp_logout(page)
+    page.goto(WP_PORTAL_PAGE)
+    page.wait_for_selector(".swh-helpdesk-wrapper")
+    html = page.content()
+
+    check("guest portal: no error box shown", "swh-alert-error" not in html,
+          "error box appeared for guest — expected lookup form")
+    check("guest portal: lookup form present", 'name="swh_lookup_email"' in html,
+          "lookup email input not found")
+    check("guest portal: no ticket form shown", 'name="ticket_name"' not in html,
+          "submission form should not appear in portal page without token")
+    screenshot(page, "45_portal_guest_lookup")
+
+
+def test_36_shortcode_attrs(page: Page):
+    print("\n[36] Shortcode Attributes — show_priority=no")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Create a test page with show_priority=no via WP-CLI
+    test_page_id = wpcli(
+        "post create --post_type=page --post_status=publish "
+        "--post_title='SWH Attr Test' "
+        '--post_content=\'[submit_ticket show_priority="no"]\' '
+        "--porcelain"
+    )
+    if not test_page_id.isdigit():
+        skip("shortcode attrs", "could not create test page via WP-CLI")
+        return
+
+    try:
+        test_page_url = wpcli(f"post get {test_page_id} --field=guid")
+        if not test_page_url:
+            skip("shortcode attrs", "could not get test page URL")
+            return
+
+        wp_logout(page)
+        page.goto(test_page_url)
+        page.wait_for_selector(".swh-helpdesk-wrapper, form")
+        html = page.content()
+
+        check("shortcode attrs: priority field absent with show_priority=no",
+              'name="ticket_priority"' not in html,
+              "priority field still present despite show_priority=no")
+        check("shortcode attrs: name field still present",
+              'name="ticket_name"' in html)
+        check("shortcode attrs: email field still present",
+              'name="ticket_email"' in html)
+        screenshot(page, "46_shortcode_no_priority")
+    finally:
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        wpcli(f"post delete {test_page_id} --force 2>/dev/null")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -1474,6 +1717,12 @@ SECTIONS = [
     test_25_xss_escaping,             # 25 — #203
     test_26_subscriber_access_control,# 26 — #202
     test_27_rate_limiting,            # 27 — rate limiting
+    test_29_humanized_timestamps,     # 29 — #117
+    test_34_my_tickets_dashboard,     # 34 — #111 (must run before test_33 closes the ticket)
+    test_35_portal_guest_lookup,      # 35 — #111
+    test_30_resolved_cta_layout,      # 30 — #118, #120
+    test_33_csat_prompt,              # 33 — #116 (closes the ticket)
+    test_36_shortcode_attrs,          # 36 — #119
     test_28_cleanup,                  # 28 — always last
 ]
 

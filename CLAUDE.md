@@ -88,7 +88,7 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 # Static analysis (level 6, excludes vendor/)
 vendor/bin/phpstan analyse
 
-# Full Playwright test suite (28 tests, ~3 min)
+# Full Playwright test suite (34 tests, ~4 min)
 source testing/.venv/bin/activate
 pytest testing/scripts/test_helpdesk_pw.py -v
 
@@ -112,7 +112,7 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 28 test sections
+### 34 test sections
 
 | # | Name | Marks |
 |---|------|-------|
@@ -143,6 +143,12 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 | 25 | xss_escaping | security |
 | 26 | subscriber_access_control | security |
 | 27 | rate_limiting | security |
+| 29 | humanized_timestamps | |
+| 30 | resolved_cta_layout | |
+| 33 | csat_prompt | |
+| 34 | my_tickets_dashboard | |
+| 35 | portal_guest_lookup | |
+| 36 | shortcode_attrs | |
 | 28 | cleanup | |
 
 ### Architecture
