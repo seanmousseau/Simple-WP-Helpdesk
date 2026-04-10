@@ -85,9 +85,172 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 ## Development Commands
 
 ```bash
-# Static analysis (level 5, excludes vendor/)
+# Static analysis (level 6, excludes vendor/)
 vendor/bin/phpstan analyse
+
+# Full Playwright test suite (28 tests, ~3 min)
+source testing/.venv/bin/activate
+pytest testing/scripts/test_helpdesk_pw.py -v
+
+# Quick smoke check (auth, submit, locate)
+pytest testing/scripts/test_helpdesk_pw.py -m smoke
+
+# Security tests only
+pytest testing/scripts/test_helpdesk_pw.py -m security
+
+# Single section
+pytest testing/scripts/test_helpdesk_pw.py -k "test_19"
+
+# Visible browser / slow-motion debug
+pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 ```
+
+## Playwright Test Suite
+
+**Location:** `testing/scripts/test_helpdesk_pw.py`
+**Config:** `testing/pytest.ini`, `testing/scripts/conftest.py`
+**Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
+**Screenshots:** `testing/screenshots/`
+
+### 28 test sections
+
+| # | Name | Marks |
+|---|------|-------|
+| 01 | admin_auth | smoke |
+| 02 | plugin_verification | smoke |
+| 03 | ticket_submission | smoke |
+| 04 | admin_locate_ticket | smoke |
+| 05 | portal_url | |
+| 06 | admin_update_ticket | |
+| 07 | technician_workflow | |
+| 08 | client_portal | |
+| 09 | admin_verify_reply | |
+| 10 | portal_close_reopen | |
+| 11 | access_control | |
+| 12 | ticket_list_filters | |
+| 13 | ticket_lookup | |
+| 14 | accessibility | |
+| 15 | plugin_icons | slow |
+| 16 | honeypot_spam | security |
+| 17 | form_validation | security |
+| 18 | settings_persistence | |
+| 19 | canned_responses | |
+| 20 | bulk_status_change | |
+| 21 | tech2_workflow | |
+| 22 | admin_search_and_filters | |
+| 23 | file_attachments | slow |
+| 24 | portal_token_security | security |
+| 25 | xss_escaping | security |
+| 26 | subscriber_access_control | security |
+| 27 | rate_limiting | security |
+| 28 | cleanup | |
+
+### Architecture
+
+- **Session-scoped browser** — single Chromium instance shared across all tests (login cookies persist)
+- **`check()`** — soft-fail helper; failures accumulate and surface after each test via `conftest.py` autouse fixture
+- **`skip()`** — records a skip without aborting
+- **`as_user(page, user, pass)`** — context manager: logout → login → yield → logout
+- **`wpcli(cmd)`** — runs WP-CLI inside the Docker container via SSH
+- **`_clear_rate_limits()`** — deletes `swh_rl_*` rows from wp_options + flushes object cache (rate limiter uses `get_option()` which checks cache first)
+- **`_navigate_settings(page)`** — navigates to settings page and removes `.wp-pointer` elements (Security Ninja and other admin pointers intercept clicks)
+- **`state` dict** — carries `ticket_id`, `ticket2_id`, `portal_url` etc. across sections
+- **`EMAIL_CHECKS` list** — printed at end of run; manually verify via Gmail MCP
+
+### Key gotchas
+
+- **Meta key is `_ticket_status`** (underscore prefix) — `wp post meta get` returns empty; use `wp eval 'echo get_post_meta(ID, "_ticket_status", true);'`
+- **`required` attributes** — strip before JS form submit in validation tests or the POST never reaches the server (HTML5 browser validation intercepts it)
+- **WordPress word-level search** — `LIKE '%Ticket%'` matches both "Ticket" and "Ticket2"; avoid negative assertions based on title substrings
+- **WP admin pointers** — Security Ninja and other plugins inject `.wp-pointer` overlays that intercept Playwright clicks; `_navigate_settings()` removes them on every settings page visit
+- **Bulk action key format** — `sanitize_title('In Progress')` → `in-progress` → action value `swh_status_in-progress`
+- **`expect_navigation()`** — wrap JS-triggered form submits in `with page.expect_navigation():` to avoid race between evaluate and `page.content()`
+- **Canned response persistence check** — use `el.value` via `page.evaluate()`, not `inner_text()` (input values aren't in innerText)
+
+### Environment variables (testing/.env)
+
+```
+WP_URL, WP_LOGIN_URL, WP_ADMIN_URL, WP_SUBMIT_PAGE, WP_PORTAL_PAGE
+WP_ADMIN_USER, WP_ADMIN_PASS
+WP_TECH1_EMAIL, WP_TECH1_USER, WP_TECH1_PASS
+WP_TECH2_USER, WP_TECH2_PASS
+WP_CLIENT1_NAME, WP_CLIENT1_EMAIL, WP_CLIENT1_PASS (optional subscriber)
+WP_CLIENT2_NAME, WP_CLIENT2_EMAIL
+SSH_HOST, WP_CONTAINER, WP_PATH
+SUBSCRIBER_USER, SUBSCRIBER_PASS (optional)
+```
+
+## Dev Tools
+
+### Static Analysis
+
+| Tool | Command | Notes |
+|------|---------|-------|
+| PHPStan | `vendor/bin/phpstan analyse` | Level 6, WP stubs via `szepeviktor/phpstan-wordpress` |
+| Semgrep | MCP tool `semgrep_scan` | Security scanning; configured via `semgrep@claude-plugins-official` plugin |
+
+### LSP (Language Intelligence)
+
+Configured in `.vscode/settings.json` and `testing/pyrightconfig.json`.
+
+| Language | Server | Binary | Notes |
+|----------|--------|--------|-------|
+| PHP | Intelephense | `intelephense` (npm global) | WP stubs from `vendor/php-stubs/wordpress-stubs/` via `intelephense.environment.includePaths` |
+| Python | Pyright | `pyright` (npm global) | Venv: `testing/.venv`; configured via `testing/pyrightconfig.json` |
+| TypeScript | typescript-language-server | `typescript-language-server` (npm global) | |
+
+LSP operations available: `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `goToImplementation`, `prepareCallHierarchy`, `incomingCalls`, `outgoingCalls`.
+
+### MCP Servers
+
+| Server | Purpose |
+|--------|---------|
+| `playwright` (npx) | Browser automation |
+| `github` | GitHub API — issues, PRs, code search |
+| Docker MCP gateway | Aggregates 11 servers (see below) |
+
+**Docker MCP gateway servers:**
+
+| Name | Purpose |
+|------|---------|
+| `github-official` | GitHub (OAuth) |
+| `context7` | Up-to-date library/framework docs |
+| `microsoft-learn` | Microsoft/Azure docs |
+| `memory` | Knowledge graph persistent memory |
+| `playwright` | Browser automation (Docker instance) |
+| `aws-documentation` | AWS docs search |
+| `node-code-sandbox` | Node.js sandbox execution |
+| `sqlite-mcp-server` | SQLite as a tool |
+| `dockerhub` | Docker Hub |
+| `mcp-python-refactoring` | Python refactoring assistant |
+| `next-devtools-mcp` | Next.js dev tools |
+
+### Plugins & Slash Commands
+
+| Command | Plugin | Purpose |
+|---------|--------|---------|
+| `/commit` | commit-commands | Create a git commit |
+| `/commit-push-pr` | commit-commands | Commit + push + open PR |
+| `/clean_gone` | commit-commands | Delete gone branches |
+| `/code-review` | code-review | Review a PR |
+| `/review` | coderabbit | CodeRabbit AI review |
+| `/review-pr` | pr-review-toolkit | Multi-agent PR review |
+| `/feature-dev` | feature-dev | Guided feature development |
+| `/revise-claude-md` | claude-md-management | Update CLAUDE.md from session |
+
+### Plugin-provided agents (via Agent tool)
+
+| Agent | Plugin | Purpose |
+|-------|--------|---------|
+| `pr-review-toolkit:code-reviewer` | pr-review-toolkit | Code quality + style |
+| `pr-review-toolkit:silent-failure-hunter` | pr-review-toolkit | Error handling gaps |
+| `pr-review-toolkit:code-simplifier` | pr-review-toolkit | Simplify after writing code |
+| `pr-review-toolkit:comment-analyzer` | pr-review-toolkit | Comment accuracy |
+| `pr-review-toolkit:pr-test-analyzer` | pr-review-toolkit | Test coverage gaps |
+| `pr-review-toolkit:type-design-analyzer` | pr-review-toolkit | Type design quality |
+| `feature-dev:code-explorer` | feature-dev | Trace execution paths |
+| `feature-dev:code-architect` | feature-dev | Design feature blueprints |
+| `coderabbit:code-reviewer` | coderabbit | Full CodeRabbit review |
 
 ## GitHub Auto-Updater
 
