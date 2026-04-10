@@ -235,7 +235,7 @@ function swh_conversation_meta_box_html( $post ) {
 			<?php
 			$swh_canned = get_option( 'swh_canned_responses', array() );
 			if ( is_array( $swh_canned ) && ! empty( $swh_canned ) ) :
-			?>
+				?>
 			<p style="margin-bottom:6px;">
 				<label for="swh-canned-select" style="font-size:12px; font-weight:600;"><?php esc_html_e( 'Insert Canned Response:', 'simple-wp-helpdesk' ); ?></label><br>
 				<select id="swh-canned-select" style="max-width:300px; margin-right:6px; margin-top:3px;">

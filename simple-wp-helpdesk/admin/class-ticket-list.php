@@ -332,7 +332,7 @@ add_filter( 'bulk_actions-edit-helpdesk_ticket', 'swh_bulk_actions_tickets' );
  */
 function swh_bulk_actions_tickets( $actions ) {
 	foreach ( swh_get_statuses() as $status ) {
-		$slug             = sanitize_title( $status );
+		$slug                             = sanitize_title( $status );
 		$actions[ 'swh_status_' . $slug ] = sprintf(
 			/* translators: %s: ticket status label */
 			__( 'Set Status: %s', 'simple-wp-helpdesk' ),
@@ -353,17 +353,17 @@ add_filter( 'handle_bulk_actions-edit-helpdesk_ticket', 'swh_handle_bulk_status'
  * Processes a bulk "Set Status" action, updating _ticket_status meta on each selected ticket.
  *
  * @since 2.2.0
- * @param string   $redirect_to The URL to redirect to after the action.
- * @param string   $action      The bulk action being processed.
- * @param int[]    $post_ids    Array of post IDs included in the bulk action.
+ * @param string $redirect_to The URL to redirect to after the action.
+ * @param string $action      The bulk action being processed.
+ * @param int[]  $post_ids    Array of post IDs included in the bulk action.
  * @return string The redirect URL, with result query args appended when handled.
  */
 function swh_handle_bulk_status( $redirect_to, $action, $post_ids ) {
 	if ( 0 !== strpos( $action, 'swh_status_' ) ) {
 		return $redirect_to;
 	}
-	$slug     = substr( $action, strlen( 'swh_status_' ) );
-	$status   = null;
+	$slug   = substr( $action, strlen( 'swh_status_' ) );
+	$status = null;
 	foreach ( swh_get_statuses() as $s ) {
 		if ( sanitize_title( $s ) === $slug ) {
 			$status = $s;
@@ -417,11 +417,11 @@ function swh_bulk_status_notice() {
 		return;
 	}
 	$count  = absint( $_GET['swh_bulk_updated'] );
-	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['swh_bulk_status'] ) ) ) : '';
+	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_bulk_status'] ) ) : '';
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	echo '<div class="updated notice is-dismissible"><p>';
 	/* translators: 1: number of tickets updated, 2: new status label */
-	echo sprintf( esc_html__( '%1$s ticket(s) updated to status: %2$s', 'simple-wp-helpdesk' ), esc_html( (string) $count ), '<strong>' . esc_html( $status ) . '</strong>' );
+	printf( esc_html__( '%1$s ticket(s) updated to status: %2$s', 'simple-wp-helpdesk' ), esc_html( (string) $count ), '<strong>' . esc_html( $status ) . '</strong>' );
 	echo '</p></div>';
 }
 

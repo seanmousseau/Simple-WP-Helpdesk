@@ -1,5 +1,5 @@
 includes:
-    - /home/sean/.config/composer/vendor/szepeviktor/phpstan-wordpress/extension.neon
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
 
 parameters:
     level: 6
@@ -8,7 +8,7 @@ parameters:
     excludePaths:
         - simple-wp-helpdesk/vendor/
     bootstrapFiles:
-        - /home/sean/.config/composer/vendor/szepeviktor/phpstan-wordpress/bootstrap.php
+        - vendor/szepeviktor/phpstan-wordpress/bootstrap.php
         - phpstan-bootstrap.php
         - phpstan-puc-stub.php
     scanDirectories:
