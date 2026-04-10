@@ -10,14 +10,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Shows a warning notice when the Helpdesk Page setting is not configured.
+ * Hooks into admin_notices to display the Helpdesk Page configuration warning.
  *
+ * @since 2.0.0
  * @see swh_admin_helpdesk_page_notice()
  */
 add_action( 'admin_notices', 'swh_admin_helpdesk_page_notice' );
 /**
  * Displays an admin notice when the Helpdesk Page setting is not configured.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_admin_helpdesk_page_notice() {
@@ -39,8 +41,9 @@ function swh_admin_helpdesk_page_notice() {
 }
 
 /**
- * Shows a success notice after a ticket has been reassigned.
+ * Hooks into admin_notices to display the post-reassignment success notice.
  *
+ * @since 2.0.0
  * @see swh_reassigned_notice()
  */
 add_action( 'admin_notices', 'swh_reassigned_notice' );
@@ -49,6 +52,7 @@ add_action( 'admin_notices', 'swh_reassigned_notice' );
  *
  * Reads the `swh_reassigned` GET parameter set by the post-save redirect.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_reassigned_notice() {
@@ -62,14 +66,16 @@ function swh_reassigned_notice() {
 }
 
 /**
- * Registers the Ticket Details and Conversation & Reply meta boxes.
+ * Hooks into add_meta_boxes to register the Ticket Details and Conversation & Reply meta boxes.
  *
+ * @since 2.0.0
  * @see swh_add_ticket_meta_boxes()
  */
 add_action( 'add_meta_boxes', 'swh_add_ticket_meta_boxes' );
 /**
  * Registers the Ticket Details (side) and Conversation & Reply (normal) meta boxes.
  *
+ * @since 2.0.0
  * @return void
  */
 function swh_add_ticket_meta_boxes() {
@@ -83,6 +89,7 @@ function swh_add_ticket_meta_boxes() {
  * Displays ticket UID, client name/email, all attachments, assigned-to selector,
  * priority selector, and status selector. Outputs a nonce field for save_post.
  *
+ * @since 2.0.0
  * @param WP_Post $post The current ticket post object.
  * @return void
  */
@@ -173,6 +180,7 @@ function swh_status_meta_box_html( $post ) {
  * then two side-by-side textareas for adding a public reply or internal note.
  * Attachments on individual replies are displayed as download links.
  *
+ * @since 2.0.0
  * @param WP_Post $post The current ticket post object.
  * @return void
  */
@@ -224,6 +232,21 @@ function swh_conversation_meta_box_html( $post ) {
 		<div style="flex:1;">
 			<h4 style="margin-top:0;"><label for="swh-tech-reply-text"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px;"><?php esc_html_e( 'This will be emailed to the client.', 'simple-wp-helpdesk' ); ?></p>
+			<?php
+			$swh_canned = get_option( 'swh_canned_responses', array() );
+			if ( is_array( $swh_canned ) && ! empty( $swh_canned ) ) :
+			?>
+			<p style="margin-bottom:6px;">
+				<label for="swh-canned-select" style="font-size:12px; font-weight:600;"><?php esc_html_e( 'Insert Canned Response:', 'simple-wp-helpdesk' ); ?></label><br>
+				<select id="swh-canned-select" style="max-width:300px; margin-right:6px; margin-top:3px;">
+					<option value=""><?php esc_html_e( '— Select a response —', 'simple-wp-helpdesk' ); ?></option>
+					<?php foreach ( $swh_canned as $swh_cr_item ) : ?>
+						<option value="<?php echo esc_attr( isset( $swh_cr_item['body'] ) ? $swh_cr_item['body'] : '' ); ?>"><?php echo esc_html( isset( $swh_cr_item['title'] ) ? $swh_cr_item['title'] : '' ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="button" id="swh-canned-insert" class="button button-small"><?php esc_html_e( 'Insert', 'simple-wp-helpdesk' ); ?></button>
+			</p>
+			<?php endif; ?>
 			<textarea id="swh-tech-reply-text" name="swh_tech_reply_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type reply here...', 'simple-wp-helpdesk' ); ?>"></textarea>
 			<p><label for="swh-tech-reply-files"><strong><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></strong></label><br>
 			<input type="file" id="swh-tech-reply-files" name="swh_tech_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
@@ -246,8 +269,9 @@ function swh_conversation_meta_box_html( $post ) {
 }
 
 /**
- * Handles ticket meta, replies, uploads, and email sending on post save.
+ * Hooks into save_post_helpdesk_ticket to save ticket meta, replies, uploads, and send emails.
  *
+ * @since 2.0.0
  * @see swh_save_ticket_data()
  */
 add_action( 'save_post_helpdesk_ticket', 'swh_save_ticket_data', 10, 3 );
@@ -262,6 +286,7 @@ add_action( 'save_post_helpdesk_ticket', 'swh_save_ticket_data', 10, 3 );
  * - Sends appropriate email (reply, status change, resolved, reassignment, confirmation).
  * - Sets/clears `_resolved_timestamp` when ticket enters/leaves resolved status.
  *
+ * @since 2.0.0
  * @param int     $post_id The ticket post ID.
  * @param WP_Post $post    The ticket post object.
  * @param bool    $update  True if this is an update, false for a new post.

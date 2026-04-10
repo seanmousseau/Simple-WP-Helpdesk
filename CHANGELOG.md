@@ -12,6 +12,24 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.2.0] — 2026-04-09
+
+### Added
+- **Bulk Status Change (#107):** New bulk action on the ticket list — "Set Status: {Status}" entries for every configured status. Updates `_ticket_status` meta on all selected tickets and shows a confirmation notice.
+- **Shortcode Indicator in Page Dropdown (#108):** The Helpdesk Page selector in Settings now annotates each page with the shortcode it contains (e.g. `— [helpdesk_portal]`), making it easy to pick the correct page at a glance.
+- **Canned Responses (#110):** New Canned Responses tab in Settings for managing pre-written reply templates (title + body). A picker above the ticket editor reply textarea inserts the selected template body at click.
+- **Plugin Branding Assets (#177, #178, #179):** CDN-hosted plugin icons (`icon-128x128.png`, `icon-256x256.png`) wired into the admin menu CPT icon, Settings page header, and the Plugin Update Checker info response for the WordPress update UI.
+
+### Changed
+- **PHPStan Level 5 → 6 (#141, #142):** Static analysis level raised to 6. Return type and parameter type declarations verified against szepeviktor/phpstan-wordpress stubs; zero errors at level 6.
+
+### Fixed
+- **Missing Icon Constants (#177-bug):** `SWH_ICON_1X`, `SWH_ICON_2X`, and `SWH_MENU_ICON` were used in `class-installer.php` and `class-settings.php` but never defined at runtime. All four CDN constants now defined in the plugin bootstrap and in `phpstan-bootstrap.php`.
+- **CDP Test: Icon-in-Transient (#180):** `wp_update_plugins()` is now called before the transient check so the icon data is primed before the assertion.
+- **CDP Test: `curl` Availability Guard (#181):** CDN reachability checks now call `shutil.which("curl")` and skip gracefully when `curl` is not in `PATH`.
+
+---
+
 ## [2.1.0] — 2026-04-09
 
 ### Added

@@ -88,6 +88,8 @@ function swh_get_defaults() {
 			// Lookup email template.
 			'swh_em_user_lookup_sub'         => 'Your Open Tickets',
 			'swh_em_user_lookup_body'        => "Hi,\n\nHere are links to your open helpdesk tickets:\n\n{ticket_links}\n\nIf you did not request this, you can safely ignore this email.",
+			// Canned responses (structured array; registered here so factory reset + uninstall clean it up).
+			'swh_canned_responses'           => array(),
 		);
 	}
 	return $defaults;

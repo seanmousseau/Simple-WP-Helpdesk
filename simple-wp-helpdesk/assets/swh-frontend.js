@@ -1,3 +1,14 @@
+/**
+ * Simple WP Helpdesk — frontend ticket form interactions.
+ *
+ * Handles file type/size validation, inline error display, and the
+ * ticket lookup form toggle on the [submit_ticket] and [helpdesk_portal]
+ * shortcode pages.
+ *
+ * @since 2.0.0
+ * @package Simple_WP_Helpdesk
+ */
+
 document.addEventListener( 'DOMContentLoaded', function () {
 	if ( typeof swhConfig === 'undefined' ) {
 		return;

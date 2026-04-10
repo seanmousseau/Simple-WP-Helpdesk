@@ -1,3 +1,14 @@
+/**
+ * Simple WP Helpdesk — admin settings page interactions.
+ *
+ * Handles ARIA tab switching, keyboard navigation, reset-to-default
+ * links on the Helpdesk Settings page, canned response management in
+ * settings, and canned response insertion in the ticket editor.
+ *
+ * @since 2.1.0
+ * @package Simple_WP_Helpdesk
+ */
+
 document.addEventListener( 'DOMContentLoaded', function () {
 	const tabs         = document.querySelectorAll( '[role="tab"]' );
 	const contents     = document.querySelectorAll( '.swh-tab-content' );
@@ -85,4 +96,98 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			if ( target ) { target.value = target.getAttribute( 'data-default' ); }
 		} );
 	} );
+
+	// Canned Responses — settings page: add and remove items.
+	const cannedList = document.getElementById( 'swh-canned-list' );
+	const addCanned  = document.getElementById( 'swh-add-canned' );
+
+	/**
+	 * Builds a new canned response row element ready to be appended to the list.
+	 *
+	 * Uses DOM methods exclusively to avoid any XSS risk from dynamic content.
+	 *
+	 * @return {HTMLElement} A div containing the title input, body textarea, and remove button.
+	 */
+	function buildCannedRow() {
+		const row = document.createElement( 'div' );
+		row.className     = 'swh-canned-item';
+		row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;';
+
+		const fieldWrap          = document.createElement( 'div' );
+		fieldWrap.style.flex     = '1';
+
+		const titleInput             = document.createElement( 'input' );
+		titleInput.type              = 'text';
+		titleInput.name              = 'swh_canned_titles[]';
+		titleInput.className         = 'regular-text';
+		titleInput.placeholder       = 'Response title\u2026';
+		titleInput.style.cssText     = 'width:100%; margin-bottom:6px;';
+
+		const bodyArea           = document.createElement( 'textarea' );
+		bodyArea.name            = 'swh_canned_bodies[]';
+		bodyArea.rows            = 3;
+		bodyArea.className       = 'large-text';
+		bodyArea.style.width     = '100%';
+
+		fieldWrap.appendChild( titleInput );
+		fieldWrap.appendChild( bodyArea );
+
+		const btnWrap       = document.createElement( 'div' );
+		const removeBtn     = document.createElement( 'button' );
+		removeBtn.type      = 'button';
+		removeBtn.className = 'button swh-remove-canned';
+		removeBtn.textContent = 'Remove';
+		btnWrap.appendChild( removeBtn );
+
+		row.appendChild( fieldWrap );
+		row.appendChild( btnWrap );
+		return row;
+	}
+
+	if ( addCanned && cannedList ) {
+		/**
+		 * Appends a blank canned response row when the "Add Response" button is clicked.
+		 */
+		addCanned.addEventListener( 'click', function () {
+			cannedList.appendChild( buildCannedRow() );
+		} );
+	}
+
+	if ( cannedList ) {
+		/**
+		 * Removes the parent canned response row when a "Remove" button is clicked.
+		 *
+		 * @param {Event} e - The click event, delegated from the list container.
+		 */
+		cannedList.addEventListener( 'click', function ( e ) {
+			if ( e.target.classList.contains( 'swh-remove-canned' ) ) {
+				const item = e.target.closest( '.swh-canned-item' );
+				if ( item ) {
+					item.remove();
+				}
+			}
+		} );
+	}
+
+	// Canned Responses — ticket editor: insert selected response body into the reply textarea.
+	const insertBtn    = document.getElementById( 'swh-canned-insert' );
+	const cannedSelect = document.getElementById( 'swh-canned-select' );
+	const replyArea    = document.getElementById( 'swh-tech-reply-text' );
+
+	if ( insertBtn && cannedSelect && replyArea ) {
+		/**
+		 * Inserts the selected canned response body into the reply textarea.
+		 *
+		 * Appends to any existing content, separated by a blank line when the textarea is non-empty.
+		 */
+		insertBtn.addEventListener( 'click', function () {
+			const body = cannedSelect.value;
+			if ( ! body ) {
+				return;
+			}
+			replyArea.value    = replyArea.value ? replyArea.value + '\n\n' + body : body;
+			cannedSelect.value = '';
+			replyArea.focus();
+		} );
+	}
 } );
