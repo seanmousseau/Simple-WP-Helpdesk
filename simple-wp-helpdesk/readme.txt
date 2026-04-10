@@ -81,7 +81,7 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: CSAT satisfaction prompt (1–5 stars) shown to client after closing a ticket; rating stored in _ticket_csat meta
 * Added: Humanised timestamps in portal conversation history ("3 hours ago", "Yesterday", etc.)
 * Added: [submit_ticket] / [helpdesk_portal] shortcode attributes: show_priority, default_priority, default_status, show_lookup
-* Added: Playwright/pytest browser test suite (28 end-to-end scenarios)
+* Added: Playwright/pytest browser test suite (34 end-to-end scenarios)
 * Changed: Resolved → Close CTA redesigned as a prominent two-part block (primary CTA + de-emphasised reply link)
 * Changed: PHPStan analysis level raised from 6 to 8 (zero errors; added non-object and foreach guards)
 * Fixed: Shortcode detection in page dropdown now uses has_shortcode() for reliable attribute-aware matching
@@ -90,6 +90,7 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Fixed: Bulk status change now syncs _resolved_timestamp meta
 * Fixed: wp_unslash() applied to canned response POST inputs before sanitization
 * Fixed: Duplicate icon constant define block removed
+
 
 = 2.2.0 =
 * Added: Bulk "Set Status" action on ticket list for all configured statuses with confirmation notice

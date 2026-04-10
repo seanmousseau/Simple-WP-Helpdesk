@@ -24,7 +24,7 @@ define( 'SWH_PLUGIN_FILE', __FILE__ );
 define( 'SWH_CDN_BASE', 'https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh' );
 define( 'SWH_ICON_1X', SWH_CDN_BASE . '/icon-128x128.png' );
 define( 'SWH_ICON_2X', SWH_CDN_BASE . '/icon-256x256.png' );
-define( 'SWH_MENU_ICON', SWH_CDN_BASE . '/favicon-32-png.png' );
+define( 'SWH_MENU_ICON', SWH_ICON_1X );
 
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';

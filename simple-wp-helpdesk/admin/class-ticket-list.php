@@ -332,7 +332,7 @@ add_filter( 'bulk_actions-edit-helpdesk_ticket', 'swh_bulk_actions_tickets' );
  */
 function swh_bulk_actions_tickets( $actions ) {
 	foreach ( swh_get_statuses() as $status ) {
-		$slug                             = sanitize_title( $status );
+		$slug = sanitize_title( $status );
 		$actions[ 'swh_status_' . $slug ] = sprintf(
 			/* translators: %s: ticket status label */
 			__( 'Set Status: %s', 'simple-wp-helpdesk' ),
@@ -417,11 +417,11 @@ function swh_bulk_status_notice() {
 		return;
 	}
 	$count  = absint( $_GET['swh_bulk_updated'] );
-	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_bulk_status'] ) ) : '';
+	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['swh_bulk_status'] ) ) ) : '';
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	echo '<div class="updated notice is-dismissible"><p>';
 	/* translators: 1: number of tickets updated, 2: new status label */
-	printf( esc_html__( '%1$s ticket(s) updated to status: %2$s', 'simple-wp-helpdesk' ), esc_html( (string) $count ), '<strong>' . esc_html( $status ) . '</strong>' );
+	echo sprintf( esc_html__( '%1$s ticket(s) updated to status: %2$s', 'simple-wp-helpdesk' ), esc_html( (string) $count ), '<strong>' . esc_html( $status ) . '</strong>' );
 	echo '</p></div>';
 }
 

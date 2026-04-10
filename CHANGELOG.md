@@ -21,7 +21,7 @@ starting from the next release after 1.8.
 - **CSAT Prompt on Ticket Close (#116):** After a client closes a ticket via the portal, a 1–5 star satisfaction widget is shown. Ratings are stored in `_ticket_csat` post meta via an AJAX handler. Clients can skip to dismiss.
 - **Humanized Timestamps (#117):** Reply timestamps in the client portal now display as relative strings ("3 hours ago", "Yesterday", etc.) using a `<time datetime>` element; the absolute date is preserved in the `title` tooltip.
 - **`[submit_ticket]` Shortcode Attributes (#119):** Both `[submit_ticket]` and `[helpdesk_portal]` shortcodes now accept `show_priority` (yes/no), `default_priority`, `default_status`, and `show_lookup` (yes/no) attributes for per-page customisation.
-- **Playwright/pytest Test Suite:** Full browser-based end-to-end suite covering 28 scenarios via pytest-playwright. Scenarios cover: admin auth, plugin verification, ticket submission, admin management, client portal, status transitions, internal notes, access control, bulk actions, settings persistence, canned responses, multi-technician workflow, admin search/filters, file attachments, portal token security, XSS escaping, subscriber access control, and rate limiting. Run with `pytest testing/scripts/test_helpdesk_pw.py`.
+- **Playwright/pytest Test Suite:** Full browser-based end-to-end suite covering 34 scenarios via pytest-playwright. Scenarios cover: admin auth, plugin verification, ticket submission, admin management, client portal, status transitions, internal notes, access control, bulk actions, settings persistence, canned responses, multi-technician workflow, admin search/filters, file attachments, portal token security, XSS escaping, subscriber access control, and rate limiting. Run with `pytest testing/scripts/test_helpdesk_pw.py`.
 
 ### Changed
 - **Resolved → Close CTA Layout (#118, #120):** On the portal, the "Close Ticket" prompt for resolved tickets is now a prominent two-part block: a primary CTA card with the Close button and a de-emphasised "Still need help? Reply below ↓" link, replacing the previous single alert box.
@@ -36,6 +36,7 @@ starting from the next release after 1.8.
 - **Duplicate Icon Constants:** Duplicate `SWH_ICON_1X` / `SWH_ICON_2X` / `SWH_MENU_ICON` define block introduced by a rebase conflict removed from the plugin bootstrap.
 
 ---
+
 
 ## [2.2.0] — 2026-04-09
 
