@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - dev
+
+  path_filters:
+    - "!simple-wp-helpdesk/vendor/**"
+    - "!vendor/**"
+    - "!releases/**"
+    - "!testing/screenshots/**"
+    - "!testing/scripts/__pycache__/**"
+    - "!*.min.js"
+    - "!*.min.css"
+    - "!composer.lock"
+
+  path_instructions:
+    - path: "simple-wp-helpdesk/**/*.php"
+      instructions: |
+        This is a WordPress plugin (Simple WP Helpdesk). Review for:
+
+        Security:
+        - Nonce verification (wp_verify_nonce) on all form handlers
+        - Capability checks: manage_options for admin actions, edit_post for ticket saves
+        - All output escaped: esc_html(), esc_attr(), esc_url(), wp_kses_post()
+        - All input sanitized: sanitize_text_field(), sanitize_email(), absint(), etc.
+        - Token comparisons use hash_equals(), never == or ===
+        - File paths validated to start with the uploads directory
+        - Rate limiting via swh_get_client_ip(), never $_SERVER['REMOTE_ADDR'] directly
+
+        Conventions:
+        - All functions prefixed swh_, all classes prefixed SWH_
+        - New options must be registered in swh_get_defaults() in includes/helpers.php
+        - Email always sent via swh_send_email(), never wp_mail() directly
+        - helpdesk_reply comment type; internal notes use _is_internal_note meta
+        - No custom DB tables; uses CPT (helpdesk_ticket), post meta, wp_options, comments
+
+        Architecture:
+        - Bootstrap (simple-wp-helpdesk.php) stays thin
+        - Admin-only code stays in admin/ (gated by is_admin())
+        - New cron events registered in swh_activate(), cleared in swh_deactivate()
+        - Schema changes must bump version and add upgrade path in swh_run_upgrade_routine()
+
+    - path: "testing/**/*.py"
+      instructions: |
+        Playwright test suite for a WordPress plugin. Review for:
+        - Use check() soft-fail helper instead of hard asserts where appropriate
+        - State dict used for cross-section state (ticket_id, portal_url, etc.)
+        - _navigate_settings() called before clicking settings to remove WP pointer overlays
+        - Rate limits cleared with _clear_rate_limits() before security tests
+        - required attributes stripped via JS before validation test form submits
+        - wrap JS-triggered form submits in with page.expect_navigation()
+
+    - path: ".github/workflows/**"
+      instructions: |
+        GitHub Actions workflow. Review for:
+        - Pinned action versions (prefer full SHA or semver tags, not @main)
+        - Minimal permissions (principle of least privilege)
+        - Secrets referenced via ${{ secrets.NAME }}, never hardcoded
+
+chat:
+  auto_reply: true
