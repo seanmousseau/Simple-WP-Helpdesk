@@ -25,14 +25,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Semgrep
+        run: pip install semgrep
+
       - name: Run Semgrep
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: >-
-            p/php
-            p/owasp-top-ten
-            p/security-audit
-          generateSarif: "1"
+        run: |
+          semgrep \
+            --config p/php \
+            --config p/owasp-top-ten \
+            --config p/security-audit \
+            --sarif \
+            --output semgrep.sarif \
+            .
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
