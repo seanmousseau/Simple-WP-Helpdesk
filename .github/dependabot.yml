@@ -5,12 +5,10 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-
-  - package-ecosystem: "composer"
-    directory: "/simple-wp-helpdesk/vendor/plugin-update-checker"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+    allow:
+      - dependency-name: "phpstan/phpstan"
+      - dependency-name: "squizlabs/php_codesniffer"
+      - dependency-name: "phpunit/phpunit"
 
   - package-ecosystem: "github-actions"
     directory: "/"
