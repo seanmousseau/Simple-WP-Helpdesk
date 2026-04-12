@@ -312,6 +312,10 @@ add_action( 'swh_sla_check_event', 'swh_process_sla_check' );
  * Sends a digest email on first breach detection.
  * Uses a transient lock to prevent concurrent runs.
  *
+ * Processes up to 20 tickets per run (micro-batched to avoid long-running cron jobs).
+ * On sites with many open tickets, subsequent hourly runs will eventually process all.
+ * The meta_query excludes tickets already marked 'breach', so each ticket is only alerted once.
+ *
  * @since 3.0.0
  * @return void
  */

@@ -180,7 +180,7 @@ function swh_status_meta_box_html( $post ) {
 	<?php endif; ?>
 	<hr>
 	<p><label for="swh-cc-emails"><strong><?php esc_html_e( 'CC / Watchers:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<input type="email" id="swh-cc-emails" name="ticket_cc_emails" value="<?php echo esc_attr( swh_get_string_meta( $post->ID, '_ticket_cc_emails' ) ); ?>" placeholder="cc@example.com, manager@example.com" style="width:100%; margin-bottom:8px;" multiple>
+	<input type="text" id="swh-cc-emails" name="ticket_cc_emails" value="<?php echo esc_attr( swh_get_string_meta( $post->ID, '_ticket_cc_emails' ) ); ?>" placeholder="cc@example.com, manager@example.com" style="width:100%; margin-bottom:8px;">
 	<p class="description" style="font-size:11px; color:#666;"><?php esc_html_e( 'Comma-separated email addresses to CC on all client notifications for this ticket.', 'simple-wp-helpdesk' ); ?></p>
 	<?php
 	$first_response_ts = swh_get_int_meta( $post->ID, '_ticket_first_response_at' );
