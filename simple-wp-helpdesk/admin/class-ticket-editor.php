@@ -172,6 +172,23 @@ function swh_status_meta_box_html( $post ) {
 			<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( $label ); ?></a>
 		<?php endforeach; ?></p>
 	<?php endif; ?>
+	<?php
+	$ticket_tmpl = swh_get_string_meta( $post->ID, '_ticket_template' );
+	if ( $ticket_tmpl ) :
+		?>
+		<p><strong><?php esc_html_e( 'Request Type:', 'simple-wp-helpdesk' ); ?></strong> <?php echo esc_html( $ticket_tmpl ); ?></p>
+	<?php endif; ?>
+	<hr>
+	<p><label for="swh-cc-emails"><strong><?php esc_html_e( 'CC / Watchers:', 'simple-wp-helpdesk' ); ?></strong></label></p>
+	<input type="email" id="swh-cc-emails" name="ticket_cc_emails" value="<?php echo esc_attr( swh_get_string_meta( $post->ID, '_ticket_cc_emails' ) ); ?>" placeholder="cc@example.com, manager@example.com" style="width:100%; margin-bottom:8px;" multiple>
+	<p class="description" style="font-size:11px; color:#666;"><?php esc_html_e( 'Comma-separated email addresses to CC on all client notifications for this ticket.', 'simple-wp-helpdesk' ); ?></p>
+	<?php
+	$first_response_ts = swh_get_int_meta( $post->ID, '_ticket_first_response_at' );
+	if ( $first_response_ts ) :
+		?>
+		<p style="margin-top:8px;"><strong><?php esc_html_e( 'First Response:', 'simple-wp-helpdesk' ); ?></strong>
+		<?php echo esc_html( human_time_diff( $first_response_ts, time() ) ); ?> <?php esc_html_e( 'after submission', 'simple-wp-helpdesk' ); ?></p>
+	<?php endif; ?>
 	<hr>
 	<p><label for="swh-assigned-to"><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></label></p>
 	<select id="swh-assigned-to" name="ticket_assigned_to" style="width: 100%; margin-bottom: 10px;">
@@ -192,6 +209,51 @@ function swh_status_meta_box_html( $post ) {
 			<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $status, $s ); ?>><?php echo esc_html( $s ); ?></option>
 		<?php endforeach; ?>
 	</select>
+	<?php
+	$sla_status = swh_get_string_meta( $post->ID, '_ticket_sla_status' );
+	if ( $sla_status ) :
+		$sla_bg    = 'breach' === $sla_status ? '#d63638' : '#dba617';
+		$sla_label = 'breach' === $sla_status ? __( 'SLA Breach', 'simple-wp-helpdesk' ) : __( 'SLA Warning', 'simple-wp-helpdesk' );
+		?>
+		<div style="margin-top:10px; padding:6px 10px; background:<?php echo esc_attr( $sla_bg ); ?>; color:#fff; border-radius:3px; font-weight:bold; font-size:12px;"><?php echo esc_html( $sla_label ); ?></div>
+	<?php endif; ?>
+	<?php if ( ! $is_new_ticket ) : ?>
+	<hr>
+	<p><strong><?php esc_html_e( 'Merge Ticket', 'simple-wp-helpdesk' ); ?></strong></p>
+	<p class="description" style="font-size:11px; color:#666; margin-bottom:8px;"><?php esc_html_e( 'Move all replies from this ticket into another. This ticket will be closed after merging.', 'simple-wp-helpdesk' ); ?></p>
+	<input type="number" id="swh-merge-target-id" placeholder="<?php esc_attr_e( 'Target ticket ID', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;" min="1">
+	<button type="button" id="swh-merge-btn" class="button" style="width:100%;"><?php esc_html_e( 'Merge into Target', 'simple-wp-helpdesk' ); ?></button>
+	<p id="swh-merge-msg" style="margin-top:6px; font-size:12px;"></p>
+	<script>
+	(function() {
+		document.getElementById('swh-merge-btn').addEventListener('click', function() {
+			var targetId = parseInt(document.getElementById('swh-merge-target-id').value, 10);
+			var msgEl = document.getElementById('swh-merge-msg');
+			if (!targetId || targetId < 1) {
+				msgEl.textContent = '<?php echo esc_js( __( 'Please enter a valid ticket ID.', 'simple-wp-helpdesk' ) ); ?>';
+				return;
+			}
+			msgEl.textContent = '<?php echo esc_js( __( 'Merging…', 'simple-wp-helpdesk' ) ); ?>';
+			var data = new URLSearchParams();
+			data.append('action', 'swh_merge_ticket');
+			data.append('nonce', '<?php echo esc_js( wp_create_nonce( 'swh_merge_ticket' ) ); ?>');
+			data.append('source_id', '<?php echo esc_js( (string) $post->ID ); ?>');
+			data.append('target_id', targetId.toString());
+			fetch(ajaxurl, { method: 'POST', body: data })
+				.then(function(r) { return r.json(); })
+				.then(function(json) {
+					if (json.success) {
+						msgEl.style.color = 'green';
+						msgEl.textContent = json.data && json.data.message ? json.data.message : '<?php echo esc_js( __( 'Merged.', 'simple-wp-helpdesk' ) ); ?>';
+					} else {
+						msgEl.style.color = 'red';
+						msgEl.textContent = json.data && json.data.message ? json.data.message : '<?php echo esc_js( __( 'Merge failed.', 'simple-wp-helpdesk' ) ); ?>';
+					}
+				} );
+		} );
+	}());
+	</script>
+	<?php endif; ?>
 	<?php
 }
 
@@ -389,6 +451,22 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	if ( $client_email ) {
 		update_post_meta( $post_id, '_ticket_email', $client_email );
 	}
+	// Save CC / Watcher emails.
+	if ( isset( $_POST['ticket_cc_emails'] ) && is_string( $_POST['ticket_cc_emails'] ) ) {
+		$raw_cc = sanitize_text_field( wp_unslash( $_POST['ticket_cc_emails'] ) );
+		// Sanitize each address and rejoin.
+		$cc_parts = array_map( 'sanitize_email', array_map( 'trim', explode( ',', $raw_cc ) ) );
+		$cc_clean = implode(
+			', ',
+			array_filter(
+				$cc_parts,
+				function ( string $addr ): bool {
+					return (bool) is_email( $addr );
+				}
+			)
+		);
+		update_post_meta( $post_id, '_ticket_cc_emails', $cc_clean );
+	}
 
 	// For admin-created tickets that have no UID yet, bootstrap the ticket identity.
 	// Must run before the assignment notification so _ticket_token exists when
@@ -527,6 +605,11 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			}
 		}
 		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
+
+		// Record first response time on the first staff reply.
+		if ( $current_user_email !== $data['email'] && ! swh_get_int_meta( $post_id, '_ticket_first_response_at' ) ) {
+			update_post_meta( $post_id, '_ticket_first_response_at', time() );
+		}
 	}
 
 	$status_changed = ( $update && $old_status !== $new_status );

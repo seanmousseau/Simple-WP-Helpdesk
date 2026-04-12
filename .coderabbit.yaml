@@ -64,6 +64,25 @@ reviews:
         - Tests cover realistic WordPress behaviour (e.g. get_option returns fallback, not false, when option is unset)
         - No patchwork; WP_Mock::setUsePatchwork(false) in bootstrap
 
+    - path: "simple-wp-helpdesk/admin/class-reporting.php"
+      instructions: |
+        Reporting dashboard AJAX endpoint. Extra review focus:
+        - WP_Query meta_query arrays must never allow unvalidated user input to flow into 'value'
+        - Transient keys must be unique and not conflict with other plugin transients (prefix swh_report_)
+        - All AJAX handlers must call current_user_can('manage_options') and check_ajax_referer()
+        - $wpdb->prepare() must wrap all raw SQL; no string interpolation in queries
+        - found_posts access on WP_Query result is correct only when 'no_found_rows' => false (default)
+
+    - path: "simple-wp-helpdesk/includes/class-email.php"
+      instructions: |
+        Email handling including inbound webhook. Extra review focus on swh_handle_inbound_email():
+        - Bearer token must be validated with hash_equals(), never == or ===
+        - Sender email must be validated with hash_equals(strtolower(), strtolower())
+        - Subject parsed with preg_match only; no eval or dynamic regex
+        - Reply body sanitized with wp_kses_post() before wp_insert_comment()
+        - No SSRF risk: handler only reads from $request params, never makes outbound HTTP requests
+        - Return value must always be WP_Error or rest_ensure_response() result — never raw arrays
+
     - path: "phpunit.xml"
       instructions: |
         PHPUnit configuration. No actionable review needed — skip.

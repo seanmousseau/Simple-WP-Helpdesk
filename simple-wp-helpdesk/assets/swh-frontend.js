@@ -164,6 +164,29 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	/**
+	 * Ticket template selector — pre-fills the description textarea when a
+	 * request type is selected. Only runs if swhConfig.templates is populated.
+	 */
+	const requestTypeSelect = document.getElementById( 'swh-request-type' );
+	if ( requestTypeSelect && swhConfig.templates && swhConfig.templates.length > 0 ) {
+		const descField = document.getElementById( 'swh-desc' );
+		requestTypeSelect.addEventListener( 'change', function () {
+			if ( ! descField ) { return; }
+			const selected = this.value;
+			if ( ! selected ) {
+				return; // "— Select a request type —" chosen; leave textarea as-is.
+			}
+			const tmpl = swhConfig.templates.find( function ( t ) { return t.label === selected; } );
+			if ( tmpl ) {
+				// Only pre-fill if the textarea is blank or already contains a previous template body.
+				if ( descField.value === '' || swhConfig.templates.some( function ( t ) { return t.body === descField.value; } ) ) {
+					descField.value = tmpl.body;
+				}
+			}
+		} );
+	}
+
+	/**
 	 * Upload progress indicator for the ticket submission form.
 	 *
 	 * When the user submits a form with files selected, shows an animated

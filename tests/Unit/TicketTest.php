@@ -59,6 +59,85 @@ class TicketTest extends TestCase {
 	}
 
 	// -------------------------------------------------------------------------
+	// Multiple-upload original-name preservation (#241)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * swh_handle_multiple_uploads() stores the original filename (with spaces) in the
+	 * $orig_names map, confirming that sanitize_text_field — not sanitize_file_name —
+	 * is used so spaces are preserved.
+	 *
+	 * @see #241
+	 */
+	public function test_handle_multiple_uploads_preserves_origname(): void {
+		$file_url = 'https://example.com/wp-content/uploads/swh-helpdesk/my-support-file.txt';
+		$temp_dir = sys_get_temp_dir() . '/swh-helpdesk';
+
+		// Ensure the upload sub-directory exists so swh_ensure_upload_protection()
+		// can write the .htaccess and index.php guard files without PHP warnings.
+		if ( ! is_dir( $temp_dir ) ) {
+			mkdir( $temp_dir, 0755, true );
+		}
+
+		WP_Mock::userFunction( 'get_option' )
+			->zeroOrMoreTimes()
+			->andReturnUsing( fn( $key, $default = false ) => $default );
+
+		WP_Mock::userFunction( 'wp_get_upload_dir' )
+			->once()
+			->andReturn(
+				array(
+					'basedir' => sys_get_temp_dir(),
+					'baseurl' => 'https://example.com/wp-content/uploads',
+					'subdir'  => '',
+					'path'    => sys_get_temp_dir(),
+					'url'     => 'https://example.com/wp-content/uploads',
+					'error'   => false,
+				)
+			);
+
+		WP_Mock::userFunction( 'wp_mkdir_p' )->andReturn( true );
+
+		WP_Mock::userFunction( 'trailingslashit' )
+			->andReturnUsing( fn( $path ) => rtrim( (string) $path, '/' ) . '/' );
+
+		WP_Mock::userFunction( 'add_filter' )->andReturn( true );
+		WP_Mock::userFunction( 'remove_filter' )->andReturn( true );
+
+		WP_Mock::userFunction( 'wp_handle_upload' )
+			->once()
+			->andReturn(
+				array(
+					'url'  => $file_url,
+					'file' => $temp_dir . '/my-support-file.txt',
+					'type' => 'text/plain',
+				)
+			);
+
+		$file_array = array(
+			'name'     => array( 'My Support File.txt' ),
+			'type'     => array( 'text/plain' ),
+			'tmp_name' => array( '/tmp/phpXXXXXX' ),
+			'error'    => array( 0 ),
+			'size'     => array( 100 ),
+		);
+		$orig_names    = null;
+		$skipped_count = 0;
+
+		$urls = swh_handle_multiple_uploads( $file_array, $orig_names, $skipped_count );
+
+		$this->assertCount( 1, $urls, 'One file should be uploaded' );
+		$this->assertIsArray( $orig_names );
+		$this->assertArrayHasKey( $file_url, $orig_names, 'orig_names must be keyed by file URL' );
+		$this->assertSame(
+			'My Support File.txt',
+			$orig_names[ $file_url ],
+			'Original filename with spaces must be preserved via sanitize_text_field'
+		);
+		$this->assertSame( 0, $skipped_count );
+	}
+
+	// -------------------------------------------------------------------------
 	// CSAT status gate (#218) — indirect via POST simulation
 	// -------------------------------------------------------------------------
 

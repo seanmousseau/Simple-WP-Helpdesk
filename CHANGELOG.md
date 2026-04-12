@@ -12,6 +12,27 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.0.0] — 2026-04-12
+
+### Added
+- **Categories / departments taxonomy (#127):** New `helpdesk_category` hierarchical taxonomy — auto-registered on `init`, admin column, ticket-list dropdown filter, optional category selector on frontend submission form (`show_category` shortcode attribute, default `no`).
+- **Ticket templates (#132):** Configurable request types (label + pre-filled description) managed in Settings → General → Templates. A "Request Type" dropdown appears on the submission form when templates exist; selected label stored as `_ticket_template` post meta and displayed read-only in the ticket editor.
+- **CC / Watcher support (#129):** "CC / Watchers" field in the ticket editor saves comma-separated addresses as `_ticket_cc_emails` meta. All outgoing `swh_send_email()` calls inject `Cc:` headers for the ticket's CC list via the new helper `swh_get_cc_emails()`.
+- **First response time tracking (#136):** `_ticket_first_response_at` Unix timestamp meta set automatically on the first staff reply. Displayed as elapsed time via `human_time_diff()` in the Ticket Details meta box.
+- **Ticket merge (#133):** "Merge with another ticket" section in the ticket editor — ticket-ID lookup, AJAX merge action (`swh_merge_ticket`), and helper `swh_merge_tickets()` that moves comments, copies attachments, adds system notes on both tickets, and notifies the source-ticket client.
+- **SLA breach alerts (#128):** Configurable warn/breach hour thresholds and alert recipient in Settings → Assignment & Routing → SLA. Hourly cron (`swh_sla_check_event`) sets `_ticket_sla_status` to `warn` or `breach` and sends a digest email on first breach. Ticket list rows receive `swh-sla-warn` / `swh-sla-breach` CSS classes; SLA badge shown in the ticket editor.
+- **Auto-assignment rules (#126):** JS rule builder in Settings maps `helpdesk_category` terms to assignee users. Rules evaluated at ticket creation via `swh_apply_assignment_rules()`; first matching rule wins, falls back to `swh_default_assignee`.
+- **Reply-by-email inbound webhook (#131):** REST endpoint `POST /wp-json/swh/v1/inbound-email` (registered in bootstrap). Supports Mailgun, SendGrid, and Postmark payload shapes. Validates optional Bearer token (`swh_inbound_secret`), parses `[TKT-XXXX]` from subject, validates sender via `hash_equals`, strips `>`-quoted lines, creates a `helpdesk_reply` comment, and reopens resolved/closed tickets. Webhook URL displayed read-only in Settings → Email Templates.
+- **Reporting dashboard (#135, #137):** New submenu page "Reports" under the helpdesk CPT. Four AJAX-powered charts/metrics: status breakdown (doughnut), weekly opened/closed trend (bar), average resolution time, and average first response time. Results cached in 1-hour transients. Powered by Chart.js (CDN).
+- **PHPUnit test additions (#241, #242):** `test_handle_multiple_uploads_preserves_origname()` verifying origname spaces preserved; CSAT building-block tests; new `ReportingTest` (status breakdown shape, resolution time row exclusion); new `InboundEmailTest` (ticket-ID regex, sender validation, quoted-reply stripping).
+
+### Changed
+- `swh_send_email()` now accepts a `$ticket_id` parameter (default `0`) to auto-inject `Cc:` headers from `_ticket_cc_emails` meta.
+- Frontend submission calls `swh_apply_assignment_rules()` instead of reading `swh_default_assignee` directly, so assignment rules take effect at submission time.
+- `SWH_VERSION` bumped to `3.0.0`.
+
+---
+
 ## [2.5.0] — 2026-04-12
 
 ### Added
@@ -344,7 +365,8 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.5.0...v3.0.0
 [2.5.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.0...v2.4.1

@@ -51,6 +51,17 @@ function swh_ticket_frontend( $atts = array() ) {
 	 */
 	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
+	$tmpl_raw     = get_option( 'swh_ticket_templates', array() );
+	$tmpl_raw     = is_array( $tmpl_raw ) ? $tmpl_raw : array();
+	$tmpl_js      = array();
+	foreach ( $tmpl_raw as $tmpl ) {
+		if ( is_array( $tmpl ) && ! empty( $tmpl['label'] ) && is_string( $tmpl['label'] ) ) {
+			$tmpl_js[] = array(
+				'label' => $tmpl['label'],
+				'body'  => isset( $tmpl['body'] ) && is_string( $tmpl['body'] ) ? $tmpl['body'] : '',
+			);
+		}
+	}
 	wp_localize_script(
 		'swh-frontend',
 		'swhConfig',
@@ -58,13 +69,16 @@ function swh_ticket_frontend( $atts = array() ) {
 			'maxMb'       => swh_get_int_option( 'swh_max_upload_size', 5 ),
 			'maxFiles'    => swh_get_int_option( 'swh_max_upload_count', 5 ),
 			'allowedExts' => $allowed_exts,
+			'templates'   => $tmpl_js,
 			'i18n'        => array(
 				/* translators: %d: maximum number of files allowed */
-				'maxFilesError' => __( 'You may only attach up to %d file(s) per upload.', 'simple-wp-helpdesk' ),
+				'maxFilesError'  => __( 'You may only attach up to %d file(s) per upload.', 'simple-wp-helpdesk' ),
 				/* translators: %s: file name */
-				'invalidType'   => __( 'File "%s" has an invalid type.', 'simple-wp-helpdesk' ),
+				'invalidType'    => __( 'File "%s" has an invalid type.', 'simple-wp-helpdesk' ),
 				/* translators: 1: file name, 2: max file size in MB */
-				'sizeExceeded'  => __( 'File "%1$s" exceeds the %2$dMB size limit.', 'simple-wp-helpdesk' ),
+				'sizeExceeded'   => __( 'File "%1$s" exceeds the %2$dMB size limit.', 'simple-wp-helpdesk' ),
+				/* translators: shown as first option in the Request Type dropdown */
+				'selectTemplate' => __( '— Select a request type —', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -105,6 +119,17 @@ function swh_render_submission_form( $atts = array() ) {
 	$show_priority  = ( ! isset( $atts['show_priority'] ) || 'no' !== strtolower( $atts['show_priority'] ) );
 	$show_lookup    = ( ! isset( $atts['show_lookup'] ) || 'no' !== strtolower( $atts['show_lookup'] ) );
 	$spam_method    = swh_get_string_option( 'swh_spam_method', 'none' );
+	$tmpl_raw       = get_option( 'swh_ticket_templates', array() );
+	$tmpl_raw       = is_array( $tmpl_raw ) ? $tmpl_raw : array();
+	$tmpl_js        = array();
+	foreach ( $tmpl_raw as $t ) {
+		if ( is_array( $t ) && ! empty( $t['label'] ) && is_string( $t['label'] ) ) {
+			$tmpl_js[] = array(
+				'label' => $t['label'],
+				'body'  => isset( $t['body'] ) && is_string( $t['body'] ) ? $t['body'] : '',
+			);
+		}
+	}
 	?>
 	<div class="swh-helpdesk-wrapper">
 	<?php
@@ -124,7 +149,8 @@ function swh_render_submission_form( $atts = array() ) {
 	}
 
 	if ( $submit_rate_passed && isset( $_POST['swh_submit_ticket'], $_POST['swh_ticket_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_ticket_nonce'] ) ? $_POST['swh_ticket_nonce'] : '' ) ), 'swh_create_ticket' ) ) {
-		$data = array(
+		$ticket_template = isset( $_POST['ticket_template'] ) && is_string( $_POST['ticket_template'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_template'] ) ) : '';
+		$data            = array(
 			'name'     => isset( $_POST['ticket_name'] ) && is_string( $_POST['ticket_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_name'] ) ) : '',
 			'email'    => isset( $_POST['ticket_email'] ) && is_string( $_POST['ticket_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_email'] ) ) : '',
 			'title'    => isset( $_POST['ticket_title'] ) && is_string( $_POST['ticket_title'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_title'] ) ) : '',
@@ -191,14 +217,15 @@ function swh_render_submission_form( $atts = array() ) {
 				update_post_meta( $ticket_id, '_ticket_token', $token );
 				update_post_meta( $ticket_id, '_ticket_token_created', time() );
 				update_post_meta( $ticket_id, '_ticket_url', get_permalink() );
+				if ( $ticket_template ) {
+					update_post_meta( $ticket_id, '_ticket_template', $ticket_template );
+				}
 				// Build ticket_url after token is in meta so swh_get_secure_ticket_link()
 				// can resolve the correct page (respects swh_ticket_page_id setting).
 				$secure_url         = swh_get_secure_ticket_link( $ticket_id );
 				$data['ticket_url'] = false !== $secure_url ? $secure_url : '';
-				$default_assignee   = get_option( 'swh_default_assignee' );
-				if ( $default_assignee ) {
-					update_post_meta( $ticket_id, '_ticket_assigned_to', $default_assignee );
-				}
+				// Apply auto-assignment rules (falls back to swh_default_assignee).
+				swh_apply_assignment_rules( $ticket_id );
 				swh_send_email( $data['email'], 'swh_em_user_new_sub', 'swh_em_user_new_body', $data );
 				$admin_email = swh_get_admin_email( $ticket_id );
 				$proxy_urls  = array_map(
@@ -310,6 +337,17 @@ function swh_render_submission_form( $atts = array() ) {
 			<select id="swh-priority" name="ticket_priority" class="swh-form-control">
 				<?php foreach ( $priorities as $p ) : ?>
 					<option value="<?php echo esc_attr( $p ); ?>" <?php selected( $form_prio, $p ); ?>><?php echo esc_html( $p ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+		<?php endif; ?>
+		<?php if ( ! empty( $tmpl_js ) ) : ?>
+		<div class="swh-form-group">
+			<label for="swh-request-type"><?php esc_html_e( 'Request Type (Optional):', 'simple-wp-helpdesk' ); ?></label>
+			<select id="swh-request-type" name="ticket_template" class="swh-form-control">
+				<option value=""><?php esc_html_e( '— Select a request type —', 'simple-wp-helpdesk' ); ?></option>
+				<?php foreach ( $tmpl_js as $tmpl ) : ?>
+					<option value="<?php echo esc_attr( $tmpl['label'] ); ?>"><?php echo esc_html( $tmpl['label'] ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</div>

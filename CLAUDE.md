@@ -4,7 +4,7 @@
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 2.5.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 3.0.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 
 ## Repository Structure
 
@@ -20,7 +20,9 @@ simple-wp-helpdesk/
 ├── admin/
 │   ├── class-settings.php              # Settings page render + save handler
 │   ├── class-ticket-editor.php         # Meta boxes, save_post, conversation UI
-│   └── class-ticket-list.php           # Columns, sorting, filters, admin styles
+│   ├── class-ticket-list.php           # Columns, sorting, filters, admin styles
+│   ├── class-reporting.php             # Reporting AJAX endpoints (status, resolution, trend, first-response)
+│   └── class-reporting-ui.php          # Reports submenu page render + Chart.js enqueue
 ├── frontend/
 │   ├── class-shortcode.php             # [submit_ticket] + [helpdesk_portal] shortcodes
 │   └── class-portal.php                # Client portal view
@@ -72,6 +74,12 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **CSAT meta** — satisfaction rating stored as `_ticket_csat` (integer 1–5) on the ticket post. Not set if client skips the prompt. AJAX handler registered on `wp_ajax_nopriv_swh_submit_csat`.
 - **My Tickets dashboard** — portal URL without a token shows a ticket table for logged-in WP users (matching `_ticket_email`) or the lookup form for guests. The `swh_render_lookup_form()` helper is shared between the submission shortcode and this view.
 - **Shortcode attributes** — `[submit_ticket]` and `[helpdesk_portal]` accept `show_priority`, `default_priority`, `default_status`, `show_lookup`. Both shortcodes share the same `swh_submit_ticket_shortcode()` handler.
+- **v3.0.0 meta keys** — `_ticket_first_response_at` (Unix timestamp of first staff reply), `_ticket_sla_status` (`warn` or `breach`), `_ticket_cc_emails` (comma-separated CC addresses), `_ticket_template` (label of selected request type at submission).
+- **`helpdesk_category` taxonomy** — registered in `class-installer.php`, hierarchical, `show_admin_column => true`, no REST, no rewrite. Use `wp_set_post_terms()` / `wp_get_post_terms()` to assign/read.
+- **Inbound webhook** — `POST /wp-json/swh/v1/inbound-email`. Validates `Authorization: Bearer <swh_inbound_secret>`. Parses `[TKT-XXXX]` from subject, validates sender vs `_ticket_email` via `hash_equals`. Strips `>`-prefixed quoted lines.
+- **Assignment rules** — stored as JSON in `swh_assignment_rules` option (array of `{category_term_id, assignee_user_id}`). Applied at ticket creation via `swh_apply_assignment_rules()`. First matching rule wins; falls back to `swh_default_assignee`.
+- **SLA cron** — `swh_sla_check_event` runs hourly. Lock transient: `swh_lock_sla`. Open statuses filtered via `swh_sla_open_statuses` filter hook.
+- **Reporting transients** — `swh_report_{type}` cached for `HOUR_IN_SECONDS`. Types: `status_breakdown`, `avg_resolution_time`, `weekly_trend`, `first_response_time`.
 
 ## Release Process
 
@@ -140,7 +148,7 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 34 test sections
+### 45 test sections (34 original + 11 v3.0.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -177,6 +185,17 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 | 34 | my_tickets_dashboard | |
 | 35 | portal_guest_lookup | |
 | 36 | shortcode_attrs | |
+| 37 | admin_list_filtering | |
+| 38 | admin_list_sorting | |
+| 39 | ticket_templates | |
+| 40 | first_response_time | |
+| 41 | cc_watchers | |
+| 42 | categories_taxonomy | |
+| 43 | ticket_merge | |
+| 44 | sla_breach_detection | |
+| 45 | assignment_rules | |
+| 46 | reporting_dashboard | |
+| 47 | inbound_email_webhook | |
 | 28 | cleanup | |
 
 ### Architecture

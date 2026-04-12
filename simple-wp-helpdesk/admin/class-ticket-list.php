@@ -466,3 +466,33 @@ function swh_ticket_filter_dropdowns( $post_type ) {
 	}
 	echo '</select>';
 }
+
+/**
+ * Hooks into post_class to add SLA status CSS classes to ticket list rows.
+ *
+ * @since 3.0.0
+ * @see swh_ticket_sla_row_class()
+ */
+add_filter( 'post_class', 'swh_ticket_sla_row_class', 10, 3 );
+/**
+ * Adds `swh-sla-warn` or `swh-sla-breach` CSS class to ticket rows in the admin list.
+ *
+ * @since 3.0.0
+ * @param string[] $classes Array of post CSS classes.
+ * @param string[] $css_class Additional classes passed to get_post_class().
+ * @param int      $post_id   The post ID.
+ * @return string[] Modified classes array.
+ */
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- Hook signature requires $css_class; not needed here.
+function swh_ticket_sla_row_class( $classes, $css_class, $post_id ) {
+	if ( ! is_admin() ) {
+		return $classes;
+	}
+	$sla = swh_get_string_meta( $post_id, '_ticket_sla_status' );
+	if ( 'breach' === $sla ) {
+		$classes[] = 'swh-sla-breach';
+	} elseif ( 'warn' === $sla ) {
+		$classes[] = 'swh-sla-warn';
+	}
+	return $classes;
+}

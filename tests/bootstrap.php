@@ -24,6 +24,23 @@ define( 'SWH_VERSION', '2.5.0' );
 WP_Mock::setUsePatchwork( false );
 WP_Mock::bootstrap();
 
+// WordPress class stubs for tests that exercise code using WP classes directly.
+
+if ( ! class_exists( 'WP_Query' ) ) {
+	/**
+	 * Minimal WP_Query stub for unit tests.
+	 * The stub always returns found_posts = 0; tests that need a specific count
+	 * should work with the return value of swh_report_status_breakdown() directly.
+	 */
+	class WP_Query {
+		/** @var int */
+		public int $found_posts = 0;
+
+		/** @param array<string, mixed> $args Query arguments (ignored in stub). */
+		public function __construct( array $args = array() ) {}
+	}
+}
+
 // Minimal WordPress function stubs required by unit tests.
 // WP_Mock does not define every WordPress function; define those needed here.
 

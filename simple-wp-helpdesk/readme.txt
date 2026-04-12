@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.5.0
+Stable tag: 3.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,21 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.0.0 =
+* Added: Categories / departments taxonomy (`helpdesk_category`) with admin column and ticket-list filter (#127)
+* Added: Ticket templates — pre-filled request types selectable at submission, stored as `_ticket_template` meta (#132)
+* Added: CC / Watcher support — comma-separated CC addresses on tickets; outgoing email sends Cc headers (#129)
+* Added: First response time tracking — `_ticket_first_response_at` meta set on first staff reply, shown in ticket editor (#136)
+* Added: Ticket merge — move all replies from a source ticket into a target ticket via admin UI (#133)
+* Added: SLA breach alerts — configurable warn/breach hour thresholds, hourly cron, row CSS classes, admin digest email (#128)
+* Added: Auto-assignment rules — JS rule builder maps categories to assignees; applied on ticket submission (#126)
+* Added: Reply-by-email inbound webhook at `/wp-json/swh/v1/inbound-email` with Bearer token auth and quoted-reply stripping (#131)
+* Added: Reporting dashboard — status breakdown (doughnut), weekly trend (bar), avg resolution time, avg first response time with Chart.js (#135, #137)
+* Added: PHPUnit origname test for `swh_handle_multiple_uploads()` (#241)
+* Added: PHPUnit CSAT handler building-block tests (#242)
+* Added: PHPUnit `ReportingTest` covering `swh_report_status_breakdown()` and `swh_report_avg_resolution_time()` row exclusion
+* Added: PHPUnit `InboundEmailTest` covering ticket-ID parser, sender validator, and quoted-reply stripper
 
 = 2.5.0 =
 * Added: PHPUnit + WP-Mock unit test infrastructure (HelpersTest, EmailTest, TicketTest)

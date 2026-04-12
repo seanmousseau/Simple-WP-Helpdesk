@@ -94,6 +94,24 @@ function swh_get_defaults() {
 			'swh_em_user_lookup_body'        => "Hi,\n\nHere are links to your open helpdesk tickets:\n\n{ticket_links}\n\nIf you did not request this, you can safely ignore this email.",
 			// Canned responses (structured array; registered here so factory reset + uninstall clean it up).
 			'swh_canned_responses'           => array(),
+			// Ticket templates (structured array; pre-configured submission types with pre-filled descriptions).
+			'swh_ticket_templates'           => array(),
+			// CC / Watchers.
+			// (stored as _ticket_cc_emails post meta; no default option needed)
+			// SLA.
+			'swh_sla_warn_hours'             => '4',
+			'swh_sla_breach_hours'           => '8',
+			'swh_sla_notify_email'           => '',
+			// Auto-assignment rules (JSON array of {category_term_id, assignee_user_id}).
+			'swh_assignment_rules'           => array(),
+			// Inbound email webhook.
+			'swh_inbound_secret'             => '',
+			// Email template: SLA breach digest.
+			'swh_em_admin_sla_breach_sub'    => 'SLA Breach Alert: {sla_count} overdue ticket(s)',
+			'swh_em_admin_sla_breach_body'   => "The following tickets have breached their SLA:\n\n{sla_list}",
+			// Email templates: ticket merge notification.
+			'swh_em_user_merged_sub'         => 'Your ticket has been merged: {ticket_id}',
+			'swh_em_user_merged_body'        => "Hi {name},\n\nYour ticket ({ticket_id}) has been merged into ticket {target_ticket_id}.\n\nYou can continue viewing your conversation here:\n{target_ticket_url}",
 		);
 	}
 	return $defaults;
@@ -367,6 +385,169 @@ function swh_get_int_option( string $key, int $fallback = 0 ): int {
 function swh_get_string_comment_meta( int $comment_id, string $key ): string {
 	$val = get_comment_meta( $comment_id, $key, true );
 	return is_scalar( $val ) ? (string) $val : '';
+}
+
+/**
+ * Returns CC/watcher email addresses for a ticket.
+ *
+ * Reads `_ticket_cc_emails` post meta (comma-separated), sanitizes each address,
+ * and returns only valid email addresses.
+ *
+ * @since 3.0.0
+ * @param int $ticket_id The ticket post ID.
+ * @return string[] Array of sanitized, valid email addresses.
+ */
+function swh_get_cc_emails( int $ticket_id ): array {
+	$raw = swh_get_string_meta( $ticket_id, '_ticket_cc_emails' );
+	if ( ! $raw ) {
+		return array();
+	}
+	$emails = array_map( 'sanitize_email', array_map( 'trim', explode( ',', $raw ) ) );
+	return array_values(
+		array_filter(
+			$emails,
+			function ( string $addr ): bool {
+				return (bool) is_email( $addr );
+			}
+		)
+	);
+}
+
+/**
+ * Applies auto-assignment rules to a ticket, setting `_ticket_assigned_to`.
+ *
+ * Checks each configured rule ({category_term_id, assignee_user_id}) against
+ * the ticket's `helpdesk_category` taxonomy terms. First matching rule wins.
+ * Falls back to `swh_default_assignee` option if no rule matches.
+ *
+ * @since 3.0.0
+ * @param int $ticket_id The ticket post ID.
+ * @return void
+ */
+function swh_apply_assignment_rules( int $ticket_id ): void {
+	$rules_raw = get_option( 'swh_assignment_rules', array() );
+	$rules     = is_array( $rules_raw ) ? $rules_raw : array();
+	$assigned  = 0;
+
+	if ( ! empty( $rules ) ) {
+		$term_ids = wp_get_post_terms( $ticket_id, 'helpdesk_category', array( 'fields' => 'ids' ) );
+		if ( is_array( $term_ids ) && ! empty( $term_ids ) ) {
+			foreach ( $rules as $rule ) {
+				if ( ! is_array( $rule ) || empty( $rule['category_term_id'] ) || empty( $rule['assignee_user_id'] ) ) {
+					continue;
+				}
+				$cat_term_id = is_scalar( $rule['category_term_id'] ) ? (int) $rule['category_term_id'] : 0;
+				$assignee_id = is_scalar( $rule['assignee_user_id'] ) ? (int) $rule['assignee_user_id'] : 0;
+				if ( in_array( $cat_term_id, $term_ids, true ) ) {
+					$assigned = $assignee_id;
+					break;
+				}
+			}
+		}
+	}
+
+	if ( ! $assigned ) {
+		$default  = get_option( 'swh_default_assignee' );
+		$assigned = is_scalar( $default ) ? (int) $default : 0;
+	}
+
+	if ( $assigned > 0 ) {
+		update_post_meta( $ticket_id, '_ticket_assigned_to', $assigned );
+	}
+}
+
+/**
+ * Merges source ticket into target ticket.
+ *
+ * Moves all helpdesk_reply comments from source to target, consolidates attachment
+ * origname maps, adds system notes to both tickets, closes the source with an
+ * internal note, and sends the client a notification linking to the target.
+ *
+ * @since 3.0.0
+ * @param int $source_id Ticket to merge from (will be closed).
+ * @param int $target_id Ticket to merge into (receives all conversation).
+ * @return bool True on success, false if either post is invalid.
+ */
+function swh_merge_tickets( int $source_id, int $target_id ): bool {
+	$source = get_post( $source_id );
+	$target = get_post( $target_id );
+	if ( ! $source || ! $target || 'helpdesk_ticket' !== $source->post_type || 'helpdesk_ticket' !== $target->post_type ) {
+		return false;
+	}
+
+	// Move all helpdesk_reply comments from source to target.
+	$comments = get_comments(
+		array(
+			'post_id' => $source_id,
+			'type'    => 'helpdesk_reply',
+			'status'  => 'approve',
+			'number'  => 0,
+			'order'   => 'ASC',
+		)
+	);
+	$comments = is_array( $comments ) ? $comments : array();
+	foreach ( $comments as $comment ) {
+		if ( ! $comment instanceof WP_Comment ) {
+			continue;
+		}
+		wp_update_comment(
+			array(
+				'comment_ID'      => $comment->comment_ID,
+				'comment_post_ID' => $target_id,
+			)
+		);
+	}
+
+	// Merge attachment orignames.
+	$source_names = get_post_meta( $source_id, '_swh_attachment_orignames', true );
+	$target_names = get_post_meta( $target_id, '_swh_attachment_orignames', true );
+	if ( is_array( $source_names ) && ! empty( $source_names ) ) {
+		$merged = is_array( $target_names ) ? array_merge( $target_names, $source_names ) : $source_names;
+		update_post_meta( $target_id, '_swh_attachment_orignames', $merged );
+	}
+
+	// Add system notes.
+	$source_uid = swh_get_string_meta( $source_id, '_ticket_uid' );
+	$target_uid = swh_get_string_meta( $target_id, '_ticket_uid' );
+	wp_insert_comment(
+		array(
+			'comment_post_ID'  => $target_id,
+			'comment_type'     => 'helpdesk_reply',
+			'comment_content'  => sprintf( 'Merged from ticket %s.', $source_uid ),
+			'comment_approved' => 1,
+			'comment_meta'     => array( '_is_internal_note' => '1' ),
+		)
+	);
+	wp_insert_comment(
+		array(
+			'comment_post_ID'  => $source_id,
+			'comment_type'     => 'helpdesk_reply',
+			'comment_content'  => sprintf( 'Merged into ticket %s.', $target_uid ),
+			'comment_approved' => 1,
+			'comment_meta'     => array( '_is_internal_note' => '1' ),
+		)
+	);
+
+	// Close the source ticket.
+	$defs          = swh_get_defaults();
+	$closed_status = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : 'Closed' );
+	update_post_meta( $source_id, '_ticket_status', $closed_status );
+
+	// Notify source ticket client.
+	$client_email = swh_get_string_meta( $source_id, '_ticket_email' );
+	$client_name  = swh_get_string_meta( $source_id, '_ticket_name' );
+	$target_link  = swh_get_secure_ticket_link( $target_id );
+	if ( $client_email && $target_link ) {
+		$mail_data = array(
+			'name'              => $client_name,
+			'ticket_id'         => $source_uid,
+			'target_ticket_id'  => $target_uid,
+			'target_ticket_url' => $target_link,
+		);
+		swh_send_email( $client_email, 'swh_em_user_merged_sub', 'swh_em_user_merged_body', $mail_data );
+	}
+
+	return true;
 }
 
 /**
