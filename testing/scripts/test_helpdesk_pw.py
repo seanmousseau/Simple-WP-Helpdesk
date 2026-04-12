@@ -2310,11 +2310,14 @@ def test_44_sla_breach_detection(page: Page):
     # Save original SLA breach hours, set to 1 for this test
     original_breach = wpcli("option get swh_sla_breach_hours 2>/dev/null").strip() or "8"
 
-    # Create a test ticket with a post_date 24 hours in the past
+    # Create a test ticket with a post_date 24 hours in the past.
+    # Embed the Unix timestamp in the title so we can search for it uniquely later.
+    sla_ts = int(time.time())
+    sla_title = f"PW SLA Test {sla_ts}"
     old_date = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() - 86400))
     sla_ticket_id = wpcli(
         "post create --post_type=helpdesk_ticket --post_status=publish "
-        f"--post_title='PW SLA Test {int(time.time())}' "
+        f"--post_title='{sla_title}' "
         f"--post_date='{old_date}' "
         "--post_author=1 --porcelain"
     ).strip()
@@ -2341,8 +2344,12 @@ def test_44_sla_breach_detection(page: Page):
               sla_status == "breach",
               f"got: {sla_status!r}")
 
-        # Navigate to ticket list and check for CSS class
-        _navigate_admin_list(page)
+        # Search for the ticket by its unique timestamp suffix — avoids pagination
+        # issues in the full suite where 40+ tickets push this old-dated ticket to page 2.
+        page.goto(
+            f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&s={sla_ts}"
+        )
+        page.wait_for_load_state("load")
         row_classes = page.evaluate(f"""
             (function() {{
                 var rows = document.querySelectorAll('#the-list tr[id*="{sla_ticket_id}"], #the-list tr.post-{sla_ticket_id}');
@@ -2538,6 +2545,10 @@ def test_47_inbound_email_webhook(page: Page):
     subject = f"Re: Your ticket [{ticket_uid}] has been updated"
     body    = f"This is a test reply from the inbound email webhook test at {int(time.time())}."
 
+    # Set a test webhook secret so the endpoint is enabled
+    test_secret = "swh-test-secret-47"
+    wpcli(f"option update swh_inbound_secret '{test_secret}'")
+
     # Use localhost inside the container to bypass Cloudflare's bot-check
     wp_path_part = WP_URL.split(".com", 1)[-1].rstrip("/")  # e.g. /testing/wordpress
     local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
@@ -2547,6 +2558,7 @@ def test_47_inbound_email_webhook(page: Page):
     curl_cmd = (
         f"curl -s -L -X POST '{local_webhook}' "
         f"-H 'Host: {host_header}' "
+        f"-H 'Authorization: Bearer {test_secret}' "
         f"--data-urlencode 'subject={subject}' "
         f"--data-urlencode 'from={ticket_email}' "
         f"--data-urlencode 'body-plain={body}' "

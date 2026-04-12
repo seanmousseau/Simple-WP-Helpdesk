@@ -118,6 +118,7 @@ function swh_render_submission_form( $atts = array() ) {
 		: swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : '' );
 	$show_priority  = ( ! isset( $atts['show_priority'] ) || 'no' !== strtolower( $atts['show_priority'] ) );
 	$show_lookup    = ( ! isset( $atts['show_lookup'] ) || 'no' !== strtolower( $atts['show_lookup'] ) );
+	$show_category  = ( isset( $atts['show_category'] ) && 'yes' === strtolower( $atts['show_category'] ) );
 	$spam_method    = swh_get_string_option( 'swh_spam_method', 'none' );
 	$tmpl_raw       = get_option( 'swh_ticket_templates', array() );
 	$tmpl_raw       = is_array( $tmpl_raw ) ? $tmpl_raw : array();
@@ -150,6 +151,7 @@ function swh_render_submission_form( $atts = array() ) {
 
 	if ( $submit_rate_passed && isset( $_POST['swh_submit_ticket'], $_POST['swh_ticket_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_ticket_nonce'] ) ? $_POST['swh_ticket_nonce'] : '' ) ), 'swh_create_ticket' ) ) {
 		$ticket_template = isset( $_POST['ticket_template'] ) && is_string( $_POST['ticket_template'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_template'] ) ) : '';
+		$ticket_category = isset( $_POST['ticket_category'] ) && is_scalar( $_POST['ticket_category'] ) ? absint( $_POST['ticket_category'] ) : 0;
 		$data            = array(
 			'name'     => isset( $_POST['ticket_name'] ) && is_string( $_POST['ticket_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_name'] ) ) : '',
 			'email'    => isset( $_POST['ticket_email'] ) && is_string( $_POST['ticket_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_email'] ) ) : '',
@@ -224,6 +226,10 @@ function swh_render_submission_form( $atts = array() ) {
 				// can resolve the correct page (respects swh_ticket_page_id setting).
 				$secure_url         = swh_get_secure_ticket_link( $ticket_id );
 				$data['ticket_url'] = false !== $secure_url ? $secure_url : '';
+				// Assign submitted category before evaluating assignment rules.
+				if ( $ticket_category > 0 ) {
+					wp_set_post_terms( $ticket_id, array( $ticket_category ), 'helpdesk_category' );
+				}
 				// Apply auto-assignment rules (falls back to swh_default_assignee).
 				swh_apply_assignment_rules( $ticket_id );
 				swh_send_email( $data['email'], 'swh_em_user_new_sub', 'swh_em_user_new_body', $data );
@@ -352,6 +358,29 @@ function swh_render_submission_form( $atts = array() ) {
 			</select>
 		</div>
 		<?php endif; ?>
+		<?php
+		if ( $show_category ) :
+			$cat_terms = get_terms(
+				array(
+					'taxonomy'   => 'helpdesk_category',
+					'hide_empty' => false,
+				)
+			);
+			if ( ! is_wp_error( $cat_terms ) && ! empty( $cat_terms ) ) :
+				?>
+		<div class="swh-form-group">
+			<label for="swh-category"><?php esc_html_e( 'Category:', 'simple-wp-helpdesk' ); ?></label>
+			<select id="swh-category" name="ticket_category" class="swh-form-control">
+				<option value=""><?php esc_html_e( '— Select a category —', 'simple-wp-helpdesk' ); ?></option>
+				<?php foreach ( $cat_terms as $cat_term ) : ?>
+					<option value="<?php echo esc_attr( (string) $cat_term->term_id ); ?>"><?php echo esc_html( $cat_term->name ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+				<?php
+			endif;
+		endif;
+		?>
 		<div class="swh-form-group">
 			<label for="swh-title"><?php esc_html_e( 'Problem Summary (Title):', 'simple-wp-helpdesk' ); ?></label>
 			<input type="text" id="swh-title" name="ticket_title" required class="swh-form-control" value="<?php echo esc_attr( $form_title ); ?>">

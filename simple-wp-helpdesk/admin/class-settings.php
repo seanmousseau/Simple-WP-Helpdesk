@@ -636,8 +636,8 @@ function swh_render_settings_page() {
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Webhook Secret', 'simple-wp-helpdesk' ); ?></th>
 						<td>
-							<input type="text" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
-							<p class="description"><?php esc_html_e( 'Optional Bearer token. If set, the webhook endpoint requires an Authorization: Bearer &lt;secret&gt; header.', 'simple-wp-helpdesk' ); ?></p>
+							<input type="password" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
+							<p class="description"><?php esc_html_e( 'Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer &lt;secret&gt; in each POST request.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
 				</table>

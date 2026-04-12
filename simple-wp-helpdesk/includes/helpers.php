@@ -498,7 +498,15 @@ function swh_merge_tickets( int $source_id, int $target_id ): bool {
 		);
 	}
 
-	// Merge attachment orignames.
+	// Merge root-level attachment URLs (files attached to the ticket, not to a reply comment).
+	$source_attach = get_post_meta( $source_id, '_ticket_attachments', true );
+	$target_attach = get_post_meta( $target_id, '_ticket_attachments', true );
+	if ( is_array( $source_attach ) && ! empty( $source_attach ) ) {
+		$merged_attach = is_array( $target_attach ) ? array_merge( $target_attach, $source_attach ) : $source_attach;
+		update_post_meta( $target_id, '_ticket_attachments', $merged_attach );
+	}
+
+	// Merge attachment orignames (URL → original filename maps).
 	$source_names = get_post_meta( $source_id, '_swh_attachment_orignames', true );
 	$target_names = get_post_meta( $target_id, '_swh_attachment_orignames', true );
 	if ( is_array( $source_names ) && ! empty( $source_names ) ) {

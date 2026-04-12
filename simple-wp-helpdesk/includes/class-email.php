@@ -181,14 +181,18 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
  * @return WP_REST_Response|WP_Error
  */
 function swh_handle_inbound_email( $request ) {
-	// Optional Bearer token authentication.
+	// Require a shared secret — the webhook is disabled when none is configured.
 	$secret = swh_get_string_option( 'swh_inbound_secret' );
-	if ( $secret ) {
-		$auth   = $request->get_header( 'Authorization' );
-		$bearer = is_string( $auth ) ? trim( str_replace( 'Bearer', '', $auth ) ) : '';
-		if ( ! hash_equals( $secret, $bearer ) ) {
-			return new WP_Error( 'swh_unauthorized', __( 'Unauthorized.', 'simple-wp-helpdesk' ), array( 'status' => 401 ) );
-		}
+	if ( ! $secret ) {
+		return new WP_Error( 'swh_not_configured', __( 'Inbound email is not configured. Set a Webhook Secret in Simple WP Helpdesk settings.', 'simple-wp-helpdesk' ), array( 'status' => 503 ) );
+	}
+	$auth   = $request->get_header( 'Authorization' );
+	$bearer = '';
+	if ( is_string( $auth ) && preg_match( '/^Bearer\s+(\S+)$/i', trim( $auth ), $m ) ) {
+		$bearer = $m[1];
+	}
+	if ( ! hash_equals( $secret, $bearer ) ) {
+		return new WP_Error( 'swh_unauthorized', __( 'Unauthorized.', 'simple-wp-helpdesk' ), array( 'status' => 401 ) );
 	}
 
 	$params  = $request->get_params();
@@ -316,7 +320,8 @@ function swh_handle_inbound_email( $request ) {
 		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
 		'ticket_url' => '',
 	);
-	swh_send_email( swh_get_admin_email( $ticket_id ), 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data, array(), $ticket_id );
+	// Admin-only notification — do not inject watcher Cc: headers.
+	swh_send_email( swh_get_admin_email( $ticket_id ), 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data );
 
 	return rest_ensure_response( array( 'success' => true ) );
 }

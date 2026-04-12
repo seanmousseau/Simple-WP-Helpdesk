@@ -331,7 +331,6 @@ function swh_process_sla_check() {
 	}
 	set_transient( $lock_key, 1, 5 * MINUTE_IN_SECONDS );
 
-	$defs          = swh_get_defaults();
 	$open_statuses = array( 'Open', 'In Progress', 'Pending' );
 	/**
 	 * Filters the ticket statuses considered "open" for SLA purposes.
@@ -403,8 +402,16 @@ function swh_process_sla_check() {
 			$notify_email = swh_get_admin_email();
 		}
 		if ( is_email( $notify_email ) ) {
+			$sla_lines = array();
+			foreach ( $newly_breached as $breached_ticket ) {
+				$uid         = swh_get_string_meta( $breached_ticket->ID, '_ticket_uid' );
+				$title       = $breached_ticket->post_title;
+				$url         = admin_url( 'post.php?post=' . $breached_ticket->ID . '&action=edit' );
+				$sla_lines[] = ( $uid ? $uid . ': ' : '' ) . $title . ' — ' . $url;
+			}
 			$data = array(
 				'sla_count' => $breach_count,
+				'sla_list'  => implode( "\n", $sla_lines ),
 			);
 			swh_send_email( $notify_email, 'swh_em_admin_sla_breach_sub', 'swh_em_admin_sla_breach_body', $data );
 		}

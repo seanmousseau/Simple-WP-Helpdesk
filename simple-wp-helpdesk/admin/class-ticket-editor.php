@@ -185,9 +185,10 @@ function swh_status_meta_box_html( $post ) {
 	<?php
 	$first_response_ts = swh_get_int_meta( $post->ID, '_ticket_first_response_at' );
 	if ( $first_response_ts ) :
+		$submitted_ts = (int) get_post_time( 'U', true, $post );
 		?>
 		<p style="margin-top:8px;"><strong><?php esc_html_e( 'First Response:', 'simple-wp-helpdesk' ); ?></strong>
-		<?php echo esc_html( human_time_diff( $first_response_ts, time() ) ); ?> <?php esc_html_e( 'after submission', 'simple-wp-helpdesk' ); ?></p>
+		<?php echo esc_html( human_time_diff( $submitted_ts, $first_response_ts ) ); ?> <?php esc_html_e( 'after submission', 'simple-wp-helpdesk' ); ?></p>
 	<?php endif; ?>
 	<hr>
 	<p><label for="swh-assigned-to"><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></label></p>
@@ -606,8 +607,8 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		}
 		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 
-		// Record first response time on the first staff reply.
-		if ( $current_user_email !== $data['email'] && ! swh_get_int_meta( $post_id, '_ticket_first_response_at' ) ) {
+		// Record first response time only when the comment was actually inserted.
+		if ( $comment_id && $current_user_email !== $data['email'] && ! swh_get_int_meta( $post_id, '_ticket_first_response_at' ) ) {
 			update_post_meta( $post_id, '_ticket_first_response_at', time() );
 		}
 	}
@@ -624,19 +625,19 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
 	if ( $data['email'] ) {
 		if ( $just_replied && $status_changed && $is_resolving ) {
-			swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, $proxy_attach_urls );
+			swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, $proxy_attach_urls, $post_id );
 		} elseif ( $just_replied && $status_changed ) {
-			swh_send_email( $data['email'], 'swh_em_user_reply_status_sub', 'swh_em_user_reply_status_body', $data, $proxy_attach_urls );
+			swh_send_email( $data['email'], 'swh_em_user_reply_status_sub', 'swh_em_user_reply_status_body', $data, $proxy_attach_urls, $post_id );
 		} elseif ( $just_replied ) {
-			swh_send_email( $data['email'], 'swh_em_user_reply_sub', 'swh_em_user_reply_body', $data, $proxy_attach_urls );
+			swh_send_email( $data['email'], 'swh_em_user_reply_sub', 'swh_em_user_reply_body', $data, $proxy_attach_urls, $post_id );
 		} elseif ( $status_changed ) {
 			$data['message'] = __( 'No additional notes provided.', 'simple-wp-helpdesk' );
 			if ( $is_resolving ) {
-				swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data );
+				swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, array(), $post_id );
 			} elseif ( swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' ) === $new_status && swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' ) === $old_status ) {
-				swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
+				swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data, array(), $post_id );
 			} else {
-				swh_send_email( $data['email'], 'swh_em_user_status_sub', 'swh_em_user_status_body', $data );
+				swh_send_email( $data['email'], 'swh_em_user_status_sub', 'swh_em_user_status_body', $data, array(), $post_id );
 			}
 		}
 	}
