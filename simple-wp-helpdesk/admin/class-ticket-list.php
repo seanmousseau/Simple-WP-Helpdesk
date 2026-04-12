@@ -531,3 +531,66 @@ function swh_ticket_sla_row_class( $classes, $css_class, $post_id ) {
 	}
 	return $classes;
 }
+
+/**
+ * Hooks into post_class to add the unread CSS class to ticket rows with new client replies.
+ *
+ * @since 3.1.0
+ * @see swh_ticket_unread_row_class()
+ */
+add_filter( 'post_class', 'swh_ticket_unread_row_class', 10, 3 );
+/**
+ * Adds `swh-has-unread` CSS class to ticket rows that have unread client replies.
+ *
+ * @since 3.1.0
+ * @param string[] $classes   Array of post CSS classes.
+ * @param string[] $css_class Additional classes passed to get_post_class().
+ * @param int      $post_id   The post ID.
+ * @return string[] Modified classes array.
+ */
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- Hook signature requires $css_class; not needed here.
+function swh_ticket_unread_row_class( $classes, $css_class, $post_id ) {
+	if ( ! is_admin() ) {
+		return $classes;
+	}
+	if ( '1' === get_post_meta( $post_id, '_swh_unread', true ) ) {
+		$classes[] = 'swh-has-unread';
+	}
+	return $classes;
+}
+
+/**
+ * Hooks into admin_menu to inject the unread reply count badge into the Tickets menu.
+ *
+ * @since 3.1.0
+ * @see swh_admin_menu_unread_badge()
+ */
+add_action( 'admin_menu', 'swh_admin_menu_unread_badge', 20 );
+/**
+ * Appends an unread count bubble to the "Tickets" admin menu item when there are
+ * tickets with new client replies awaiting staff attention.
+ *
+ * @since 3.1.0
+ * @return void
+ */
+function swh_admin_menu_unread_badge() {
+	global $menu;
+	if ( ! is_array( $menu ) ) {
+		return;
+	}
+	$count = swh_get_unread_reply_count();
+	if ( $count < 1 ) {
+		return;
+	}
+	foreach ( $menu as $key => $item ) {
+		if ( ! is_array( $item ) || ! isset( $item[2] ) || ! is_string( $item[2] ) ) {
+			continue;
+		}
+		if ( 'edit.php?post_type=helpdesk_ticket' === $item[2] && isset( $item[0] ) && is_string( $item[0] ) ) {
+			/* translators: %d: number of tickets with unread client replies */
+			$item[0]     .= ' <span class="awaiting-mod" title="' . esc_attr( sprintf( __( '%d ticket(s) with unread client replies', 'simple-wp-helpdesk' ), $count ) ) . '">' . esc_html( (string) $count ) . '</span>';
+			$menu[ $key ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- intentional badge injection
+			break;
+		}
+	}
+}

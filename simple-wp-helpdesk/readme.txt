@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.0.0
+Stable tag: 3.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,16 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.1.0 =
+* Fixed: Conversation timestamps now use `wp_date()` with UTC source (`comment_date_gmt`), respecting the site timezone and date/time format options (#121)
+* Added: Dedicated "Send Reply" and "Save Note" buttons in the ticket editor conversation meta box (#97)
+* Added: Unread reply count badge (`.awaiting-mod`) on the admin menu item; clears when the ticket is opened (#101)
+* Added: `swh-has-unread` CSS class on ticket list rows with new client replies; cleared on admin view (#102)
+* Added: "Send Test Email" button in Settings → Email Templates with inline AJAX feedback (#103)
+* Added: `languages/simple-wp-helpdesk.pot` translation file for i18n support (#123)
+* Changed: `swh_send_email()` now returns `bool` (the `wp_mail()` return value) instead of `void`
+* Changed: `SWH_VERSION` bumped to `3.1.0`
 
 = 3.0.0 =
 * Added: Categories / departments taxonomy (`helpdesk_category`) with admin column and ticket-list filter (#127)

@@ -148,6 +148,8 @@ function swh_render_client_portal() {
 						update_comment_meta( $comment_id, '_swh_reply_orignames', $reopen_orignames );
 					}
 				}
+				update_post_meta( $ticket_id, '_swh_unread', '1' );
+				delete_transient( 'swh_unread_count' );
 			}
 			// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- dynamic fallback intentional
 			$data['message'] = $reply_text ? $reply_text : ( $has_files ? __( 'Attached file(s)', 'simple-wp-helpdesk' ) : '' );
@@ -207,6 +209,8 @@ function swh_render_client_portal() {
 							update_comment_meta( $comment_id, '_swh_reply_orignames', $reply_orignames );
 						}
 					}
+					update_post_meta( $ticket_id, '_swh_unread', '1' );
+					delete_transient( 'swh_unread_count' );
 				}
 				$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 				$admin_email     = swh_get_admin_email( $ticket_id );
@@ -277,12 +281,14 @@ function swh_render_client_portal() {
 			$attach_urls  = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 			$reply_names  = get_comment_meta( (int) $comment->comment_ID, '_swh_reply_orignames', true );
 			$reply_names  = is_array( $reply_names ) ? $reply_names : array();
-			$parsed_ts    = strtotime( $comment->comment_date );
-			$comment_ts   = false !== $parsed_ts ? $parsed_ts : time();
-			$comment_iso  = gmdate( 'c', $comment_ts );
+			$gmt_str      = $comment->comment_date_gmt;
+			$utc_ts       = $gmt_str ? strtotime( $gmt_str . ' UTC' ) : false;
+			$utc_ts       = false !== $utc_ts ? $utc_ts : time();
+			$comment_iso  = gmdate( 'c', $utc_ts );
+			$comment_disp = swh_format_comment_date( $comment );
 
 			echo '<div class="swh-chat-bubble ' . esc_attr( $bubble_class ) . '">';
-			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_name ) . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(<time class="swh-timestamp" datetime="' . esc_attr( $comment_iso ) . '" title="' . esc_attr( $comment->comment_date ) . '">' . esc_html( $comment->comment_date ) . '</time>)</span></strong>';
+			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_name ) . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(<time class="swh-timestamp" datetime="' . esc_attr( $comment_iso ) . '" title="' . esc_attr( $comment_disp ) . '">' . esc_html( $comment_disp ) . '</time>)</span></strong>';
 			echo nl2br( esc_html( $comment->comment_content ) );
 			if ( ! empty( $attach_urls ) && is_array( $attach_urls ) ) {
 				echo '<div style="margin-top: 10px;">';
@@ -447,16 +453,22 @@ function swh_render_portal_no_token() {
 			echo '</tr></thead>';
 			echo '<tbody>';
 			foreach ( $tickets as $ticket ) {
-				$uid       = swh_get_string_meta( $ticket->ID, '_ticket_uid' );
-				$status    = swh_get_string_meta( $ticket->ID, '_ticket_status' );
-				$link      = swh_get_secure_ticket_link( $ticket->ID );
-				$parsed_ts = strtotime( $ticket->post_modified );
-				$ts        = false !== $parsed_ts ? $parsed_ts : time();
+				$uid          = swh_get_string_meta( $ticket->ID, '_ticket_uid' );
+				$status       = swh_get_string_meta( $ticket->ID, '_ticket_status' );
+				$link         = swh_get_secure_ticket_link( $ticket->ID );
+				$modified_gmt = $ticket->post_modified_gmt;
+				$utc_ts       = $modified_gmt ? strtotime( $modified_gmt . ' UTC' ) : false;
+				$utc_ts       = false !== $utc_ts ? $utc_ts : time();
+				$date_fmt     = get_option( 'date_format' );
+				$time_fmt     = get_option( 'time_format' );
+				$fmt          = ( is_string( $date_fmt ) ? $date_fmt : 'F j, Y' ) . ' ' . ( is_string( $time_fmt ) ? $time_fmt : 'g:i a' );
+				$disp         = wp_date( $fmt, $utc_ts );
+				$disp         = is_string( $disp ) ? $disp : gmdate( 'Y-m-d H:i', $utc_ts );
 				echo '<tr class="swh-ticket-row">';
 				echo '<td>' . esc_html( $uid ) . '</td>';
 				echo '<td>' . esc_html( $ticket->post_title ) . '</td>';
 				echo '<td><span class="swh-badge swh-badge-open">' . esc_html( $status ) . '</span></td>';
-				echo '<td><time class="swh-timestamp" datetime="' . esc_attr( gmdate( 'c', $ts ) ) . '" title="' . esc_attr( $ticket->post_modified ) . '">' . esc_html( $ticket->post_modified ) . '</time></td>';
+				echo '<td><time class="swh-timestamp" datetime="' . esc_attr( gmdate( 'c', $utc_ts ) ) . '" title="' . esc_attr( $disp ) . '">' . esc_html( $disp ) . '</time></td>';
 				echo '<td>';
 				if ( $link ) {
 					echo '<a href="' . esc_url( $link ) . '" class="swh-btn" style="padding:6px 12px; font-size:13px;">' . esc_html__( 'View', 'simple-wp-helpdesk' ) . '</a>';

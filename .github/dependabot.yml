@@ -11,6 +11,12 @@ updates:
       - dependency-name: "phpunit/phpunit"
       - dependency-name: "10up/wp_mock"
 
+  - package-ecosystem: "pip"
+    directory: "/testing"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

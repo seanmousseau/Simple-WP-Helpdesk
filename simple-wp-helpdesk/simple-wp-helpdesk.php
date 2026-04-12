@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 3.0.0
+ * Version: 3.1.0
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '3.0.0' );
+define( 'SWH_VERSION', '3.1.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -157,6 +157,52 @@ function swh_inject_plugin_icons_into_update_transient( $transient ) {
 		}
 	}
 	return $transient;
+}
+
+// ==============================================================================
+// AJAX: SEND TEST EMAIL
+// ==============================================================================
+
+add_action( 'wp_ajax_swh_send_test_email', 'swh_ajax_send_test_email' );
+/**
+ * Handles the AJAX "Send Test Email" request from the Settings → Email Templates tab.
+ *
+ * Sends a sample "New Ticket" notification to the WordPress admin email address
+ * so administrators can verify their email configuration is working.
+ *
+ * @since 3.1.0
+ * @return void
+ */
+function swh_ajax_send_test_email() {
+	check_ajax_referer( 'swh_test_email_nonce', 'nonce' );
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'simple-wp-helpdesk' ) ), 403 );
+	}
+	$admin_email_raw = get_option( 'admin_email', '' );
+	$admin_email     = is_string( $admin_email_raw ) ? $admin_email_raw : '';
+	if ( ! is_email( $admin_email ) ) {
+		wp_send_json_error( array( 'message' => __( 'WordPress admin email is not configured.', 'simple-wp-helpdesk' ) ) );
+	}
+	$defs      = swh_get_defaults();
+	$test_data = array(
+		'name'           => __( 'Test Client', 'simple-wp-helpdesk' ),
+		'email'          => $admin_email,
+		'ticket_id'      => 'TKT-0001',
+		'title'          => __( 'Test Ticket — email configuration check', 'simple-wp-helpdesk' ),
+		'status'         => swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : 'Open' ),
+		'priority'       => swh_get_string_option( 'swh_default_priority', is_string( $defs['swh_default_priority'] ) ? $defs['swh_default_priority'] : 'Medium' ),
+		'message'        => __( 'This is a test message sent from Simple WP Helpdesk settings to verify email delivery.', 'simple-wp-helpdesk' ),
+		'ticket_url'     => home_url( '/' ),
+		'admin_url'      => admin_url( 'edit.php?post_type=helpdesk_ticket' ),
+		'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
+	);
+	$result    = swh_send_email( $admin_email, 'swh_em_admin_new_sub', 'swh_em_admin_new_body', $test_data );
+	if ( $result ) {
+		/* translators: %s: admin email address */
+		wp_send_json_success( array( 'message' => sprintf( __( 'Test email sent to %s.', 'simple-wp-helpdesk' ), $admin_email ) ) );
+	} else {
+		wp_send_json_error( array( 'message' => __( 'Email dispatch failed. Check your server mail configuration.', 'simple-wp-helpdesk' ) ) );
+	}
 }
 
 // ==============================================================================

@@ -1,0 +1,1909 @@
+# Copyright (C) 2026 Sean Mousseau
+# This file is distributed under the same license as the Simple WP Helpdesk plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Simple WP Helpdesk 3.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/simple-wp-helpdesk\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-04-12T16:34:55+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: simple-wp-helpdesk\n"
+
+#. Plugin Name of the plugin
+#: simple-wp-helpdesk.php
+msgid "Simple WP Helpdesk"
+msgstr ""
+
+#. Description of the plugin
+#: simple-wp-helpdesk.php
+msgid "A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates."
+msgstr ""
+
+#. Author of the plugin
+#: simple-wp-helpdesk.php
+msgid "Sean Mousseau"
+msgstr ""
+
+#. Author URI of the plugin
+#: simple-wp-helpdesk.php
+msgid "https://github.com/seanmousseau/Simple-WP-Helpdesk"
+msgstr ""
+
+#: admin/class-cron.php:93
+#: includes/class-cron.php:93
+msgid "System Auto-Close"
+msgstr ""
+
+#. translators: %d: number of days of inactivity
+#: admin/class-cron.php:95
+#: includes/class-cron.php:95
+#, php-format
+msgid "Ticket automatically closed due to inactivity (%d days)."
+msgstr ""
+
+#: admin/class-cron.php:188
+#: includes/class-cron.php:188
+msgid "System Maintenance"
+msgstr ""
+
+#. translators: %d: number of days for retention
+#: admin/class-cron.php:190
+#: includes/class-cron.php:190
+#, php-format
+msgid "Original ticket attachments automatically purged (older than %d days)."
+msgstr ""
+
+#. translators: %d: number of days for retention
+#: admin/class-cron.php:248
+#: includes/class-cron.php:248
+#, php-format
+msgid "Attachments automatically purged after %d days"
+msgstr ""
+
+#: admin/class-reporting-ui.php:22
+#: admin/class-reporting-ui.php:78
+msgid "Helpdesk Reports"
+msgstr ""
+
+#: admin/class-reporting-ui.php:23
+msgid "Reports"
+msgstr ""
+
+#: admin/class-reporting-ui.php:74
+#: admin/class-reporting.php:24
+#: simple-wp-helpdesk.php:179
+#: simple-wp-helpdesk.php:225
+msgid "Permission denied."
+msgstr ""
+
+#: admin/class-reporting-ui.php:81
+msgid "Tickets by Status"
+msgstr ""
+
+#: admin/class-reporting-ui.php:85
+msgid "Weekly Trend (8 Weeks)"
+msgstr ""
+
+#: admin/class-reporting-ui.php:89
+msgid "Avg. Resolution Time (30 Days)"
+msgstr ""
+
+#: admin/class-reporting-ui.php:93
+msgid "Avg. First Response Time (30 Days)"
+msgstr ""
+
+#: admin/class-reporting.php:50
+msgid "Unknown report type."
+msgstr ""
+
+#: admin/class-settings.php:29
+#: includes/class-settings.php:29
+msgid "Reset to default"
+msgstr ""
+
+#. translators: Placeholder text shown inside the canned response title input field.
+#: admin/class-settings.php:71
+#: includes/class-settings.php:69
+msgid "Response title..."
+msgstr ""
+
+#: admin/class-settings.php:72
+#: admin/class-settings.php:808
+#: includes/class-settings.php:70
+#: includes/class-settings.php:796
+msgid "Canned response title"
+msgstr ""
+
+#: admin/class-settings.php:73
+#: admin/class-settings.php:809
+#: includes/class-settings.php:71
+#: includes/class-settings.php:797
+msgid "Canned response body"
+msgstr ""
+
+#: admin/class-settings.php:74
+#: admin/class-settings.php:532
+#: admin/class-settings.php:606
+#: admin/class-settings.php:812
+#: admin/class-settings.php:836
+#: admin/class-settings.php:849
+#: includes/class-settings.php:72
+#: includes/class-settings.php:526
+#: includes/class-settings.php:600
+#: includes/class-settings.php:800
+#: includes/class-settings.php:824
+#: includes/class-settings.php:837
+msgid "Remove"
+msgstr ""
+
+#: admin/class-settings.php:75
+msgid "Sending\\u2026"
+msgstr ""
+
+#. translators: Shown after a test email is successfully dispatched.
+#: admin/class-settings.php:77
+msgid "Test email sent successfully."
+msgstr ""
+
+#: admin/class-settings.php:78
+msgid "Failed to send test email."
+msgstr ""
+
+#: admin/class-settings.php:98
+#: admin/class-settings.php:376
+#: includes/class-settings.php:92
+#: includes/class-settings.php:370
+msgid "Helpdesk Settings"
+msgstr ""
+
+#: admin/class-settings.php:98
+#: includes/class-settings.php:92
+msgid "Settings"
+msgstr ""
+
+#: admin/class-settings.php:354
+#: includes/class-settings.php:348
+msgid "Settings saved successfully."
+msgstr ""
+
+#: admin/class-settings.php:356
+#: includes/class-settings.php:350
+msgid "Plugin Factory Reset Complete. All tickets/files purged and settings reverted to default."
+msgstr ""
+
+#: admin/class-settings.php:358
+#: includes/class-settings.php:352
+msgid "All tickets & files have been successfully purged."
+msgstr ""
+
+#. translators: 1: number of tickets deleted, 2: email address
+#: admin/class-settings.php:364
+#: includes/class-settings.php:358
+#, php-format
+msgid "Successfully deleted %1$s ticket(s) and all associated files for %2$s."
+msgstr ""
+
+#: admin/class-settings.php:366
+#: includes/class-settings.php:360
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: admin/class-settings.php:378
+#: includes/class-settings.php:372
+msgid "Settings Sections"
+msgstr ""
+
+#: admin/class-settings.php:379
+#: includes/class-settings.php:373
+msgid "General"
+msgstr ""
+
+#: admin/class-settings.php:380
+#: includes/class-settings.php:374
+msgid "Assignment & Routing"
+msgstr ""
+
+#: admin/class-settings.php:381
+#: includes/class-settings.php:375
+msgid "Email Templates"
+msgstr ""
+
+#: admin/class-settings.php:382
+#: includes/class-settings.php:376
+msgid "Messages"
+msgstr ""
+
+#: admin/class-settings.php:383
+#: includes/class-settings.php:377
+msgid "Anti-Spam"
+msgstr ""
+
+#: admin/class-settings.php:384
+#: includes/class-settings.php:378
+msgid "Canned Responses"
+msgstr ""
+
+#: admin/class-settings.php:385
+#: includes/class-settings.php:379
+msgid "Templates"
+msgstr ""
+
+#: admin/class-settings.php:386
+#: includes/class-settings.php:380
+msgid "Tools"
+msgstr ""
+
+#: admin/class-settings.php:394
+#: includes/class-settings.php:388
+msgid "Custom Priorities"
+msgstr ""
+
+#: admin/class-settings.php:395
+#: includes/class-settings.php:389
+msgid "Default Priority"
+msgstr ""
+
+#: admin/class-settings.php:397
+#: includes/class-settings.php:391
+msgid "Custom Statuses"
+msgstr ""
+
+#: admin/class-settings.php:398
+#: includes/class-settings.php:392
+msgid "Default New Status"
+msgstr ""
+
+#: admin/class-settings.php:399
+#: includes/class-settings.php:393
+msgid "\"Resolved\" Status"
+msgstr ""
+
+#: admin/class-settings.php:399
+#: includes/class-settings.php:393
+msgid "Triggers Auto-close"
+msgstr ""
+
+#: admin/class-settings.php:400
+#: includes/class-settings.php:394
+msgid "\"Closed\" Status"
+msgstr ""
+
+#: admin/class-settings.php:400
+#: includes/class-settings.php:394
+msgid "Disables replies"
+msgstr ""
+
+#: admin/class-settings.php:401
+#: includes/class-settings.php:395
+msgid "\"Re-Opened\" Status"
+msgstr ""
+
+#: admin/class-settings.php:403
+#: includes/class-settings.php:397
+msgid "Auto-Close Days"
+msgstr ""
+
+#: admin/class-settings.php:403
+#: admin/class-settings.php:906
+#: admin/class-settings.php:913
+#: includes/class-settings.php:397
+#: includes/class-settings.php:894
+#: includes/class-settings.php:901
+msgid "days"
+msgstr ""
+
+#: admin/class-settings.php:403
+#: includes/class-settings.php:397
+msgid "If a ticket is Resolved and the user doesn't reply in this many days, it automatically closes. Set to 0 to disable."
+msgstr ""
+
+#: admin/class-settings.php:404
+#: includes/class-settings.php:398
+msgid "Max File Upload Size"
+msgstr ""
+
+#: admin/class-settings.php:404
+#: includes/class-settings.php:398
+msgid "MB"
+msgstr ""
+
+#: admin/class-settings.php:405
+#: includes/class-settings.php:399
+msgid "Max Files Per Upload"
+msgstr ""
+
+#: admin/class-settings.php:405
+#: includes/class-settings.php:399
+msgid "files"
+msgstr ""
+
+#: admin/class-settings.php:405
+#: includes/class-settings.php:399
+msgid "Maximum number of files a user can attach per submission. Set to 0 for unlimited."
+msgstr ""
+
+#: admin/class-settings.php:411
+#: includes/class-settings.php:405
+msgid "Default Assignee"
+msgstr ""
+
+#: admin/class-settings.php:412
+#: admin/class-ticket-editor.php:207
+#: admin/class-ticket-list.php:115
+#: includes/class-settings.php:406
+#: includes/class-ticket-editor.php:196
+msgid "Unassigned"
+msgstr ""
+
+#: admin/class-settings.php:417
+#: includes/class-settings.php:411
+msgid "Fallback Alert Email"
+msgstr ""
+
+#: admin/class-settings.php:419
+#: includes/class-settings.php:413
+msgid "Helpdesk Page"
+msgstr ""
+
+#: admin/class-settings.php:419
+#: includes/class-settings.php:413
+msgid "Client portal destination"
+msgstr ""
+
+#: admin/class-settings.php:427
+#: includes/class-settings.php:421
+msgid "Select a page"
+msgstr ""
+
+#: admin/class-settings.php:444
+#: includes/class-settings.php:438
+msgid "The page clients visit to view their ticket. Use the page containing [helpdesk_portal] if you have a dedicated portal page, or the page containing [submit_ticket] if you use a combined layout. All secure portal links will point here."
+msgstr ""
+
+#: admin/class-settings.php:448
+#: includes/class-settings.php:442
+msgid "Portal Link Expiration"
+msgstr ""
+
+#: admin/class-settings.php:451
+#: includes/class-settings.php:445
+msgid "days (0 = never expires)"
+msgstr ""
+
+#: admin/class-settings.php:452
+#: includes/class-settings.php:446
+msgid "Ticket portal links expire after this many days. Clients can request fresh links via the lookup form."
+msgstr ""
+
+#: admin/class-settings.php:456
+#: includes/class-settings.php:450
+msgid "Restrict Technicians"
+msgstr ""
+
+#: admin/class-settings.php:459
+#: includes/class-settings.php:453
+msgid "Technicians can only view tickets assigned to them"
+msgstr ""
+
+#: admin/class-settings.php:463
+#: includes/class-settings.php:457
+msgid "SLA Breach Alerts"
+msgstr ""
+
+#: admin/class-settings.php:466
+#: includes/class-settings.php:460
+msgid "Warning Threshold"
+msgstr ""
+
+#: admin/class-settings.php:469
+#: admin/class-settings.php:477
+#: includes/class-settings.php:463
+#: includes/class-settings.php:471
+msgid "hours (0 = disabled)"
+msgstr ""
+
+#: admin/class-settings.php:470
+#: includes/class-settings.php:464
+msgid "Mark open tickets as \"warn\" when older than this many hours."
+msgstr ""
+
+#: admin/class-settings.php:474
+#: includes/class-settings.php:468
+msgid "Breach Threshold"
+msgstr ""
+
+#: admin/class-settings.php:478
+#: includes/class-settings.php:472
+msgid "Mark open tickets as \"breach\" and send alert when older than this many hours."
+msgstr ""
+
+#: admin/class-settings.php:482
+#: includes/class-settings.php:476
+msgid "Alert Recipient"
+msgstr ""
+
+#: admin/class-settings.php:485
+#: includes/class-settings.php:479
+msgid "Leave blank to use the default admin/assignee email."
+msgstr ""
+
+#: admin/class-settings.php:489
+#: includes/class-settings.php:483
+msgid "Auto-Assignment Rules"
+msgstr ""
+
+#: admin/class-settings.php:490
+#: includes/class-settings.php:484
+msgid "When a new ticket is submitted with a matching category, it is automatically assigned to the specified technician. Rules are evaluated in order; the first match wins."
+msgstr ""
+
+#: admin/class-settings.php:504
+#: admin/class-ticket-list.php:56
+#: includes/class-installer.php:316
+#: includes/class-settings.php:498
+msgid "Category"
+msgstr ""
+
+#: admin/class-settings.php:505
+#: includes/class-settings.php:499
+msgid "Assign To"
+msgstr ""
+
+#: admin/class-settings.php:518
+#: admin/class-settings.php:579
+#: includes/class-settings.php:512
+#: includes/class-settings.php:573
+msgid "— Select category —"
+msgstr ""
+
+#: admin/class-settings.php:526
+#: admin/class-settings.php:593
+#: includes/class-settings.php:520
+#: includes/class-settings.php:587
+msgid "— Select technician —"
+msgstr ""
+
+#: admin/class-settings.php:537
+#: includes/class-settings.php:531
+msgid "+ Add Rule"
+msgstr ""
+
+#: admin/class-settings.php:624
+msgid "Send Test Email"
+msgstr ""
+
+#: admin/class-settings.php:626
+msgid "Sends a sample \"New Ticket\" email to the WordPress admin address to verify your email settings."
+msgstr ""
+
+#: admin/class-settings.php:631
+#: includes/class-settings.php:619
+msgid "Email Format"
+msgstr ""
+
+#: admin/class-settings.php:635
+#: includes/class-settings.php:623
+msgid "HTML (Recommended)"
+msgstr ""
+
+#: admin/class-settings.php:636
+#: includes/class-settings.php:624
+msgid "Plain Text"
+msgstr ""
+
+#: admin/class-settings.php:638
+#: includes/class-settings.php:626
+msgid "HTML emails include clickable links and a clean layout. Switch to Plain Text for basic SMTP setups."
+msgstr ""
+
+#: admin/class-settings.php:642
+#: includes/class-settings.php:630
+msgid "Reply-by-Email Webhook URL"
+msgstr ""
+
+#: admin/class-settings.php:645
+#: includes/class-settings.php:633
+msgid "Point your email service (Mailgun, SendGrid, Postmark) inbound webhook here. Clients can reply to notification emails and the reply is attached to their ticket."
+msgstr ""
+
+#: admin/class-settings.php:649
+#: includes/class-settings.php:637
+msgid "Webhook Secret"
+msgstr ""
+
+#: admin/class-settings.php:652
+#: includes/class-settings.php:640
+msgid "Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer &lt;secret&gt; in each POST request."
+msgstr ""
+
+#: admin/class-settings.php:657
+#: includes/class-settings.php:645
+msgid "Placeholders:"
+msgstr ""
+
+#: admin/class-settings.php:657
+#: includes/class-settings.php:645
+msgid "lookup only"
+msgstr ""
+
+#: admin/class-settings.php:658
+#: includes/class-settings.php:646
+msgid "Conditional blocks:"
+msgstr ""
+
+#: admin/class-settings.php:658
+#: includes/class-settings.php:646
+msgid "content is only included when the placeholder has a value."
+msgstr ""
+
+#: admin/class-settings.php:659
+#: includes/class-settings.php:647
+msgid "Emails Sent to Client"
+msgstr ""
+
+#: admin/class-settings.php:661
+#: admin/class-settings.php:682
+#: includes/class-settings.php:649
+#: includes/class-settings.php:670
+msgid "New Ticket (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:662
+#: admin/class-settings.php:683
+#: includes/class-settings.php:650
+#: includes/class-settings.php:671
+msgid "New Ticket (Body)"
+msgstr ""
+
+#: admin/class-settings.php:663
+#: includes/class-settings.php:651
+msgid "Tech Replied (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:664
+#: includes/class-settings.php:652
+msgid "Tech Replied (Body)"
+msgstr ""
+
+#: admin/class-settings.php:665
+#: includes/class-settings.php:653
+msgid "Status Changed (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:666
+#: includes/class-settings.php:654
+msgid "Status Changed (Body)"
+msgstr ""
+
+#: admin/class-settings.php:667
+#: includes/class-settings.php:655
+msgid "Reply + Status Change (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:668
+#: includes/class-settings.php:656
+msgid "Reply + Status Change (Body)"
+msgstr ""
+
+#: admin/class-settings.php:669
+#: includes/class-settings.php:657
+msgid "Ticket Resolved (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:670
+#: includes/class-settings.php:658
+msgid "Ticket Resolved (Body)"
+msgstr ""
+
+#: admin/class-settings.php:671
+#: includes/class-settings.php:659
+msgid "Ticket Re-opened (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:672
+#: admin/class-settings.php:687
+#: includes/class-settings.php:660
+#: includes/class-settings.php:675
+msgid "Ticket Re-opened (Body)"
+msgstr ""
+
+#: admin/class-settings.php:673
+#: includes/class-settings.php:661
+msgid "Client Closed Ticket (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:674
+#: admin/class-settings.php:689
+#: includes/class-settings.php:662
+#: includes/class-settings.php:677
+msgid "Client Closed Ticket (Body)"
+msgstr ""
+
+#: admin/class-settings.php:675
+#: includes/class-settings.php:663
+msgid "Auto-Closed (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:676
+#: includes/class-settings.php:664
+msgid "Auto-Closed (Body)"
+msgstr ""
+
+#: admin/class-settings.php:677
+#: includes/class-settings.php:665
+msgid "Ticket Lookup (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:678
+#: includes/class-settings.php:666
+msgid "Ticket Lookup (Body)"
+msgstr ""
+
+#: admin/class-settings.php:680
+#: includes/class-settings.php:668
+msgid "Emails Sent to Technician/Admin"
+msgstr ""
+
+#: admin/class-settings.php:684
+#: includes/class-settings.php:672
+msgid "Client Replied (Sub)"
+msgstr ""
+
+#: admin/class-settings.php:685
+#: includes/class-settings.php:673
+msgid "Client Replied (Body)"
+msgstr ""
+
+#: admin/class-settings.php:686
+#: includes/class-settings.php:674
+msgid "Ticket Re-opened (Sub)"
+msgstr ""
+
+#: admin/class-settings.php:688
+#: includes/class-settings.php:676
+msgid "Client Closed Ticket (Sub)"
+msgstr ""
+
+#: admin/class-settings.php:690
+#: includes/class-settings.php:678
+msgid "Ticket Assigned to You (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:691
+#: includes/class-settings.php:679
+msgid "Ticket Assigned to You (Body)"
+msgstr ""
+
+#: admin/class-settings.php:692
+#: includes/class-settings.php:680
+msgid "SLA Breach Alert (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:693
+#: includes/class-settings.php:681
+msgid "SLA Breach Alert (Body)"
+msgstr ""
+
+#: admin/class-settings.php:695
+#: includes/class-settings.php:683
+msgid "Emails Sent to Client (System)"
+msgstr ""
+
+#: admin/class-settings.php:697
+#: includes/class-settings.php:685
+msgid "Ticket Merged (Subject)"
+msgstr ""
+
+#: admin/class-settings.php:698
+#: includes/class-settings.php:686
+msgid "Ticket Merged (Body)"
+msgstr ""
+
+#: admin/class-settings.php:704
+#: includes/class-settings.php:692
+msgid "Success: Ticket Created"
+msgstr ""
+
+#: admin/class-settings.php:705
+#: includes/class-settings.php:693
+msgid "Success: Reply Added"
+msgstr ""
+
+#: admin/class-settings.php:706
+#: includes/class-settings.php:694
+msgid "Success: Ticket Re-opened"
+msgstr ""
+
+#: admin/class-settings.php:707
+#: includes/class-settings.php:695
+msgid "Success: Ticket Closed"
+msgstr ""
+
+#: admin/class-settings.php:708
+#: includes/class-settings.php:696
+msgid "Error: Anti-Spam Failed"
+msgstr ""
+
+#: admin/class-settings.php:709
+#: includes/class-settings.php:697
+msgid "Error: Missing Fields"
+msgstr ""
+
+#: admin/class-settings.php:710
+#: includes/class-settings.php:698
+msgid "Error: Invalid Link"
+msgstr ""
+
+#: admin/class-settings.php:711
+#: includes/class-settings.php:699
+msgid "Error: Expired Link"
+msgstr ""
+
+#: admin/class-settings.php:712
+#: includes/class-settings.php:700
+msgid "Success: Ticket Links Sent"
+msgstr ""
+
+#: admin/class-settings.php:724
+#: includes/class-settings.php:712
+msgid "Spam Prevention"
+msgstr ""
+
+#: admin/class-settings.php:727
+#: includes/class-settings.php:715
+msgid "None"
+msgstr ""
+
+#: admin/class-settings.php:728
+#: includes/class-settings.php:716
+msgid "Honeypot"
+msgstr ""
+
+#: admin/class-settings.php:729
+#: includes/class-settings.php:717
+msgid "Google reCAPTCHA"
+msgstr ""
+
+#: admin/class-settings.php:730
+#: includes/class-settings.php:718
+msgid "Cloudflare Turnstile"
+msgstr ""
+
+#: admin/class-settings.php:735
+#: includes/class-settings.php:723
+msgid "reCAPTCHA Type"
+msgstr ""
+
+#: admin/class-settings.php:737
+#: includes/class-settings.php:725
+msgid "v2 (Checkbox)"
+msgstr ""
+
+#: admin/class-settings.php:738
+#: includes/class-settings.php:726
+msgid "Enterprise (Score-based)"
+msgstr ""
+
+#: admin/class-settings.php:742
+#: includes/class-settings.php:730
+msgid "reCAPTCHA Site Key"
+msgstr ""
+
+#: admin/class-settings.php:746
+#: includes/class-settings.php:734
+msgid "reCAPTCHA Secret Key"
+msgstr ""
+
+#: admin/class-settings.php:750
+#: includes/class-settings.php:738
+msgid "reCAPTCHA Project ID"
+msgstr ""
+
+#: admin/class-settings.php:754
+#: includes/class-settings.php:742
+msgid "reCAPTCHA API Key"
+msgstr ""
+
+#: admin/class-settings.php:758
+#: includes/class-settings.php:746
+msgid "Enterprise Score Threshold"
+msgstr ""
+
+#: admin/class-settings.php:761
+#: includes/class-settings.php:749
+msgid "Submissions with a score below this threshold are flagged as spam (0.0 = likely bot, 1.0 = likely human)."
+msgstr ""
+
+#: admin/class-settings.php:764
+#: includes/class-settings.php:752
+msgid "Turnstile Site Key"
+msgstr ""
+
+#: admin/class-settings.php:765
+#: includes/class-settings.php:753
+msgid "Turnstile Secret Key"
+msgstr ""
+
+#: admin/class-settings.php:797
+#: includes/class-settings.php:785
+msgid "Pre-written reply templates. Select one in the ticket editor to insert it into the reply field."
+msgstr ""
+
+#: admin/class-settings.php:808
+#: includes/class-settings.php:796
+msgid "Response title…"
+msgstr ""
+
+#: admin/class-settings.php:817
+#: includes/class-settings.php:805
+msgid "+ Add Response"
+msgstr ""
+
+#: admin/class-settings.php:821
+#: includes/class-settings.php:809
+msgid "Pre-configured submission types that pre-fill the ticket description on the frontend form. Clients select a \"Request Type\" to load the matching template."
+msgstr ""
+
+#: admin/class-settings.php:832
+#: admin/class-settings.php:845
+#: includes/class-settings.php:820
+#: includes/class-settings.php:833
+msgid "Request type label…"
+msgstr ""
+
+#: admin/class-settings.php:832
+#: admin/class-settings.php:846
+#: includes/class-settings.php:820
+#: includes/class-settings.php:834
+msgid "Template label"
+msgstr ""
+
+#: admin/class-settings.php:833
+#: admin/class-settings.php:847
+#: includes/class-settings.php:821
+#: includes/class-settings.php:835
+msgid "Template description"
+msgstr ""
+
+#: admin/class-settings.php:833
+#: admin/class-settings.php:848
+#: includes/class-settings.php:821
+#: includes/class-settings.php:836
+msgid "Description template text…"
+msgstr ""
+
+#: admin/class-settings.php:841
+#: includes/class-settings.php:829
+msgid "+ Add Template"
+msgstr ""
+
+#: admin/class-settings.php:895
+#: includes/class-settings.php:883
+msgid "Save Changes"
+msgstr ""
+
+#: admin/class-settings.php:899
+#: includes/class-settings.php:887
+msgid "Automated Data Retention"
+msgstr ""
+
+#: admin/class-settings.php:904
+#: includes/class-settings.php:892
+msgid "Purge Old Attachments"
+msgstr ""
+
+#: admin/class-settings.php:907
+#: includes/class-settings.php:895
+msgid "Automatically delete physical file attachments older than this many days to save server space. Links to the files will be safely removed from the ticket. Set to 0 to disable."
+msgstr ""
+
+#: admin/class-settings.php:911
+#: includes/class-settings.php:899
+msgid "Purge Old Tickets"
+msgstr ""
+
+#: admin/class-settings.php:914
+#: includes/class-settings.php:902
+msgid "Automatically delete entire tickets (and their files) that haven't been updated in this many days. Set to 0 to disable."
+msgstr ""
+
+#: admin/class-settings.php:918
+#: includes/class-settings.php:906
+msgid "Uninstallation Behavior"
+msgstr ""
+
+#: admin/class-settings.php:922
+#: includes/class-settings.php:910
+msgid "Delete all Plugin Data when uninstalled"
+msgstr ""
+
+#: admin/class-settings.php:924
+#: includes/class-settings.php:912
+msgid "If checked, completely deleting this plugin from the WP Plugins screen will wipe all tickets, files, and settings. Leave unchecked to safely preserve data."
+msgstr ""
+
+#: admin/class-settings.php:928
+#: includes/class-settings.php:916
+msgid "Save Retention Settings"
+msgstr ""
+
+#: admin/class-settings.php:932
+#: includes/class-settings.php:920
+msgid "Danger Zone (Manual Cleanup)"
+msgstr ""
+
+#: admin/class-settings.php:933
+#: includes/class-settings.php:921
+msgid "These manual actions are permanent and cannot be undone."
+msgstr ""
+
+#: admin/class-settings.php:937
+#: includes/class-settings.php:925
+msgid "GDPR / Client Data Purge:"
+msgstr ""
+
+#: admin/class-settings.php:937
+#: includes/class-settings.php:925
+msgid "Deletes all tickets, comments, and files associated with a specific email address."
+msgstr ""
+
+#: admin/class-settings.php:939
+#: includes/class-settings.php:927
+msgid "Are you sure you want to delete all data for this email?"
+msgstr ""
+
+#: admin/class-settings.php:939
+#: includes/class-settings.php:927
+msgid "Delete Client Data"
+msgstr ""
+
+#: admin/class-settings.php:943
+#: includes/class-settings.php:931
+msgid "Purge ALL Tickets:"
+msgstr ""
+
+#: admin/class-settings.php:943
+#: includes/class-settings.php:931
+msgid "Deletes all helpdesk tickets, conversation history, and associated file uploads for EVERYONE."
+msgstr ""
+
+#: admin/class-settings.php:944
+#: includes/class-settings.php:932
+msgid "Are you sure you want to PURGE ALL TICKETS? This cannot be undone."
+msgstr ""
+
+#: admin/class-settings.php:944
+#: includes/class-settings.php:932
+msgid "Purge All Tickets"
+msgstr ""
+
+#: admin/class-settings.php:948
+#: includes/class-settings.php:936
+msgid "Factory Reset:"
+msgstr ""
+
+#: admin/class-settings.php:948
+#: includes/class-settings.php:936
+msgid "Purges all tickets AND resets all plugin settings back to original defaults."
+msgstr ""
+
+#: admin/class-settings.php:949
+#: includes/class-settings.php:937
+msgid "Are you sure you want to FACTORY RESET the plugin? This cannot be undone."
+msgstr ""
+
+#: admin/class-settings.php:949
+#: includes/class-settings.php:937
+msgid "Factory Reset Plugin"
+msgstr ""
+
+#: admin/class-ticket-editor.php:38
+#: includes/class-ticket-editor.php:38
+msgid "Simple WP Helpdesk:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:38
+#: includes/class-ticket-editor.php:38
+msgid "The Helpdesk Page setting is not configured. Admin-created tickets will not have a client portal URL."
+msgstr ""
+
+#: admin/class-ticket-editor.php:39
+#: includes/class-ticket-editor.php:39
+msgid "Configure it under Settings &rarr; Assignment & Routing."
+msgstr ""
+
+#: admin/class-ticket-editor.php:64
+#: includes/class-ticket-editor.php:64
+msgid "Ticket reassigned successfully."
+msgstr ""
+
+#: admin/class-ticket-editor.php:83
+#: includes/class-ticket-editor.php:82
+msgid "Ticket Details"
+msgstr ""
+
+#: admin/class-ticket-editor.php:84
+#: includes/class-ticket-editor.php:83
+msgid "Conversation & Reply"
+msgstr ""
+
+#: admin/class-ticket-editor.php:133
+#: includes/class-ticket-editor.php:122
+msgid "New Ticket"
+msgstr ""
+
+#: admin/class-ticket-editor.php:133
+#: includes/class-ticket-editor.php:122
+msgid "ID:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:135
+#: includes/class-ticket-editor.php:124
+msgid "Client Name:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:136
+#: includes/class-ticket-editor.php:125
+msgid "Client name"
+msgstr ""
+
+#: admin/class-ticket-editor.php:137
+#: includes/class-ticket-editor.php:126
+msgid "Client Email:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:140
+#: includes/class-ticket-editor.php:129
+msgid "Send confirmation email to client"
+msgstr ""
+
+#: admin/class-ticket-editor.php:175
+#: includes/class-ticket-editor.php:164
+msgid "All Attachments:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:190
+#: includes/class-ticket-editor.php:179
+msgid "Request Type:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:193
+#: includes/class-ticket-editor.php:182
+msgid "CC / Watchers:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:195
+#: includes/class-ticket-editor.php:184
+msgid "Comma-separated email addresses to CC on all client notifications for this ticket."
+msgstr ""
+
+#: admin/class-ticket-editor.php:201
+#: includes/class-ticket-editor.php:190
+msgid "First Response:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:202
+#: includes/class-ticket-editor.php:191
+msgid "after submission"
+msgstr ""
+
+#: admin/class-ticket-editor.php:205
+#: includes/class-ticket-editor.php:194
+msgid "Assigned To:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:212
+#: frontend/class-portal.php:241
+#: frontend/class-shortcode.php:342
+#: includes/class-shortcode.php:342
+#: includes/class-ticket-editor.php:201
+msgid "Priority:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:218
+#: frontend/class-portal.php:240
+#: includes/class-ticket-editor.php:207
+msgid "Status:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:228
+#: includes/class-ticket-editor.php:217
+msgid "SLA Breach"
+msgstr ""
+
+#: admin/class-ticket-editor.php:228
+#: includes/class-ticket-editor.php:217
+msgid "SLA Warning"
+msgstr ""
+
+#: admin/class-ticket-editor.php:234
+#: includes/class-ticket-editor.php:223
+msgid "Merge Ticket"
+msgstr ""
+
+#: admin/class-ticket-editor.php:235
+#: includes/class-ticket-editor.php:224
+msgid "Move all replies from this ticket into another. This ticket will be closed after merging."
+msgstr ""
+
+#: admin/class-ticket-editor.php:236
+#: includes/class-ticket-editor.php:225
+msgid "Target ticket ID"
+msgstr ""
+
+#: admin/class-ticket-editor.php:237
+#: includes/class-ticket-editor.php:226
+msgid "Merge into Target"
+msgstr ""
+
+#: admin/class-ticket-editor.php:245
+#: includes/class-ticket-editor.php:234
+msgid "Please enter a valid ticket ID."
+msgstr ""
+
+#: admin/class-ticket-editor.php:248
+#: includes/class-ticket-editor.php:237
+msgid "Merging…"
+msgstr ""
+
+#: admin/class-ticket-editor.php:259
+#: includes/class-ticket-editor.php:248
+msgid "Merged."
+msgstr ""
+
+#: admin/class-ticket-editor.php:262
+#: includes/class-ticket-editor.php:251
+msgid "Merge failed."
+msgstr ""
+
+#: admin/class-ticket-editor.php:291
+#: includes/class-ticket-editor.php:280
+msgid "Ticket Conversation"
+msgstr ""
+
+#. translators: %s: comment author name
+#: admin/class-ticket-editor.php:302
+#: includes/class-ticket-editor.php:291
+#, php-format
+msgid "Internal Note (%s)"
+msgstr ""
+
+#. translators: %s: comment author name
+#: admin/class-ticket-editor.php:307
+#: includes/class-ticket-editor.php:296
+#, php-format
+msgid "Client (%s)"
+msgstr ""
+
+#. translators: %s: comment author name
+#. translators: %s: technician name
+#: admin/class-ticket-editor.php:307
+#: frontend/class-portal.php:279
+#: includes/class-ticket-editor.php:296
+#, php-format
+msgid "Technician (%s)"
+msgstr ""
+
+#: admin/class-ticket-editor.php:330
+#: includes/class-ticket-editor.php:319
+msgid "No replies yet. Use the boxes below to start the conversation."
+msgstr ""
+
+#: admin/class-ticket-editor.php:336
+#: includes/class-ticket-editor.php:325
+msgid "Add a Public Reply"
+msgstr ""
+
+#: admin/class-ticket-editor.php:337
+#: includes/class-ticket-editor.php:326
+msgid "This will be emailed to the client."
+msgstr ""
+
+#: admin/class-ticket-editor.php:343
+#: includes/class-ticket-editor.php:332
+msgid "Insert Canned Response:"
+msgstr ""
+
+#: admin/class-ticket-editor.php:345
+#: includes/class-ticket-editor.php:334
+msgid "— Select a response —"
+msgstr ""
+
+#: admin/class-ticket-editor.php:354
+#: includes/class-ticket-editor.php:343
+msgid "Insert"
+msgstr ""
+
+#: admin/class-ticket-editor.php:357
+#: includes/class-ticket-editor.php:346
+msgid "Type reply here..."
+msgstr ""
+
+#: admin/class-ticket-editor.php:358
+#: frontend/class-portal.php:333
+#: frontend/class-portal.php:380
+#: includes/class-ticket-editor.php:347
+msgid "Attach Files (Optional):"
+msgstr ""
+
+#: admin/class-ticket-editor.php:360
+#: includes/class-ticket-editor.php:349
+msgid "Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT."
+msgstr ""
+
+#: admin/class-ticket-editor.php:363
+#: frontend/class-portal.php:367
+msgid "Send Reply"
+msgstr ""
+
+#: admin/class-ticket-editor.php:367
+#: includes/class-ticket-editor.php:353
+msgid "Add Internal Note"
+msgstr ""
+
+#: admin/class-ticket-editor.php:368
+#: includes/class-ticket-editor.php:354
+msgid "Hidden from client. For staff only."
+msgstr ""
+
+#: admin/class-ticket-editor.php:369
+#: includes/class-ticket-editor.php:355
+msgid "Type private note here..."
+msgstr ""
+
+#: admin/class-ticket-editor.php:371
+msgid "Save Note"
+msgstr ""
+
+#: admin/class-ticket-editor.php:593
+#: admin/class-ticket-editor.php:619
+#: frontend/class-portal.php:129
+#: frontend/class-portal.php:155
+#: frontend/class-portal.php:193
+#: frontend/class-portal.php:215
+#: includes/class-ticket-editor.php:582
+#: includes/class-ticket-editor.php:608
+msgid "Attached file(s)"
+msgstr ""
+
+#: admin/class-ticket-editor.php:645
+#: includes/class-ticket-editor.php:634
+msgid "No additional notes provided."
+msgstr ""
+
+#: admin/class-ticket-list.php:50
+#: frontend/class-portal.php:448
+msgid "Ticket #"
+msgstr ""
+
+#: admin/class-ticket-list.php:52
+#: frontend/class-portal.php:450
+msgid "Status"
+msgstr ""
+
+#: admin/class-ticket-list.php:53
+msgid "Priority"
+msgstr ""
+
+#: admin/class-ticket-list.php:54
+msgid "Assigned To"
+msgstr ""
+
+#: admin/class-ticket-list.php:55
+msgid "Client"
+msgstr ""
+
+#: admin/class-ticket-list.php:113
+msgid "Unknown"
+msgstr ""
+
+#: admin/class-ticket-list.php:276
+msgid "You are not assigned to this ticket."
+msgstr ""
+
+#. translators: %s: ticket status label
+#: admin/class-ticket-list.php:356
+#, php-format
+msgid "Set Status: %s"
+msgstr ""
+
+#. translators: 1: number of tickets updated, 2: new status label
+#: admin/class-ticket-list.php:442
+#, php-format
+msgid "%1$s ticket(s) updated to status: %2$s"
+msgstr ""
+
+#: admin/class-ticket-list.php:468
+msgid "All Statuses"
+msgstr ""
+
+#: admin/class-ticket-list.php:484
+#: includes/class-installer.php:317
+msgid "All Categories"
+msgstr ""
+
+#: admin/class-ticket-list.php:498
+msgid "All Priorities"
+msgstr ""
+
+#. translators: %d: number of tickets with unread client replies
+#: admin/class-ticket-list.php:591
+#, php-format
+msgid "%d ticket(s) with unread client replies"
+msgstr ""
+
+#: frontend/class-portal.php:73
+#: frontend/class-portal.php:504
+#: frontend/class-shortcode.php:147
+#: frontend/class-shortcode.php:280
+#: includes/class-shortcode.php:147
+#: includes/class-shortcode.php:280
+msgid "Please wait a moment before submitting again."
+msgstr ""
+
+#: frontend/class-portal.php:86
+msgid "TICKET CLOSED BY CLIENT"
+msgstr ""
+
+#: frontend/class-portal.php:100
+msgid "How was your support experience?"
+msgstr ""
+
+#. translators: %d: star rating value
+#: frontend/class-portal.php:104
+#, php-format
+msgid "%d star"
+msgstr ""
+
+#: frontend/class-portal.php:107
+msgid "Skip"
+msgstr ""
+
+#: frontend/class-portal.php:109
+msgid "Thanks for your feedback!"
+msgstr ""
+
+#: frontend/class-portal.php:127
+#: frontend/class-portal.php:129
+msgid "TICKET RE-OPENED:"
+msgstr ""
+
+#: frontend/class-portal.php:131
+msgid "TICKET RE-OPENED BY CLIENT"
+msgstr ""
+
+#. translators: 1: number of skipped files, 2: upload size limit in MB
+#: frontend/class-portal.php:170
+#: frontend/class-portal.php:229
+#: frontend/class-shortcode.php:257
+#: includes/class-shortcode.php:257
+#, php-format
+msgid "%1$d file was not uploaded because it exceeds the %2$dMB size limit."
+msgid_plural "%1$d files were not uploaded because they exceed the %2$dMB size limit."
+msgstr[0] ""
+msgstr[1] ""
+
+#: frontend/class-portal.php:247
+msgid "Attachments:"
+msgstr ""
+
+#: frontend/class-portal.php:258
+msgid "Conversation History"
+msgstr ""
+
+#. translators: %s: technician name
+#: frontend/class-portal.php:279
+msgid "You"
+msgstr ""
+
+#: frontend/class-portal.php:308
+msgid "No replies yet."
+msgstr ""
+
+#: frontend/class-portal.php:315
+msgid "&#10003; Your issue is resolved?"
+msgstr ""
+
+#: frontend/class-portal.php:316
+msgid "Mark this ticket as closed once your issue is fully resolved."
+msgstr ""
+
+#: frontend/class-portal.php:320
+msgid "Close Ticket"
+msgstr ""
+
+#: frontend/class-portal.php:323
+msgid "Still need help?"
+msgstr ""
+
+#: frontend/class-portal.php:323
+msgid "Reply below &#8595;"
+msgstr ""
+
+#: frontend/class-portal.php:329
+msgid "Add a Reply:"
+msgstr ""
+
+#. translators: 1: max upload size in MB, 2: max file count
+#: frontend/class-portal.php:338
+#, php-format
+msgid "Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: %1$sMB per file. Max files: %2$s."
+msgstr ""
+
+#: frontend/class-portal.php:372
+msgid "This ticket is closed."
+msgstr ""
+
+#: frontend/class-portal.php:376
+msgid "Explain why you need this re-opened:"
+msgstr ""
+
+#. translators: 1: max upload size in MB, 2: max file count
+#: frontend/class-portal.php:385
+#: frontend/class-shortcode.php:398
+#: includes/class-shortcode.php:398
+#, php-format
+msgid "Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: %1$sMB. Max files: %2$s."
+msgstr ""
+
+#: frontend/class-portal.php:393
+msgid "Re-open Ticket"
+msgstr ""
+
+#: frontend/class-portal.php:441
+msgid "My Open Tickets"
+msgstr ""
+
+#: frontend/class-portal.php:444
+msgid "You have no open tickets."
+msgstr ""
+
+#: frontend/class-portal.php:449
+msgid "Summary"
+msgstr ""
+
+#: frontend/class-portal.php:451
+msgid "Last Updated"
+msgstr ""
+
+#: frontend/class-portal.php:474
+msgid "View"
+msgstr ""
+
+#: frontend/class-portal.php:476
+msgid "Link unavailable"
+msgstr ""
+
+#: frontend/class-portal.php:565
+msgid "Enter your email address to receive links to your open tickets."
+msgstr ""
+
+#: frontend/class-portal.php:569
+#: frontend/class-shortcode.php:450
+#: includes/class-shortcode.php:450
+msgid "Your Email Address:"
+msgstr ""
+
+#: frontend/class-portal.php:576
+#: frontend/class-shortcode.php:457
+#: includes/class-shortcode.php:457
+msgid "Send My Ticket Links"
+msgstr ""
+
+#. translators: %d: maximum number of files allowed
+#: frontend/class-shortcode.php:75
+#: frontend/class-shortcode.php:514
+#: includes/class-shortcode.php:75
+#: includes/class-shortcode.php:514
+#, php-format
+msgid "You may only attach up to %d file(s) per upload."
+msgstr ""
+
+#. translators: %s: file name
+#: frontend/class-shortcode.php:77
+#: frontend/class-shortcode.php:516
+#: includes/class-shortcode.php:77
+#: includes/class-shortcode.php:516
+#, php-format
+msgid "File \"%s\" has an invalid type."
+msgstr ""
+
+#. translators: 1: file name, 2: max file size in MB
+#: frontend/class-shortcode.php:79
+#: frontend/class-shortcode.php:518
+#: includes/class-shortcode.php:79
+#: includes/class-shortcode.php:518
+#, php-format
+msgid "File \"%1$s\" exceeds the %2$dMB size limit."
+msgstr ""
+
+#. translators: shown as first option in the Request Type dropdown
+#: frontend/class-shortcode.php:81
+#: frontend/class-shortcode.php:354
+#: includes/class-shortcode.php:81
+#: includes/class-shortcode.php:354
+msgid "— Select a request type —"
+msgstr ""
+
+#: frontend/class-shortcode.php:263
+#: includes/class-shortcode.php:263
+msgid "Sorry, there was a problem saving your ticket. Please try again."
+msgstr ""
+
+#: frontend/class-shortcode.php:333
+#: includes/class-shortcode.php:333
+msgid "Your Name:"
+msgstr ""
+
+#: frontend/class-shortcode.php:337
+#: includes/class-shortcode.php:337
+msgid "Your Email:"
+msgstr ""
+
+#: frontend/class-shortcode.php:352
+#: includes/class-shortcode.php:352
+msgid "Request Type (Optional):"
+msgstr ""
+
+#: frontend/class-shortcode.php:372
+#: includes/class-shortcode.php:372
+msgid "Category:"
+msgstr ""
+
+#: frontend/class-shortcode.php:374
+#: includes/class-shortcode.php:374
+msgid "— Select a category —"
+msgstr ""
+
+#: frontend/class-shortcode.php:385
+#: includes/class-shortcode.php:385
+msgid "Problem Summary (Title):"
+msgstr ""
+
+#: frontend/class-shortcode.php:389
+#: includes/class-shortcode.php:389
+msgid "Problem Description:"
+msgstr ""
+
+#: frontend/class-shortcode.php:393
+#: includes/class-shortcode.php:393
+msgid "Attachments (Optional):"
+msgstr ""
+
+#: frontend/class-shortcode.php:440
+#: includes/class-shortcode.php:440
+msgid "Submit Ticket"
+msgstr ""
+
+#: frontend/class-shortcode.php:445
+#: includes/class-shortcode.php:445
+msgid "Already submitted a ticket? Resend my ticket links"
+msgstr ""
+
+#: includes/class-email.php:189
+msgid "Inbound email is not configured. Set a Webhook Secret in Simple WP Helpdesk settings."
+msgstr ""
+
+#: includes/class-email.php:197
+msgid "Unauthorized."
+msgstr ""
+
+#: includes/class-installer.php:277
+#: includes/class-installer.php:286
+msgid "Tickets"
+msgstr ""
+
+#: includes/class-installer.php:278
+msgid "Ticket"
+msgstr ""
+
+#: includes/class-installer.php:279
+msgid "Add New Ticket"
+msgstr ""
+
+#: includes/class-installer.php:280
+msgid "Edit Ticket"
+msgstr ""
+
+#: includes/class-installer.php:281
+msgid "All Tickets"
+msgstr ""
+
+#: includes/class-installer.php:282
+msgid "View Ticket"
+msgstr ""
+
+#: includes/class-installer.php:283
+msgid "Search Tickets"
+msgstr ""
+
+#: includes/class-installer.php:284
+msgid "No tickets found."
+msgstr ""
+
+#: includes/class-installer.php:285
+msgid "No tickets found in Trash."
+msgstr ""
+
+#: includes/class-installer.php:315
+#: includes/class-installer.php:325
+msgid "Categories"
+msgstr ""
+
+#: includes/class-installer.php:318
+msgid "Edit Category"
+msgstr ""
+
+#: includes/class-installer.php:319
+msgid "View Category"
+msgstr ""
+
+#: includes/class-installer.php:320
+msgid "Update Category"
+msgstr ""
+
+#: includes/class-installer.php:321
+msgid "Add New Category"
+msgstr ""
+
+#: includes/class-installer.php:322
+msgid "New Category Name"
+msgstr ""
+
+#: includes/class-installer.php:323
+msgid "Search Categories"
+msgstr ""
+
+#: includes/class-installer.php:324
+msgid "No categories found."
+msgstr ""
+
+#. translators: "Update" refers to the WordPress post editor button
+#: includes/class-ticket-editor.php:361
+#, php-format
+msgid "Click the %s button on the top right to save the ticket."
+msgstr ""
+
+#. translators: "Update" refers to the WordPress post editor button
+#: includes/class-ticket-editor.php:361
+msgid "Update"
+msgstr ""
+
+#: includes/class-ticket.php:41
+msgid "Invalid request."
+msgstr ""
+
+#: includes/class-ticket.php:46
+msgid "Invalid ticket."
+msgstr ""
+
+#: includes/class-ticket.php:58
+msgid "Access denied."
+msgstr ""
+
+#: includes/class-ticket.php:62
+msgid "This link has expired."
+msgstr ""
+
+#: includes/class-ticket.php:73
+msgid "File not found."
+msgstr ""
+
+#: includes/class-ticket.php:418
+msgid "Ticket is not closed."
+msgstr ""
+
+#: simple-wp-helpdesk.php:102
+msgid "Tickets as Custom Post Types"
+msgstr ""
+
+#: simple-wp-helpdesk.php:102
+msgid "all data lives in standard WP tables; no schema migrations or DB cleanup needed on uninstall"
+msgstr ""
+
+#. translators: %s: [submit_ticket] shortcode name wrapped in <code> tags
+#: simple-wp-helpdesk.php:104
+msgid "Frontend submission form"
+msgstr ""
+
+#. translators: %s: [submit_ticket] shortcode name wrapped in <code> tags
+#: simple-wp-helpdesk.php:104
+#, php-format
+msgid "%s shortcode with configurable priority, status, and lookup form visibility"
+msgstr ""
+
+#: simple-wp-helpdesk.php:105
+msgid "Secure token-based client portal"
+msgstr ""
+
+#: simple-wp-helpdesk.php:105
+msgid "clients view conversation history, reply, upload attachments, and close or reopen their ticket"
+msgstr ""
+
+#: simple-wp-helpdesk.php:106
+msgid "My Tickets dashboard"
+msgstr ""
+
+#: simple-wp-helpdesk.php:106
+msgid "portal without a token shows a ticket table for logged-in users or the lookup form for guests"
+msgstr ""
+
+#. translators: %s: [helpdesk_portal] shortcode name wrapped in <code> tags
+#: simple-wp-helpdesk.php:108
+msgid "Standalone portal shortcode"
+msgstr ""
+
+#. translators: %s: [helpdesk_portal] shortcode name wrapped in <code> tags
+#: simple-wp-helpdesk.php:108
+#, php-format
+msgid "optional %s for a dedicated support hub page"
+msgstr ""
+
+#: simple-wp-helpdesk.php:109
+msgid "Canned responses"
+msgstr ""
+
+#: simple-wp-helpdesk.php:109
+msgid "save reply templates in Settings and insert them from within the ticket editor"
+msgstr ""
+
+#. translators: %s: {if key}…{endif key} template conditional syntax wrapped in <code> tags
+#: simple-wp-helpdesk.php:111
+msgid "14 customizable email templates"
+msgstr ""
+
+#. translators: %s: {if key}…{endif key} template conditional syntax wrapped in <code> tags
+#: simple-wp-helpdesk.php:111
+#, php-format
+msgid "HTML and plain-text, with dynamic placeholders and %s conditional blocks"
+msgstr ""
+
+#: simple-wp-helpdesk.php:112
+msgid "Multi-file uploads"
+msgstr ""
+
+#: simple-wp-helpdesk.php:112
+msgid "XHR progress bar on submission, configurable size/count limits, files served via a secure proxy endpoint"
+msgstr ""
+
+#: simple-wp-helpdesk.php:113
+msgid "Technician role"
+msgstr ""
+
+#: simple-wp-helpdesk.php:113
+msgid "optional restriction so technicians only see tickets assigned to them"
+msgstr ""
+
+#: simple-wp-helpdesk.php:114
+msgid "Bulk status changes"
+msgstr ""
+
+#: simple-wp-helpdesk.php:114
+msgid "update multiple tickets at once directly from the ticket list"
+msgstr ""
+
+#: simple-wp-helpdesk.php:115
+msgid "CSAT satisfaction prompt"
+msgstr ""
+
+#: simple-wp-helpdesk.php:115
+msgid "1&#x2013;5 star rating shown to clients after closing a ticket, stored as post meta"
+msgstr ""
+
+#: simple-wp-helpdesk.php:116
+msgid "Background automation"
+msgstr ""
+
+#: simple-wp-helpdesk.php:116
+msgid "auto-close resolved tickets and scheduled data retention with cron locking"
+msgstr ""
+
+#: simple-wp-helpdesk.php:117
+msgid "Anti-spam"
+msgstr ""
+
+#: simple-wp-helpdesk.php:117
+msgid "honeypot (zero config), Google reCAPTCHA v2/Enterprise, and Cloudflare Turnstile on all public forms"
+msgstr ""
+
+#. translators: %s: wp_options WordPress table name wrapped in <code> tags
+#: simple-wp-helpdesk.php:119
+msgid "CDN/proxy-aware rate limiting"
+msgstr ""
+
+#. translators: %s: wp_options WordPress table name wrapped in <code> tags
+#: simple-wp-helpdesk.php:119
+#, php-format
+msgid "persistent via %s, survives cache flushes"
+msgstr ""
+
+#: simple-wp-helpdesk.php:120
+msgid "Token expiration"
+msgstr ""
+
+#: simple-wp-helpdesk.php:120
+msgid "configurable TTL with auto-rotation for portal links"
+msgstr ""
+
+#: simple-wp-helpdesk.php:121
+msgid "Tabbed settings panel"
+msgstr ""
+
+#: simple-wp-helpdesk.php:121
+msgid "7 tabs: General, Assignment &amp; Routing, Email Templates, Messages, Anti-Spam, Canned Responses, Tools"
+msgstr ""
+
+#: simple-wp-helpdesk.php:122
+msgid "GDPR tools"
+msgstr ""
+
+#: simple-wp-helpdesk.php:122
+msgid "per-email data purge, retention policies, and thorough uninstall cleanup"
+msgstr ""
+
+#: simple-wp-helpdesk.php:123
+msgid "Internationalization"
+msgstr ""
+
+#: simple-wp-helpdesk.php:123
+msgid "i18n ready with full text-domain support"
+msgstr ""
+
+#: simple-wp-helpdesk.php:124
+msgid "GitHub auto-updater"
+msgstr ""
+
+#: simple-wp-helpdesk.php:124
+msgid "new releases delivered directly to the WordPress dashboard via plugin-update-checker"
+msgstr ""
+
+#: simple-wp-helpdesk.php:126
+msgid "Simple WP Helpdesk is a full-featured helpdesk and ticketing system built entirely on WordPress core data structures. No custom database tables, no external services, no subscriptions — your data stays on your server."
+msgstr ""
+
+#: simple-wp-helpdesk.php:127
+msgid "Key Features:"
+msgstr ""
+
+#: simple-wp-helpdesk.php:184
+msgid "WordPress admin email is not configured."
+msgstr ""
+
+#: simple-wp-helpdesk.php:188
+msgid "Test Client"
+msgstr ""
+
+#: simple-wp-helpdesk.php:191
+msgid "Test Ticket — email configuration check"
+msgstr ""
+
+#: simple-wp-helpdesk.php:194
+msgid "This is a test message sent from Simple WP Helpdesk settings to verify email delivery."
+msgstr ""
+
+#. translators: %s: admin email address
+#: simple-wp-helpdesk.php:202
+#, php-format
+msgid "Test email sent to %s."
+msgstr ""
+
+#: simple-wp-helpdesk.php:204
+msgid "Email dispatch failed. Check your server mail configuration."
+msgstr ""
+
+#: simple-wp-helpdesk.php:232
+msgid "Invalid ticket IDs."
+msgstr ""
+
+#: simple-wp-helpdesk.php:235
+msgid "Merge failed. Check that both tickets exist."
+msgstr ""
+
+#: simple-wp-helpdesk.php:237
+msgid "Tickets merged successfully."
+msgstr ""

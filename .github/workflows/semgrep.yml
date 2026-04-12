@@ -21,13 +21,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         # Shallow clone: static analysis does not need full git history.
         with:
           fetch-depth: 1
 
       - name: Install Semgrep
-        run: python -m pip install "semgrep==1.159.0"
+        run: python -m pip install "semgrep==1.157.0"
 
       - name: Run Semgrep
         run: |

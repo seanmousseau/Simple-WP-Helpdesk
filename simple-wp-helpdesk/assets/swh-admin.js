@@ -194,4 +194,89 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			replyArea.focus();
 		} );
 	}
+
+	// Ticket editor: dedicated Send Reply / Save Note buttons.
+	const sendReplyBtn = document.getElementById( 'swh-send-reply-btn' );
+	const saveNoteBtn  = document.getElementById( 'swh-save-note-btn' );
+	const noteArea     = document.getElementById( 'swh-tech-note-text' );
+
+	if ( sendReplyBtn ) {
+		/**
+		 * Submits the ticket form as a "Send Reply": clears the note textarea first so
+		 * only the public reply is saved, then triggers the WordPress post-update form.
+		 */
+		sendReplyBtn.addEventListener( 'click', function () {
+			if ( noteArea ) {
+				noteArea.value = '';
+			}
+			const form = document.querySelector( '#post' );
+			if ( form ) {
+				const submitBtn = document.getElementById( 'publish' );
+				if ( submitBtn ) {
+					submitBtn.click();
+				} else {
+					form.submit();
+				}
+			}
+		} );
+	}
+
+	if ( saveNoteBtn ) {
+		/**
+		 * Submits the ticket form as a "Save Note": clears the reply textarea first so
+		 * only the internal note is saved, then triggers the WordPress post-update form.
+		 */
+		saveNoteBtn.addEventListener( 'click', function () {
+			if ( replyArea ) {
+				replyArea.value = '';
+			}
+			const form = document.querySelector( '#post' );
+			if ( form ) {
+				const submitBtn = document.getElementById( 'publish' );
+				if ( submitBtn ) {
+					submitBtn.click();
+				} else {
+					form.submit();
+				}
+			}
+		} );
+	}
+
+	// Settings: Send Test Email button.
+	const testEmailBtn = document.getElementById( 'swh-test-email-btn' );
+	const testEmailMsg = document.getElementById( 'swh-test-email-msg' );
+
+	if ( testEmailBtn && testEmailMsg ) {
+		/**
+		 * Sends a test email via AJAX and shows the result inline.
+		 */
+		testEmailBtn.addEventListener( 'click', function () {
+			const i18n   = ( window.swhAdmin && window.swhAdmin.i18n ) ? window.swhAdmin.i18n : {};
+			const nonce  = ( window.swhAdmin && window.swhAdmin.testEmailNonce ) ? window.swhAdmin.testEmailNonce : '';
+			const ajaxUrl = ( window.swhAdmin && window.swhAdmin.ajaxUrl ) ? window.swhAdmin.ajaxUrl : '';
+
+			testEmailBtn.disabled    = true;
+			testEmailMsg.textContent = i18n.testEmailSending || 'Sending\u2026';
+			testEmailMsg.style.color = '#666';
+
+			const data = new URLSearchParams();
+			data.append( 'action', 'swh_send_test_email' );
+			data.append( 'nonce', nonce );
+
+			fetch( ajaxUrl, { method: 'POST', body: data } )
+				.then( function ( r ) { return r.json(); } )
+				.then( function ( json ) {
+					testEmailBtn.disabled    = false;
+					testEmailMsg.textContent = json.success
+						? ( json.data && json.data.message ? json.data.message : ( i18n.testEmailSuccess || 'Test email sent.' ) )
+						: ( json.data && json.data.message ? json.data.message : ( i18n.testEmailError || 'Failed to send.' ) );
+					testEmailMsg.style.color = json.success ? 'green' : '#d63638';
+				} )
+				.catch( function () {
+					testEmailBtn.disabled    = false;
+					testEmailMsg.textContent = i18n.testEmailError || 'Failed to send.';
+					testEmailMsg.style.color = '#d63638';
+				} );
+		} );
+	}
 } );

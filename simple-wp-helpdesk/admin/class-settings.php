@@ -64,12 +64,18 @@ function swh_enqueue_admin_assets( $hook ) {
 		'swh-admin',
 		'swhAdmin',
 		array(
-			'i18n' => array(
+			'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+			'testEmailNonce' => wp_create_nonce( 'swh_test_email_nonce' ),
+			'i18n'           => array(
 				/* translators: Placeholder text shown inside the canned response title input field. */
 				'cannedTitlePlaceholder' => __( 'Response title...', 'simple-wp-helpdesk' ),
 				'cannedTitleAriaLabel'   => __( 'Canned response title', 'simple-wp-helpdesk' ),
 				'cannedBodyAriaLabel'    => __( 'Canned response body', 'simple-wp-helpdesk' ),
 				'removeLabel'            => __( 'Remove', 'simple-wp-helpdesk' ),
+				'testEmailSending'       => __( 'Sending\u2026', 'simple-wp-helpdesk' ),
+				/* translators: Shown after a test email is successfully dispatched. */
+				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
+				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -614,6 +620,12 @@ function swh_render_settings_page() {
 			</div>
 
 			<div id="tab-emails" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-emails" tabindex="0" style="display:none;">
+				<p>
+					<button type="button" id="swh-test-email-btn" class="button"><?php esc_html_e( 'Send Test Email', 'simple-wp-helpdesk' ); ?></button>
+					<span id="swh-test-email-msg" style="margin-left:10px; font-size:13px;" aria-live="polite"></span>
+					<span class="description" style="display:block; margin-top:4px; font-size:12px;"><?php esc_html_e( 'Sends a sample "New Ticket" email to the WordPress admin address to verify your email settings.', 'simple-wp-helpdesk' ); ?></span>
+				</p>
+				<hr>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Email Format', 'simple-wp-helpdesk' ); ?></th>

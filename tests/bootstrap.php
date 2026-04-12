@@ -19,7 +19,7 @@ define( 'HOUR_IN_SECONDS', 3600 );
 define( 'SWH_PLUGIN_DIR', dirname( __DIR__ ) . '/simple-wp-helpdesk/' );
 define( 'SWH_PLUGIN_URL', 'https://example.com/wp-content/plugins/simple-wp-helpdesk/' );
 define( 'SWH_PLUGIN_FILE', SWH_PLUGIN_DIR . 'simple-wp-helpdesk.php' );
-define( 'SWH_VERSION', '2.5.0' );
+define( 'SWH_VERSION', '3.1.0' );
 
 WP_Mock::setUsePatchwork( false );
 WP_Mock::bootstrap();
@@ -38,6 +38,30 @@ if ( ! class_exists( 'WP_Query' ) ) {
 
 		/** @param array<string, mixed> $args Query arguments (ignored in stub). */
 		public function __construct( array $args = array() ) {}
+	}
+}
+
+if ( ! class_exists( 'WP_Comment' ) ) {
+	/**
+	 * Minimal WP_Comment stub for unit tests.
+	 *
+	 * Defines the properties accessed by swh_format_comment_date() so tests can
+	 * construct real WP_Comment objects without a full WordPress environment.
+	 */
+	class WP_Comment {
+		/** @var string UTC timestamp of the comment. */
+		public string $comment_date_gmt = '';
+
+		/**
+		 * @param array<string, mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = (string) $value;
+				}
+			}
+		}
 	}
 }
 

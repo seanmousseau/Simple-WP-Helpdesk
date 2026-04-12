@@ -49,3 +49,13 @@ button.nav-tab:focus {
 .swh-tab-tools {
 	color: #d63638;
 }
+
+/* Ticket list row: unread client reply indicator. */
+.swh-has-unread {
+	border-left: 3px solid #0073aa;
+	background-color: #f0f8ff;
+}
+
+.swh-has-unread .column-title a {
+	font-weight: 600;
+}

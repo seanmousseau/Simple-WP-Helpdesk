@@ -1325,7 +1325,33 @@ def test_25_xss_escaping(page: Page):
     check("xss: img onerror did not fire in ticket editor", not xss2_fired)
     screenshot(page, "36_xss_ticket_editor")
 
-    # Cleanup: permanently delete via WP-CLI
+    # ── Event-handler and SVG payloads ───────────────────────────────────────
+
+    ts2  = int(time.time())
+    evh_title = f'Test <a href="#" onload="window.__xss_evh=1">click</a> {ts2}'
+    svg_title = f'SVG <svg onload="window.__xss_svg=1"><circle/></svg> {ts2}'
+
+    evh_id = wpcli(
+        f"post create --post_type=helpdesk_ticket --post_status=publish "
+        f"--post_title={json.dumps(evh_title)} --porcelain"
+    )
+    svg_id = wpcli(
+        f"post create --post_type=helpdesk_ticket --post_status=publish "
+        f"--post_title={json.dumps(svg_title)} --porcelain"
+    )
+    if evh_id.isdigit() and svg_id.isdigit():
+        wpcli(f"post meta update {evh_id} ticket_status Open")
+        wpcli(f"post meta update {svg_id} ticket_status Open")
+        _navigate_admin_list(page)
+        evh_fired = page.evaluate("!!window.__xss_evh")
+        svg_fired = page.evaluate("!!window.__xss_svg")
+        check("xss: event-handler payload (onload) did not fire in admin list",
+              not evh_fired, "window.__xss_evh was set — event handler executed!")
+        check("xss: SVG onload payload did not fire in admin list",
+              not svg_fired, "window.__xss_svg was set — SVG payload executed!")
+        wpcli(f"post delete {evh_id} {svg_id} --force 2>/dev/null")
+
+    # Cleanup: permanently delete original test ticket
     wpcli(f"post delete {xss_id} --force 2>/dev/null")
     state.pop('xss_ticket_id', None)
 
@@ -1433,6 +1459,23 @@ def test_27_rate_limiting(page: Page):
           after_second == after_first,
           f"before={after_first} after={after_second}")
     screenshot(page, "38_rate_limit_rejected")
+
+    # ── Rate limit persists after cache flush ─────────────────────────────────
+
+    # Flush only the object cache (not the DB rows) — rate limit must still hold
+    wpcli("cache flush")
+    page.goto(WP_SUBMIT_PAGE)
+    page.wait_for_load_state("load")
+    page.fill('[name="ticket_name"]', CLIENT1_NAME)
+    page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
+    page.fill('[name="ticket_title"]', f"Rate Limit Persist Test {int(time.time())}")
+    page.fill('[name="ticket_desc"]', "Third submission after cache flush — should still be blocked.")
+    page.click('[name="swh_submit_ticket"]')
+    page.wait_for_load_state("load")
+    html_post_flush = page.content()
+    check("rate limit: persists after object cache flush (DB-backed)",
+          "swh-alert-success" not in html_post_flush,
+          "rate limit was not enforced after cache flush — option-backed persistence broken")
 
     # Cleanup this section's ticket immediately (does not go through main cleanup)
     if rl_ticket_id:
@@ -2614,6 +2657,306 @@ def test_47_inbound_email_webhook(page: Page):
     screenshot(page, "57_inbound_webhook_result")
 
 
+# ── v3.1.0 Admin UX & i18n ───────────────────────────────────────────────────
+
+
+def test_48_timestamp_locale(page: Page):
+    """Admin conversation timestamps use WP site timezone and date format."""
+    print("\n[48] Timestamp Locale — Admin Conversation Uses WP Timezone")  # closes issue #121
+
+    if not state.get('ticket_id'):
+        skip("timestamp locale", "no ticket_id in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    ticket_id = state['ticket_id']
+
+    # Read the current WP date_format setting from the DB.
+    wp_date_fmt = wpcli("eval \"echo get_option('date_format');\"")
+
+    check("timestamp locale: WP date_format is configured",
+          bool(wp_date_fmt), f"date_format: {wp_date_fmt!r}")
+
+    _navigate_ticket_editor(page, ticket_id)
+
+    # Collect all <time> elements rendered by swh_format_comment_date().
+    time_els = page.locator('.swh-conversation-thread time.swh-timestamp')
+    count = time_els.count()
+    if count == 0:
+        skip("timestamp locale: no <time> elements found", "no replies yet")
+        return
+
+    # Each <time> element has a datetime= ISO attribute (UTC) and a display text.
+    # Verify: the datetime= attr is a valid ISO timestamp; display text is non-empty.
+    first_dt   = time_els.first.get_attribute('datetime') or ''
+    first_disp = time_els.first.inner_text().strip()
+    check("timestamp locale: <time datetime> is a valid ISO timestamp",
+          'T' in first_dt and ('+' in first_dt or 'Z' in first_dt or first_dt.endswith('00')),
+          f"datetime attr: {first_dt!r}")
+    check("timestamp locale: displayed timestamp is non-empty",
+          bool(first_disp), f"display text: {first_disp!r}")
+
+    # Verify that the WP timezone/format setting is reflected — change to a unique
+    # format, reload, and confirm the display text changes accordingly.
+    unique_fmt = 'Y.m.d'
+    wpcli(f"option update date_format '{unique_fmt}'")
+    try:
+        _navigate_ticket_editor(page, ticket_id)
+        time_els_new = page.locator('.swh-conversation-thread time.swh-timestamp')
+        if time_els_new.count() > 0:
+            disp_new = time_els_new.first.inner_text().strip()
+            # New format produces YYYY.MM.DD pattern — digits with dots
+            import re as _re
+            check("timestamp locale: date_format change is reflected in display",
+                  bool(_re.search(r'\d{4}\.\d{2}\.\d{2}', disp_new)),
+                  f"display text after format change: {disp_new!r}")
+    finally:
+        wpcli(f"option update date_format {json.dumps(wp_date_fmt or 'F j, Y')}")
+
+    screenshot(page, "58_timestamp_locale")
+
+
+def test_49_dedicated_reply_buttons(page: Page):
+    """Send Reply button creates a public reply; Save Note creates an internal note."""
+    print("\n[49] Dedicated Reply Buttons — Send Reply / Save Note")  # closes issue #97
+
+    if not state.get('ticket_id'):
+        skip("dedicated reply buttons", "no ticket_id in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    ticket_id = state['ticket_id']
+
+    # Count current replies/notes before the test.
+    reply_count_before = wpcli(
+        f"comment list --post_id={ticket_id} --comment_type=helpdesk_reply "
+        "--format=count"
+    ).strip()
+
+    note_count_before = wpcli(
+        f"eval \"echo get_comments(['post_id' => {ticket_id}, "
+        "'type' => 'helpdesk_reply', 'meta_key' => '_is_internal_note', "
+        "'meta_value' => '1', 'count' => true]);\""
+    ).strip()
+
+    _navigate_ticket_editor(page, ticket_id)
+
+    # Verify the buttons exist.
+    send_btn = page.locator('#swh-send-reply-btn')
+    note_btn = page.locator('#swh-save-note-btn')
+    check("reply buttons: Send Reply button exists", send_btn.count() > 0)
+    check("reply buttons: Save Note button exists", note_btn.count() > 0)
+
+    if send_btn.count() == 0:
+        skip("reply buttons functionality", "Send Reply button not found in DOM")
+        return
+
+    # ── Send Reply ────────────────────────────────────────────────────────────
+    REPLY_TEXT = f"Dedicated button reply {int(time.time())}"
+    page.fill('[name="swh_tech_reply_text"]', REPLY_TEXT)
+    with page.expect_navigation():
+        send_btn.click()
+    page.wait_for_load_state("load")
+
+    reply_count_after = wpcli(
+        f"comment list --post_id={ticket_id} --comment_type=helpdesk_reply "
+        "--format=count"
+    ).strip()
+    check("reply buttons: Send Reply creates a new helpdesk_reply comment",
+          reply_count_after.isdigit() and reply_count_before.isdigit() and
+          int(reply_count_after) > int(reply_count_before),
+          f"before={reply_count_before} after={reply_count_after}")
+
+    # Confirm it is NOT flagged as an internal note.
+    latest = wpcli(
+        f"comment list --post_id={ticket_id} --comment_type=helpdesk_reply "
+        "--fields=comment_ID --format=ids --number=1 --orderby=comment_date --order=DESC"
+    ).strip()
+    if latest.isdigit():
+        is_note = wpcli(f"comment meta get {latest} _is_internal_note").strip()
+        check("reply buttons: Send Reply comment is NOT flagged as internal note",
+              is_note not in ('1', 'true'),
+              f"_is_internal_note={is_note!r}")
+
+    # ── Save Note ─────────────────────────────────────────────────────────────
+    _navigate_ticket_editor(page, ticket_id)
+    NOTE_TEXT = f"Internal note via button {int(time.time())}"
+    page.fill('[name="swh_tech_note_text"]', NOTE_TEXT)
+    with page.expect_navigation():
+        note_btn.click()
+    page.wait_for_load_state("load")
+
+    note_count_after = wpcli(
+        f"eval \"echo get_comments(['post_id' => {ticket_id}, "
+        "'type' => 'helpdesk_reply', 'meta_key' => '_is_internal_note', "
+        "'meta_value' => '1', 'count' => true]);\""
+    ).strip()
+    check("reply buttons: Save Note creates an internal note comment",
+          note_count_after.isdigit() and note_count_before.isdigit() and
+          int(note_count_after) > int(note_count_before),
+          f"before={note_count_before} after={note_count_after}")
+
+    screenshot(page, "59_dedicated_reply_buttons")
+
+
+def test_50_unread_badge(page: Page):
+    """Unread badge appears in admin menu after client reply; clears after admin opens ticket."""
+    print("\n[50] Unread Badge — Admin Menu Badge for New Client Replies")  # closes issue #101
+
+    if not state.get('ticket_id'):
+        skip("unread badge", "no ticket_id in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    ticket_id = state['ticket_id']
+
+    # Manually set _swh_unread=1 to simulate a client reply.
+    wpcli(f"post meta update {ticket_id} _swh_unread 1")
+    wpcli("eval \"delete_transient('swh_unread_count');\"")
+
+    # Navigate to admin dashboard (any admin page re-renders the menu).
+    page.goto(f"{WP_ADMIN_URL}/")
+    page.wait_for_load_state("load")
+
+    # Check for the badge specifically in the helpdesk menu item.
+    # WP already uses .awaiting-mod for comment moderation; use a scoped locator.
+    badge = page.locator(
+        '#adminmenu a[href*="post_type=helpdesk_ticket"] .awaiting-mod'
+    )
+    badge_visible = badge.count() > 0
+    check("unread badge: .awaiting-mod badge appears in helpdesk menu item after client reply",
+          badge_visible, "no .awaiting-mod element found in helpdesk menu link")
+    if badge_visible:
+        badge_text = badge.first.inner_text().strip()
+        check("unread badge: badge displays a positive count",
+              badge_text.isdigit() and int(badge_text) >= 1,
+              f"badge text: {badge_text!r}")
+
+    screenshot(page, "60_unread_badge_visible")
+
+    # Open the ticket in the editor — this should clear the unread flag.
+    _navigate_ticket_editor(page, ticket_id)
+
+    unread_after = wpcli(f"post meta get {ticket_id} _swh_unread").strip()
+    check("unread badge: _swh_unread flag cleared after admin opens ticket",
+          unread_after not in ('1', 'true'),
+          f"_swh_unread after opening: {unread_after!r}")
+
+    # Verify this ticket no longer contributes to unread count.
+    check("unread badge: _swh_unread meta is cleared on ticket open (badge count reduced)",
+          unread_after not in ('1', 'true'))
+
+    screenshot(page, "61_unread_badge_cleared")
+
+
+def test_51_unread_row_highlight(page: Page):
+    """Admin list row gets swh-has-unread class when _swh_unread=1; removed after viewing."""
+    print("\n[51] Unread Row Highlight — Admin List CSS Class")  # closes issue #102
+
+    if not state.get('ticket_id'):
+        skip("unread row highlight", "no ticket_id in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    ticket_id = state['ticket_id']
+
+    # Set _swh_unread=1 manually.
+    wpcli(f"post meta update {ticket_id} _swh_unread 1")
+    wpcli("eval \"delete_transient('swh_unread_count');\"")
+
+    _navigate_admin_list(page)
+
+    # The <tr> for this ticket should have the swh-has-unread class.
+    row_class = page.evaluate(f"""
+        (function() {{
+            var rows = document.querySelectorAll('#the-list tr');
+            for (var r of rows) {{
+                if (r.querySelector('a[href*="post={ticket_id}&"]')) {{
+                    return r.className;
+                }}
+            }}
+            return '';
+        }})()
+    """)
+    check("unread highlight: ticket row has swh-has-unread CSS class",
+          'swh-has-unread' in (row_class or ''),
+          f"row classes: {row_class!r}")
+
+    screenshot(page, "62_unread_row_highlighted")
+
+    # Open the ticket to clear the flag.
+    _navigate_ticket_editor(page, ticket_id)
+    _navigate_admin_list(page)
+
+    row_class_after = page.evaluate(f"""
+        (function() {{
+            var rows = document.querySelectorAll('#the-list tr');
+            for (var r of rows) {{
+                if (r.querySelector('a[href*="post={ticket_id}&"]')) {{
+                    return r.className;
+                }}
+            }}
+            return '';
+        }})()
+    """)
+    check("unread highlight: swh-has-unread class removed after admin opens ticket",
+          'swh-has-unread' not in (row_class_after or ''),
+          f"row classes after viewing: {row_class_after!r}")
+
+    screenshot(page, "63_unread_row_cleared")
+
+
+def test_52_email_test_button(page: Page):
+    """Send Test Email button in Settings → Email Templates tab sends email and shows success."""
+    print("\n[52] Email Test Button — Settings → Email Templates")  # closes issue #103
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    _navigate_settings(page)
+    page.locator('#swh-tab-emails').click()
+    page.wait_for_selector('#swh-test-email-btn', timeout=5000)
+
+    btn = page.locator('#swh-test-email-btn')
+    msg = page.locator('#swh-test-email-msg')
+
+    check("email test button: button exists on Email Templates tab", btn.count() > 0)
+    check("email test button: status message element exists", msg.count() > 0)
+
+    if btn.count() == 0:
+        skip("email test button functionality", "button not found")
+        return
+
+    # Click the button and wait for the AJAX response.
+    btn.click()
+    # Wait for the message element to contain a non-sending string (up to 10 s).
+    page.wait_for_function(
+        "() => { var el = document.getElementById('swh-test-email-msg'); "
+        "return el && el.textContent && "
+        "!el.textContent.includes('Sending') && el.textContent.trim().length > 0; }",
+        timeout=10000
+    )
+
+    msg_text  = msg.inner_text().strip()
+    btn_state = btn.is_disabled()
+
+    check("email test button: button is re-enabled after AJAX completes",
+          not btn_state, "button remained disabled after AJAX response")
+    check("email test button: status message is non-empty",
+          bool(msg_text), "no status message displayed")
+    check("email test button: success or useful error message shown",
+          bool(msg_text) and (
+              'sent' in msg_text.lower() or '@' in msg_text or
+              'failed' in msg_text.lower() or 'check' in msg_text.lower()
+          ),
+          f"message: {msg_text!r}")
+
+    screenshot(page, "64_email_test_button")
+
+    if 'sent' in msg_text.lower() or '@' in msg_text:
+        admin_email_raw = wpcli("eval \"echo get_option('admin_email');\"").strip()
+        expect_email(admin_email_raw, "Test email from Send Test Email button (Settings → Email Templates)")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -2713,6 +3056,11 @@ SECTIONS = [
     test_45_assignment_rules,         # 45 — #126
     test_46_reporting_dashboard,      # 46 — #135/#137
     test_47_inbound_email_webhook,    # 47 — #131
+    test_48_timestamp_locale,         # 48 — #121 timestamp timezone
+    test_49_dedicated_reply_buttons,  # 49 — #97 send reply / save note
+    test_50_unread_badge,             # 50 — #101 unread badge
+    test_51_unread_row_highlight,     # 51 — #102 row highlight
+    test_52_email_test_button,        # 52 — #103 test email button
     test_28_cleanup,                  # 28 — always last
 ]
 
