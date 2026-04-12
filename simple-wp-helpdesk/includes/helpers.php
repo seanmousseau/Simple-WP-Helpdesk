@@ -559,6 +559,64 @@ function swh_merge_tickets( int $source_id, int $target_id ): bool {
 }
 
 /**
+ * Formats a comment's date/time string using the WP site timezone and locale.
+ *
+ * Uses `comment_date_gmt` (UTC) as the source so the result is correct
+ * regardless of any mismatch between the PHP server timezone and the WP
+ * site timezone setting.
+ *
+ * @since 3.1.0
+ * @param WP_Comment $comment The comment object.
+ * @return string Formatted date string in the site locale and timezone.
+ */
+function swh_format_comment_date( WP_Comment $comment ): string {
+	$gmt       = $comment->comment_date_gmt;
+	$utc_ts    = $gmt ? strtotime( $gmt . ' UTC' ) : false;
+	$utc_ts    = false !== $utc_ts ? $utc_ts : time();
+	$date_fmt  = get_option( 'date_format' );
+	$time_fmt  = get_option( 'time_format' );
+	$format    = ( is_string( $date_fmt ) ? $date_fmt : 'F j, Y' ) . ' ' . ( is_string( $time_fmt ) ? $time_fmt : 'g:i a' );
+	$localized = wp_date( $format, $utc_ts );
+	return is_string( $localized ) ? $localized : gmdate( 'Y-m-d H:i', $utc_ts );
+}
+
+/**
+ * Returns the count of tickets with unread client replies.
+ *
+ * A ticket is "unread" when `_swh_unread` post meta equals `1`, set whenever
+ * a client posts a reply via the portal or inbound email webhook.
+ * Result is cached in a 5-minute transient to avoid per-request WP_Query overhead.
+ *
+ * @since 3.1.0
+ * @return int Number of tickets with unread client replies.
+ */
+function swh_get_unread_reply_count(): int {
+	$cached = get_transient( 'swh_unread_count' );
+	if ( false !== $cached ) {
+		return is_scalar( $cached ) ? intval( $cached ) : 0;
+	}
+	$query = new WP_Query(
+		array(
+			'post_type'      => 'helpdesk_ticket',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => '_swh_unread',
+					'value' => '1',
+				),
+			),
+			'no_found_rows'  => true,
+		)
+	);
+	$count = count( $query->posts );
+	set_transient( 'swh_unread_count', $count, 5 * MINUTE_IN_SECONDS );
+	return $count;
+}
+
+/**
  * Checks and sets a rate-limit lock keyed by action name and client IP.
  *
  * Returns true if the client is currently rate-limited. When not limited,

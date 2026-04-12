@@ -4,7 +4,7 @@
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 3.0.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 3.1.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 
 ## Repository Structure
 
@@ -75,6 +75,7 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **My Tickets dashboard** — portal URL without a token shows a ticket table for logged-in WP users (matching `_ticket_email`) or the lookup form for guests. The `swh_render_lookup_form()` helper is shared between the submission shortcode and this view.
 - **Shortcode attributes** — `[submit_ticket]` and `[helpdesk_portal]` accept `show_priority`, `default_priority`, `default_status`, `show_lookup`. Both shortcodes share the same `swh_submit_ticket_shortcode()` handler.
 - **v3.0.0 meta keys** — `_ticket_first_response_at` (Unix timestamp of first staff reply), `_ticket_sla_status` (`warn` or `breach`), `_ticket_cc_emails` (comma-separated CC addresses), `_ticket_template` (label of selected request type at submission).
+- **v3.1.0 meta keys** — `_swh_unread` (`1` when ticket has an unread client reply; cleared when admin opens ticket in editor). Paired with `swh_unread_count` transient (5-min TTL) for badge count performance. Always `delete_transient('swh_unread_count')` after setting or clearing `_swh_unread`.
 - **`helpdesk_category` taxonomy** — registered in `class-installer.php`, hierarchical, `show_admin_column => true`, no REST, no rewrite. Use `wp_set_post_terms()` / `wp_get_post_terms()` to assign/read.
 - **Inbound webhook** — `POST /wp-json/swh/v1/inbound-email`. Validates `Authorization: Bearer <swh_inbound_secret>`. Parses `[TKT-XXXX]` from subject, validates sender vs `_ticket_email` via `hash_equals`. Strips `>`-prefixed quoted lines.
 - **Assignment rules** — stored as JSON in `swh_assignment_rules` option (array of `{category_term_id, assignee_user_id}`). Applied at ticket creation via `swh_apply_assignment_rules()`. First matching rule wins; falls back to `swh_default_assignee`.
@@ -148,7 +149,7 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 45 test sections (34 original + 11 v3.0.0)
+### 52 test sections (34 original + 11 v3.0.0 + 7 v3.1.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -196,6 +197,11 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 | 45 | assignment_rules | |
 | 46 | reporting_dashboard | |
 | 47 | inbound_email_webhook | |
+| 48 | timestamp_locale | |
+| 49 | dedicated_reply_buttons | |
+| 50 | unread_badge | |
+| 51 | unread_row_highlight | |
+| 52 | email_test_button | |
 | 28 | cleanup | |
 
 ### Architecture

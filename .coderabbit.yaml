@@ -27,6 +27,7 @@ reviews:
     - "!*.min.css"
     - "!composer.lock"
     - "!phpunit.xml"
+    - "!simple-wp-helpdesk/languages/*.pot"
 
   path_instructions:
     - path: "simple-wp-helpdesk/**/*.php"
@@ -82,6 +83,14 @@ reviews:
         - Reply body sanitized with wp_kses_post() before wp_insert_comment()
         - No SSRF risk: handler only reads from $request params, never makes outbound HTTP requests
         - Return value must always be WP_Error or rest_ensure_response() result — never raw arrays
+
+    - path: "simple-wp-helpdesk/admin/class-ticket-list.php"
+      instructions: |
+        Ticket list admin page. For v3.1.0 unread tracking, extra review focus:
+        - `swh_unread_count` transient key must be unique (prefixed) and match delete_transient() calls elsewhere
+        - post_class filter: check is_admin() guard to avoid CSS class injection on frontend
+        - admin_menu badge injection: must check is_array($item) before offset access on $menu entries
+        - Capability check on any read/clear action modifying _swh_unread meta
 
     - path: "phpunit.xml"
       instructions: |

@@ -64,12 +64,18 @@ function swh_enqueue_admin_assets( $hook ) {
 		'swh-admin',
 		'swhAdmin',
 		array(
-			'i18n' => array(
+			'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+			'testEmailNonce' => wp_create_nonce( 'swh_test_email_nonce' ),
+			'i18n'           => array(
 				/* translators: Placeholder text shown inside the canned response title input field. */
 				'cannedTitlePlaceholder' => __( 'Response title...', 'simple-wp-helpdesk' ),
 				'cannedTitleAriaLabel'   => __( 'Canned response title', 'simple-wp-helpdesk' ),
 				'cannedBodyAriaLabel'    => __( 'Canned response body', 'simple-wp-helpdesk' ),
 				'removeLabel'            => __( 'Remove', 'simple-wp-helpdesk' ),
+				'testEmailSending'       => __( 'Sending…', 'simple-wp-helpdesk' ),
+				/* translators: Shown after a test email is successfully dispatched. */
+				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
+				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -614,6 +620,12 @@ function swh_render_settings_page() {
 			</div>
 
 			<div id="tab-emails" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-emails" tabindex="0" style="display:none;">
+				<p>
+					<button type="button" id="swh-test-email-btn" class="button"><?php esc_html_e( 'Send Test Email', 'simple-wp-helpdesk' ); ?></button>
+					<span id="swh-test-email-msg" style="margin-left:10px; font-size:13px;" aria-live="polite"></span>
+					<span class="description" style="display:block; margin-top:4px; font-size:12px;"><?php esc_html_e( 'Sends a sample "New Ticket" email to your account email address to verify your email settings.', 'simple-wp-helpdesk' ); ?></span>
+				</p>
+				<hr>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Email Format', 'simple-wp-helpdesk' ); ?></th>
@@ -942,4 +954,57 @@ function swh_render_settings_page() {
 	</div>
 
 	<?php
+}
+
+// ==============================================================================
+// AJAX: SEND TEST EMAIL
+// ==============================================================================
+
+add_action( 'wp_ajax_swh_send_test_email', 'swh_ajax_send_test_email' );
+/**
+ * Handles the AJAX "Send Test Email" request from the Settings → Email Templates tab.
+ *
+ * Sends a sample "New Ticket" notification to the requesting admin's own email address
+ * (falls back to the site admin_email option) so the current administrator can verify
+ * their email configuration is working.
+ *
+ * @since 3.1.0
+ * @return void
+ */
+function swh_ajax_send_test_email() {
+	check_ajax_referer( 'swh_test_email_nonce', 'nonce' );
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'simple-wp-helpdesk' ) ), 403 );
+	}
+	$current_user = wp_get_current_user();
+	$admin_email  = ( $current_user instanceof WP_User && is_email( $current_user->user_email ) )
+		? $current_user->user_email
+		: '';
+	if ( ! $admin_email ) {
+		$admin_email_raw = get_option( 'admin_email', '' );
+		$admin_email     = is_string( $admin_email_raw ) ? $admin_email_raw : '';
+	}
+	if ( ! is_email( $admin_email ) ) {
+		wp_send_json_error( array( 'message' => __( 'No valid email address found for your account.', 'simple-wp-helpdesk' ) ) );
+	}
+	$defs      = swh_get_defaults();
+	$test_data = array(
+		'name'           => __( 'Test Client', 'simple-wp-helpdesk' ),
+		'email'          => $admin_email,
+		'ticket_id'      => 'TKT-0001',
+		'title'          => __( 'Test Ticket — email configuration check', 'simple-wp-helpdesk' ),
+		'status'         => swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : 'Open' ),
+		'priority'       => swh_get_string_option( 'swh_default_priority', is_string( $defs['swh_default_priority'] ) ? $defs['swh_default_priority'] : 'Medium' ),
+		'message'        => __( 'This is a test message sent from Simple WP Helpdesk settings to verify email delivery.', 'simple-wp-helpdesk' ),
+		'ticket_url'     => home_url( '/' ),
+		'admin_url'      => admin_url( 'edit.php?post_type=helpdesk_ticket' ),
+		'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
+	);
+	$result    = swh_send_email( $admin_email, 'swh_em_admin_new_sub', 'swh_em_admin_new_body', $test_data );
+	if ( $result ) {
+		/* translators: %s: recipient email address */
+		wp_send_json_success( array( 'message' => sprintf( __( 'Test email sent to %s.', 'simple-wp-helpdesk' ), $admin_email ) ) );
+	} else {
+		wp_send_json_error( array( 'message' => __( 'Email dispatch failed. Check your server mail configuration.', 'simple-wp-helpdesk' ) ) );
+	}
 }

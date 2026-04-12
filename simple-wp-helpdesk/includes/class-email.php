@@ -85,7 +85,7 @@ function swh_parse_template( $template, $data ) {
  * @param array<string, mixed> $data        Template data for placeholder substitution.
  * @param string[]             $attachments Optional. Array of attachment file proxy URLs.
  * @param int                  $ticket_id   Optional. Ticket post ID for CC email resolution. Default 0.
- * @return void
+ * @return bool True if wp_mail() succeeded, false otherwise.
  */
 function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = array(), $ticket_id = 0 ) {
 	$defs        = swh_get_defaults();
@@ -125,10 +125,12 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 			$headers[] = 'Cc: ' . $cc;
 		}
 	}
-	if ( ! wp_mail( $to, $subject, $body, $headers ) ) {
+	$sent = wp_mail( $to, $subject, $body, $headers );
+	if ( ! $sent ) {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs wp_mail() failures for site admin troubleshooting.
 		error_log( 'Simple WP Helpdesk: wp_mail() failed — to: ' . $to . ', subject: ' . $subject );
 	}
+	return $sent;
 }
 
 /**
@@ -296,6 +298,8 @@ function swh_handle_inbound_email( $request ) {
 		);
 	}
 	update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
+	update_post_meta( $ticket_id, '_swh_unread', '1' );
+	delete_transient( 'swh_unread_count' );
 
 	// Reopen ticket if resolved/closed.
 	$defs            = swh_get_defaults();

@@ -225,4 +225,65 @@ class HelpersTest extends TestCase {
 		$this->assertSame( $first, $second );
 		$this->assertArrayHasKey( 'swh_closed_status', $first );
 	}
+
+	// -------------------------------------------------------------------------
+	// swh_format_comment_date — v3.1.0 timezone-aware formatting
+	// -------------------------------------------------------------------------
+
+	/** Returns a string with a WP-locale-aware date when wp_date() returns a value. */
+	public function test_format_comment_date_uses_wp_timezone(): void {
+		$comment = new WP_Comment( array( 'comment_date_gmt' => '2026-01-15 12:00:00' ) );
+
+		WP_Mock::userFunction( 'get_option' )
+			->with( 'date_format' )
+			->andReturn( 'Y-m-d' );
+		WP_Mock::userFunction( 'get_option' )
+			->with( 'time_format' )
+			->andReturn( 'H:i' );
+		// wp_date() formats the UTC timestamp in the WP timezone.
+		WP_Mock::userFunction( 'wp_date' )
+			->once()
+			->andReturn( '2026-01-15 07:00' );
+
+		$result = swh_format_comment_date( $comment );
+		$this->assertSame( '2026-01-15 07:00', $result );
+	}
+
+	/** Falls back to gmdate() when wp_date() returns a non-string. */
+	public function test_format_comment_date_fallback_when_wp_date_fails(): void {
+		$comment = new WP_Comment( array( 'comment_date_gmt' => '2026-06-01 18:30:00' ) );
+
+		WP_Mock::userFunction( 'get_option' )
+			->with( 'date_format' )
+			->andReturn( 'Y-m-d' );
+		WP_Mock::userFunction( 'get_option' )
+			->with( 'time_format' )
+			->andReturn( 'H:i' );
+		WP_Mock::userFunction( 'wp_date' )
+			->once()
+			->andReturn( false );
+
+		$result = swh_format_comment_date( $comment );
+		// Fallback produces gmdate('Y-m-d H:i', ts) — matches YYYY-MM-DD HH:MM pattern.
+		$this->assertMatchesRegularExpression( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $result );
+	}
+
+	/** Returns a non-empty string even when comment_date_gmt is empty. */
+	public function test_format_comment_date_handles_empty_gmt(): void {
+		$comment = new WP_Comment( array( 'comment_date_gmt' => '' ) );
+
+		WP_Mock::userFunction( 'get_option' )
+			->with( 'date_format' )
+			->andReturn( 'Y-m-d' );
+		WP_Mock::userFunction( 'get_option' )
+			->with( 'time_format' )
+			->andReturn( 'H:i' );
+		WP_Mock::userFunction( 'wp_date' )
+			->once()
+			->andReturn( '2026-04-12 00:00' );
+
+		$result = swh_format_comment_date( $comment );
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+	}
 }
