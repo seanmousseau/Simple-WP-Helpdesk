@@ -26,6 +26,7 @@ reviews:
     - "!*.min.js"
     - "!*.min.css"
     - "!composer.lock"
+    - "!phpunit.xml"
 
   path_instructions:
     - path: "simple-wp-helpdesk/**/*.php"
@@ -53,6 +54,19 @@ reviews:
         - Admin-only code stays in admin/ (gated by is_admin())
         - New cron events registered in swh_activate(), cleared in swh_deactivate()
         - Schema changes must bump version and add upgrade path in swh_run_upgrade_routine()
+
+    - path: "tests/**/*.php"
+      instructions: |
+        PHPUnit unit tests using WP_Mock (10up/wp_mock). Review for:
+        - WP_Mock::userFunction() used to mock WordPress functions; WP_Mock::onFilter() for apply_filters
+        - setUp() loads plugin files; no direct DB calls
+        - Arrange/Act/Assert structure within each test method
+        - Tests cover realistic WordPress behaviour (e.g. get_option returns fallback, not false, when option is unset)
+        - No patchwork; WP_Mock::setUsePatchwork(false) in bootstrap
+
+    - path: "phpunit.xml"
+      instructions: |
+        PHPUnit configuration. No actionable review needed — skip.
 
     - path: "testing/**/*.py"
       instructions: |

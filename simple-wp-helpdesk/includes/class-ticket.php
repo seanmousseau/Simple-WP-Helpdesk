@@ -33,9 +33,9 @@ function swh_serve_file() {
 	if ( ! isset( $_GET['swh_file'], $_GET['swh_ticket'], $_GET['token'] ) ) {
 		return;
 	}
-	$filename  = sanitize_file_name( wp_unslash( $_GET['swh_file'] ) );
-	$ticket_id = absint( $_GET['swh_ticket'] );
-	$token     = sanitize_text_field( wp_unslash( $_GET['token'] ) );
+	$filename  = sanitize_file_name( wp_unslash( is_string( $_GET['swh_file'] ) ? $_GET['swh_file'] : '' ) );
+	$ticket_id = is_scalar( $_GET['swh_ticket'] ) ? absint( $_GET['swh_ticket'] ) : 0;
+	$token     = sanitize_text_field( wp_unslash( is_string( $_GET['token'] ) ? $_GET['token'] : '' ) );
 
 	if ( ! $filename || ! $ticket_id ) {
 		wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
@@ -47,7 +47,7 @@ function swh_serve_file() {
 	}
 
 	// Access check: valid portal token OR admin/technician capability.
-	$db_token   = get_post_meta( $ticket_id, '_ticket_token', true );
+	$db_token   = swh_get_string_meta( $ticket_id, '_ticket_token' );
 	$has_access = false;
 	if ( $db_token && hash_equals( $db_token, $token ) ) {
 		$has_access = true;
@@ -107,12 +107,19 @@ function swh_add_enctype_to_post_form() {
 /**
  * Normalizes a multi-file $_FILES sub-array into an array of individual file entries.
  *
- * @param array<string, mixed> $files A $_FILES entry for a file[] input (keys: name, type, tmp_name, error, size).
+ * @param mixed $files A $_FILES entry for a file[] input (keys: name, type, tmp_name, error, size).
  * @return array<int, array<string, mixed>> Array of per-file associative arrays.
  */
 function swh_normalize_files_array( $files ) {
 	$normalized = array();
-	if ( isset( $files['name'] ) && is_array( $files['name'] ) ) {
+	if (
+		is_array( $files )
+		&& isset( $files['name'] ) && is_array( $files['name'] )
+		&& isset( $files['type'] ) && is_array( $files['type'] )
+		&& isset( $files['tmp_name'] ) && is_array( $files['tmp_name'] )
+		&& isset( $files['error'] ) && is_array( $files['error'] )
+		&& isset( $files['size'] ) && is_array( $files['size'] )
+	) {
 		foreach ( $files['name'] as $key => $name ) {
 			if ( $name ) {
 				$normalized[] = array(
@@ -177,7 +184,7 @@ function swh_ensure_upload_protection() {
  * @return string The proxy URL, or the original URL as a fallback.
  */
 function swh_get_file_proxy_url( $url, $ticket_id ) {
-	$token = get_post_meta( $ticket_id, '_ticket_token', true );
+	$token = swh_get_string_meta( $ticket_id, '_ticket_token' );
 	if ( ! $token ) {
 		return $url;
 	}
@@ -198,25 +205,27 @@ function swh_get_file_proxy_url( $url, $ticket_id ) {
  * upload_dir filter to route files into swh-helpdesk/. Logs errors via error_log().
  *
  * Pass a reference as $orig_names to receive a url→original_name map for display purposes.
+ * Pass a reference as $skipped_count to receive the number of files skipped due to size limit.
  *
- * @param array<string, mixed>       $file_array  The $_FILES sub-array for the file input.
- * @param array<string, string>|null $orig_names  Optional. Populated with url→original_name map on return.
+ * @param mixed                      $file_array    The $_FILES sub-array for the file input.
+ * @param array<string, string>|null $orig_names    Optional. Populated with url→original_name map on return.
  * @param-out array<string, string> $orig_names
+ * @param int                        $skipped_count Optional. Populated with the number of files skipped due to the size limit.
  * @return string[] Array of successfully uploaded file URLs.
  */
-function swh_handle_multiple_uploads( $file_array, &$orig_names = null ) {
+function swh_handle_multiple_uploads( $file_array, &$orig_names = null, &$skipped_count = 0 ) {
 	$files = swh_normalize_files_array( $file_array );
 	if ( empty( $files ) ) {
 		return array();
 	}
-	$max_count = (int) get_option( 'swh_max_upload_count', 5 );
+	$max_count = swh_get_int_option( 'swh_max_upload_count', 5 );
 	if ( $max_count > 0 && count( $files ) > $max_count ) {
 		$files = array_slice( $files, 0, $max_count );
 	}
 	if ( ! function_exists( 'wp_handle_upload' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 	}
-	$max_size_mb   = (int) get_option( 'swh_max_upload_size', 5 );
+	$max_size_mb   = swh_get_int_option( 'swh_max_upload_size', 5 );
 	$max_bytes     = $max_size_mb * 1048576;
 	$allowed_mimes = array(
 		'jpg|jpeg|jpe' => 'image/jpeg',
@@ -238,13 +247,22 @@ function swh_handle_multiple_uploads( $file_array, &$orig_names = null ) {
 	swh_ensure_upload_protection();
 	add_filter( 'upload_dir', 'swh_custom_upload_dir' );
 	foreach ( $files as $file ) {
-		if ( $file['size'] > $max_bytes ) {
+		$file_size = is_scalar( $file['size'] ) ? intval( $file['size'] ) : 0;
+		if ( $file_size > $max_bytes ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs oversized uploads for admin troubleshooting.
-			error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', isset( $file['name'] ) ? $file['name'] : '', $max_size_mb ) );
+			error_log( sprintf( 'SWH upload skipped: "%1$s" exceeds %2$dMB limit.', is_string( $file['name'] ) ? $file['name'] : '', $max_size_mb ) );
+			++$skipped_count;
 			continue;
 		}
-		$original_name = isset( $file['name'] ) ? sanitize_text_field( $file['name'] ) : '';
-		$movefile      = wp_handle_upload( $file, $overrides );
+		$original_name = is_string( $file['name'] ) ? sanitize_text_field( $file['name'] ) : '';
+		$typed_file    = array(
+			'name'     => is_string( $file['name'] ) ? $file['name'] : '',
+			'type'     => is_string( $file['type'] ) ? $file['type'] : '',
+			'tmp_name' => is_string( $file['tmp_name'] ) ? $file['tmp_name'] : '',
+			'error'    => is_scalar( $file['error'] ) ? intval( $file['error'] ) : UPLOAD_ERR_NO_FILE,
+			'size'     => $file_size,
+		);
+		$movefile      = wp_handle_upload( $typed_file, $overrides );
 		if ( $movefile && ! isset( $movefile['error'] ) && isset( $movefile['url'] ) && is_string( $movefile['url'] ) ) {
 			$file_url                  = $movefile['url'];
 			$uploaded_urls[]           = $file_url;
@@ -293,14 +311,16 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 	$main_atts = get_post_meta( $ticket_id, '_ticket_attachments', true );
 	if ( ! empty( $main_atts ) && is_array( $main_atts ) ) {
 		foreach ( $main_atts as $url ) {
-			swh_delete_file_by_url( $url );
+			if ( is_string( $url ) ) {
+				swh_delete_file_by_url( $url );
+			}
 		}
 	}
-	$legacy_id = get_post_meta( $ticket_id, '_ticket_attachment_id', true );
+	$legacy_id = swh_get_int_meta( $ticket_id, '_ticket_attachment_id' );
 	if ( $legacy_id ) {
 		wp_delete_attachment( $legacy_id, true );
 	}
-	$legacy_url = get_post_meta( $ticket_id, '_ticket_attachment_url', true );
+	$legacy_url = swh_get_string_meta( $ticket_id, '_ticket_attachment_url' );
 	if ( $legacy_url ) {
 		swh_delete_file_by_url( $legacy_url );
 	}
@@ -313,10 +333,12 @@ function swh_delete_ticket_and_files( $ticket_id ) {
 		$c_atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $c_atts ) && is_array( $c_atts ) ) {
 			foreach ( $c_atts as $url ) {
-				swh_delete_file_by_url( $url );
+				if ( is_string( $url ) ) {
+					swh_delete_file_by_url( $url );
+				}
 			}
 		}
-		$legacy_c_url = get_comment_meta( (int) $c->comment_ID, '_attachment_url', true );
+		$legacy_c_url = swh_get_string_comment_meta( (int) $c->comment_ID, '_attachment_url' );
 		if ( $legacy_c_url ) {
 			swh_delete_file_by_url( $legacy_c_url );
 		}
@@ -376,9 +398,9 @@ add_action( 'wp_ajax_nopriv_swh_submit_csat', 'swh_submit_csat_ajax' );
  * @return void Outputs JSON and exits.
  */
 function swh_submit_csat_ajax() {
-	$ticket_id = isset( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
-	$rating    = isset( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
-	$nonce     = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+	$ticket_id = isset( $_POST['ticket_id'] ) && is_scalar( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+	$rating    = isset( $_POST['rating'] ) && is_scalar( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
+	$nonce     = isset( $_POST['nonce'] ) && is_string( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 
 	if ( ! $ticket_id || $rating < 1 || $rating > 5 || ! wp_verify_nonce( $nonce, 'swh_csat_' . $ticket_id ) ) {
 		wp_send_json_error( array( 'message' => 'Invalid request.' ), 400 );
@@ -387,6 +409,13 @@ function swh_submit_csat_ajax() {
 	$post = get_post( $ticket_id );
 	if ( ! $post || 'helpdesk_ticket' !== $post->post_type ) {
 		wp_send_json_error( array( 'message' => 'Invalid ticket.' ), 400 );
+	}
+
+	$defs          = swh_get_defaults();
+	$closed_status = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
+	$ticket_status = swh_get_string_meta( $ticket_id, '_ticket_status' );
+	if ( $ticket_status !== $closed_status ) {
+		wp_send_json_error( array( 'message' => __( 'Ticket is not closed.', 'simple-wp-helpdesk' ) ), 400 );
 	}
 
 	update_post_meta( $ticket_id, '_ticket_csat', $rating );

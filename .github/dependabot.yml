@@ -9,6 +9,7 @@ updates:
       - dependency-name: "phpstan/phpstan"
       - dependency-name: "squizlabs/php_codesniffer"
       - dependency-name: "phpunit/phpunit"
+      - dependency-name: "10up/wp_mock"
 
   - package-ecosystem: "github-actions"
     directory: "/"

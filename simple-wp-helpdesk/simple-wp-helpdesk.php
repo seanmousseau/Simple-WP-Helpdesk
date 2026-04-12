@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 2.4.2
+ * Version: 2.5.0
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '2.4.2' );
+define( 'SWH_VERSION', '2.5.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -96,29 +96,38 @@ function swh_add_plugin_icons( $info ) {
  * @return string
  */
 function swh_plugin_description_html() {
-	return '<p>Simple WP Helpdesk is a full-featured helpdesk and ticketing system built entirely on WordPress core data structures. No custom database tables, no external services, no subscriptions — your data stays on your server.</p>
-<p><strong>Key Features:</strong></p>
-<ul>
-<li><strong>Tickets as Custom Post Types</strong> — all data lives in standard WP tables; no schema migrations or DB cleanup needed on uninstall</li>
-<li><strong>Frontend submission form</strong> — <code>[submit_ticket]</code> shortcode with configurable priority, status, and lookup form visibility</li>
-<li><strong>Secure token-based client portal</strong> — clients view conversation history, reply, upload attachments, and close or reopen their ticket</li>
-<li><strong>My Tickets dashboard</strong> — portal without a token shows a ticket table for logged-in users or the lookup form for guests</li>
-<li><strong>Standalone portal shortcode</strong> — optional <code>[helpdesk_portal]</code> for a dedicated support hub page</li>
-<li><strong>Canned responses</strong> — save reply templates in Settings and insert them from within the ticket editor</li>
-<li><strong>14 customizable email templates</strong> — HTML and plain-text, with dynamic placeholders and <code>{if key}&hellip;{endif key}</code> conditional blocks</li>
-<li><strong>Multi-file uploads</strong> — XHR progress bar on submission, configurable size/count limits, files served via a secure proxy endpoint</li>
-<li><strong>Technician role</strong> — optional restriction so technicians only see tickets assigned to them</li>
-<li><strong>Bulk status changes</strong> — update multiple tickets at once directly from the ticket list</li>
-<li><strong>CSAT satisfaction prompt</strong> — 1&ndash;5 star rating shown to clients after closing a ticket, stored as post meta</li>
-<li><strong>Background automation</strong> — auto-close resolved tickets and scheduled data retention with cron locking</li>
-<li><strong>Anti-spam</strong> — honeypot (zero config), Google reCAPTCHA v2, and Cloudflare Turnstile on all public forms</li>
-<li><strong>CDN/proxy-aware rate limiting</strong> — persistent via <code>wp_options</code>, survives cache flushes</li>
-<li><strong>Token expiration</strong> — configurable TTL with auto-rotation for portal links</li>
-<li><strong>Tabbed settings panel</strong> — 7 tabs: General, Assignment &amp; Routing, Email Templates, Messages, Anti-Spam, Canned Responses, Tools</li>
-<li><strong>GDPR tools</strong> — per-email data purge, retention policies, and thorough uninstall cleanup</li>
-<li><strong>Internationalization</strong> — i18n ready with full text-domain support</li>
-<li><strong>GitHub auto-updater</strong> — new releases delivered directly to the WordPress dashboard via plugin-update-checker</li>
-</ul>';
+	$features = array(
+		array( __( 'Tickets as Custom Post Types', 'simple-wp-helpdesk' ), __( 'all data lives in standard WP tables; no schema migrations or DB cleanup needed on uninstall', 'simple-wp-helpdesk' ) ),
+		/* translators: %s: [submit_ticket] shortcode name wrapped in <code> tags */
+		array( __( 'Frontend submission form', 'simple-wp-helpdesk' ), sprintf( __( '%s shortcode with configurable priority, status, and lookup form visibility', 'simple-wp-helpdesk' ), '<code>[submit_ticket]</code>' ) ),
+		array( __( 'Secure token-based client portal', 'simple-wp-helpdesk' ), __( 'clients view conversation history, reply, upload attachments, and close or reopen their ticket', 'simple-wp-helpdesk' ) ),
+		array( __( 'My Tickets dashboard', 'simple-wp-helpdesk' ), __( 'portal without a token shows a ticket table for logged-in users or the lookup form for guests', 'simple-wp-helpdesk' ) ),
+		/* translators: %s: [helpdesk_portal] shortcode name wrapped in <code> tags */
+		array( __( 'Standalone portal shortcode', 'simple-wp-helpdesk' ), sprintf( __( 'optional %s for a dedicated support hub page', 'simple-wp-helpdesk' ), '<code>[helpdesk_portal]</code>' ) ),
+		array( __( 'Canned responses', 'simple-wp-helpdesk' ), __( 'save reply templates in Settings and insert them from within the ticket editor', 'simple-wp-helpdesk' ) ),
+		/* translators: %s: {if key}…{endif key} template conditional syntax wrapped in <code> tags */
+		array( __( '14 customizable email templates', 'simple-wp-helpdesk' ), sprintf( __( 'HTML and plain-text, with dynamic placeholders and %s conditional blocks', 'simple-wp-helpdesk' ), '<code>{if key}&hellip;{endif key}</code>' ) ),
+		array( __( 'Multi-file uploads', 'simple-wp-helpdesk' ), __( 'XHR progress bar on submission, configurable size/count limits, files served via a secure proxy endpoint', 'simple-wp-helpdesk' ) ),
+		array( __( 'Technician role', 'simple-wp-helpdesk' ), __( 'optional restriction so technicians only see tickets assigned to them', 'simple-wp-helpdesk' ) ),
+		array( __( 'Bulk status changes', 'simple-wp-helpdesk' ), __( 'update multiple tickets at once directly from the ticket list', 'simple-wp-helpdesk' ) ),
+		array( __( 'CSAT satisfaction prompt', 'simple-wp-helpdesk' ), __( '1&#x2013;5 star rating shown to clients after closing a ticket, stored as post meta', 'simple-wp-helpdesk' ) ),
+		array( __( 'Background automation', 'simple-wp-helpdesk' ), __( 'auto-close resolved tickets and scheduled data retention with cron locking', 'simple-wp-helpdesk' ) ),
+		array( __( 'Anti-spam', 'simple-wp-helpdesk' ), __( 'honeypot (zero config), Google reCAPTCHA v2/Enterprise, and Cloudflare Turnstile on all public forms', 'simple-wp-helpdesk' ) ),
+		/* translators: %s: wp_options WordPress table name wrapped in <code> tags */
+		array( __( 'CDN/proxy-aware rate limiting', 'simple-wp-helpdesk' ), sprintf( __( 'persistent via %s, survives cache flushes', 'simple-wp-helpdesk' ), '<code>wp_options</code>' ) ),
+		array( __( 'Token expiration', 'simple-wp-helpdesk' ), __( 'configurable TTL with auto-rotation for portal links', 'simple-wp-helpdesk' ) ),
+		array( __( 'Tabbed settings panel', 'simple-wp-helpdesk' ), __( '7 tabs: General, Assignment &amp; Routing, Email Templates, Messages, Anti-Spam, Canned Responses, Tools', 'simple-wp-helpdesk' ) ),
+		array( __( 'GDPR tools', 'simple-wp-helpdesk' ), __( 'per-email data purge, retention policies, and thorough uninstall cleanup', 'simple-wp-helpdesk' ) ),
+		array( __( 'Internationalization', 'simple-wp-helpdesk' ), __( 'i18n ready with full text-domain support', 'simple-wp-helpdesk' ) ),
+		array( __( 'GitHub auto-updater', 'simple-wp-helpdesk' ), __( 'new releases delivered directly to the WordPress dashboard via plugin-update-checker', 'simple-wp-helpdesk' ) ),
+	);
+	$html  = '<p>' . esc_html__( 'Simple WP Helpdesk is a full-featured helpdesk and ticketing system built entirely on WordPress core data structures. No custom database tables, no external services, no subscriptions — your data stays on your server.', 'simple-wp-helpdesk' ) . '</p>';
+	$html .= '<p><strong>' . esc_html__( 'Key Features:', 'simple-wp-helpdesk' ) . '</strong></p><ul>';
+	foreach ( $features as $feature ) {
+		$html .= '<li><strong>' . esc_html( $feature[0] ) . '</strong> &mdash; ' . wp_kses( $feature[1], array( 'code' => array() ) ) . '</li>';
+	}
+	$html .= '</ul>';
+	return $html;
 }
 
 // Inject icons into the update transient so they appear on the Plugins list screen.

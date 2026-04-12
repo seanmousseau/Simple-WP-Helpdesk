@@ -19,8 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return void
  */
 function swh_field( $name, $defs, $type = 'text' ) {
-	$val     = get_option( $name, isset( $defs[ $name ] ) ? $defs[ $name ] : '' );
-	$default = isset( $defs[ $name ] ) ? $defs[ $name ] : '';
+	$default = isset( $defs[ $name ] ) && is_scalar( $defs[ $name ] ) ? (string) $defs[ $name ] : '';
+	$val     = swh_get_string_option( $name, $default );
 	if ( 'textarea' === $type ) {
 		echo '<textarea name="' . esc_attr( $name ) . '" rows="4" class="large-text" data-default="' . esc_attr( $default ) . '" data-field-name="' . esc_attr( $name ) . '">' . esc_textarea( $val ) . '</textarea>';
 	} else {
@@ -60,6 +60,19 @@ function swh_enqueue_admin_assets( $hook ) {
 
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array(), SWH_VERSION );
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
+	wp_localize_script(
+		'swh-admin',
+		'swhAdmin',
+		array(
+			'i18n' => array(
+				/* translators: Placeholder text shown inside the canned response title input field. */
+				'cannedTitlePlaceholder' => __( 'Response title...', 'simple-wp-helpdesk' ),
+				'cannedTitleAriaLabel'   => __( 'Canned response title', 'simple-wp-helpdesk' ),
+				'cannedBodyAriaLabel'    => __( 'Canned response body', 'simple-wp-helpdesk' ),
+				'removeLabel'            => __( 'Remove', 'simple-wp-helpdesk' ),
+			),
+		)
+	);
 }
 
 /**
@@ -109,8 +122,8 @@ function swh_handle_settings_save() {
 	$integer_opts = array( 'swh_autoclose_days', 'swh_max_upload_size', 'swh_max_upload_count', 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_ticket_page_id', 'swh_token_expiration_days' );
 
 	// GDPR specific client delete.
-	if ( isset( $_POST['swh_gdpr_delete'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_danger_nonce'] ) ), 'swh_danger_action' ) ) {
-		$gdpr_email = isset( $_POST['swh_gdpr_email'] ) ? sanitize_email( wp_unslash( $_POST['swh_gdpr_email'] ) ) : '';
+	if ( isset( $_POST['swh_gdpr_delete'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_danger_nonce'] ) ? $_POST['swh_danger_nonce'] : '' ) ), 'swh_danger_action' ) ) {
+		$gdpr_email = isset( $_POST['swh_gdpr_email'] ) && is_string( $_POST['swh_gdpr_email'] ) ? sanitize_email( wp_unslash( $_POST['swh_gdpr_email'] ) ) : '';
 		if ( $gdpr_email ) {
             // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$tickets = get_posts(
@@ -157,7 +170,7 @@ function swh_handle_settings_save() {
 	}
 
 	// Mass executions.
-	if ( isset( $_POST['swh_purge_tickets'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_danger_nonce'] ) ), 'swh_danger_action' ) ) {
+	if ( isset( $_POST['swh_purge_tickets'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_danger_nonce'] ) ? $_POST['swh_danger_nonce'] : '' ) ), 'swh_danger_action' ) ) {
 		$tickets = get_posts(
 			array(
 				'post_type'      => 'helpdesk_ticket',
@@ -180,7 +193,7 @@ function swh_handle_settings_save() {
 		exit;
 	}
 
-	if ( isset( $_POST['swh_factory_reset'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_danger_nonce'] ) ), 'swh_danger_action' ) ) {
+	if ( isset( $_POST['swh_factory_reset'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_danger_nonce'] ) ? $_POST['swh_danger_nonce'] : '' ) ), 'swh_danger_action' ) ) {
 		$tickets = get_posts(
 			array(
 				'post_type'      => 'helpdesk_ticket',
@@ -208,9 +221,9 @@ function swh_handle_settings_save() {
 	}
 
 	// SAVE TOOLS/RETENTION SETTINGS (separate form with its own nonce).
-	if ( isset( $_POST['swh_save_settings'], $_POST['swh_tools_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_tools_nonce'] ) ), 'swh_save_tools_action' ) ) {
-		update_option( 'swh_retention_attachments_days', absint( isset( $_POST['swh_retention_attachments_days'] ) ? $_POST['swh_retention_attachments_days'] : 0 ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		update_option( 'swh_retention_tickets_days', absint( isset( $_POST['swh_retention_tickets_days'] ) ? $_POST['swh_retention_tickets_days'] : 0 ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+	if ( isset( $_POST['swh_save_settings'], $_POST['swh_tools_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_tools_nonce'] ) ? $_POST['swh_tools_nonce'] : '' ) ), 'swh_save_tools_action' ) ) {
+		update_option( 'swh_retention_attachments_days', isset( $_POST['swh_retention_attachments_days'] ) && is_scalar( $_POST['swh_retention_attachments_days'] ) ? absint( $_POST['swh_retention_attachments_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		update_option( 'swh_retention_tickets_days', isset( $_POST['swh_retention_tickets_days'] ) && is_scalar( $_POST['swh_retention_tickets_days'] ) ? absint( $_POST['swh_retention_tickets_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		update_option( 'swh_delete_on_uninstall', isset( $_POST['swh_delete_on_uninstall'] ) ? 'yes' : 'no' );
 		wp_safe_redirect(
 			add_query_arg(
@@ -225,11 +238,11 @@ function swh_handle_settings_save() {
 	}
 
 	// SAVE GENERAL SETTINGS (main form).
-	if ( isset( $_POST['swh_save_settings'], $_POST['swh_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_settings_nonce'] ) ), 'swh_save_settings_action' ) ) {
+	if ( isset( $_POST['swh_save_settings'], $_POST['swh_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_settings_nonce'] ) ? $_POST['swh_settings_nonce'] : '' ) ), 'swh_save_settings_action' ) ) {
 		if ( ! isset( $_POST['swh_restrict_to_assigned'] ) ) {
 			update_option( 'swh_restrict_to_assigned', 'no' );
 		}
-		$active_tab = isset( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
+		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
 		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses' );
 
@@ -238,11 +251,11 @@ function swh_handle_settings_save() {
 				continue;
 			}
 			if ( in_array( $opt, $integer_opts, true ) ) {
-				$val = absint( $_POST[ $opt ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+				$val = is_scalar( $_POST[ $opt ] ) ? absint( $_POST[ $opt ] ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} elseif ( strpos( $opt, '_body' ) !== false ) {
-				$val = wp_kses_post( wp_unslash( $_POST[ $opt ] ) );
+				$val = is_string( $_POST[ $opt ] ) ? wp_kses_post( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} else {
-				$val = sanitize_text_field( wp_unslash( $_POST[ $opt ] ) );
+				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
 			update_option( $opt, $val );
 		}
@@ -253,8 +266,8 @@ function swh_handle_settings_save() {
 		$raw_bodies = isset( $_POST['swh_canned_bodies'] ) ? (array) wp_unslash( $_POST['swh_canned_bodies'] ) : array();
 		$canned     = array();
 		foreach ( $raw_titles as $ci => $raw_title ) {
-			$ctitle = sanitize_text_field( $raw_title );
-			$cbody  = isset( $raw_bodies[ $ci ] ) ? wp_kses_post( $raw_bodies[ $ci ] ) : '';
+			$ctitle = is_string( $raw_title ) ? sanitize_text_field( $raw_title ) : '';
+			$cbody  = isset( $raw_bodies[ $ci ] ) && is_string( $raw_bodies[ $ci ] ) ? wp_kses_post( $raw_bodies[ $ci ] ) : '';
 			if ( '' !== $ctitle ) {
 				$canned[] = array(
 					'title' => $ctitle,
@@ -294,7 +307,7 @@ function swh_render_settings_page() {
 	// Display notices from redirects.
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only GET params set by server redirect; used only for display.
 	if ( isset( $_GET['swh_notice'] ) ) {
-		$notice = sanitize_key( $_GET['swh_notice'] );
+		$notice = sanitize_key( is_string( $_GET['swh_notice'] ) ? $_GET['swh_notice'] : '' );
 		if ( 'saved' === $notice ) {
 			echo '<div class="updated notice is-dismissible"><p><strong>' . esc_html__( 'Settings saved successfully.', 'simple-wp-helpdesk' ) . '</strong></p></div>';
 		} elseif ( 'reset' === $notice ) {
@@ -302,9 +315,9 @@ function swh_render_settings_page() {
 		} elseif ( 'purged' === $notice ) {
 			echo '<div class="updated error notice is-dismissible"><p><strong>' . esc_html__( 'All tickets & files have been successfully purged.', 'simple-wp-helpdesk' ) . '</strong></p></div>';
 		} elseif ( 'gdpr_done' === $notice ) {
-			$count = absint( isset( $_GET['swh_count'] ) ? $_GET['swh_count'] : 0 );
+			$count = isset( $_GET['swh_count'] ) && is_scalar( $_GET['swh_count'] ) ? absint( $_GET['swh_count'] ) : 0;
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_email + rawurldecode constitutes sanitization.
-			$gdpr_email = isset( $_GET['swh_email'] ) ? sanitize_email( rawurldecode( wp_unslash( $_GET['swh_email'] ) ) ) : '';
+			$gdpr_email = isset( $_GET['swh_email'] ) && is_string( $_GET['swh_email'] ) ? sanitize_email( rawurldecode( wp_unslash( $_GET['swh_email'] ) ) ) : '';
 			/* translators: 1: number of tickets deleted, 2: email address */
 			echo '<div class="updated error notice is-dismissible"><p><strong>' . sprintf( esc_html__( 'Successfully deleted %1$s ticket(s) and all associated files for %2$s.', 'simple-wp-helpdesk' ), esc_html( (string) $count ), esc_html( $gdpr_email ) ) . '</strong></p></div>';
 		} elseif ( 'gdpr_fail' === $notice ) {
@@ -344,9 +357,9 @@ function swh_render_settings_page() {
 					<tr><th scope="row"><?php esc_html_e( '"Closed" Status', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Disables replies', 'simple-wp-helpdesk' ); ?>)</small></th><td><?php swh_field( 'swh_closed_status', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( '"Re-Opened" Status', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_reopened_status', $defs ); ?></td></tr>
 					<tr><td colspan="2"><hr></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Auto-Close Days', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_autoclose_days" value="<?php echo esc_attr( get_option( 'swh_autoclose_days', 3 ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'If a ticket is Resolved and the user doesn\'t reply in this many days, it automatically closes. Set to 0 to disable.', 'simple-wp-helpdesk' ); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Max File Upload Size', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_size" value="<?php echo esc_attr( get_option( 'swh_max_upload_size', 5 ) ); ?>" style="width:80px;"> <?php esc_html_e( 'MB', 'simple-wp-helpdesk' ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Max Files Per Upload', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_count" value="<?php echo esc_attr( get_option( 'swh_max_upload_count', 5 ) ); ?>" style="width:80px;"> <?php esc_html_e( 'files', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'Maximum number of files a user can attach per submission. Set to 0 for unlimited.', 'simple-wp-helpdesk' ); ?></p></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Auto-Close Days', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_autoclose_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_autoclose_days', '3' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'If a ticket is Resolved and the user doesn\'t reply in this many days, it automatically closes. Set to 0 to disable.', 'simple-wp-helpdesk' ); ?></p></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Max File Upload Size', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_size" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_size', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'MB', 'simple-wp-helpdesk' ); ?></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Max Files Per Upload', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_count" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_count', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'files', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'Maximum number of files a user can attach per submission. Set to 0 for unlimited.', 'simple-wp-helpdesk' ); ?></p></td></tr>
 				</table>
 			</div>
 
@@ -358,14 +371,14 @@ function swh_render_settings_page() {
 							<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( get_option( 'swh_default_assignee' ), $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
 						<?php endforeach; ?></select></td>
 					</tr>
-					<tr><th scope="row"><?php esc_html_e( 'Fallback Alert Email', 'simple-wp-helpdesk' ); ?></th><td><input type="email" name="swh_fallback_email" value="<?php echo esc_attr( get_option( 'swh_fallback_email' ) ); ?>" class="regular-text"></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Fallback Alert Email', 'simple-wp-helpdesk' ); ?></th><td><input type="email" name="swh_fallback_email" value="<?php echo esc_attr( swh_get_string_option( 'swh_fallback_email' ) ); ?>" class="regular-text"></td></tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Helpdesk Page', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Client portal destination', 'simple-wp-helpdesk' ); ?>)</small></th>
 						<td>
 							<?php
 							$pages        = get_pages( array( 'post_status' => 'publish' ) );
 							$pages        = is_array( $pages ) ? $pages : array();
-							$current_page = (int) get_option( 'swh_ticket_page_id', 0 );
+							$current_page = swh_get_int_option( 'swh_ticket_page_id', 0 );
 							?>
 							<select name="swh_ticket_page_id">
 								<option value="0"><?php echo '-- ' . esc_html__( 'Select a page', 'simple-wp-helpdesk' ) . ' --'; ?></option>
@@ -391,7 +404,7 @@ function swh_render_settings_page() {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Portal Link Expiration', 'simple-wp-helpdesk' ); ?></th>
 					<td>
-						<input type="number" name="swh_token_expiration_days" value="<?php echo esc_attr( get_option( 'swh_token_expiration_days', 90 ) ); ?>" style="width:80px;" min="0">
+						<input type="number" name="swh_token_expiration_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_token_expiration_days', '90' ) ); ?>" style="width:80px;" min="0">
 						<?php esc_html_e( 'days (0 = never expires)', 'simple-wp-helpdesk' ); ?>
 						<p class="description"><?php esc_html_e( 'Ticket portal links expire after this many days. Clients can request fresh links via the lookup form.', 'simple-wp-helpdesk' ); ?></p>
 					</td>
@@ -474,14 +487,81 @@ function swh_render_settings_page() {
 			</div>
 
 			<div id="tab-spam" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-spam" tabindex="0" style="display:none;">
-				<?php $spam_method = get_option( 'swh_spam_method', 'none' ); ?>
+				<?php
+				$spam_method    = get_option( 'swh_spam_method', 'none' );
+				$recaptcha_type = get_option( 'swh_recaptcha_type', 'v2' );
+				$is_enterprise  = ( 'enterprise' === $recaptcha_type );
+				?>
 				<table class="form-table">
-					<tr><th scope="row"><?php esc_html_e( 'Spam Prevention', 'simple-wp-helpdesk' ); ?></th><td><select name="swh_spam_method"><option value="none" <?php selected( $spam_method, 'none' ); ?>><?php esc_html_e( 'None', 'simple-wp-helpdesk' ); ?></option><option value="honeypot" <?php selected( $spam_method, 'honeypot' ); ?>><?php esc_html_e( 'Honeypot', 'simple-wp-helpdesk' ); ?></option><option value="recaptcha" <?php selected( $spam_method, 'recaptcha' ); ?>><?php esc_html_e( 'Google reCAPTCHA v2', 'simple-wp-helpdesk' ); ?></option><option value="turnstile" <?php selected( $spam_method, 'turnstile' ); ?>><?php esc_html_e( 'Cloudflare Turnstile', 'simple-wp-helpdesk' ); ?></option></select></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'reCAPTCHA Site Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_recaptcha_site_key" value="<?php echo esc_attr( get_option( 'swh_recaptcha_site_key' ) ); ?>" class="regular-text"></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'reCAPTCHA Secret Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_recaptcha_secret_key" value="<?php echo esc_attr( get_option( 'swh_recaptcha_secret_key' ) ); ?>" class="regular-text"></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Turnstile Site Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_site_key" value="<?php echo esc_attr( get_option( 'swh_turnstile_site_key' ) ); ?>" class="regular-text"></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Turnstile Secret Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_secret_key" value="<?php echo esc_attr( get_option( 'swh_turnstile_secret_key' ) ); ?>" class="regular-text"></td></tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Spam Prevention', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<select name="swh_spam_method" id="swh_spam_method">
+								<option value="none" <?php selected( $spam_method, 'none' ); ?>><?php esc_html_e( 'None', 'simple-wp-helpdesk' ); ?></option>
+								<option value="honeypot" <?php selected( $spam_method, 'honeypot' ); ?>><?php esc_html_e( 'Honeypot', 'simple-wp-helpdesk' ); ?></option>
+								<option value="recaptcha" <?php selected( $spam_method, 'recaptcha' ); ?>><?php esc_html_e( 'Google reCAPTCHA', 'simple-wp-helpdesk' ); ?></option>
+								<option value="turnstile" <?php selected( $spam_method, 'turnstile' ); ?>><?php esc_html_e( 'Cloudflare Turnstile', 'simple-wp-helpdesk' ); ?></option>
+							</select>
+						</td>
+					</tr>
+					<tr class="swh-recaptcha-row">
+						<th scope="row"><?php esc_html_e( 'reCAPTCHA Type', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<label style="margin-right:15px;"><input type="radio" name="swh_recaptcha_type" value="v2" <?php checked( $recaptcha_type, 'v2' ); ?>> <?php esc_html_e( 'v2 (Checkbox)', 'simple-wp-helpdesk' ); ?></label>
+							<label><input type="radio" name="swh_recaptcha_type" value="enterprise" <?php checked( $recaptcha_type, 'enterprise' ); ?>> <?php esc_html_e( 'Enterprise (Score-based)', 'simple-wp-helpdesk' ); ?></label>
+						</td>
+					</tr>
+					<tr class="swh-recaptcha-row">
+						<th scope="row"><?php esc_html_e( 'reCAPTCHA Site Key', 'simple-wp-helpdesk' ); ?></th>
+						<td><input type="text" name="swh_recaptcha_site_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_recaptcha_site_key' ) ); ?>" class="regular-text"></td>
+					</tr>
+					<tr class="swh-recaptcha-row swh-recaptcha-v2-row" <?php echo $is_enterprise ? 'style="display:none;"' : ''; ?>>
+						<th scope="row"><?php esc_html_e( 'reCAPTCHA Secret Key', 'simple-wp-helpdesk' ); ?></th>
+						<td><input type="text" name="swh_recaptcha_secret_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_recaptcha_secret_key' ) ); ?>" class="regular-text"></td>
+					</tr>
+					<tr class="swh-recaptcha-row swh-recaptcha-enterprise-row" <?php echo $is_enterprise ? '' : 'style="display:none;"'; ?>>
+						<th scope="row"><?php esc_html_e( 'reCAPTCHA Project ID', 'simple-wp-helpdesk' ); ?></th>
+						<td><input type="text" name="swh_recaptcha_project_id" value="<?php echo esc_attr( swh_get_string_option( 'swh_recaptcha_project_id' ) ); ?>" class="regular-text"></td>
+					</tr>
+					<tr class="swh-recaptcha-row swh-recaptcha-enterprise-row" <?php echo $is_enterprise ? '' : 'style="display:none;"'; ?>>
+						<th scope="row"><?php esc_html_e( 'reCAPTCHA API Key', 'simple-wp-helpdesk' ); ?></th>
+						<td><input type="text" name="swh_recaptcha_api_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_recaptcha_api_key' ) ); ?>" class="regular-text"></td>
+					</tr>
+					<tr class="swh-recaptcha-row swh-recaptcha-enterprise-row" <?php echo $is_enterprise ? '' : 'style="display:none;"'; ?>>
+						<th scope="row"><?php esc_html_e( 'Enterprise Score Threshold', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="number" name="swh_recaptcha_threshold" value="<?php echo esc_attr( swh_get_string_option( 'swh_recaptcha_threshold', '0.5' ) ); ?>" class="small-text" min="0" max="1" step="0.1">
+							<p class="description"><?php esc_html_e( 'Submissions with a score below this threshold are flagged as spam (0.0 = likely bot, 1.0 = likely human).', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr><th scope="row"><?php esc_html_e( 'Turnstile Site Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_site_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_turnstile_site_key' ) ); ?>" class="regular-text"></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Turnstile Secret Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_secret_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_turnstile_secret_key' ) ); ?>" class="regular-text"></td></tr>
 				</table>
+				<script>
+				(function() {
+					function swhUpdateSpamRows() {
+						var method = document.getElementById('swh_spam_method').value;
+						document.querySelectorAll('.swh-recaptcha-row').forEach(function(row) {
+							row.style.display = ( 'recaptcha' === method ) ? '' : 'none';
+						});
+					}
+					function swhUpdateRecaptchaType() {
+						var isEnterprise = document.querySelector('input[name="swh_recaptcha_type"]:checked') &&
+							document.querySelector('input[name="swh_recaptcha_type"]:checked').value === 'enterprise';
+						document.querySelectorAll('.swh-recaptcha-enterprise-row').forEach(function(row) {
+							row.style.display = isEnterprise ? '' : 'none';
+						});
+						document.querySelectorAll('.swh-recaptcha-v2-row').forEach(function(row) {
+							row.style.display = isEnterprise ? 'none' : '';
+						});
+					}
+					document.getElementById('swh_spam_method').addEventListener('change', swhUpdateSpamRows);
+					document.querySelectorAll('input[name="swh_recaptcha_type"]').forEach(function(radio) {
+						radio.addEventListener('change', swhUpdateRecaptchaType);
+					});
+					swhUpdateSpamRows();
+				})();
+				</script>
 			</div>
 			<div id="tab-canned" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-canned" tabindex="0" style="display:none;">
 				<p class="description"><?php esc_html_e( 'Pre-written reply templates. Select one in the ticket editor to insert it into the reply field.', 'simple-wp-helpdesk' ); ?></p>
@@ -495,8 +575,8 @@ function swh_render_settings_page() {
 					?>
 					<div class="swh-canned-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
 						<div style="flex:1;">
-							<input type="text" name="swh_canned_titles[]" value="<?php echo esc_attr( isset( $canned_item['title'] ) ? $canned_item['title'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Response title…', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">
-							<textarea name="swh_canned_bodies[]" rows="3" class="large-text" style="width:100%;"><?php echo esc_textarea( isset( $canned_item['body'] ) ? $canned_item['body'] : '' ); ?></textarea>
+							<input type="text" name="swh_canned_titles[]" value="<?php echo esc_attr( is_array( $canned_item ) && isset( $canned_item['title'] ) && is_string( $canned_item['title'] ) ? $canned_item['title'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Response title…', 'simple-wp-helpdesk' ); ?>" aria-label="<?php esc_attr_e( 'Canned response title', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">
+							<textarea name="swh_canned_bodies[]" rows="3" class="large-text" aria-label="<?php esc_attr_e( 'Canned response body', 'simple-wp-helpdesk' ); ?>" style="width:100%;"><?php echo esc_textarea( is_array( $canned_item ) && isset( $canned_item['body'] ) && is_string( $canned_item['body'] ) ? $canned_item['body'] : '' ); ?></textarea>
 						</div>
 						<div>
 							<button type="button" class="button swh-remove-canned"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button>
@@ -518,14 +598,14 @@ function swh_render_settings_page() {
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Purge Old Attachments', 'simple-wp-helpdesk' ); ?></th>
 						<td>
-							<input type="number" name="swh_retention_attachments_days" value="<?php echo esc_attr( get_option( 'swh_retention_attachments_days', 0 ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?>
+							<input type="number" name="swh_retention_attachments_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_retention_attachments_days', '0' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?>
 							<p class="description"><?php esc_html_e( 'Automatically delete physical file attachments older than this many days to save server space. Links to the files will be safely removed from the ticket. Set to 0 to disable.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Purge Old Tickets', 'simple-wp-helpdesk' ); ?></th>
 						<td>
-							<input type="number" name="swh_retention_tickets_days" value="<?php echo esc_attr( get_option( 'swh_retention_tickets_days', 0 ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?>
+							<input type="number" name="swh_retention_tickets_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_retention_tickets_days', '0' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?>
 							<p class="description"><?php esc_html_e( 'Automatically delete entire tickets (and their files) that haven\'t been updated in this many days. Set to 0 to disable.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>

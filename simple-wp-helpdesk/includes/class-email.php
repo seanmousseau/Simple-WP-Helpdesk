@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function swh_parse_template( $template, $data ) {
 	// 1. Process conditional blocks: {if key}...{endif key}
-	$template = preg_replace_callback(
+	$result = preg_replace_callback(
 		'/\{if (\w+)\}(.*?)\{endif \1\}/s',
 		function ( $matches ) use ( $data ) {
 			$key = $matches[1];
@@ -32,22 +32,31 @@ function swh_parse_template( $template, $data ) {
 		},
 		$template
 	);
-	if ( null === $template ) {
-		$template = '';
+	if ( null === $result ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs PCRE failures for admin troubleshooting.
+		error_log( 'Simple WP Helpdesk: preg_replace_callback() returned null in swh_parse_template (step 1) — PCRE error ' . preg_last_error() );
+	} else {
+		$template = $result;
 	}
 	// 2. Replace placeholders with data values.
 	foreach ( $data as $key => $value ) {
-		$template = str_replace( '{' . $key . '}', $value, $template );
+		$template = str_replace( '{' . $key . '}', is_scalar( $value ) ? (string) $value : '', $template );
 	}
 	// 3. Clean up any unreplaced placeholders.
-	$template = preg_replace( '/\{[a-zA-Z_]+\}/', '', $template );
-	if ( null === $template ) {
-		$template = '';
+	$result = preg_replace( '/\{[a-zA-Z_]+\}/', '', $template );
+	if ( null === $result ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs PCRE failures for admin troubleshooting.
+		error_log( 'Simple WP Helpdesk: preg_replace() returned null in swh_parse_template (step 3) — PCRE error ' . preg_last_error() );
+	} else {
+		$template = $result;
 	}
 	// 4. Collapse runs of 3+ newlines down to 2.
-	$template = preg_replace( '/\n{3,}/', "\n\n", $template );
-	if ( null === $template ) {
-		$template = '';
+	$result = preg_replace( '/\n{3,}/', "\n\n", $template );
+	if ( null === $result ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs PCRE failures for admin troubleshooting.
+		error_log( 'Simple WP Helpdesk: preg_replace() returned null in swh_parse_template (step 4) — PCRE error ' . preg_last_error() );
+	} else {
+		$template = $result;
 	}
 	$template = trim( $template );
 	/**
@@ -75,11 +84,13 @@ function swh_parse_template( $template, $data ) {
  * @return void
  */
 function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = array() ) {
-	$defs    = swh_get_defaults();
-	$subject = swh_parse_template( get_option( $subject_key, isset( $defs[ $subject_key ] ) ? $defs[ $subject_key ] : '' ), $data );
-	$body    = swh_parse_template( get_option( $body_key, isset( $defs[ $body_key ] ) ? $defs[ $body_key ] : '' ), $data );
-	$headers = array();
-	$format  = get_option( 'swh_email_format', 'html' );
+	$defs        = swh_get_defaults();
+	$subject_dfl = isset( $defs[ $subject_key ] ) && is_string( $defs[ $subject_key ] ) ? $defs[ $subject_key ] : '';
+	$body_dfl    = isset( $defs[ $body_key ] ) && is_string( $defs[ $body_key ] ) ? $defs[ $body_key ] : '';
+	$subject     = swh_parse_template( swh_get_string_option( $subject_key, $subject_dfl ), $data );
+	$body        = swh_parse_template( swh_get_string_option( $body_key, $body_dfl ), $data );
+	$headers     = array();
+	$format      = get_option( 'swh_email_format', 'html' );
 	if ( 'html' === $format ) {
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
 	}
@@ -158,7 +169,7 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
  */
 function swh_get_admin_email( $ticket_id = 0 ) {
 	if ( $ticket_id ) {
-		$assigned = get_post_meta( $ticket_id, '_ticket_assigned_to', true );
+		$assigned = swh_get_int_meta( $ticket_id, '_ticket_assigned_to' );
 		if ( $assigned ) {
 			$user = get_userdata( $assigned );
 			if ( $user ) {
@@ -166,16 +177,16 @@ function swh_get_admin_email( $ticket_id = 0 ) {
 			}
 		}
 	}
-	$default_assignee = get_option( 'swh_default_assignee' );
+	$default_assignee = swh_get_int_option( 'swh_default_assignee' );
 	if ( $default_assignee ) {
 		$user = get_userdata( $default_assignee );
 		if ( $user ) {
 			return $user->user_email;
 		}
 	}
-	$fallback = get_option( 'swh_fallback_email' );
+	$fallback = swh_get_string_option( 'swh_fallback_email' );
 	if ( $fallback ) {
 		return $fallback;
 	}
-	return get_option( 'admin_email' );
+	return swh_get_string_option( 'admin_email' );
 }

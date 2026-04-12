@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 2.4.2
+Stable tag: 2.5.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,26 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 2.5.0 =
+* Added: PHPUnit + WP-Mock unit test infrastructure (HelpersTest, EmailTest, TicketTest)
+* Added: reCAPTCHA Enterprise support — new settings for Project ID, API Key, Score Threshold, and Enterprise Assessment API
+* Added: CSAT rating now rejected when ticket status is not the configured closed status
+* Added: User-visible error when wp_insert_post() fails on ticket submission
+* Added: Skipped upload count included in submission response when files exceed size limit
+* Added: PCRE failure logging and template preservation in swh_parse_template()
+* Added: JS string localisation for canned response UI via wp_localize_script (swhAdmin.i18n)
+* Added: aria-label on all canned response title and body inputs (PHP-rendered and JS-built rows)
+* Added: Typed wrapper helpers for PHPStan L9 (swh_get_string_meta, swh_get_int_meta, swh_get_string_option, swh_get_int_option, swh_get_string_comment_meta)
+* Added: i18n wrapping for swh_plugin_description_html() strings
+* Changed: PHPStan raised to Level 9 with full mixed-type narrowing
+* Changed: actions/checkout bumped v4→v6 in CI workflows
+* Fixed: Double wp_unslash() on canned response save removed
+* Fixed: Attachment origname now stored with sanitize_text_field (preserves spaces) instead of sanitize_file_name
+* Fixed: get_posts() return values guarded with is_array() in class-portal.php
+* Fixed: My Tickets "View" cell now shows fallback text when link is unavailable
+* Fixed: Lookup email skipped (with log entry) when no usable ticket links can be generated
+* Fixed: [helpdesk_portal] shortcode docblock updated to reflect My Tickets / lookup form no-token behaviour
 
 = 2.4.2 =
 * Fixed: Correct icon now shown in expanded admin sidebar menu (favicon-32.png restored as SWH_MENU_ICON)
