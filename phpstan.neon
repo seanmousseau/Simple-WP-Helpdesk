@@ -2,7 +2,8 @@ includes:
     - vendor/szepeviktor/phpstan-wordpress/extension.neon
 
 parameters:
-    level: 8
+    level: 9
+    treatPhpDocTypesAsCertain: false
     paths:
         - simple-wp-helpdesk/
     excludePaths:

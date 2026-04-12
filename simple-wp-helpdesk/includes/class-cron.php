@@ -41,14 +41,15 @@ function swh_process_autoclose() {
 	);
 
 	$defs = swh_get_defaults();
-	$days = (int) get_option( 'swh_autoclose_days', 3 );
+	$days = swh_get_int_option( 'swh_autoclose_days', 3 );
 	/**
 	 * Filters the number of days before a resolved ticket is automatically closed.
 	 *
 	 * @since 2.1.0
 	 * @param int $days Number of inactivity days. 0 disables auto-close.
 	 */
-	$days = (int) apply_filters( 'swh_autoclose_threshold', $days );
+	$filtered_days = apply_filters( 'swh_autoclose_threshold', $days );
+	$days          = is_scalar( $filtered_days ) ? intval( $filtered_days ) : $days;
 	if ( $days <= 0 ) {
 		return;
 	}
@@ -100,20 +101,22 @@ function swh_process_autoclose() {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
 		}
 
-		$data = array(
-			'name'           => get_post_meta( $ticket->ID, '_ticket_name', true ) ? get_post_meta( $ticket->ID, '_ticket_name', true ) : 'Client',
-			'email'          => get_post_meta( $ticket->ID, '_ticket_email', true ),
-			'ticket_id'      => get_post_meta( $ticket->ID, '_ticket_uid', true ),
+		$ticket_email = swh_get_string_meta( $ticket->ID, '_ticket_email' );
+		$ticket_name  = swh_get_string_meta( $ticket->ID, '_ticket_name' );
+		$data         = array(
+			'name'           => $ticket_name ? $ticket_name : 'Client',
+			'email'          => $ticket_email,
+			'ticket_id'      => swh_get_string_meta( $ticket->ID, '_ticket_uid' ),
 			'title'          => $ticket->post_title,
 			'status'         => $closed_status,
-			'priority'       => get_post_meta( $ticket->ID, '_ticket_priority', true ),
+			'priority'       => swh_get_string_meta( $ticket->ID, '_ticket_priority' ),
 			'ticket_url'     => swh_get_secure_ticket_link( $ticket->ID ),
 			'admin_url'      => admin_url( 'post.php?post=' . $ticket->ID . '&action=edit' ),
 			'autoclose_days' => $days,
 			'message'        => '',
 		);
-		if ( $data['email'] && $data['ticket_url'] ) {
-			swh_send_email( $data['email'], 'swh_em_user_autoclose_sub', 'swh_em_user_autoclose_body', $data );
+		if ( $ticket_email && $data['ticket_url'] ) {
+			swh_send_email( $ticket_email, 'swh_em_user_autoclose_sub', 'swh_em_user_autoclose_body', $data );
 		}
 	}
 	delete_transient( $lock_key );
@@ -134,7 +137,7 @@ add_action( 'swh_retention_attachments_event', 'swh_process_retention_attachment
  * @return void
  */
 function swh_process_retention_attachments() {
-	$days = (int) get_option( 'swh_retention_attachments_days', 0 );
+	$days = swh_get_int_option( 'swh_retention_attachments_days', 0 );
 	if ( $days <= 0 ) {
 		return;
 	}
@@ -174,7 +177,9 @@ function swh_process_retention_attachments() {
 				$atts = array( $atts );
 			}
 			foreach ( $atts as $url ) {
-				swh_delete_file_by_url( $url );
+				if ( is_string( $url ) ) {
+					swh_delete_file_by_url( $url );
+				}
 			}
 			delete_post_meta( $ticket->ID, '_ticket_attachments' );
 			$comment_id = wp_insert_comment(
@@ -192,12 +197,12 @@ function swh_process_retention_attachments() {
 			}
 		}
 		// Handle legacy single-URL attachment format.
-		$legacy_url = get_post_meta( $ticket->ID, '_ticket_attachment_url', true );
+		$legacy_url = swh_get_string_meta( $ticket->ID, '_ticket_attachment_url' );
 		if ( $legacy_url ) {
 			swh_delete_file_by_url( $legacy_url );
 			delete_post_meta( $ticket->ID, '_ticket_attachment_url' );
 		}
-		$legacy_id = get_post_meta( $ticket->ID, '_ticket_attachment_id', true );
+		$legacy_id = swh_get_int_meta( $ticket->ID, '_ticket_attachment_id' );
 		if ( $legacy_id ) {
 			wp_delete_attachment( $legacy_id, true );
 			delete_post_meta( $ticket->ID, '_ticket_attachment_id' );
@@ -234,7 +239,9 @@ function swh_process_retention_attachments() {
 				$atts = array( $atts );
 			}
 			foreach ( $atts as $url ) {
-				swh_delete_file_by_url( $url );
+				if ( is_string( $url ) ) {
+					swh_delete_file_by_url( $url );
+				}
 			}
 			delete_comment_meta( (int) $comment->comment_ID, '_attachments' );
 			/* translators: %d: number of days for retention */
@@ -264,7 +271,7 @@ add_action( 'swh_retention_tickets_event', 'swh_process_retention_tickets' );
  * @return void
  */
 function swh_process_retention_tickets() {
-	$days = (int) get_option( 'swh_retention_tickets_days', 0 );
+	$days = swh_get_int_option( 'swh_retention_tickets_days', 0 );
 	if ( $days <= 0 ) {
 		return;
 	}

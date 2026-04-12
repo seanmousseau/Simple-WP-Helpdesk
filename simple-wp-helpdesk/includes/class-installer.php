@@ -99,7 +99,7 @@ function swh_run_upgrade_routine() {
 		update_option( 'swh_comment_type_v2', '1' );
 	}
 
-	$db_version = get_option( 'swh_db_version', '0.0' );
+	$db_version = swh_get_string_option( 'swh_db_version', '0.0' );
 	if ( version_compare( $db_version, SWH_VERSION, '>=' ) ) {
 		return;
 	}

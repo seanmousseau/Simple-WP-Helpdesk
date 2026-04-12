@@ -31,7 +31,7 @@ Simple-WP-Helpdesk/
     └── languages/                       # .pot/.po/.mo
 ```
 
-The bootstrap file (`simple-wp-helpdesk.php`) is a thin loader (~55 lines). Admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
+The bootstrap file (`simple-wp-helpdesk.php`) is a loader (~160 lines, including the GitHub auto-updater initialisation and plugin icon injection). Admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
 
 ---
 

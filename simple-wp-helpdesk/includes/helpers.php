@@ -43,6 +43,10 @@ function swh_get_defaults() {
 			'swh_spam_method'                => 'honeypot',
 			'swh_recaptcha_site_key'         => '',
 			'swh_recaptcha_secret_key'       => '',
+			'swh_recaptcha_type'             => 'v2',
+			'swh_recaptcha_project_id'       => '',
+			'swh_recaptcha_api_key'          => '',
+			'swh_recaptcha_threshold'        => '0.5',
 			'swh_turnstile_site_key'         => '',
 			'swh_turnstile_secret_key'       => '',
 			// Data Retention & Tools.
@@ -111,8 +115,9 @@ function swh_get_all_option_keys() {
  * @return string[] Trimmed status label strings.
  */
 function swh_get_statuses() {
-	$defs     = swh_get_defaults();
-	$statuses = array_map( 'trim', explode( ',', get_option( 'swh_ticket_statuses', $defs['swh_ticket_statuses'] ) ) );
+	$defs             = swh_get_defaults();
+	$default_statuses = is_string( $defs['swh_ticket_statuses'] ) ? $defs['swh_ticket_statuses'] : '';
+	$statuses         = array_map( 'trim', explode( ',', swh_get_string_option( 'swh_ticket_statuses', $default_statuses ) ) );
 	/**
 	 * Filters the list of available ticket statuses.
 	 *
@@ -128,8 +133,9 @@ function swh_get_statuses() {
  * @return string[] Trimmed priority label strings.
  */
 function swh_get_priorities() {
-	$defs       = swh_get_defaults();
-	$priorities = array_map( 'trim', explode( ',', get_option( 'swh_ticket_priorities', $defs['swh_ticket_priorities'] ) ) );
+	$defs               = swh_get_defaults();
+	$default_priorities = is_string( $defs['swh_ticket_priorities'] ) ? $defs['swh_ticket_priorities'] : '';
+	$priorities         = array_map( 'trim', explode( ',', swh_get_string_option( 'swh_ticket_priorities', $default_priorities ) ) );
 	/**
 	 * Filters the list of available ticket priorities.
 	 *
@@ -153,8 +159,8 @@ function swh_get_secure_ticket_link( $ticket_id ) {
 	if ( ! $token ) {
 		return false;
 	}
-	$page_id  = (int) get_option( 'swh_ticket_page_id', 0 );
-	$base_url = $page_id ? get_permalink( $page_id ) : get_post_meta( $ticket_id, '_ticket_url', true );
+	$page_id  = swh_get_int_option( 'swh_ticket_page_id', 0 );
+	$base_url = $page_id ? get_permalink( $page_id ) : swh_get_string_meta( $ticket_id, '_ticket_url' );
 	if ( ! $base_url ) {
 		return false;
 	}
@@ -177,11 +183,11 @@ function swh_get_secure_ticket_link( $ticket_id ) {
  * @return bool True if the token is expired, false otherwise.
  */
 function swh_is_token_expired( $ticket_id ) {
-	$days = (int) get_option( 'swh_token_expiration_days', 90 );
+	$days = swh_get_int_option( 'swh_token_expiration_days', 90 );
 	if ( 0 === $days ) {
 		return false;
 	}
-	$created = (int) get_post_meta( $ticket_id, '_ticket_token_created', true );
+	$created = swh_get_int_meta( $ticket_id, '_ticket_token_created' );
 	if ( ! $created ) {
 		return false;
 	}
@@ -197,14 +203,14 @@ function swh_is_token_expired( $ticket_id ) {
  * @return string The client IP address, or empty string if unavailable.
  */
 function swh_get_client_ip() {
-	if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+	if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && is_string( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
 		return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
 	}
-	if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+	if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && is_string( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
 		$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
 		return trim( $ips[0] );
 	}
-	return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+	return isset( $_SERVER['REMOTE_ADDR'] ) && is_string( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 }
 
 /**
@@ -224,37 +230,143 @@ function swh_check_antispam( $check_captcha = true ) {
 		return false;
 	}
 	if ( 'recaptcha' === $method ) {
-		$resp = wp_remote_post(
-			'https://www.google.com/recaptcha/api/siteverify',
-			array(
-				'body'    => array(
-					'secret'   => get_option( 'swh_recaptcha_secret_key' ),
-					'response' => isset( $_POST['g-recaptcha-response'] ) ? sanitize_text_field( wp_unslash( $_POST['g-recaptcha-response'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing
-				),
-				'timeout' => 10,
-			)
-		);
-		$json = json_decode( wp_remote_retrieve_body( $resp ) );
-		if ( empty( $json->success ) ) {
-			return true;
+		$recaptcha_type = swh_get_string_option( 'swh_recaptcha_type', 'v2' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- reCAPTCHA token has no nonce; validated server-side by Google's API.
+		$token = isset( $_POST['g-recaptcha-response'] ) && is_string( $_POST['g-recaptcha-response'] ) ? sanitize_text_field( wp_unslash( $_POST['g-recaptcha-response'] ) ) : '';
+		if ( 'enterprise' === $recaptcha_type ) {
+			$project_id = swh_get_string_option( 'swh_recaptcha_project_id' );
+			$api_key    = swh_get_string_option( 'swh_recaptcha_api_key' );
+			$site_key   = swh_get_string_option( 'swh_recaptcha_site_key' );
+			$threshold  = (float) swh_get_string_option( 'swh_recaptcha_threshold', '0.5' );
+			if ( ! $project_id || ! $api_key ) {
+				return true; // Fail closed: missing credentials → reject submission.
+			}
+			$body = wp_json_encode(
+				array(
+					'event' => array(
+						'token'   => $token,
+						'siteKey' => $site_key,
+					),
+				)
+			);
+			if ( false === $body ) {
+				return true;
+			}
+			$resp = wp_remote_post(
+				'https://recaptchaenterprise.googleapis.com/v1/projects/' . rawurlencode( $project_id ) . '/assessments?key=' . rawurlencode( $api_key ),
+				array(
+					'headers' => array( 'Content-Type' => 'application/json' ),
+					'body'    => $body,
+					'timeout' => 10,
+				)
+			);
+			$json = json_decode( wp_remote_retrieve_body( $resp ) );
+			if (
+				! is_object( $json )
+				|| empty( $json->tokenProperties->valid ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+				|| empty( $json->riskAnalysis->score ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+				|| (float) $json->riskAnalysis->score < $threshold // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+			) {
+				return true;
+			}
+		} else {
+			$resp = wp_remote_post(
+				'https://www.google.com/recaptcha/api/siteverify',
+				array(
+					'body'    => array(
+						'secret'   => swh_get_string_option( 'swh_recaptcha_secret_key' ),
+						'response' => $token,
+					),
+					'timeout' => 10,
+				)
+			);
+			$json = json_decode( wp_remote_retrieve_body( $resp ) );
+			if ( ! is_object( $json ) || empty( $json->success ) ) {
+				return true;
+			}
 		}
 	} elseif ( 'turnstile' === $method ) {
-		$resp = wp_remote_post(
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Turnstile token has no nonce; validated server-side by Cloudflare's API.
+		$turnstile_token = isset( $_POST['cf-turnstile-response'] ) && is_string( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '';
+		$resp            = wp_remote_post(
 			'https://challenges.cloudflare.com/turnstile/v0/siteverify',
 			array(
 				'body'    => array(
-					'secret'   => get_option( 'swh_turnstile_secret_key' ),
-					'response' => isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing
+					'secret'   => swh_get_string_option( 'swh_turnstile_secret_key' ),
+					'response' => $turnstile_token,
 				),
 				'timeout' => 10,
 			)
 		);
-		$json = json_decode( wp_remote_retrieve_body( $resp ) );
-		if ( empty( $json->success ) ) {
+		$json            = json_decode( wp_remote_retrieve_body( $resp ) );
+		if ( ! is_object( $json ) || empty( $json->success ) ) {
 			return true;
 		}
 	}
 	return false;
+}
+
+/**
+ * Returns a post meta value cast to string.
+ *
+ * Wrapper around get_post_meta() that guarantees a string return type for
+ * PHPStan L9 compatibility.
+ *
+ * @param int    $post_id Post ID.
+ * @param string $key     Meta key.
+ * @return string
+ */
+function swh_get_string_meta( int $post_id, string $key ): string {
+	$val = get_post_meta( $post_id, $key, true );
+	return is_scalar( $val ) ? (string) $val : '';
+}
+
+/**
+ * Returns a post meta value cast to int.
+ *
+ * @param int    $post_id Post ID.
+ * @param string $key     Meta key.
+ * @return int
+ */
+function swh_get_int_meta( int $post_id, string $key ): int {
+	$val = get_post_meta( $post_id, $key, true );
+	return is_scalar( $val ) ? intval( $val ) : 0;
+}
+
+/**
+ * Returns an option value cast to string.
+ *
+ * @param string $key      Option name.
+ * @param string $fallback Default value if option not set.
+ * @return string
+ */
+function swh_get_string_option( string $key, string $fallback = '' ): string {
+	$val = get_option( $key, $fallback );
+	return is_scalar( $val ) ? (string) $val : $fallback;
+}
+
+/**
+ * Returns an option value cast to int.
+ *
+ * @param string $key      Option name.
+ * @param int    $fallback Default value if option not set.
+ * @return int
+ */
+function swh_get_int_option( string $key, int $fallback = 0 ): int {
+	$val = get_option( $key, $fallback );
+	return is_scalar( $val ) ? intval( $val ) : $fallback;
+}
+
+/**
+ * Returns a comment meta value cast to string.
+ *
+ * @param int    $comment_id Comment ID.
+ * @param string $key        Meta key.
+ * @return string
+ */
+function swh_get_string_comment_meta( int $comment_id, string $key ): string {
+	$val = get_comment_meta( $comment_id, $key, true );
+	return is_scalar( $val ) ? (string) $val : '';
 }
 
 /**
@@ -276,10 +388,11 @@ function swh_is_rate_limited( $action, $ttl = 30 ) {
 	 * @param int    $ttl    Lock duration in seconds.
 	 * @param string $action The action identifier being rate-limited.
 	 */
-	$ttl = (int) apply_filters( 'swh_rate_limit_ttl', $ttl, $action );
-	$key = 'swh_rl_' . md5( $action . '_' . swh_get_client_ip() );
-	$val = get_option( $key );
-	if ( false !== $val && (int) $val > time() ) {
+	$filtered_ttl = apply_filters( 'swh_rate_limit_ttl', $ttl, $action );
+	$ttl          = is_scalar( $filtered_ttl ) ? intval( $filtered_ttl ) : $ttl;
+	$key          = 'swh_rl_' . md5( $action . '_' . swh_get_client_ip() );
+	$val          = get_option( $key );
+	if ( false !== $val && is_scalar( $val ) && intval( $val ) > time() ) {
 		return true;
 	}
 	update_option( $key, time() + $ttl, false );

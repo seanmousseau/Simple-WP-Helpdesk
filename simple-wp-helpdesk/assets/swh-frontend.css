@@ -94,6 +94,12 @@
 	color: #721c24;
 }
 
+.swh-alert-warning {
+	background-color: #fff3cd;
+	border-color: #ffeeba;
+	color: #856404;
+}
+
 .swh-alert-info {
 	display: flex;
 	flex-wrap: wrap;

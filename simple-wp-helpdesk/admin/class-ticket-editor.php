@@ -30,7 +30,7 @@ function swh_admin_helpdesk_page_notice() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	$page_id = (int) get_option( 'swh_ticket_page_id', 0 );
+	$page_id = swh_get_int_option( 'swh_ticket_page_id', 0 );
 	if ( $page_id && get_post( $page_id ) ) {
 		return;
 	}
@@ -94,13 +94,16 @@ function swh_add_ticket_meta_boxes() {
  * @return void
  */
 function swh_status_meta_box_html( $post ) {
-	$defs     = swh_get_defaults();
-	$uid      = get_post_meta( $post->ID, '_ticket_uid', true );
-	$status   = get_post_meta( $post->ID, '_ticket_status', true ) ? get_post_meta( $post->ID, '_ticket_status', true ) : get_option( 'swh_default_status', $defs['swh_default_status'] );
-	$priority = get_post_meta( $post->ID, '_ticket_priority', true ) ? get_post_meta( $post->ID, '_ticket_priority', true ) : get_option( 'swh_default_priority', $defs['swh_default_priority'] );
-	$assignee = get_post_meta( $post->ID, '_ticket_assigned_to', true );
-	$name     = get_post_meta( $post->ID, '_ticket_name', true ) ? get_post_meta( $post->ID, '_ticket_name', true ) : 'Unknown User';
-	$email    = get_post_meta( $post->ID, '_ticket_email', true );
+	$defs         = swh_get_defaults();
+	$uid          = swh_get_string_meta( $post->ID, '_ticket_uid' );
+	$raw_status   = swh_get_string_meta( $post->ID, '_ticket_status' );
+	$status       = $raw_status ? $raw_status : swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : '' );
+	$raw_priority = swh_get_string_meta( $post->ID, '_ticket_priority' );
+	$priority     = $raw_priority ? $raw_priority : swh_get_string_option( 'swh_default_priority', is_string( $defs['swh_default_priority'] ) ? $defs['swh_default_priority'] : '' );
+	$assignee     = swh_get_int_meta( $post->ID, '_ticket_assigned_to' );
+	$raw_name     = swh_get_string_meta( $post->ID, '_ticket_name' );
+	$name         = $raw_name ? $raw_name : 'Unknown User';
+	$email        = swh_get_string_meta( $post->ID, '_ticket_email' );
 
 	$statuses   = swh_get_statuses();
 	$priorities = swh_get_priorities();
@@ -128,18 +131,19 @@ function swh_status_meta_box_html( $post ) {
 	<p style="font-size:12px; color:#666;"><a href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a></p>
 	<?php endif; ?>
 	<?php
-	$main_attachments  = get_post_meta( $post->ID, '_ticket_attachments', true ) ? get_post_meta( $post->ID, '_ticket_attachments', true ) : array();
-	$main_orignames    = get_post_meta( $post->ID, '_swh_attachment_orignames', true );
-	$main_orignames    = is_array( $main_orignames ) ? $main_orignames : array();
-	$comments          = get_comments(
+	$main_attachments_raw = get_post_meta( $post->ID, '_ticket_attachments', true );
+	$main_attachments     = is_array( $main_attachments_raw ) ? $main_attachments_raw : array();
+	$main_orignames       = get_post_meta( $post->ID, '_swh_attachment_orignames', true );
+	$main_orignames       = is_array( $main_orignames ) ? $main_orignames : array();
+	$comments             = get_comments(
 		array(
 			'post_id' => $post->ID,
 			'order'   => 'ASC',
 		)
 	);
-	$comments          = is_array( $comments ) ? $comments : array();
-	$reply_attachments = array();
-	$reply_orignames   = array();
+	$comments             = is_array( $comments ) ? $comments : array();
+	$reply_attachments    = array();
+	$reply_orignames      = array();
 	foreach ( $comments as $c ) {
 		if ( ! $c instanceof WP_Comment ) {
 			continue;
@@ -159,7 +163,12 @@ function swh_status_meta_box_html( $post ) {
 		?>
 		<p><strong><?php esc_html_e( 'All Attachments:', 'simple-wp-helpdesk' ); ?></strong><br>
 		<?php foreach ( $all_attachments as $url ) : ?>
-			<?php $label = ! empty( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url ); ?>
+			<?php
+			if ( ! is_string( $url ) ) {
+				continue;
+			}
+			$label = ! empty( $all_orignames[ $url ] ) && is_string( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url );
+			?>
 			<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( $label ); ?></a>
 		<?php endforeach; ?></p>
 	<?php endif; ?>
@@ -234,6 +243,9 @@ function swh_conversation_meta_box_html( $post ) {
 			if ( ! empty( $attachments ) && is_array( $attachments ) ) {
 				echo '<div style="margin-top: 10px;">';
 				foreach ( $attachments as $url ) {
+					if ( ! is_string( $url ) ) {
+						continue;
+					}
 					echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $post->ID ) ) . '" target="_blank" class="button button-small" style="margin-right:5px;">' . esc_html( basename( $url ) ) . '</a>';
 				}
 				echo '</div>';
@@ -258,7 +270,11 @@ function swh_conversation_meta_box_html( $post ) {
 				<select id="swh-canned-select" style="max-width:300px; margin-right:6px; margin-top:3px;">
 					<option value=""><?php esc_html_e( '— Select a response —', 'simple-wp-helpdesk' ); ?></option>
 					<?php foreach ( $swh_canned as $swh_cr_item ) : ?>
-						<option value="<?php echo esc_attr( isset( $swh_cr_item['body'] ) ? $swh_cr_item['body'] : '' ); ?>"><?php echo esc_html( isset( $swh_cr_item['title'] ) ? $swh_cr_item['title'] : '' ); ?></option>
+						<?php
+						if ( ! is_array( $swh_cr_item ) ) {
+							continue; }
+						?>
+						<option value="<?php echo esc_attr( isset( $swh_cr_item['body'] ) && is_string( $swh_cr_item['body'] ) ? $swh_cr_item['body'] : '' ); ?>"><?php echo esc_html( isset( $swh_cr_item['title'] ) && is_string( $swh_cr_item['title'] ) ? $swh_cr_item['title'] : '' ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<button type="button" id="swh-canned-insert" class="button button-small"><?php esc_html_e( 'Insert', 'simple-wp-helpdesk' ); ?></button>
@@ -313,7 +329,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 		return;
 	}
-	if ( ! isset( $_POST['swh_ticket_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['swh_ticket_nonce'] ) ), 'swh_save_ticket' ) ) {
+	if ( ! isset( $_POST['swh_ticket_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_ticket_nonce'] ) ? $_POST['swh_ticket_nonce'] : '' ) ), 'swh_save_ticket' ) ) {
 		return;
 	}
 	if ( ! current_user_can( 'edit_post', $post_id ) ) {
@@ -321,11 +337,11 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	}
 
 	$defs            = swh_get_defaults();
-	$old_status      = get_post_meta( $post_id, '_ticket_status', true );
-	$old_assigned_to = (int) get_post_meta( $post_id, '_ticket_assigned_to', true );
-	$new_status      = isset( $_POST['ticket_status'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_status'] ) ) : '';
-	$new_priority    = isset( $_POST['ticket_priority'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_priority'] ) ) : '';
-	$assigned_to     = isset( $_POST['ticket_assigned_to'] ) ? absint( $_POST['ticket_assigned_to'] ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+	$old_status      = swh_get_string_meta( $post_id, '_ticket_status' );
+	$old_assigned_to = swh_get_int_meta( $post_id, '_ticket_assigned_to' );
+	$new_status      = isset( $_POST['ticket_status'] ) && is_string( $_POST['ticket_status'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_status'] ) ) : '';
+	$new_priority    = isset( $_POST['ticket_priority'] ) && is_string( $_POST['ticket_priority'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_priority'] ) ) : '';
+	$assigned_to     = isset( $_POST['ticket_assigned_to'] ) && is_scalar( $_POST['ticket_assigned_to'] ) ? absint( $_POST['ticket_assigned_to'] ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
 	// Validate status and priority against configured lists.
 	$allowed_statuses   = swh_get_statuses();
@@ -334,7 +350,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		$new_status = $old_status; // Reject unknown status; keep existing.
 	}
 	if ( $new_priority && ! in_array( $new_priority, $allowed_priorities, true ) ) {
-		$new_priority = get_post_meta( $post_id, '_ticket_priority', true );
+		$new_priority = swh_get_string_meta( $post_id, '_ticket_priority' );
 	}
 	// Validate assignee: must be an administrator or technician (0 = unassigned).
 	if ( $assigned_to ) {
@@ -365,8 +381,8 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	// Save editable client name/email (admin-created tickets or corrections).
 	// Must run before the bootstrap and assignment notification so meta is current
 	// when swh_get_secure_ticket_link() and email templates are called below.
-	$client_name  = isset( $_POST['ticket_client_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_client_name'] ) ) : '';
-	$client_email = isset( $_POST['ticket_client_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_client_email'] ) ) : '';
+	$client_name  = isset( $_POST['ticket_client_name'] ) && is_string( $_POST['ticket_client_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_client_name'] ) ) : '';
+	$client_email = isset( $_POST['ticket_client_email'] ) && is_string( $_POST['ticket_client_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_client_email'] ) ) : '';
 	if ( $client_name ) {
 		update_post_meta( $post_id, '_ticket_name', $client_name );
 	}
@@ -383,7 +399,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		update_post_meta( $post_id, '_ticket_uid', $uid );
 		update_post_meta( $post_id, '_ticket_token', $token );
 		update_post_meta( $post_id, '_ticket_token_created', time() );
-		$portal_page_id = (int) get_option( 'swh_ticket_page_id', 0 );
+		$portal_page_id = swh_get_int_option( 'swh_ticket_page_id', 0 );
 		if ( $portal_page_id ) {
 			update_post_meta( $post_id, '_ticket_url', get_permalink( $portal_page_id ) );
 		}
@@ -401,7 +417,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 					'ticket_url'     => $ticket_link,
 					'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 					'message'        => '',
-					'autoclose_days' => get_option( 'swh_autoclose_days', $defs['swh_autoclose_days'] ),
+					'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
 				);
 				swh_send_email( $client_email, 'swh_em_user_new_sub', 'swh_em_user_new_body', $new_data );
 			}
@@ -411,53 +427,58 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	// Send assignment notification when a ticket is newly assigned or reassigned.
 	// Token and client meta are now guaranteed to exist before this block runs.
 	if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
-		$assignee_user = get_userdata( $assigned_to );
+		$assignee_user    = get_userdata( $assigned_to );
+		$assign_raw_name  = swh_get_string_meta( $post_id, '_ticket_name' );
+		$assign_ticket_id = swh_get_string_meta( $post_id, '_ticket_uid' );
 		if ( $assignee_user->user_email ) {
 			$assign_data = array(
-				'name'           => get_post_meta( $post_id, '_ticket_name', true ) ? get_post_meta( $post_id, '_ticket_name', true ) : 'Client',
-				'email'          => get_post_meta( $post_id, '_ticket_email', true ),
-				'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
+				'name'           => $assign_raw_name ? $assign_raw_name : 'Client',
+				'email'          => swh_get_string_meta( $post_id, '_ticket_email' ),
+				'ticket_id'      => $assign_ticket_id ? $assign_ticket_id : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
 				'title'          => $post->post_title,
 				'status'         => $new_status,
 				'priority'       => $new_priority,
 				'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
 				'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 				'message'        => '',
-				'autoclose_days' => get_option( 'swh_autoclose_days', $defs['swh_autoclose_days'] ),
+				'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
 			);
 			swh_send_email( $assignee_user->user_email, 'swh_em_assigned_sub', 'swh_em_assigned_body', $assign_data );
 		}
 	}
 
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
 	if ( $resolved_status === $new_status && $old_status !== $new_status ) {
 		update_post_meta( $post_id, '_resolved_timestamp', time() );
 	} elseif ( $resolved_status === $old_status && $resolved_status !== $new_status ) {
 		delete_post_meta( $post_id, '_resolved_timestamp' );
 	}
 
-	$data = array(
-		'name'           => get_post_meta( $post_id, '_ticket_name', true ) ? get_post_meta( $post_id, '_ticket_name', true ) : 'Client',
-		'email'          => get_post_meta( $post_id, '_ticket_email', true ),
-		'ticket_id'      => get_post_meta( $post_id, '_ticket_uid', true ),
+	$data_name = swh_get_string_meta( $post_id, '_ticket_name' );
+	$data      = array(
+		'name'           => $data_name ? $data_name : 'Client',
+		'email'          => swh_get_string_meta( $post_id, '_ticket_email' ),
+		'ticket_id'      => swh_get_string_meta( $post_id, '_ticket_uid' ),
 		'title'          => $post->post_title,
 		'status'         => $new_status,
 		'priority'       => $new_priority,
-		'autoclose_days' => get_option( 'swh_autoclose_days', 3 ),
+		'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
 		'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
 		'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 		'message'        => '',
 	);
 
-	$current_user = wp_get_current_user();
+	$current_user       = wp_get_current_user();
+	$current_user_name  = is_string( $current_user->display_name ) ? $current_user->display_name : '';
+	$current_user_email = is_string( $current_user->user_email ) ? $current_user->user_email : '';
 
-	if ( ! empty( $_POST['swh_tech_note_text'] ) ) {
+	if ( ! empty( $_POST['swh_tech_note_text'] ) && is_string( $_POST['swh_tech_note_text'] ) ) {
 		$note_text  = sanitize_textarea_field( wp_unslash( $_POST['swh_tech_note_text'] ) );
 		$comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID'      => $post_id,
-				'comment_author'       => $current_user->display_name,
-				'comment_author_email' => $current_user->user_email,
+				'comment_author'       => $current_user_name,
+				'comment_author_email' => $current_user_email,
 				'comment_content'      => $note_text,
 				'comment_approved'     => 1,
 				'comment_type'         => 'helpdesk_reply',
@@ -470,10 +491,12 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 
 	$just_replied = false;
 	$attach_urls  = array();
-	$reply_text   = isset( $_POST['swh_tech_reply_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['swh_tech_reply_text'] ) ) : '';
+	$reply_text   = isset( $_POST['swh_tech_reply_text'] ) && is_string( $_POST['swh_tech_reply_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['swh_tech_reply_text'] ) ) : '';
 
-    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-	$has_files = ! empty( $_FILES['swh_tech_reply_attachments']['name'][0] );
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	$files_raw  = isset( $_FILES['swh_tech_reply_attachments'] ) && is_array( $_FILES['swh_tech_reply_attachments'] ) ? $_FILES['swh_tech_reply_attachments'] : array();
+	$files_name = isset( $files_raw['name'] ) && is_array( $files_raw['name'] ) ? $files_raw['name'] : array();
+	$has_files  = ! empty( $files_name[0] );
 
 	if ( $reply_text || $has_files ) {
 		$just_replied    = true;
@@ -481,8 +504,8 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		$comment_id      = wp_insert_comment(
 			array(
 				'comment_post_ID'      => $post_id,
-				'comment_author'       => $current_user->display_name,
-				'comment_author_email' => $current_user->user_email,
+				'comment_author'       => $current_user_name,
+				'comment_author_email' => $current_user_email,
 				'comment_content'      => $comment_content,
 				'comment_approved'     => 1,
 				'comment_type'         => 'helpdesk_reply',
@@ -493,9 +516,10 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		}
 
 		$tech_orignames = null;
+		$tech_skipped   = 0;
 		// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$attach_urls = swh_handle_multiple_uploads( $_FILES['swh_tech_reply_attachments'], $tech_orignames );
+		$attach_urls = ! empty( $files_raw ) ? swh_handle_multiple_uploads( $files_raw, $tech_orignames, $tech_skipped ) : array();
 		if ( $comment_id && ! empty( $attach_urls ) ) {
 			update_comment_meta( $comment_id, '_attachments', $attach_urls );
 			if ( ! empty( $tech_orignames ) ) {
@@ -526,7 +550,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			$data['message'] = __( 'No additional notes provided.', 'simple-wp-helpdesk' );
 			if ( $is_resolving ) {
 				swh_send_email( $data['email'], 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data );
-			} elseif ( get_option( 'swh_reopened_status', $defs['swh_reopened_status'] ) === $new_status && get_option( 'swh_closed_status', $defs['swh_closed_status'] ) === $old_status ) {
+			} elseif ( swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' ) === $new_status && swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' ) === $old_status ) {
 				swh_send_email( $data['email'], 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
 			} else {
 				swh_send_email( $data['email'], 'swh_em_user_status_sub', 'swh_em_user_status_body', $data );

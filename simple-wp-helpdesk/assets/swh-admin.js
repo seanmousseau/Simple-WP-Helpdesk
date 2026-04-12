@@ -109,6 +109,8 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	 * @return {HTMLElement} A div containing the title input, body textarea, and remove button.
 	 */
 	function buildCannedRow() {
+		const i18n = ( window.swhAdmin && window.swhAdmin.i18n ) ? window.swhAdmin.i18n : {};
+
 		const row = document.createElement( 'div' );
 		row.className     = 'swh-canned-item';
 		row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;';
@@ -120,13 +122,15 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		titleInput.type              = 'text';
 		titleInput.name              = 'swh_canned_titles[]';
 		titleInput.className         = 'regular-text';
-		titleInput.placeholder       = 'Response title\u2026';
+		titleInput.placeholder       = i18n.cannedTitlePlaceholder || 'Response title\u2026';
+		titleInput.setAttribute( 'aria-label', i18n.cannedTitleAriaLabel || 'Canned response title' );
 		titleInput.style.cssText     = 'width:100%; margin-bottom:6px;';
 
 		const bodyArea           = document.createElement( 'textarea' );
 		bodyArea.name            = 'swh_canned_bodies[]';
 		bodyArea.rows            = 3;
 		bodyArea.className       = 'large-text';
+		bodyArea.setAttribute( 'aria-label', i18n.cannedBodyAriaLabel || 'Canned response body' );
 		bodyArea.style.width     = '100%';
 
 		fieldWrap.appendChild( titleInput );
@@ -136,7 +140,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		const removeBtn     = document.createElement( 'button' );
 		removeBtn.type      = 'button';
 		removeBtn.className = 'button swh-remove-canned';
-		removeBtn.textContent = 'Remove';
+		removeBtn.textContent = i18n.removeLabel || 'Remove';
 		btnWrap.appendChild( removeBtn );
 
 		row.appendChild( fieldWrap );

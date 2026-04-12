@@ -12,6 +12,40 @@ starting from the next release after 1.8.
 
 ---
 
+## [2.5.0] — 2026-04-12
+
+### Added
+- **PHPUnit + WP-Mock unit test infrastructure:** `phpunit.xml`, `tests/bootstrap.php`, and three test classes (`HelpersTest`, `EmailTest`, `TicketTest`) covering typed helpers, template parsing, CSAT gating, and attachment origname handling.
+- **reCAPTCHA Enterprise support (#236):** New Anti-Spam settings (Type selector, Project ID, API Key, Score Threshold) to use the reCAPTCHA Enterprise Assessment API alongside the existing v2 flow. Enterprise JS API enqueued automatically when selected.
+- **CSAT status gate (#218):** `swh_submit_csat_ajax()` now rejects ratings (HTTP 400) when the ticket status does not match the configured closed status.
+- **`wp_insert_post()` error feedback (#215):** Frontend submission shortcode now shows a user-visible error message and logs to `error_log` when ticket creation fails.
+- **File upload size feedback (#219):** When one or more uploads are skipped due to the configured size limit, the response includes the count of skipped files for user feedback.
+- **PCRE failure logging (#230):** All `preg_replace*` calls in `swh_parse_template()` now log to `error_log` on `null` return (PCRE error) and preserve the unmodified template.
+- **JS string localisation for canned responses (#185):** Canned response UI strings (placeholder, aria-labels, Remove button label) are now passed from PHP via `wp_localize_script()` as `swhAdmin.i18n.*`; `swh-admin.js` consumes them with hard-coded fallbacks.
+- **`aria-label` on canned response inputs (#187):** PHP-rendered canned response rows and JS-built rows both now carry explicit `aria-label` attributes for screen reader compatibility.
+- **Typed wrapper helpers for PHPStan L9 (#145):** `swh_get_string_meta()`, `swh_get_int_meta()`, `swh_get_string_option()`, `swh_get_int_option()`, `swh_get_string_comment_meta()` in `includes/helpers.php`.
+- **`swh_plugin_description_html()` i18n (#233):** All hard-coded English strings in the plugin description function now wrapped with `esc_html__()` / `__()`.
+
+### Changed
+
+- **PHPStan raised to Level 9 (#146):** All `mixed`-typed accesses from `get_option()`, `get_post_meta()`, `$_POST`, `$_FILES`, and WP_User magic getters narrowed to concrete types. `phpstan.neon` bumped to `level: 9`.
+- **`actions/checkout` bumped v4→v6 (#238):** Both `.github/workflows/semgrep.yml` and `.github/workflows/claude-code-review.yml` updated.
+
+### Fixed
+
+- **Double `wp_unslash()` on canned responses (#213):** Redundant inner `wp_unslash()` calls removed from the settings save handler; the outer unslash on the raw POST array already handles unslashing.
+- **Attachment origname stores sanitised name (#231):** `sanitize_file_name()` (converts spaces → hyphens) replaced with `sanitize_text_field()` when storing `_swh_attachment_orignames`, preserving the original filename.
+- **`get_posts()` not guarded with `is_array()` (#220):** All `get_posts()` return values in `class-portal.php` now guarded with `is_array()` before iteration.
+- **Empty "View" cell in My Tickets (#216):** Added a "Link unavailable" fallback when `swh_get_secure_ticket_link()` returns `false` so the table cell is never blank.
+- **Lookup email sent with empty `{ticket_links}` (#217):** `swh_send_email()` is now skipped when no usable ticket links could be generated; an `error_log` entry is written and a user-facing message shown instead.
+- **`swh_helpdesk_portal_shortcode` docblock (#221):** Docblock updated to accurately describe the no-token behaviour (My Tickets for logged-in users, lookup form for guests).
+
+### Security
+
+- **reCAPTCHA / Turnstile token extraction (#146):** Combined `isset` + `is_string` + `sanitize_text_field` + `wp_unslash` into a single expression; added `phpcs:ignore NonceVerification` comments with explanatory notes.
+
+---
+
 ## [2.4.2] — 2026-04-10
 
 ### Fixed
@@ -310,7 +344,8 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.2...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v2.3.0...v2.4.0

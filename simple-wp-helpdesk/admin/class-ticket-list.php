@@ -79,12 +79,13 @@ function swh_ticket_column_content( $column, $post_id ) {
 	$defs = swh_get_defaults();
 	switch ( $column ) {
 		case 'ticket_uid':
-			echo esc_html( get_post_meta( $post_id, '_ticket_uid', true ) ? get_post_meta( $post_id, '_ticket_uid', true ) : '—' );
+			$uid = swh_get_string_meta( $post_id, '_ticket_uid' );
+			echo esc_html( $uid ? $uid : '—' );
 			break;
 		case 'ticket_status':
-			$status          = get_post_meta( $post_id, '_ticket_status', true );
-			$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
-			$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+			$status          = swh_get_string_meta( $post_id, '_ticket_status' );
+			$closed_status   = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
+			$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
 			if ( $status === $closed_status ) {
 				$bg    = '#f8d7da';
 				$color = '#721c24';
@@ -101,20 +102,21 @@ function swh_ticket_column_content( $column, $post_id ) {
 			echo '<span class="swh-status-badge" style="background:' . esc_attr( $bg ) . ';color:' . esc_attr( $color ) . ';">' . esc_html( $status ) . '</span>';
 			break;
 		case 'ticket_priority':
-			echo esc_html( get_post_meta( $post_id, '_ticket_priority', true ) ? get_post_meta( $post_id, '_ticket_priority', true ) : '—' );
+			$priority = swh_get_string_meta( $post_id, '_ticket_priority' );
+			echo esc_html( $priority ? $priority : '—' );
 			break;
 		case 'ticket_assigned':
-			$assigned = get_post_meta( $post_id, '_ticket_assigned_to', true );
+			$assigned = swh_get_int_meta( $post_id, '_ticket_assigned_to' );
 			if ( $assigned ) {
 				$user = get_userdata( $assigned );
-				echo $user ? esc_html( $user->display_name ) : esc_html__( 'Unknown', 'simple-wp-helpdesk' );
+				echo $user ? esc_html( is_string( $user->display_name ) ? $user->display_name : '' ) : esc_html__( 'Unknown', 'simple-wp-helpdesk' );
 			} else {
 				echo '<span style="color:#999;">' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . '</span>';
 			}
 			break;
 		case 'ticket_client':
-			$name  = get_post_meta( $post_id, '_ticket_name', true );
-			$email = get_post_meta( $post_id, '_ticket_email', true );
+			$name  = swh_get_string_meta( $post_id, '_ticket_name' );
+			$email = swh_get_string_meta( $post_id, '_ticket_email' );
 			if ( $name ) {
 				echo esc_html( $name );
 			}
@@ -190,13 +192,13 @@ function swh_ticket_list_query( $query ) {
 	if ( ! empty( $_GET['swh_filter_status'] ) ) {
 		$meta_query[] = array(
 			'key'   => '_ticket_status',
-			'value' => sanitize_text_field( wp_unslash( $_GET['swh_filter_status'] ) ),
+			'value' => sanitize_text_field( wp_unslash( is_string( $_GET['swh_filter_status'] ) ? $_GET['swh_filter_status'] : '' ) ),
 		);
 	}
 	if ( ! empty( $_GET['swh_filter_priority'] ) ) {
 		$meta_query[] = array(
 			'key'   => '_ticket_priority',
-			'value' => sanitize_text_field( wp_unslash( $_GET['swh_filter_priority'] ) ),
+			'value' => sanitize_text_field( wp_unslash( is_string( $_GET['swh_filter_priority'] ) ? $_GET['swh_filter_priority'] : '' ) ),
 		);
 	}
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -206,11 +208,12 @@ function swh_ticket_list_query( $query ) {
 	}
 
 	// Restrict technicians to assigned tickets if enabled.
-	if ( 'yes' === get_option( 'swh_restrict_to_assigned', 'no' ) ) {
+	if ( 'yes' === swh_get_string_option( 'swh_restrict_to_assigned', 'no' ) ) {
 		$current_user = wp_get_current_user();
 		if ( in_array( 'technician', (array) $current_user->roles, true ) ) {
-			$meta_query   = $query->get( 'meta_query' ) ? $query->get( 'meta_query' ) : array();
-			$meta_query[] = array(
+			$meta_query_raw = $query->get( 'meta_query' );
+			$meta_query     = is_array( $meta_query_raw ) ? $meta_query_raw : array();
+			$meta_query[]   = array(
 				'key'   => '_ticket_assigned_to',
 				'value' => $current_user->ID,
 			);
@@ -246,7 +249,7 @@ function swh_restrict_ticket_edit() {
 		return;
 	}
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin read-only GET param; capability check already performed above.
-	$post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+	$post_id = isset( $_GET['post'] ) && is_scalar( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
 	if ( ! $post_id ) {
 		return;
 	}
@@ -254,7 +257,7 @@ function swh_restrict_ticket_edit() {
 	if ( ! $post || 'helpdesk_ticket' !== $post->post_type ) {
 		return;
 	}
-	if ( (int) get_post_meta( $post_id, '_ticket_assigned_to', true ) !== $user->ID ) {
+	if ( swh_get_int_meta( $post_id, '_ticket_assigned_to' ) !== $user->ID ) {
 		wp_die( esc_html__( 'You are not assigned to this ticket.', 'simple-wp-helpdesk' ), 403 );
 	}
 }
@@ -416,8 +419,8 @@ function swh_bulk_status_notice() {
 	if ( empty( $_GET['swh_bulk_updated'] ) ) {
 		return;
 	}
-	$count  = absint( $_GET['swh_bulk_updated'] );
-	$status = isset( $_GET['swh_bulk_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_bulk_status'] ) ) : '';
+	$count  = isset( $_GET['swh_bulk_updated'] ) && is_scalar( $_GET['swh_bulk_updated'] ) ? absint( $_GET['swh_bulk_updated'] ) : 0;
+	$status = isset( $_GET['swh_bulk_status'] ) && is_string( $_GET['swh_bulk_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_bulk_status'] ) ) : '';
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	echo '<div class="updated notice is-dismissible"><p>';
 	/* translators: 1: number of tickets updated, 2: new status label */
@@ -445,7 +448,7 @@ function swh_ticket_filter_dropdowns( $post_type ) {
 	}
 	$statuses = swh_get_statuses();
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; sanitized before use.
-	$current_status = isset( $_GET['swh_filter_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_status'] ) ) : '';
+	$current_status = isset( $_GET['swh_filter_status'] ) && is_string( $_GET['swh_filter_status'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_status'] ) ) : '';
 	$current_status = esc_attr( $current_status );
 	echo '<select name="swh_filter_status"><option value="">' . esc_html__( 'All Statuses', 'simple-wp-helpdesk' ) . '</option>';
 	foreach ( $statuses as $s ) {
@@ -455,7 +458,7 @@ function swh_ticket_filter_dropdowns( $post_type ) {
 
 	$priorities = swh_get_priorities();
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; sanitized before use.
-	$current_priority = isset( $_GET['swh_filter_priority'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_priority'] ) ) : '';
+	$current_priority = isset( $_GET['swh_filter_priority'] ) && is_string( $_GET['swh_filter_priority'] ) ? sanitize_text_field( wp_unslash( $_GET['swh_filter_priority'] ) ) : '';
 	$current_priority = esc_attr( $current_priority );
 	echo '<select name="swh_filter_priority"><option value="">' . esc_html__( 'All Priorities', 'simple-wp-helpdesk' ) . '</option>';
 	foreach ( $priorities as $p ) {
