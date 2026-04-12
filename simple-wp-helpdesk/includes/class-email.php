@@ -206,8 +206,8 @@ function swh_handle_inbound_email( $request ) {
 	}
 	$from = sanitize_email( trim( $from ) );
 
-	// Parse ticket ID from subject: [TKT-XXXX].
-	if ( ! preg_match( '/\[TKT-(\d+)\]/i', $subject, $tm ) ) {
+	// Parse ticket UID from subject: [TKT-XXXX] where XXXX is the numeric portion.
+	if ( ! preg_match( '/\[(TKT-\d+)\]/i', $subject, $tm ) ) {
 		return rest_ensure_response(
 			array(
 				'success' => false,
@@ -215,7 +215,7 @@ function swh_handle_inbound_email( $request ) {
 			)
 		);
 	}
-	$ticket_uid = $tm[1];
+	$ticket_uid = strtoupper( $tm[1] );
 
 	// Find ticket by UID.
 	$tickets = get_posts(

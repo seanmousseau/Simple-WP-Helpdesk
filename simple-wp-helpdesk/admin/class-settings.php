@@ -506,7 +506,7 @@ function swh_render_settings_page() {
 						$rule_cat  = isset( $rule['category_term_id'] ) && is_scalar( $rule['category_term_id'] ) ? intval( $rule['category_term_id'] ) : 0;
 						$rule_user = isset( $rule['assignee_user_id'] ) && is_scalar( $rule['assignee_user_id'] ) ? intval( $rule['assignee_user_id'] ) : 0;
 						?>
-						<tr>
+						<tr class="swh-rule-item">
 							<td>
 								<select name="swh_rule_category[]">
 									<option value=""><?php esc_html_e( '— Select category —', 'simple-wp-helpdesk' ); ?></option>
@@ -564,6 +564,7 @@ function swh_render_settings_page() {
 					document.getElementById( 'swh-add-rule' ).addEventListener( 'click', function() {
 						var tbody = document.getElementById( 'swh-rules-body' );
 						var tr = document.createElement( 'tr' );
+						tr.className = 'swh-rule-item';
 						var tdCat = document.createElement( 'td' );
 						var selCat = document.createElement( 'select' );
 						selCat.name = 'swh_rule_category[]';

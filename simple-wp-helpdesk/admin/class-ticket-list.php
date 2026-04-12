@@ -45,15 +45,16 @@ add_filter( 'manage_helpdesk_ticket_posts_columns', 'swh_ticket_columns' );
  * @return string[] Modified column definitions.
  */
 function swh_ticket_columns( $columns ) {
-	$new                    = array();
-	$new['cb']              = $columns['cb'];
-	$new['ticket_uid']      = __( 'Ticket #', 'simple-wp-helpdesk' );
-	$new['title']           = $columns['title'];
-	$new['ticket_status']   = __( 'Status', 'simple-wp-helpdesk' );
-	$new['ticket_priority'] = __( 'Priority', 'simple-wp-helpdesk' );
-	$new['ticket_assigned'] = __( 'Assigned To', 'simple-wp-helpdesk' );
-	$new['ticket_client']   = __( 'Client', 'simple-wp-helpdesk' );
-	$new['date']            = $columns['date'];
+	$new                               = array();
+	$new['cb']                         = $columns['cb'];
+	$new['ticket_uid']                 = __( 'Ticket #', 'simple-wp-helpdesk' );
+	$new['title']                      = $columns['title'];
+	$new['ticket_status']              = __( 'Status', 'simple-wp-helpdesk' );
+	$new['ticket_priority']            = __( 'Priority', 'simple-wp-helpdesk' );
+	$new['ticket_assigned']            = __( 'Assigned To', 'simple-wp-helpdesk' );
+	$new['ticket_client']              = __( 'Client', 'simple-wp-helpdesk' );
+	$new['taxonomy-helpdesk_category'] = __( 'Category', 'simple-wp-helpdesk' );
+	$new['date']                       = $columns['date'];
 	return $new;
 }
 
@@ -199,6 +200,20 @@ function swh_ticket_list_query( $query ) {
 		$meta_query[] = array(
 			'key'   => '_ticket_priority',
 			'value' => sanitize_text_field( wp_unslash( is_string( $_GET['swh_filter_priority'] ) ? $_GET['swh_filter_priority'] : '' ) ),
+		);
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; absint-sanitized.
+	if ( ! empty( $_GET['helpdesk_category'] ) && is_scalar( $_GET['helpdesk_category'] ) ) {
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		$query->set(
+			'tax_query',
+			array(
+				array(
+					'taxonomy' => 'helpdesk_category',
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- absint sanitizes this.
+					'terms'    => absint( $_GET['helpdesk_category'] ),
+				),
+			)
 		);
 	}
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -455,6 +470,26 @@ function swh_ticket_filter_dropdowns( $post_type ) {
 		echo '<option value="' . esc_attr( $s ) . '"' . selected( $current_status, $s, false ) . '>' . esc_html( $s ) . '</option>';
 	}
 	echo '</select>';
+
+	// Category taxonomy filter.
+	$cat_terms = get_terms(
+		array(
+			'taxonomy'   => 'helpdesk_category',
+			'hide_empty' => false,
+		)
+	);
+	if ( ! is_wp_error( $cat_terms ) && ! empty( $cat_terms ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; sanitized before use.
+		$current_cat = isset( $_GET['helpdesk_category'] ) && is_scalar( $_GET['helpdesk_category'] ) ? absint( $_GET['helpdesk_category'] ) : 0;
+		echo '<select name="helpdesk_category"><option value="">' . esc_html__( 'All Categories', 'simple-wp-helpdesk' ) . '</option>';
+		foreach ( $cat_terms as $cat_term ) {
+			$term_id_safe   = esc_attr( (string) $cat_term->term_id );
+			$term_name_safe = esc_html( $cat_term->name );
+			$is_selected    = ( $current_cat === (int) $cat_term->term_id ) ? ' selected="selected"' : '';
+			echo '<option value="' . $term_id_safe . '"' . $is_selected . '>' . $term_name_safe . '</option>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped above
+		}
+		echo '</select>';
+	}
 
 	$priorities = swh_get_priorities();
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list-table filter GET param; sanitized before use.

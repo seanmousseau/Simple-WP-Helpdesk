@@ -22,7 +22,7 @@ use WP_Mock\Tools\TestCase;
 class InboundEmailTest extends TestCase {
 
 	// -------------------------------------------------------------------------
-	// Ticket-ID parser  /\[TKT-(\d+)\]/i
+	// Ticket-ID parser  /\[(TKT-\d+)\]/i
 	// -------------------------------------------------------------------------
 
 	/**
@@ -30,9 +30,9 @@ class InboundEmailTest extends TestCase {
 	 */
 	public function test_parse_ticket_id_from_subject(): void {
 		$subject = 'Re: Your support request [TKT-1234]';
-		$matched = preg_match( '/\[TKT-(\d+)\]/i', $subject, $matches );
+		$matched = preg_match( '/\[(TKT-\d+)\]/i', $subject, $matches );
 		$this->assertSame( 1, $matched );
-		$this->assertSame( '1234', $matches[1] );
+		$this->assertSame( 'TKT-1234', strtoupper( $matches[1] ) );
 	}
 
 	/**
@@ -40,9 +40,9 @@ class InboundEmailTest extends TestCase {
 	 */
 	public function test_parse_ticket_id_from_subject_middle(): void {
 		$subject = 'Your ticket [TKT-9999] has a new reply';
-		$matched = preg_match( '/\[TKT-(\d+)\]/i', $subject, $matches );
+		$matched = preg_match( '/\[(TKT-\d+)\]/i', $subject, $matches );
 		$this->assertSame( 1, $matched );
-		$this->assertSame( '9999', $matches[1] );
+		$this->assertSame( 'TKT-9999', strtoupper( $matches[1] ) );
 	}
 
 	/**
@@ -50,7 +50,7 @@ class InboundEmailTest extends TestCase {
 	 */
 	public function test_parse_ticket_id_missing_returns_no_match(): void {
 		$subject = 'A completely unrelated email with no ticket ID';
-		$matched = preg_match( '/\[TKT-(\d+)\]/i', $subject, $matches );
+		$matched = preg_match( '/\[(TKT-\d+)\]/i', $subject, $matches );
 		$this->assertSame( 0, $matched );
 	}
 
@@ -59,9 +59,9 @@ class InboundEmailTest extends TestCase {
 	 */
 	public function test_parse_ticket_id_case_insensitive(): void {
 		$subject = 'Reply to [tkt-42] from the client';
-		$matched = preg_match( '/\[TKT-(\d+)\]/i', $subject, $matches );
+		$matched = preg_match( '/\[(TKT-\d+)\]/i', $subject, $matches );
 		$this->assertSame( 1, $matched );
-		$this->assertSame( '42', $matches[1] );
+		$this->assertSame( 'TKT-42', strtoupper( $matches[1] ) );
 	}
 
 	// -------------------------------------------------------------------------
