@@ -72,7 +72,7 @@ function swh_enqueue_admin_assets( $hook ) {
 				'cannedTitleAriaLabel'   => __( 'Canned response title', 'simple-wp-helpdesk' ),
 				'cannedBodyAriaLabel'    => __( 'Canned response body', 'simple-wp-helpdesk' ),
 				'removeLabel'            => __( 'Remove', 'simple-wp-helpdesk' ),
-				'testEmailSending'       => __( 'Sending\u2026', 'simple-wp-helpdesk' ),
+				'testEmailSending'       => __( 'Sending…', 'simple-wp-helpdesk' ),
 				/* translators: Shown after a test email is successfully dispatched. */
 				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
 				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
@@ -623,7 +623,7 @@ function swh_render_settings_page() {
 				<p>
 					<button type="button" id="swh-test-email-btn" class="button"><?php esc_html_e( 'Send Test Email', 'simple-wp-helpdesk' ); ?></button>
 					<span id="swh-test-email-msg" style="margin-left:10px; font-size:13px;" aria-live="polite"></span>
-					<span class="description" style="display:block; margin-top:4px; font-size:12px;"><?php esc_html_e( 'Sends a sample "New Ticket" email to the WordPress admin address to verify your email settings.', 'simple-wp-helpdesk' ); ?></span>
+					<span class="description" style="display:block; margin-top:4px; font-size:12px;"><?php esc_html_e( 'Sends a sample "New Ticket" email to your account email address to verify your email settings.', 'simple-wp-helpdesk' ); ?></span>
 				</p>
 				<hr>
 				<table class="form-table">

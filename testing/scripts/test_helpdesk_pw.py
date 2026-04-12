@@ -2922,13 +2922,14 @@ def test_52_email_test_button(page: Page):
         skip("email test button functionality", "button not found")
         return
 
-    # Click the button and wait for the AJAX response.
+    # Click the button and wait for AJAX to complete (locale-agnostic: wait for
+    # button re-enable rather than checking for the English "Sending…" string).
     btn.click()
-    # Wait for the message element to contain a non-sending string (up to 10 s).
     page.wait_for_function(
-        "() => { var el = document.getElementById('swh-test-email-msg'); "
-        "return el && el.textContent && "
-        "!el.textContent.includes('Sending') && el.textContent.trim().length > 0; }",
+        "() => { "
+        "var b = document.getElementById('swh-test-email-btn'); "
+        "var el = document.getElementById('swh-test-email-msg'); "
+        "return b && !b.disabled && el && el.textContent.trim().length > 0; }",
         timeout=10000
     )
 
@@ -2949,8 +2950,10 @@ def test_52_email_test_button(page: Page):
     screenshot(page, "64_email_test_button")
 
     if 'sent' in msg_text.lower() or '@' in msg_text:
-        admin_email_raw = wpcli("eval \"echo get_option('admin_email');\"").strip()
-        expect_email(admin_email_raw, "Test email from Send Test Email button (Settings → Email Templates)")
+        # Handler sends to wp_get_current_user()->user_email first; query via WP-CLI.
+        current_admin_email = wpcli(f"user get {ADMIN_USER} --field=user_email 2>/dev/null").strip()
+        if current_admin_email:
+            expect_email(current_admin_email, "Test email from Send Test Email button (Settings → Email Templates)")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

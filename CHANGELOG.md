@@ -15,6 +15,7 @@ starting from the next release after 1.8.
 ## [3.1.0] — Unreleased
 
 ### Added
+
 - **Dedicated "Send Reply" and "Save Note" buttons (#97):** The ticket editor conversation meta box now has explicit buttons for sending a public reply and saving an internal note, replacing the ambiguous "click Update" instruction.
 - **Unread reply count badge in admin menu (#101):** The helpdesk menu item shows a WordPress-native `.awaiting-mod` count badge when tickets have unread client replies. Badge clears automatically when the admin opens the ticket.
 - **Row highlighting for unread client replies (#102):** Tickets with new client replies receive the `swh-has-unread` CSS class in the admin list, adding a blue left border and light background tint for visual prominence.
@@ -24,10 +25,12 @@ starting from the next release after 1.8.
 - **Playwright tests 48–52:** End-to-end coverage for timestamp locale (48), dedicated reply buttons (49), unread badge (50), unread row highlight (51), and Send Test Email button (52).
 
 ### Fixed
+
 - **Timestamps now respect WP site locale and timezone (#121):** Conversation timestamps in both the admin ticket editor and client portal now use `wp_date()` with `comment_date_gmt` (UTC source), ensuring the displayed time respects the site's timezone and `date_format` / `time_format` options.
 - **`swh_send_email()` now returns `bool`:** The function previously returned `void`; it now returns the `wp_mail()` return value so callers (e.g. the test email AJAX handler) can detect delivery failures.
 
 ### Changed
+
 - `SWH_VERSION` bumped to `3.1.0`.
 
 ---
