@@ -6,7 +6,7 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     allow:
-      - dependency-name: "phpstan/phpstan"
+      - dependency-name: "szepeviktor/phpstan-wordpress"
       - dependency-name: "squizlabs/php_codesniffer"
       - dependency-name: "phpunit/phpunit"
       - dependency-name: "10up/wp_mock"

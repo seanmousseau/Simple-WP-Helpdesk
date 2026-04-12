@@ -33,7 +33,7 @@ function swh_render_client_portal() {
 	$post     = get_post( $ticket_id );
 	$db_token = swh_get_string_meta( $ticket_id, '_ticket_token' );
 
-	if ( ! $post || 'helpdesk_ticket' !== $post->post_type || ! hash_equals( $db_token, $token ) ) {
+	if ( ! $post || 'helpdesk_ticket' !== $post->post_type || '' === $db_token || '' === $token || ! hash_equals( $db_token, $token ) ) {
 		echo '<div class="swh-helpdesk-wrapper">';
 		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( swh_get_string_option( 'swh_msg_err_invalid', is_string( $defs['swh_msg_err_invalid'] ) ? $defs['swh_msg_err_invalid'] : '' ) ) . '</div>';
 		echo '</div>';
@@ -115,9 +115,12 @@ function swh_render_client_portal() {
 		} else {
 			$reply_text = isset( $_POST['ticket_reopen_text'] ) && is_string( $_POST['ticket_reopen_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reopen_text'] ) ) : '';
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-			$reopen_files = isset( $_FILES['swh_reopen_attachments'] ) && is_array( $_FILES['swh_reopen_attachments'] ) ? $_FILES['swh_reopen_attachments'] : array();
-			$reopen_names = isset( $reopen_files['name'] ) && is_array( $reopen_files['name'] ) ? $reopen_files['name'] : array();
-			$has_files    = ! empty( $reopen_names[0] );
+			$reopen_files     = isset( $_FILES['swh_reopen_attachments'] ) && is_array( $_FILES['swh_reopen_attachments'] ) ? $_FILES['swh_reopen_attachments'] : array();
+			$reopen_orignames = null;
+			$reopen_skipped   = 0;
+			// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
+			$attach_urls = swh_handle_multiple_uploads( $reopen_files, $reopen_orignames, $reopen_skipped );
+			$has_files   = ! empty( $attach_urls ); // Derive from actual upload result, not raw file names.
 			update_post_meta( $ticket_id, '_ticket_status', $reopened_status );
 			delete_post_meta( $ticket_id, '_resolved_timestamp' );
 			if ( $reply_text ) {
@@ -139,15 +142,11 @@ function swh_render_client_portal() {
 			);
 			if ( $comment_id ) {
 				update_comment_meta( $comment_id, '_is_user_reply', '1' );
-			}
-			$reopen_orignames = null;
-			$reopen_skipped   = 0;
-			// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
-			$attach_urls = swh_handle_multiple_uploads( $reopen_files, $reopen_orignames, $reopen_skipped );
-			if ( $comment_id && ! empty( $attach_urls ) ) {
-				update_comment_meta( $comment_id, '_attachments', $attach_urls );
-				if ( ! empty( $reopen_orignames ) ) {
-					update_comment_meta( $comment_id, '_swh_reply_orignames', $reopen_orignames );
+				if ( ! empty( $attach_urls ) ) {
+					update_comment_meta( $comment_id, '_attachments', $attach_urls );
+					if ( ! empty( $reopen_orignames ) ) {
+						update_comment_meta( $comment_id, '_swh_reply_orignames', $reopen_orignames );
+					}
 				}
 			}
 			// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- dynamic fallback intentional
@@ -177,9 +176,12 @@ function swh_render_client_portal() {
 		} else {
 			$reply_text = isset( $_POST['ticket_reply_text'] ) && is_string( $_POST['ticket_reply_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ticket_reply_text'] ) ) : '';
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-			$reply_files = isset( $_FILES['swh_user_reply_attachments'] ) && is_array( $_FILES['swh_user_reply_attachments'] ) ? $_FILES['swh_user_reply_attachments'] : array();
-			$reply_names = isset( $reply_files['name'] ) && is_array( $reply_files['name'] ) ? $reply_files['name'] : array();
-			$has_files   = ! empty( $reply_names[0] );
+			$reply_files     = isset( $_FILES['swh_user_reply_attachments'] ) && is_array( $_FILES['swh_user_reply_attachments'] ) ? $_FILES['swh_user_reply_attachments'] : array();
+			$reply_orignames = null;
+			$reply_skipped   = 0;
+			// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
+			$attach_urls = swh_handle_multiple_uploads( $reply_files, $reply_orignames, $reply_skipped );
+			$has_files   = ! empty( $attach_urls ); // Derive from actual upload result, not raw file names.
 			if ( $reply_text || $has_files ) {
 				if ( $resolved_status === $data['status'] ) {
 					$data['status'] = $reopened_status;
@@ -199,15 +201,11 @@ function swh_render_client_portal() {
 				);
 				if ( $comment_id ) {
 					update_comment_meta( $comment_id, '_is_user_reply', '1' );
-				}
-				$reply_orignames = null;
-				$reply_skipped   = 0;
-				// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
-				$attach_urls = swh_handle_multiple_uploads( $reply_files, $reply_orignames, $reply_skipped );
-				if ( $comment_id && ! empty( $attach_urls ) ) {
-					update_comment_meta( $comment_id, '_attachments', $attach_urls );
-					if ( ! empty( $reply_orignames ) ) {
-						update_comment_meta( $comment_id, '_swh_reply_orignames', $reply_orignames );
+					if ( ! empty( $attach_urls ) ) {
+						update_comment_meta( $comment_id, '_attachments', $attach_urls );
+						if ( ! empty( $reply_orignames ) ) {
+							update_comment_meta( $comment_id, '_swh_reply_orignames', $reply_orignames );
+						}
 					}
 				}
 				$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
@@ -532,7 +530,7 @@ function swh_render_lookup_form() {
 							$ticket_links .= '- ' . $uid . ': ' . $lt->post_title . "\n  " . $link . "\n\n";
 						} else {
 							// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs link generation failures for admin troubleshooting.
-							error_log( 'SWH: swh_get_secure_ticket_link() returned false for ticket ' . $lt->ID . ' during lookup for ' . $lookup_email );
+							error_log( 'SWH: swh_get_secure_ticket_link() returned false for ticket ' . $lt->ID . ' during lookup (email hash: ' . substr( md5( $lookup_email ), 0, 8 ) . ')' );
 						}
 					}
 					if ( $ticket_links ) {
@@ -543,7 +541,7 @@ function swh_render_lookup_form() {
 						swh_send_email( $lookup_email, 'swh_em_user_lookup_sub', 'swh_em_user_lookup_body', $lookup_data );
 					} else {
 						// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs skipped lookup emails for admin troubleshooting.
-						error_log( 'SWH: lookup email skipped for ' . $lookup_email . ' — no usable ticket links (portal page not configured or pre-v1.9.0 tickets without tokens).' );
+						error_log( 'SWH: lookup email skipped (email hash: ' . substr( md5( $lookup_email ), 0, 8 ) . ') — no usable ticket links (portal page not configured or pre-v1.9.0 tickets without tokens).' );
 					}
 				}
 			}

@@ -544,6 +544,9 @@ function swh_render_settings_page() {
 						document.querySelectorAll('.swh-recaptcha-row').forEach(function(row) {
 							row.style.display = ( 'recaptcha' === method ) ? '' : 'none';
 						});
+						if ( 'recaptcha' === method ) {
+							swhUpdateRecaptchaType();
+						}
 					}
 					function swhUpdateRecaptchaType() {
 						var isEnterprise = document.querySelector('input[name="swh_recaptcha_type"]:checked') &&

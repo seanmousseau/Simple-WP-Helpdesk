@@ -239,7 +239,7 @@ function swh_check_antispam( $check_captcha = true ) {
 			$site_key   = swh_get_string_option( 'swh_recaptcha_site_key' );
 			$threshold  = (float) swh_get_string_option( 'swh_recaptcha_threshold', '0.5' );
 			if ( ! $project_id || ! $api_key ) {
-				return false;
+				return true; // Fail closed: missing credentials → reject submission.
 			}
 			$body = wp_json_encode(
 				array(

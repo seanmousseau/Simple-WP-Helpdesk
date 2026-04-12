@@ -27,10 +27,12 @@ starting from the next release after 1.8.
 - **`swh_plugin_description_html()` i18n (#233):** All hard-coded English strings in the plugin description function now wrapped with `esc_html__()` / `__()`.
 
 ### Changed
+
 - **PHPStan raised to Level 9 (#146):** All `mixed`-typed accesses from `get_option()`, `get_post_meta()`, `$_POST`, `$_FILES`, and WP_User magic getters narrowed to concrete types. `phpstan.neon` bumped to `level: 9`.
 - **`actions/checkout` bumped v4→v6 (#238):** Both `.github/workflows/semgrep.yml` and `.github/workflows/claude-code-review.yml` updated.
 
 ### Fixed
+
 - **Double `wp_unslash()` on canned responses (#213):** Redundant inner `wp_unslash()` calls removed from the settings save handler; the outer unslash on the raw POST array already handles unslashing.
 - **Attachment origname stores sanitised name (#231):** `sanitize_file_name()` (converts spaces → hyphens) replaced with `sanitize_text_field()` when storing `_swh_attachment_orignames`, preserving the original filename.
 - **`get_posts()` not guarded with `is_array()` (#220):** All `get_posts()` return values in `class-portal.php` now guarded with `is_array()` before iteration.
@@ -39,6 +41,7 @@ starting from the next release after 1.8.
 - **`swh_helpdesk_portal_shortcode` docblock (#221):** Docblock updated to accurately describe the no-token behaviour (My Tickets for logged-in users, lookup form for guests).
 
 ### Security
+
 - **reCAPTCHA / Turnstile token extraction (#146):** Combined `isset` + `is_string` + `sanitize_text_field` + `wp_unslash` into a single expression; added `phpcs:ignore NonceVerification` comments with explanatory notes.
 
 ---

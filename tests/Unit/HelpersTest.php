@@ -218,10 +218,11 @@ class HelpersTest extends TestCase {
 		$this->assertSame( '0.5', $defaults['swh_recaptcha_threshold'] );
 	}
 
-	/** Result is cached (same instance returned on second call). */
+	/** Consecutive calls return structurally equal arrays with the same keys. */
 	public function test_get_defaults_returns_same_instance(): void {
 		$first  = swh_get_defaults();
 		$second = swh_get_defaults();
 		$this->assertSame( $first, $second );
+		$this->assertArrayHasKey( 'swh_closed_status', $first );
 	}
 }

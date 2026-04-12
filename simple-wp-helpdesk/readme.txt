@@ -182,6 +182,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 == Upgrade Notice ==
 
+= 2.5.0 =
+Security patch: empty portal tokens are now rejected before hash comparison (previously `hash_equals('','')` could bypass access control). Also adds reCAPTCHA Enterprise support, PHPStan L9, PHPUnit tests, and several bug fixes. Upgrade recommended.
+
 = 2.4.0 =
 Cosmetic release: author attribution corrected, plugin details modal now shows the full feature description.
 

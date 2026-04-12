@@ -226,7 +226,7 @@ function swh_render_submission_form( $atts = array() ) {
 				}
 			} else {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs submission failures for admin troubleshooting.
-				error_log( 'Simple WP Helpdesk: wp_insert_post() failed for submission by ' . ( isset( $data['email'] ) ? $data['email'] : 'unknown' ) );
+				error_log( 'Simple WP Helpdesk: wp_insert_post() failed for submission (email hash: ' . ( isset( $data['email'] ) ? substr( md5( $data['email'] ), 0, 8 ) : 'unknown' ) . ')' );
 				echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html__( 'Sorry, there was a problem saving your ticket. Please try again.', 'simple-wp-helpdesk' ) . '</div>';
 			}
 		} else {
