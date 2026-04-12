@@ -76,14 +76,18 @@ function swh_parse_template( $template, $data ) {
  * and wraps the body in HTML if the email format is set to HTML.
  * Logs wp_mail() failures via error_log().
  *
+ * When $ticket_id > 0, CC addresses from `_ticket_cc_emails` meta are added
+ * as Cc: headers so watchers receive a copy of all client-facing notifications.
+ *
  * @param string               $to          Recipient email address.
  * @param string               $subject_key Option key for the subject template.
  * @param string               $body_key    Option key for the body template.
  * @param array<string, mixed> $data        Template data for placeholder substitution.
  * @param string[]             $attachments Optional. Array of attachment file proxy URLs.
+ * @param int                  $ticket_id   Optional. Ticket post ID for CC email resolution. Default 0.
  * @return void
  */
-function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = array() ) {
+function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = array(), $ticket_id = 0 ) {
 	$defs        = swh_get_defaults();
 	$subject_dfl = isset( $defs[ $subject_key ] ) && is_string( $defs[ $subject_key ] ) ? $defs[ $subject_key ] : '';
 	$body_dfl    = isset( $defs[ $body_key ] ) && is_string( $defs[ $body_key ] ) ? $defs[ $body_key ] : '';
@@ -114,6 +118,12 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 			$lines[] = $name . ' — ' . $url;
 		}
 			$body .= "\n\nAttachments:\n" . implode( "\n", $lines );
+	}
+	// Add CC emails from ticket watchers.
+	if ( $ticket_id > 0 ) {
+		foreach ( swh_get_cc_emails( $ticket_id ) as $cc ) {
+			$headers[] = 'Cc: ' . $cc;
+		}
 	}
 	if ( ! wp_mail( $to, $subject, $body, $headers ) ) {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional; logs wp_mail() failures for site admin troubleshooting.
@@ -157,6 +167,163 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
 		. '<tr><td>' . $html_body . $attachment_html . '</td></tr>'
 		. '</table>'
 		. '</td></tr></table></body></html>';
+}
+
+/**
+ * Handles the inbound email REST endpoint (POST /wp-json/swh/v1/inbound-email).
+ *
+ * Extracts ticket ID from subject [TKT-XXXX], validates sender against `_ticket_email`,
+ * strips quoted-reply lines, creates a helpdesk_reply comment, and notifies admin.
+ * Validates an optional Bearer token via `swh_inbound_secret` option.
+ *
+ * @since 3.0.0
+ * @param WP_REST_Request $request The REST request object.
+ * @return WP_REST_Response|WP_Error
+ */
+function swh_handle_inbound_email( $request ) {
+	// Require a shared secret — the webhook is disabled when none is configured.
+	$secret = swh_get_string_option( 'swh_inbound_secret' );
+	if ( ! $secret ) {
+		return new WP_Error( 'swh_not_configured', __( 'Inbound email is not configured. Set a Webhook Secret in Simple WP Helpdesk settings.', 'simple-wp-helpdesk' ), array( 'status' => 503 ) );
+	}
+	$auth   = $request->get_header( 'Authorization' );
+	$bearer = '';
+	if ( is_string( $auth ) && preg_match( '/^Bearer\s+(\S+)$/i', trim( $auth ), $m ) ) {
+		$bearer = $m[1];
+	}
+	if ( ! hash_equals( $secret, $bearer ) ) {
+		return new WP_Error( 'swh_unauthorized', __( 'Unauthorized.', 'simple-wp-helpdesk' ), array( 'status' => 401 ) );
+	}
+
+	$params  = $request->get_params();
+	$subject = isset( $params['subject'] ) && is_string( $params['subject'] ) ? sanitize_text_field( $params['subject'] ) : '';
+	$body    = isset( $params['body-plain'] ) && is_string( $params['body-plain'] ) ? $params['body-plain'] : (
+		isset( $params['text'] ) && is_string( $params['text'] ) ? $params['text'] : ''
+	);
+	$from    = isset( $params['sender'] ) && is_string( $params['sender'] ) ? $params['sender'] : (
+		isset( $params['from'] ) && is_string( $params['from'] ) ? $params['from'] : ''
+	);
+
+	// Extract email address from "Name <email@example.com>" format.
+	if ( preg_match( '/<([^>]+)>/', $from, $m ) ) {
+		$from = $m[1];
+	}
+	$from = sanitize_email( trim( $from ) );
+
+	// Parse ticket UID from subject: [TKT-XXXX] where XXXX is the numeric portion.
+	if ( ! preg_match( '/\[(TKT-\d+)\]/i', $subject, $tm ) ) {
+		return rest_ensure_response(
+			array(
+				'success' => false,
+				'error'   => 'no_ticket_id',
+			)
+		);
+	}
+	$ticket_uid = strtoupper( $tm[1] );
+
+	// Find ticket by UID.
+	$tickets = get_posts(
+		array(
+			'post_type'      => 'helpdesk_ticket',
+			'posts_per_page' => 1,
+			'post_status'    => 'any',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => '_ticket_uid',
+					'value' => $ticket_uid,
+				),
+			),
+		)
+	);
+	if ( empty( $tickets ) ) {
+		return rest_ensure_response(
+			array(
+				'success' => false,
+				'error'   => 'ticket_not_found',
+			)
+		);
+	}
+	$ticket    = $tickets[0];
+	$ticket_id = $ticket->ID;
+
+	// Validate sender matches ticket's client email.
+	$ticket_email = swh_get_string_meta( $ticket_id, '_ticket_email' );
+	if ( ! $ticket_email || ! hash_equals( strtolower( $ticket_email ), strtolower( $from ) ) ) {
+		return rest_ensure_response(
+			array(
+				'success' => false,
+				'error'   => 'sender_mismatch',
+			)
+		);
+	}
+
+	// Strip quoted-reply lines (lines starting with ">").
+	$lines       = explode( "\n", $body );
+	$clean_lines = array_filter(
+		$lines,
+		function ( $line ) {
+			return 0 !== strpos( trim( $line ), '>' );
+		}
+	);
+	$clean_body  = trim( implode( "\n", $clean_lines ) );
+	if ( '' === $clean_body ) {
+		return rest_ensure_response(
+			array(
+				'success' => false,
+				'error'   => 'empty_body',
+			)
+		);
+	}
+
+	// Create reply comment.
+	$comment_id = wp_insert_comment(
+		array(
+			'comment_post_ID'      => $ticket_id,
+			'comment_author'       => swh_get_string_meta( $ticket_id, '_ticket_name' ),
+			'comment_author_email' => $ticket_email,
+			'comment_content'      => wp_kses_post( $clean_body ),
+			'comment_approved'     => 1,
+			'comment_type'         => 'helpdesk_reply',
+		)
+	);
+	if ( ! $comment_id ) {
+		return rest_ensure_response(
+			array(
+				'success' => false,
+				'error'   => 'comment_insert_failed',
+			)
+		);
+	}
+	update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
+
+	// Reopen ticket if resolved/closed.
+	$defs            = swh_get_defaults();
+	$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+	$statuses        = swh_get_statuses();
+	$open_status     = ! empty( $statuses ) ? $statuses[0] : 'Open';
+	$current_status  = swh_get_string_meta( $ticket_id, '_ticket_status' );
+	if ( $current_status === $closed_status || $current_status === $resolved_status ) {
+		update_post_meta( $ticket_id, '_ticket_status', $open_status );
+	}
+
+	// Notify admin.
+	$data = array(
+		'name'       => swh_get_string_meta( $ticket_id, '_ticket_name' ),
+		'email'      => $ticket_email,
+		'ticket_id'  => $ticket_uid,
+		'title'      => $ticket->post_title,
+		'status'     => swh_get_string_meta( $ticket_id, '_ticket_status' ),
+		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
+		'message'    => $clean_body,
+		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'ticket_url' => '',
+	);
+	// Admin-only notification — do not inject watcher Cc: headers.
+	swh_send_email( swh_get_admin_email( $ticket_id ), 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data );
+
+	return rest_ensure_response( array( 'success' => true ) );
 }
 
 /**

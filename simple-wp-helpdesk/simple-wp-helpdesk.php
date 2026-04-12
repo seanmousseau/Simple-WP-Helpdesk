@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 2.5.0
+ * Version: 3.0.0
  * Requires at least: 5.3
  * Requires PHP: 7.4
  * Text Domain: simple-wp-helpdesk
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '2.5.0' );
+define( 'SWH_VERSION', '3.0.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -38,6 +38,8 @@ if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';
 }
 
 // Frontend includes.
@@ -155,4 +157,59 @@ function swh_inject_plugin_icons_into_update_transient( $transient ) {
 		}
 	}
 	return $transient;
+}
+
+// ==============================================================================
+// AJAX: TICKET MERGE
+// ==============================================================================
+
+add_action( 'wp_ajax_swh_merge_ticket', 'swh_ajax_merge_ticket' );
+/**
+ * Handles the AJAX ticket merge request.
+ *
+ * Verifies nonce and manage_options capability, merges source into target,
+ * and returns a JSON response.
+ *
+ * @since 3.0.0
+ * @return void
+ */
+function swh_ajax_merge_ticket() {
+	check_ajax_referer( 'swh_merge_ticket', 'nonce' );
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'simple-wp-helpdesk' ) ), 403 );
+	}
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by absint().
+	$source_id = isset( $_POST['source_id'] ) && is_scalar( $_POST['source_id'] ) ? absint( $_POST['source_id'] ) : 0;
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by absint().
+	$target_id = isset( $_POST['target_id'] ) && is_scalar( $_POST['target_id'] ) ? absint( $_POST['target_id'] ) : 0;
+	if ( ! $source_id || ! $target_id || $source_id === $target_id ) {
+		wp_send_json_error( array( 'message' => __( 'Invalid ticket IDs.', 'simple-wp-helpdesk' ) ) );
+	}
+	if ( ! swh_merge_tickets( $source_id, $target_id ) ) {
+		wp_send_json_error( array( 'message' => __( 'Merge failed. Check that both tickets exist.', 'simple-wp-helpdesk' ) ) );
+	}
+	wp_send_json_success( array( 'message' => __( 'Tickets merged successfully.', 'simple-wp-helpdesk' ) ) );
+}
+
+// ==============================================================================
+// REST API: INBOUND EMAIL WEBHOOK
+// ==============================================================================
+
+add_action( 'rest_api_init', 'swh_register_inbound_email_endpoint' );
+/**
+ * Registers the /swh/v1/inbound-email REST endpoint.
+ *
+ * @since 3.0.0
+ * @return void
+ */
+function swh_register_inbound_email_endpoint() {
+	register_rest_route(
+		'swh/v1',
+		'/inbound-email',
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'swh_handle_inbound_email',
+			'permission_callback' => '__return_true',
+		)
+	);
 }

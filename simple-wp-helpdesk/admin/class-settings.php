@@ -119,7 +119,7 @@ function swh_handle_settings_save() {
 	}
 	$defs         = swh_get_defaults();
 	$options_list = swh_get_all_option_keys();
-	$integer_opts = array( 'swh_autoclose_days', 'swh_max_upload_size', 'swh_max_upload_count', 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_ticket_page_id', 'swh_token_expiration_days' );
+	$integer_opts = array( 'swh_autoclose_days', 'swh_max_upload_size', 'swh_max_upload_count', 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_ticket_page_id', 'swh_token_expiration_days', 'swh_sla_warn_hours', 'swh_sla_breach_hours' );
 
 	// GDPR specific client delete.
 	if ( isset( $_POST['swh_gdpr_delete'], $_POST['swh_danger_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_danger_nonce'] ) ? $_POST['swh_danger_nonce'] : '' ) ), 'swh_danger_action' ) ) {
@@ -244,7 +244,7 @@ function swh_handle_settings_save() {
 		}
 		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
-		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses' );
+		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses', 'swh_ticket_templates', 'swh_assignment_rules' );
 
 		foreach ( $options_list as $opt ) {
 			if ( in_array( $opt, $tools_only, true ) || ! isset( $_POST[ $opt ] ) ) {
@@ -276,6 +276,42 @@ function swh_handle_settings_save() {
 			}
 		}
 		update_option( 'swh_canned_responses', $canned );
+
+		// Save ticket templates (structured option, not part of $options_list).
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
+		$raw_tmpl_labels = isset( $_POST['swh_tmpl_labels'] ) ? (array) wp_unslash( $_POST['swh_tmpl_labels'] ) : array();
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
+		$raw_tmpl_bodies = isset( $_POST['swh_tmpl_bodies'] ) ? (array) wp_unslash( $_POST['swh_tmpl_bodies'] ) : array();
+		$templates       = array();
+		foreach ( $raw_tmpl_labels as $ti => $raw_label ) {
+			$tlabel = is_string( $raw_label ) ? sanitize_text_field( $raw_label ) : '';
+			$tbody  = isset( $raw_tmpl_bodies[ $ti ] ) && is_string( $raw_tmpl_bodies[ $ti ] ) ? sanitize_textarea_field( $raw_tmpl_bodies[ $ti ] ) : '';
+			if ( '' !== $tlabel ) {
+				$templates[] = array(
+					'label' => $tlabel,
+					'body'  => $tbody,
+				);
+			}
+		}
+		update_option( 'swh_ticket_templates', $templates );
+
+		// Save assignment rules (array of {category_term_id, assignee_user_id}).
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by absint() in loop below.
+		$raw_rule_cats = isset( $_POST['swh_rule_category'] ) ? (array) wp_unslash( $_POST['swh_rule_category'] ) : array();
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by absint() in loop below.
+		$raw_rule_users = isset( $_POST['swh_rule_assignee'] ) ? (array) wp_unslash( $_POST['swh_rule_assignee'] ) : array();
+		$rules          = array();
+		foreach ( $raw_rule_cats as $ri => $raw_cat ) {
+			$cat_id  = is_scalar( $raw_cat ) ? absint( $raw_cat ) : 0;
+			$user_id = isset( $raw_rule_users[ $ri ] ) && is_scalar( $raw_rule_users[ $ri ] ) ? absint( $raw_rule_users[ $ri ] ) : 0;
+			if ( $cat_id > 0 && $user_id > 0 ) {
+				$rules[] = array(
+					'category_term_id' => $cat_id,
+					'assignee_user_id' => $user_id,
+				);
+			}
+		}
+		update_option( 'swh_assignment_rules', $rules );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -340,6 +376,7 @@ function swh_render_settings_page() {
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-canned" data-tab="tab-canned" aria-selected="false" aria-controls="tab-canned" tabindex="-1"><?php esc_html_e( 'Canned Responses', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
 		</div>
 		<form method="POST" action="">
@@ -417,6 +454,163 @@ function swh_render_settings_page() {
 					</td>
 				</tr>
 				</table>
+				<h3><?php esc_html_e( 'SLA Breach Alerts', 'simple-wp-helpdesk' ); ?></h3>
+				<table class="form-table">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Warning Threshold', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="number" name="swh_sla_warn_hours" value="<?php echo esc_attr( swh_get_string_option( 'swh_sla_warn_hours', '4' ) ); ?>" style="width:80px;" min="0">
+							<?php esc_html_e( 'hours (0 = disabled)', 'simple-wp-helpdesk' ); ?>
+							<p class="description"><?php esc_html_e( 'Mark open tickets as "warn" when older than this many hours.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Breach Threshold', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="number" name="swh_sla_breach_hours" value="<?php echo esc_attr( swh_get_string_option( 'swh_sla_breach_hours', '8' ) ); ?>" style="width:80px;" min="0">
+							<?php esc_html_e( 'hours (0 = disabled)', 'simple-wp-helpdesk' ); ?>
+							<p class="description"><?php esc_html_e( 'Mark open tickets as "breach" and send alert when older than this many hours.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Alert Recipient', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="email" name="swh_sla_notify_email" value="<?php echo esc_attr( swh_get_string_option( 'swh_sla_notify_email' ) ); ?>" class="regular-text">
+							<p class="description"><?php esc_html_e( 'Leave blank to use the default admin/assignee email.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+				</table>
+				<h3><?php esc_html_e( 'Auto-Assignment Rules', 'simple-wp-helpdesk' ); ?></h3>
+				<p class="description"><?php esc_html_e( 'When a new ticket is submitted with a matching category, it is automatically assigned to the specified technician. Rules are evaluated in order; the first match wins.', 'simple-wp-helpdesk' ); ?></p>
+				<?php
+				$assignment_rules = get_option( 'swh_assignment_rules', array() );
+				$assignment_rules = is_array( $assignment_rules ) ? $assignment_rules : array();
+				$categories       = get_terms(
+					array(
+						'taxonomy'   => 'helpdesk_category',
+						'hide_empty' => false,
+					)
+				);
+				$categories       = is_array( $categories ) ? $categories : array();
+				?>
+				<table class="widefat" id="swh-rules-table" style="margin-bottom:10px;">
+					<thead><tr>
+						<th><?php esc_html_e( 'Category', 'simple-wp-helpdesk' ); ?></th>
+						<th><?php esc_html_e( 'Assign To', 'simple-wp-helpdesk' ); ?></th>
+						<th></th>
+					</tr></thead>
+					<tbody id="swh-rules-body">
+					<?php foreach ( $assignment_rules as $rule ) : ?>
+						<?php
+						$rule      = is_array( $rule ) ? $rule : array();
+						$rule_cat  = isset( $rule['category_term_id'] ) && is_scalar( $rule['category_term_id'] ) ? intval( $rule['category_term_id'] ) : 0;
+						$rule_user = isset( $rule['assignee_user_id'] ) && is_scalar( $rule['assignee_user_id'] ) ? intval( $rule['assignee_user_id'] ) : 0;
+						?>
+						<tr class="swh-rule-item">
+							<td>
+								<select name="swh_rule_category[]">
+									<option value=""><?php esc_html_e( '— Select category —', 'simple-wp-helpdesk' ); ?></option>
+									<?php foreach ( $categories as $cat ) : ?>
+										<option value="<?php echo esc_attr( (string) $cat->term_id ); ?>" <?php selected( $rule_cat, $cat->term_id ); ?>><?php echo esc_html( $cat->name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+							<td>
+								<select name="swh_rule_assignee[]">
+									<option value=""><?php esc_html_e( '— Select technician —', 'simple-wp-helpdesk' ); ?></option>
+									<?php foreach ( $techs as $t ) : ?>
+										<option value="<?php echo esc_attr( (string) $t->ID ); ?>" <?php selected( $rule_user, $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+							<td><button type="button" class="button swh-remove-rule"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				<button type="button" class="button" id="swh-add-rule"><?php esc_html_e( '+ Add Rule', 'simple-wp-helpdesk' ); ?></button>
+				<script>
+				(function() {
+					var catOptions = 
+					<?php
+					echo wp_json_encode(
+						array_map(
+							function ( $c ) {
+								return array(
+									'id'   => $c->term_id,
+									'name' => $c->name,
+								);
+							},
+							$categories
+						)
+					);
+					?>
+										;
+					var techOptions = 
+					<?php
+					echo wp_json_encode(
+						array_map(
+							function ( $t ) {
+								return array(
+									'id'   => $t->ID,
+									'name' => $t->display_name,
+								);
+							},
+							$techs
+						)
+					);
+					?>
+										;
+					document.getElementById( 'swh-add-rule' ).addEventListener( 'click', function() {
+						var tbody = document.getElementById( 'swh-rules-body' );
+						var tr = document.createElement( 'tr' );
+						tr.className = 'swh-rule-item';
+						var tdCat = document.createElement( 'td' );
+						var selCat = document.createElement( 'select' );
+						selCat.name = 'swh_rule_category[]';
+						var optBlank = document.createElement( 'option' );
+						optBlank.value = '';
+						optBlank.textContent = '<?php echo esc_js( __( '— Select category —', 'simple-wp-helpdesk' ) ); ?>';
+						selCat.appendChild( optBlank );
+						catOptions.forEach( function( c ) {
+							var opt = document.createElement( 'option' );
+							opt.value = c.id;
+							opt.textContent = c.name;
+							selCat.appendChild( opt );
+						} );
+						tdCat.appendChild( selCat );
+						var tdUser = document.createElement( 'td' );
+						var selUser = document.createElement( 'select' );
+						selUser.name = 'swh_rule_assignee[]';
+						var optBlankU = document.createElement( 'option' );
+						optBlankU.value = '';
+						optBlankU.textContent = '<?php echo esc_js( __( '— Select technician —', 'simple-wp-helpdesk' ) ); ?>';
+						selUser.appendChild( optBlankU );
+						techOptions.forEach( function( t ) {
+							var opt = document.createElement( 'option' );
+							opt.value = t.id;
+							opt.textContent = t.name;
+							selUser.appendChild( opt );
+						} );
+						tdUser.appendChild( selUser );
+						var tdBtn = document.createElement( 'td' );
+						var btn = document.createElement( 'button' );
+						btn.type = 'button';
+						btn.className = 'button swh-remove-rule';
+						btn.textContent = '<?php echo esc_js( __( 'Remove', 'simple-wp-helpdesk' ) ); ?>';
+						tdBtn.appendChild( btn );
+						tr.appendChild( tdCat );
+						tr.appendChild( tdUser );
+						tr.appendChild( tdBtn );
+						tbody.appendChild( tr );
+					} );
+					document.getElementById( 'swh-rules-body' ).addEventListener( 'click', function( e ) {
+						if ( e.target && e.target.classList.contains( 'swh-remove-rule' ) ) {
+							e.target.closest( 'tr' ).remove();
+						}
+					} );
+				}());
+				</script>
 			</div>
 
 			<div id="tab-emails" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-emails" tabindex="0" style="display:none;">
@@ -430,6 +624,20 @@ function swh_render_settings_page() {
 								<option value="plain" <?php selected( $email_format, 'plain' ); ?>><?php esc_html_e( 'Plain Text', 'simple-wp-helpdesk' ); ?></option>
 							</select>
 							<p class="description"><?php esc_html_e( 'HTML emails include clickable links and a clean layout. Switch to Plain Text for basic SMTP setups.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Reply-by-Email Webhook URL', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<code><?php echo esc_html( rest_url( 'swh/v1/inbound-email' ) ); ?></code>
+							<p class="description"><?php esc_html_e( 'Point your email service (Mailgun, SendGrid, Postmark) inbound webhook here. Clients can reply to notification emails and the reply is attached to their ticket.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Webhook Secret', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="password" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
+							<p class="description"><?php esc_html_e( 'Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer &lt;secret&gt; in each POST request.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
 				</table>
@@ -469,6 +677,13 @@ function swh_render_settings_page() {
 					<tr><th scope="row"><?php esc_html_e( 'Client Closed Ticket (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_closed_body', $defs, 'textarea' ); ?></td></tr>
 					<tr style="background:#e6f7ff;"><th scope="row"><?php esc_html_e( 'Ticket Assigned to You (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_assigned_sub', $defs ); ?></td></tr>
 					<tr style="background:#e6f7ff;"><th scope="row"><?php esc_html_e( 'Ticket Assigned to You (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_assigned_body', $defs, 'textarea' ); ?></td></tr>
+					<tr style="background:#fff3cd;"><th scope="row"><?php esc_html_e( 'SLA Breach Alert (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_sla_breach_sub', $defs ); ?></td></tr>
+					<tr style="background:#fff3cd;"><th scope="row"><?php esc_html_e( 'SLA Breach Alert (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_sla_breach_body', $defs, 'textarea' ); ?></td></tr>
+				</table>
+				<h3><?php esc_html_e( 'Emails Sent to Client (System)', 'simple-wp-helpdesk' ); ?></h3>
+				<table class="form-table">
+					<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_sub', $defs ); ?></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_body', $defs, 'textarea' ); ?></td></tr>
 				</table>
 			</div>
 
@@ -588,6 +803,81 @@ function swh_render_settings_page() {
 				<?php endforeach; ?>
 				</div>
 				<p><button type="button" id="swh-add-canned" class="button"><?php esc_html_e( '+ Add Response', 'simple-wp-helpdesk' ); ?></button></p>
+			</div>
+
+			<div id="tab-templates" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-templates" tabindex="0" style="display:none;">
+				<p class="description"><?php esc_html_e( 'Pre-configured submission types that pre-fill the ticket description on the frontend form. Clients select a "Request Type" to load the matching template.', 'simple-wp-helpdesk' ); ?></p>
+				<div id="swh-tmpl-list">
+				<?php
+				$ticket_templates = get_option( 'swh_ticket_templates', array() );
+				if ( ! is_array( $ticket_templates ) ) {
+					$ticket_templates = array();
+				}
+				foreach ( $ticket_templates as $tmpl_item ) :
+					?>
+					<div class="swh-tmpl-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
+						<div style="flex:1;">
+							<input type="text" name="swh_tmpl_labels[]" value="<?php echo esc_attr( is_array( $tmpl_item ) && isset( $tmpl_item['label'] ) && is_string( $tmpl_item['label'] ) ? $tmpl_item['label'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Request type label…', 'simple-wp-helpdesk' ); ?>" aria-label="<?php esc_attr_e( 'Template label', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">
+							<textarea name="swh_tmpl_bodies[]" rows="4" class="large-text" aria-label="<?php esc_attr_e( 'Template description', 'simple-wp-helpdesk' ); ?>" style="width:100%;" placeholder="<?php esc_attr_e( 'Description template text…', 'simple-wp-helpdesk' ); ?>"><?php echo esc_textarea( is_array( $tmpl_item ) && isset( $tmpl_item['body'] ) && is_string( $tmpl_item['body'] ) ? $tmpl_item['body'] : '' ); ?></textarea>
+						</div>
+						<div>
+							<button type="button" class="button swh-remove-tmpl"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button>
+						</div>
+					</div>
+				<?php endforeach; ?>
+				</div>
+				<p><button type="button" id="swh-add-tmpl" class="button"><?php esc_html_e( '+ Add Template', 'simple-wp-helpdesk' ); ?></button></p>
+				<script>
+				(function() {
+					var tmplI18n = {
+						labelPlaceholder: <?php echo wp_json_encode( __( 'Request type label…', 'simple-wp-helpdesk' ) ); ?>,
+						labelAriaLabel:   <?php echo wp_json_encode( __( 'Template label', 'simple-wp-helpdesk' ) ); ?>,
+						bodyAriaLabel:    <?php echo wp_json_encode( __( 'Template description', 'simple-wp-helpdesk' ) ); ?>,
+						bodyPlaceholder:  <?php echo wp_json_encode( __( 'Description template text…', 'simple-wp-helpdesk' ) ); ?>,
+						removeLabel:      <?php echo wp_json_encode( __( 'Remove', 'simple-wp-helpdesk' ) ); ?>,
+					};
+					function swhCreateTmplItem() {
+						var outer = document.createElement('div');
+						outer.className = 'swh-tmpl-item';
+						outer.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;';
+						var inner = document.createElement('div');
+						inner.style.flex = '1';
+						var lbl = document.createElement('input');
+						lbl.type = 'text';
+						lbl.name = 'swh_tmpl_labels[]';
+						lbl.className = 'regular-text';
+						lbl.placeholder = tmplI18n.labelPlaceholder;
+						lbl.setAttribute('aria-label', tmplI18n.labelAriaLabel);
+						lbl.style.cssText = 'width:100%; margin-bottom:6px;';
+						var body = document.createElement('textarea');
+						body.name = 'swh_tmpl_bodies[]';
+						body.rows = 4;
+						body.className = 'large-text';
+						body.setAttribute('aria-label', tmplI18n.bodyAriaLabel);
+						body.style.width = '100%';
+						body.placeholder = tmplI18n.bodyPlaceholder;
+						inner.appendChild(lbl);
+						inner.appendChild(body);
+						var btnWrap = document.createElement('div');
+						var btn = document.createElement('button');
+						btn.type = 'button';
+						btn.className = 'button swh-remove-tmpl';
+						btn.textContent = tmplI18n.removeLabel;
+						btnWrap.appendChild(btn);
+						outer.appendChild(inner);
+						outer.appendChild(btnWrap);
+						return outer;
+					}
+					document.getElementById('swh-add-tmpl').addEventListener('click', function() {
+						document.getElementById('swh-tmpl-list').appendChild(swhCreateTmplItem());
+					});
+					document.addEventListener('click', function(e) {
+						if ( e.target && e.target.classList.contains('swh-remove-tmpl') ) {
+							e.target.closest('.swh-tmpl-item').remove();
+						}
+					});
+				})();
+				</script>
 			</div>
 
 			<p class="submit" id="save-btn-container"><input type="submit" name="swh_save_settings" class="button button-primary" value="<?php esc_attr_e( 'Save Changes', 'simple-wp-helpdesk' ); ?>"></p>

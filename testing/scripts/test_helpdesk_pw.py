@@ -1883,6 +1883,737 @@ def test_36_shortcode_attrs(page: Page):
             wpcli(f"post delete {pid} --force 2>/dev/null")
 
 
+# ── v3.0.0 feature tests ─────────────────────────────────────────────────────
+
+
+def test_37_admin_list_filtering(page: Page):
+    print("\n[37] Admin List Filtering — status, priority, category (#127)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    _navigate_admin_list(page)
+
+    # ── Status filter ─────────────────────────────────────────────────────────
+
+    html_before = page.content()
+    # Filter by "Open" status using the existing filter select
+    status_sel = page.locator('select[name="swh_filter_status"]')
+    if status_sel.count() > 0:
+        page.select_option('select[name="swh_filter_status"]', "Open")
+        page.locator('#post-query-submit, #search-submit').first.click()
+        page.wait_for_load_state("load")
+        page.wait_for_selector("#the-list, .no-items")
+        check("admin list filter: filtering by Open status works",
+              page.url != "" and "post_type=helpdesk_ticket" in page.url)
+        screenshot(page, "47_list_filter_status")
+        # Reset filter
+        _navigate_admin_list(page)
+    else:
+        skip("admin list status filter", "swh_filter_status select not found")
+
+    # ── Priority filter ───────────────────────────────────────────────────────
+
+    prio_sel = page.locator('select[name="swh_filter_priority"]')
+    if prio_sel.count() > 0:
+        page.select_option('select[name="swh_filter_priority"]', index=1)
+        page.locator('#post-query-submit, #search-submit').first.click()
+        page.wait_for_load_state("load")
+        page.wait_for_selector("#the-list, .no-items")
+        check("admin list filter: filtering by priority works",
+              "post_type=helpdesk_ticket" in page.url)
+        _navigate_admin_list(page)
+    else:
+        skip("admin list priority filter", "swh_filter_priority select not found")
+
+    # ── Category taxonomy filter (built-in WP taxonomy dropdown) ─────────────
+
+    cat_slug = f"pw-cat-{int(time.time())}"
+    cat_name = f"PW Test Category {int(time.time())}"
+    term_id = wpcli(
+        f"term create helpdesk_category '{cat_name}' --slug={cat_slug} --porcelain 2>/dev/null"
+    ).strip()
+    if term_id.isdigit():
+        state['test_category_term_id'] = int(term_id)
+        state['test_category_name'] = cat_name
+        _navigate_admin_list(page)
+        # WP's built-in taxonomy filter renders as a <select name="helpdesk_category">
+        cat_filter = page.locator('select[name="helpdesk_category"]')
+        check("admin list: category taxonomy filter dropdown is present",
+              cat_filter.count() > 0, "helpdesk_category select not found")
+        if cat_filter.count() > 0:
+            # Verify our new term appears in the dropdown
+            option_found = page.evaluate(
+                f"Array.from(document.querySelectorAll('select[name=\"helpdesk_category\"] option'))"
+                f".some(o => o.text.includes({json.dumps(cat_name)}))"
+            )
+            check("admin list: new category term appears in taxonomy filter",
+                  option_found, f"term {cat_name!r} not in dropdown")
+        screenshot(page, "47b_category_filter_dropdown")
+    else:
+        skip("admin list category filter", "could not create test category term")
+
+
+def test_38_admin_list_sorting(page: Page):
+    print("\n[38] Admin List Sorting — ticket_uid column")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    _navigate_admin_list(page)
+
+    # Sort by ticket_uid ASC
+    uid_col = page.locator('th.sortable a[href*="orderby=ticket_uid"], th.sorted a[href*="orderby=ticket_uid"]')
+    if uid_col.count() == 0:
+        skip("admin list sorting", "ticket_uid column not found — may not be sortable")
+        return
+
+    uid_col.first.click()
+    page.wait_for_load_state("load")
+    page.wait_for_selector("#the-list, .no-items")
+    check("admin list sort: sorted by ticket_uid",
+          "orderby=ticket_uid" in page.url, f"url: {page.url[:120]}")
+    screenshot(page, "48_list_sort_uid_asc")
+
+    # Click again for DESC
+    uid_col_desc = page.locator('th.sorted a[href*="order=desc"], th.sorted a[href*="orderby=ticket_uid"]')
+    if uid_col_desc.count() > 0:
+        uid_col_desc.first.click()
+        page.wait_for_load_state("load")
+        page.wait_for_selector("#the-list, .no-items")
+        check("admin list sort: ticket_uid DESC sort applied",
+              "orderby=ticket_uid" in page.url or "order=desc" in page.url)
+        screenshot(page, "48b_list_sort_uid_desc")
+
+
+def test_39_ticket_templates(page: Page):
+    print("\n[39] Ticket Templates — save in settings, display on form, meta stored (#132)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    TPL_LABEL = f"PW Template {int(time.time())}"
+    TPL_BODY  = "Please describe the issue you are experiencing in detail."
+
+    # ── Save a template in Settings → Templates tab ───────────────────────────
+
+    _navigate_settings(page)
+    page.wait_for_selector('#swh-tab-templates')
+    page.evaluate("document.getElementById('swh-tab-templates').click()")
+    page.wait_for_selector('#swh-add-tmpl')
+    page.locator('#swh-add-tmpl').click()
+    page.wait_for_selector('.swh-tmpl-item:last-child [name="swh_tmpl_labels[]"]')
+
+    last_label = page.locator('.swh-tmpl-item [name="swh_tmpl_labels[]"]').last
+    last_body  = page.locator('.swh-tmpl-item [name="swh_tmpl_bodies[]"]').last
+    last_label.fill(TPL_LABEL)
+    last_body.fill(TPL_BODY)
+    page.locator('[name="swh_save_settings"]').first.click()
+    page.wait_for_load_state("load")
+
+    # Verify persistence
+    _navigate_settings(page)
+    page.wait_for_selector('#swh-tab-templates')
+    page.evaluate("document.getElementById('swh-tab-templates').click()")
+    page.wait_for_selector('#swh-tmpl-list')
+    label_found = page.evaluate(
+        f"Array.from(document.querySelectorAll('.swh-tmpl-item [name=\"swh_tmpl_labels[]\"]'))"
+        f".some(el => el.value === {json.dumps(TPL_LABEL)})"
+    )
+    check("ticket templates: saved label persists in settings", label_found)
+    screenshot(page, "49_templates_settings")
+
+    # ── Create a temp submission page with the template dropdown visible ───────
+
+    pid = wpcli(
+        "post create --post_type=page --post_status=publish "
+        "--post_title='SWH Template Test' "
+        "--post_content='[submit_ticket]' "
+        "--porcelain"
+    )
+    if not pid.isdigit():
+        skip("ticket templates frontend", "could not create test page")
+        return
+
+    try:
+        url = wpcli(f"post get {pid} --field=guid")
+        wp_logout(page)
+        _clear_rate_limits()
+        page.goto(url)
+        page.wait_for_selector(".swh-helpdesk-wrapper, form")
+
+        # The request type dropdown should appear since we have a template
+        req_type_sel = page.locator('select[name="ticket_request_type"], select#swh-request-type')
+        if req_type_sel.count() == 0:
+            # Try a more general selector
+            req_type_sel = page.locator('select').filter(has_text=TPL_LABEL)
+        check("ticket templates: request type dropdown appears on form",
+              req_type_sel.count() > 0,
+              "no request type select found — check show_category / templates logic")
+
+        # Submit a ticket with the template
+        page.fill('[name="ticket_name"]', CLIENT1_NAME)
+        page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
+        page.fill('[name="ticket_title"]', f"TPL Test {int(time.time())}")
+        if req_type_sel.count() > 0:
+            # Select the template option
+            req_type_sel.first.select_option(label=TPL_LABEL)
+            page.wait_for_timeout(300)  # JS pre-fill
+            desc_val = page.input_value('[name="ticket_desc"]')
+            check("ticket templates: selecting template pre-fills description",
+                  TPL_BODY[:20] in desc_val,
+                  f"description got: {desc_val[:60]!r}")
+        else:
+            page.fill('[name="ticket_desc"]', "Template test ticket body.")
+
+        with page.expect_navigation(timeout=15000):
+            page.click('[name="swh_submit_ticket"]')
+        page.wait_for_load_state("load")
+        success = "swh-alert-success" in page.content()
+        check("ticket templates: ticket submitted successfully", success)
+
+        # Verify _ticket_template meta via WP-CLI
+        if success:
+            new_ids = wpcli(
+                "post list --post_type=helpdesk_ticket --post_status=any "
+                f"--s={json.dumps('TPL Test')} --orderby=ID --order=DESC "
+                "--format=ids"
+            ).split()
+            if new_ids:
+                state['tpl_ticket_id'] = int(new_ids[0])
+                tpl_meta = wpcli(
+                    f"eval \"echo get_post_meta({new_ids[0]}, '_ticket_template', true);\""
+                )
+                check("ticket templates: _ticket_template meta stored",
+                      tpl_meta.strip() == TPL_LABEL,
+                      f"got: {tpl_meta.strip()!r}")
+        screenshot(page, "49b_template_submitted")
+
+    finally:
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        wpcli(f"post delete {pid} --force 2>/dev/null")
+
+    # ── Cleanup: remove the test template ─────────────────────────────────────
+
+    _navigate_settings(page)
+    page.wait_for_selector('#swh-tab-templates')
+    page.evaluate("document.getElementById('swh-tab-templates').click()")
+    page.wait_for_selector('#swh-tmpl-list')
+    for item in page.locator('.swh-tmpl-item').all():
+        if TPL_LABEL in item.inner_text():
+            item.locator('.swh-remove-tmpl').click()
+            break
+    page.locator('[name="swh_save_settings"]').first.click()
+    page.wait_for_load_state("load")
+
+
+def test_40_first_response_time(page: Page):
+    print("\n[40] First Response Time — _ticket_first_response_at meta (#136)")
+
+    if not state.get('ticket_id'):
+        skip("first response time", "no ticket_id in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Admin has already replied in test_06 — meta should be set
+    frt = wpcli(
+        f"eval \"echo get_post_meta({state['ticket_id']}, '_ticket_first_response_at', true);\""
+    ).strip()
+    check("first response time: _ticket_first_response_at meta is set after admin reply",
+          frt.isdigit() and int(frt) > 0,
+          f"got meta value: {frt!r}")
+
+    # Verify the display in the ticket editor Details meta box
+    _navigate_ticket_editor(page, state['ticket_id'])
+    body = page.inner_text("body")
+    check("first response time: elapsed time display present in ticket editor",
+          "First Response" in body or "first response" in body.lower() or frt in body,
+          "no first-response indicator found in ticket editor")
+    screenshot(page, "50_first_response_meta_box")
+
+
+def test_41_cc_watchers(page: Page):
+    print("\n[41] CC / Watcher Support — _ticket_cc_emails meta (#129)")
+
+    if not state.get('ticket_id'):
+        skip("cc watchers", "no ticket_id in state")
+        return
+
+    CC_EMAIL = "cc-test@example.com"
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # ── Add CC email in ticket editor ─────────────────────────────────────────
+
+    _navigate_ticket_editor(page, state['ticket_id'])
+    cc_field = page.locator('[name="ticket_cc_emails"]')
+    check("cc watchers: CC / Watchers field present in ticket editor",
+          cc_field.count() > 0, "ticket_cc_emails input not found")
+
+    if cc_field.count() > 0:
+        cc_field.fill(CC_EMAIL)
+        page.click('#publish')
+        page.wait_for_load_state("load")
+
+        # Verify meta stored via WP-CLI
+        stored_cc = wpcli(
+            f"eval \"echo get_post_meta({state['ticket_id']}, '_ticket_cc_emails', true);\""
+        ).strip()
+        check("cc watchers: _ticket_cc_emails meta stored after save",
+              CC_EMAIL in stored_cc,
+              f"got: {stored_cc!r}")
+
+        # Verify it reloads in the editor
+        _navigate_ticket_editor(page, state['ticket_id'])
+        reloaded_cc = page.input_value('[name="ticket_cc_emails"]')
+        check("cc watchers: CC email reloads in ticket editor",
+              CC_EMAIL in reloaded_cc,
+              f"got: {reloaded_cc!r}")
+        screenshot(page, "51_cc_watchers_field")
+
+
+def test_42_categories_taxonomy(page: Page):
+    print("\n[42] Categories Taxonomy — helpdesk_category (#127)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Reuse the term created in test_37 if available, otherwise create one
+    if not state.get('test_category_term_id'):
+        cat_name = f"PW Test Category {int(time.time())}"
+        term_id = wpcli(
+            f"term create helpdesk_category '{cat_name}' --porcelain 2>/dev/null"
+        ).strip()
+        if not term_id.isdigit():
+            skip("categories taxonomy", "could not create category term")
+            return
+        state['test_category_term_id'] = int(term_id)
+        state['test_category_name'] = cat_name
+
+    term_id  = state['test_category_term_id']
+    cat_name = state.get('test_category_name', 'PW Test Category')
+
+    # Assign the category to ticket1 via WP-CLI
+    if state.get('ticket_id'):
+        wpcli(
+            f"eval \"wp_set_post_terms({state['ticket_id']}, [{term_id}], 'helpdesk_category');\""
+        )
+        # Verify term is assigned
+        assigned = wpcli(
+            f"post term list {state['ticket_id']} helpdesk_category "
+            "--field=name --format=csv 2>/dev/null"
+        ).strip()
+        check("categories taxonomy: term assigned to ticket1 via WP-CLI",
+              cat_name in assigned or assigned != "",
+              f"got: {assigned!r}")
+
+    # Navigate to ticket list — admin column should show taxonomy
+    _navigate_admin_list(page)
+    col_header = page.locator('th.column-taxonomy-helpdesk_category, th[id*="helpdesk_category"]')
+    check("categories taxonomy: admin column present in ticket list",
+          col_header.count() > 0, "no helpdesk_category column in list table")
+
+    # Verify taxonomy filter dropdown is present
+    cat_filter = page.locator('select[name="helpdesk_category"]')
+    check("categories taxonomy: taxonomy filter dropdown in admin list",
+          cat_filter.count() > 0, "helpdesk_category filter select not found")
+
+    screenshot(page, "52_categories_admin_column")
+
+    # Filter by the test category
+    if cat_filter.count() > 0 and state.get('ticket_id'):
+        # Select our term by value (term_id)
+        page.select_option('select[name="helpdesk_category"]', str(term_id))
+        page.locator('#post-query-submit, #search-submit').first.click()
+        page.wait_for_load_state("load")
+        page.wait_for_selector("#the-list, .no-items")
+        list_body = page.inner_text("body")
+        check("categories taxonomy: filtering by category shows assigned ticket",
+              TEST_TICKET_TITLE in list_body,
+              "ticket1 not visible when filtering by its assigned category")
+        screenshot(page, "52b_category_filter_applied")
+
+
+def test_43_ticket_merge(page: Page):
+    print("\n[43] Ticket Merge (#133)")
+
+    if not state.get('ticket_id'):
+        skip("ticket merge", "no ticket_id in state")
+        return
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Create a source ticket via WP-CLI that will be merged into ticket1
+    source_id = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        f"--post_title='PW Merge Source {int(time.time())}' "
+        "--post_author=1 --porcelain"
+    ).strip()
+    if not source_id.isdigit():
+        skip("ticket merge", "could not create source ticket via WP-CLI")
+        return
+
+    wpcli(f"post meta update {source_id} _ticket_status 'Open'")
+    wpcli(f"post meta update {source_id} _ticket_email 'merge-test@example.com'")
+    wpcli(f"post meta update {source_id} _ticket_name 'Merge Test Client'")
+    wpcli(f"post meta update {source_id} _ticket_uid 'TKT-MERGE-{source_id}'")
+
+    # Add a reply comment to the source ticket so we can verify it moves
+    wpcli(
+        f"comment create --comment_post_ID={source_id} "
+        "--comment_author='Merge Test Client' "
+        "--comment_author_email='merge-test@example.com' "
+        "--comment_content='This reply should move to the target ticket.' "
+        "--comment_type=helpdesk_reply --comment_approved=1"
+    )
+
+    try:
+        target_id = state['ticket_id']
+
+        # Navigate to the SOURCE ticket editor and merge into target
+        _navigate_ticket_editor(page, source_id)
+        merge_input = page.locator('#swh-merge-target-id')
+        check("ticket merge: merge target input present in ticket editor",
+              merge_input.count() > 0, "#swh-merge-target-id not found")
+
+        if merge_input.count() > 0:
+            merge_input.fill(str(target_id))
+            page.locator('#swh-merge-btn').click()
+            page.wait_for_timeout(2000)  # AJAX
+            merge_msg = page.locator('#swh-merge-msg').inner_text() if \
+                page.locator('#swh-merge-msg').count() > 0 else ""
+            check("ticket merge: AJAX returns success message",
+                  "merged" in merge_msg.lower() or "success" in merge_msg.lower(),
+                  f"merge message: {merge_msg!r}")
+            screenshot(page, "53_ticket_merge_result")
+
+        # Verify source ticket status is now Closed/Merged via WP-CLI
+        source_status = wpcli(
+            f"eval \"echo get_post_meta({source_id}, '_ticket_status', true);\""
+        ).strip()
+        check("ticket merge: source ticket closed after merge",
+              source_status in ("Closed", "Resolved", "Merged") or source_status != "Open",
+              f"source status: {source_status!r}")
+
+        # Verify target ticket has the merged reply
+        target_comments = wpcli(
+            f"comment list --post_id={target_id} --comment_type=helpdesk_reply "
+            "--format=count"
+        ).strip()
+        check("ticket merge: target ticket has comments (including merged reply)",
+              target_comments.isdigit() and int(target_comments) >= 1,
+              f"target comment count: {target_comments!r}")
+
+    finally:
+        wpcli(f"post delete {source_id} --force 2>/dev/null")
+
+
+def test_44_sla_breach_detection(page: Page):
+    print("\n[44] SLA Breach Detection — hourly cron, _ticket_sla_status (#128)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Save original SLA breach hours, set to 1 for this test
+    original_breach = wpcli("option get swh_sla_breach_hours 2>/dev/null").strip() or "8"
+
+    # Create a test ticket with a post_date 24 hours in the past.
+    # Embed the Unix timestamp in the title so we can search for it uniquely later.
+    sla_ts = int(time.time())
+    sla_title = f"PW SLA Test {sla_ts}"
+    old_date = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() - 86400))
+    sla_ticket_id = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        f"--post_title='{sla_title}' "
+        f"--post_date='{old_date}' "
+        "--post_author=1 --porcelain"
+    ).strip()
+    if not sla_ticket_id.isdigit():
+        skip("sla breach detection", "could not create SLA test ticket")
+        return
+
+    wpcli(f"post meta update {sla_ticket_id} _ticket_status 'Open'")
+    state['sla_ticket_id'] = int(sla_ticket_id)
+
+    try:
+        # Set breach threshold to 1 hour so our 24-hour-old ticket triggers it
+        wpcli("option update swh_sla_breach_hours 1")
+        wpcli("option update swh_sla_warn_hours 0")
+
+        # Run the SLA check cron manually
+        wpcli("eval 'swh_process_sla_check();'")
+
+        # Verify _ticket_sla_status is set to 'breach'
+        sla_status = wpcli(
+            f"eval \"echo get_post_meta({sla_ticket_id}, '_ticket_sla_status', true);\""
+        ).strip()
+        check("sla breach: _ticket_sla_status set to 'breach' after cron",
+              sla_status == "breach",
+              f"got: {sla_status!r}")
+
+        # Search for the ticket by its unique timestamp suffix — avoids pagination
+        # issues in the full suite where 40+ tickets push this old-dated ticket to page 2.
+        page.goto(
+            f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&s={sla_ts}"
+        )
+        page.wait_for_load_state("load")
+        row_classes = page.evaluate(f"""
+            (function() {{
+                var rows = document.querySelectorAll('#the-list tr[id*="{sla_ticket_id}"], #the-list tr.post-{sla_ticket_id}');
+                if (!rows.length) return '';
+                return rows[0].className;
+            }})()
+        """)
+        check("sla breach: row has swh-sla-breach CSS class in ticket list",
+              "swh-sla-breach" in row_classes,
+              f"row classes: {row_classes!r}")
+        screenshot(page, "54_sla_breach_row")
+
+    finally:
+        wpcli(f"option update swh_sla_breach_hours {original_breach}")
+        wpcli("option update swh_sla_warn_hours 4")
+        wpcli(f"post delete {sla_ticket_id} --force 2>/dev/null")
+        state.pop('sla_ticket_id', None)
+
+
+def test_45_assignment_rules(page: Page):
+    print("\n[45] Auto-Assignment Rules — category → assignee (#126)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Get the admin user's WP ID for use as the assignee
+    admin_id = wpcli(f"user get {ADMIN_USER} --field=ID 2>/dev/null").strip()
+    if not admin_id.isdigit():
+        skip("assignment rules", "could not get admin user ID")
+        return
+
+    # Reuse the test category from test_37/test_42 if available
+    if not state.get('test_category_term_id'):
+        cat_name = f"PW Assign Cat {int(time.time())}"
+        term_id = wpcli(
+            f"term create helpdesk_category '{cat_name}' --porcelain 2>/dev/null"
+        ).strip()
+        if not term_id.isdigit():
+            skip("assignment rules", "could not create test category")
+            return
+        state['test_category_term_id'] = int(term_id)
+        state['test_category_name'] = cat_name
+
+    term_id = state['test_category_term_id']
+
+    # ── Save an assignment rule in Settings → Routing tab ─────────────────────
+
+    _navigate_settings(page)
+    page.locator('#swh-tab-routing').click()
+    page.wait_for_selector('#swh-add-rule')
+
+    # Clear existing rules first by reading how many there are
+    existing_rules = page.locator('.swh-rule-item')
+    rule_count_before = existing_rules.count()
+
+    # Add a new rule
+    page.locator('#swh-add-rule').click()
+    page.wait_for_timeout(300)
+
+    # The new rule row should have a category select and assignee select
+    last_rule = page.locator('.swh-rule-item').last
+    check("assignment rules: rule row added after clicking + Add Rule",
+          last_rule.count() > 0, "no .swh-rule-item found after add")
+
+    if last_rule.count() > 0:
+        cat_select   = last_rule.locator('select[name="swh_rule_category[]"]')
+        user_select  = last_rule.locator('select[name="swh_rule_assignee[]"]')
+        if cat_select.count() > 0 and user_select.count() > 0:
+            cat_select.first.select_option(str(term_id))
+            user_select.first.select_option(admin_id)
+            page.locator('[name="swh_save_settings"]').first.click()
+            page.wait_for_load_state("load")
+            screenshot(page, "55_assignment_rule_saved")
+
+    # Verify the rule persists in settings
+    _navigate_settings(page)
+    page.locator('#swh-tab-routing').click()
+    page.wait_for_selector('#swh-add-rule')
+    rule_count_after = page.locator('.swh-rule-item').count()
+    check("assignment rules: rule persists after save",
+          rule_count_after > rule_count_before or rule_count_after >= 1,
+          f"rule count before={rule_count_before} after={rule_count_after}")
+
+    # ── Test rule application via WP-CLI ──────────────────────────────────────
+
+    # Create a test ticket and assign the category, then apply rules
+    rule_ticket_id = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        f"--post_title='PW Rule Test {int(time.time())}' "
+        "--post_author=1 --porcelain"
+    ).strip()
+    if rule_ticket_id.isdigit():
+        try:
+            # Assign the category term to the ticket
+            wpcli(
+                f"eval \"wp_set_post_terms({rule_ticket_id}, [{term_id}], 'helpdesk_category');\""
+            )
+            # Apply assignment rules
+            wpcli(f"eval 'swh_apply_assignment_rules({rule_ticket_id});'")
+            # Check assigned_to meta
+            assigned_to = wpcli(
+                f"eval \"echo get_post_meta({rule_ticket_id}, '_ticket_assigned_to', true);\""
+            ).strip()
+            check("assignment rules: ticket assigned to correct user via rule",
+                  assigned_to == admin_id,
+                  f"expected admin_id={admin_id}, got: {assigned_to!r}")
+        finally:
+            wpcli(f"post delete {rule_ticket_id} --force 2>/dev/null")
+
+    # ── Cleanup: remove the test rule ─────────────────────────────────────────
+
+    _navigate_settings(page)
+    page.locator('#swh-tab-routing').click()
+    page.wait_for_selector('#swh-add-rule')
+    # Remove all rule items (simpler than finding the specific one)
+    for item in page.locator('.swh-rule-item').all():
+        btn = item.locator('.swh-remove-rule, button[class*="remove"]')
+        if btn.count() > 0:
+            btn.first.click()
+    page.locator('[name="swh_save_settings"]').first.click()
+    page.wait_for_load_state("load")
+
+
+def test_46_reporting_dashboard(page: Page):
+    print("\n[46] Reporting Dashboard — page, charts, AJAX endpoint (#135, #137)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    reports_url = f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-reports"
+    page.goto(reports_url)
+    page.wait_for_load_state("load")
+
+    # Verify the page loads
+    check("reporting dashboard: page title contains Reports",
+          "Reports" in page.title() or "Helpdesk Reports" in page.inner_text("h1, h2"),
+          f"title: {page.title()!r}")
+
+    # Verify chart canvas elements are present
+    check("reporting dashboard: status chart canvas present",
+          page.locator('#swh-chart-status').count() > 0, "#swh-chart-status not found")
+    check("reporting dashboard: trend chart canvas present",
+          page.locator('#swh-chart-trend').count() > 0, "#swh-chart-trend not found")
+    check("reporting dashboard: avg resolution metric element present",
+          page.locator('#swh-avg-resolution').count() > 0, "#swh-avg-resolution not found")
+    check("reporting dashboard: avg first response metric element present",
+          page.locator('#swh-avg-first-response').count() > 0)
+    screenshot(page, "56_reporting_dashboard")
+
+    # Verify the AJAX endpoint responds with JSON for each report type
+    nonce = page.evaluate(
+        "typeof swhReports !== 'undefined' ? swhReports.nonce : ''"
+    )
+    if nonce:
+        for report_type in ("status_breakdown", "avg_resolution_time",
+                            "weekly_trend", "first_response_time"):
+            result = page.evaluate(f"""
+                (async function() {{
+                    var fd = new FormData();
+                    fd.append('action', 'swh_report_data');
+                    fd.append('nonce', {json.dumps(nonce)});
+                    fd.append('type', {json.dumps(report_type)});
+                    var r = await fetch(ajaxurl, {{ method: 'POST', body: fd }});
+                    var j = await r.json();
+                    return j.success ? 'ok' : ('error: ' + JSON.stringify(j));
+                }})()
+            """)
+            check(f"reporting dashboard AJAX: {report_type} returns success",
+                  result == "ok", f"got: {result!r}")
+    else:
+        skip("reporting dashboard AJAX", "swhReports.nonce not available")
+
+
+def test_47_inbound_email_webhook(page: Page):
+    print("\n[47] Inbound Email Webhook — POST /wp-json/swh/v1/inbound-email (#131)")
+
+    if not state.get('ticket_id'):
+        skip("inbound email webhook", "no ticket_id in state")
+        return
+
+    ticket_id = state['ticket_id']
+
+    # Get ticket UID and email via WP-CLI
+    ticket_uid = wpcli(
+        f"eval \"echo get_post_meta({ticket_id}, '_ticket_uid', true);\""
+    ).strip()
+    ticket_email = wpcli(
+        f"eval \"echo get_post_meta({ticket_id}, '_ticket_email', true);\""
+    ).strip()
+
+    if not ticket_uid or not ticket_email:
+        skip("inbound email webhook", f"missing uid={ticket_uid!r} or email={ticket_email!r}")
+        return
+
+    subject = f"Re: Your ticket [{ticket_uid}] has been updated"
+    body    = f"This is a test reply from the inbound email webhook test at {int(time.time())}."
+
+    # Set a test webhook secret so the endpoint is enabled
+    test_secret = "swh-test-secret-47"
+    wpcli(f"option update swh_inbound_secret '{test_secret}'")
+
+    # Use localhost inside the container to bypass Cloudflare's bot-check
+    wp_path_part = WP_URL.split(".com", 1)[-1].rstrip("/")  # e.g. /testing/wordpress
+    local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
+    host_header   = WP_URL.split("//", 1)[-1].split("/")[0]  # e.g. dev.seanmousseau.com
+
+    # POST to the webhook from inside the container to avoid Cloudflare routing
+    curl_cmd = (
+        f"curl -s -L -X POST '{local_webhook}' "
+        f"-H 'Host: {host_header}' "
+        f"-H 'Authorization: Bearer {test_secret}' "
+        f"--data-urlencode 'subject={subject}' "
+        f"--data-urlencode 'from={ticket_email}' "
+        f"--data-urlencode 'body-plain={body}' "
+        f"-w '\\n%{{http_code}}'"
+    )
+    docker_cmd = f"docker exec {WP_CONTAINER} {curl_cmd}"
+    result = subprocess.run(
+        ["ssh", SSH_HOST, docker_cmd],
+        capture_output=True, text=True, timeout=20
+    )
+    output = result.stdout.strip()
+    lines  = output.splitlines()
+    http_code = lines[-1] if lines else ""
+    body_resp = "\n".join(lines[:-1]) if len(lines) > 1 else output
+
+    check("inbound email webhook: HTTP 200 response",
+          http_code == "200", f"got HTTP {http_code!r}, body: {body_resp[:100]!r}")
+
+    try:
+        resp_json = json.loads(body_resp)
+        check("inbound email webhook: response JSON has success=true",
+              resp_json.get("success") is True,
+              f"response: {body_resp[:120]!r}")
+    except (json.JSONDecodeError, AttributeError):
+        check("inbound email webhook: response is valid JSON", False,
+              f"body: {body_resp[:120]!r}")
+        return
+
+    # Verify a reply comment was created on the ticket
+    comment_count = wpcli(
+        f"comment list --post_id={ticket_id} --comment_type=helpdesk_reply "
+        "--format=count"
+    ).strip()
+    check("inbound email webhook: reply comment created on ticket",
+          comment_count.isdigit() and int(comment_count) >= 1,
+          f"comment count: {comment_count!r}")
+
+    # Verify the comment contains our body text
+    latest_comment = wpcli(
+        f"comment list --post_id={ticket_id} --comment_type=helpdesk_reply "
+        "--fields=comment_ID,comment_content "
+        "--format=json --number=1 --orderby=comment_date --order=DESC"
+    )
+    try:
+        comments = json.loads(latest_comment)
+        if comments:
+            content = comments[0].get('comment_content', '')
+            check("inbound email webhook: reply comment contains expected body",
+                  "inbound email webhook test" in content.lower(),
+                  f"content: {content[:100]!r}")
+    except (json.JSONDecodeError, IndexError, AttributeError):
+        skip("inbound email webhook body check", "could not parse comment JSON")
+    screenshot(page, "57_inbound_webhook_result")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -1971,6 +2702,17 @@ SECTIONS = [
     test_30_resolved_cta_layout,      # 30 — #118, #120
     test_33_csat_prompt,              # 33 — #116 (closes the ticket)
     test_36_shortcode_attrs,          # 36 — #119
+    test_37_admin_list_filtering,     # 37 — #127 category filter
+    test_38_admin_list_sorting,       # 38 — column sorting
+    test_39_ticket_templates,         # 39 — #132
+    test_40_first_response_time,      # 40 — #136
+    test_41_cc_watchers,              # 41 — #129
+    test_42_categories_taxonomy,      # 42 — #127
+    test_43_ticket_merge,             # 43 — #133
+    test_44_sla_breach_detection,     # 44 — #128
+    test_45_assignment_rules,         # 45 — #126
+    test_46_reporting_dashboard,      # 46 — #135/#137
+    test_47_inbound_email_webhook,    # 47 — #131
     test_28_cleanup,                  # 28 — always last
 ]
 

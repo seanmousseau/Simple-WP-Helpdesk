@@ -48,6 +48,9 @@ function swh_activate() {
 	if ( ! wp_next_scheduled( 'swh_retention_attachments_event' ) ) {
 		wp_schedule_event( time() + 3600, 'hourly', 'swh_retention_attachments_event' );
 	}
+	if ( ! wp_next_scheduled( 'swh_sla_check_event' ) ) {
+		wp_schedule_event( time() + 5400, 'hourly', 'swh_sla_check_event' );
+	}
 	swh_run_upgrade_routine();
 	swh_ensure_upload_protection();
 }
@@ -61,6 +64,7 @@ function swh_deactivate() {
 	wp_clear_scheduled_hook( 'swh_autoclose_event' );
 	wp_clear_scheduled_hook( 'swh_retention_tickets_event' );
 	wp_clear_scheduled_hook( 'swh_retention_attachments_event' );
+	wp_clear_scheduled_hook( 'swh_sla_check_event' );
 	// Clear legacy hooks just in case.
 	wp_clear_scheduled_hook( 'swh_hourly_maintenance_event' );
 	wp_clear_scheduled_hook( 'swh_daily_autoclose_event' );
@@ -286,6 +290,47 @@ function swh_register_ticket_cpt() {
 			'menu_icon'       => SWH_MENU_ICON,
 			'supports'        => array( 'title', 'editor' ),
 			'capability_type' => 'post',
+		)
+	);
+}
+
+/**
+ * Registers the helpdesk_category taxonomy.
+ *
+ * @see swh_register_ticket_taxonomy()
+ */
+add_action( 'init', 'swh_register_ticket_taxonomy' );
+/**
+ * Registers the helpdesk_category hierarchical taxonomy for helpdesk_ticket posts.
+ *
+ * @since 3.0.0
+ * @return void
+ */
+function swh_register_ticket_taxonomy() {
+	register_taxonomy(
+		'helpdesk_category',
+		'helpdesk_ticket',
+		array(
+			'labels'            => array(
+				'name'          => __( 'Categories', 'simple-wp-helpdesk' ),
+				'singular_name' => __( 'Category', 'simple-wp-helpdesk' ),
+				'all_items'     => __( 'All Categories', 'simple-wp-helpdesk' ),
+				'edit_item'     => __( 'Edit Category', 'simple-wp-helpdesk' ),
+				'view_item'     => __( 'View Category', 'simple-wp-helpdesk' ),
+				'update_item'   => __( 'Update Category', 'simple-wp-helpdesk' ),
+				'add_new_item'  => __( 'Add New Category', 'simple-wp-helpdesk' ),
+				'new_item_name' => __( 'New Category Name', 'simple-wp-helpdesk' ),
+				'search_items'  => __( 'Search Categories', 'simple-wp-helpdesk' ),
+				'not_found'     => __( 'No categories found.', 'simple-wp-helpdesk' ),
+				'menu_name'     => __( 'Categories', 'simple-wp-helpdesk' ),
+			),
+			'hierarchical'      => true,
+			'show_ui'           => true,
+			'show_in_menu'      => true,
+			'show_admin_column' => true,
+			'show_in_rest'      => false,
+			'rewrite'           => false,
+			'query_var'         => false,
 		)
 	);
 }

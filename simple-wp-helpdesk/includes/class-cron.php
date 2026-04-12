@@ -1,6 +1,6 @@
 <?php
 /**
- * Background cron tasks: auto-close, attachment retention, and ticket retention.
+ * Background cron tasks: auto-close, attachment retention, ticket retention, and SLA breach alerts.
  *
  * All tasks are micro-batched (1–2 tickets per run) to prevent cURL error 28 timeouts.
  *
@@ -296,5 +296,126 @@ function swh_process_retention_tickets() {
 	foreach ( $tickets as $ticket ) {
 		swh_delete_ticket_and_files( $ticket->ID );
 	}
+	delete_transient( $lock_key );
+}
+
+/**
+ * Processes the SLA check cron event: detects breach/warn thresholds and sends digest alerts.
+ *
+ * @see swh_process_sla_check()
+ */
+add_action( 'swh_sla_check_event', 'swh_process_sla_check' );
+/**
+ * Checks open tickets against SLA warn and breach thresholds.
+ *
+ * Updates `_ticket_sla_status` to 'warn' or 'breach' on first detection.
+ * Sends a digest email on first breach detection.
+ * Uses a transient lock to prevent concurrent runs.
+ *
+ * Processes up to 20 tickets per run (micro-batched to avoid long-running cron jobs).
+ * On sites with many open tickets, subsequent hourly runs will eventually process all.
+ * The meta_query excludes tickets already marked 'breach', so each ticket is only alerted once.
+ *
+ * @since 3.0.0
+ * @return void
+ */
+function swh_process_sla_check() {
+	$warn_hours   = swh_get_int_option( 'swh_sla_warn_hours', 4 );
+	$breach_hours = swh_get_int_option( 'swh_sla_breach_hours', 8 );
+	if ( $warn_hours <= 0 && $breach_hours <= 0 ) {
+		return;
+	}
+	$lock_key = 'swh_lock_sla';
+	if ( get_transient( $lock_key ) ) {
+		return;
+	}
+	set_transient( $lock_key, 1, 5 * MINUTE_IN_SECONDS );
+
+	$open_statuses = array( 'Open', 'In Progress', 'Pending' );
+	/**
+	 * Filters the ticket statuses considered "open" for SLA purposes.
+	 *
+	 * @since 3.0.0
+	 * @param string[] $open_statuses Array of status strings.
+	 */
+	$open_statuses  = apply_filters( 'swh_sla_open_statuses', $open_statuses );
+	$now            = time();
+	$breach_time    = $breach_hours > 0 ? $now - ( $breach_hours * HOUR_IN_SECONDS ) : 0;
+	$warn_time      = $warn_hours > 0 ? $now - ( $warn_hours * HOUR_IN_SECONDS ) : 0;
+	$breach_count   = 0;
+	$newly_breached = array();
+
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+	$tickets = get_posts(
+		array(
+			'post_type'      => 'helpdesk_ticket',
+			'posts_per_page' => 20,
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_ticket_status',
+					'value'   => $open_statuses,
+					'compare' => 'IN',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key'     => '_ticket_sla_status',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'     => '_ticket_sla_status',
+						'value'   => 'breach',
+						'compare' => '!=',
+					),
+				),
+			),
+			'date_query'     => array(
+				array(
+					'column' => 'post_date',
+					'before' => gmdate( 'Y-m-d H:i:s', $warn_time > 0 ? $warn_time : $breach_time ),
+				),
+			),
+		)
+	);
+
+	if ( ! empty( $tickets ) ) {
+		update_meta_cache( 'post', wp_list_pluck( $tickets, 'ID' ) );
+	}
+	foreach ( $tickets as $ticket ) {
+		$post_date_ts  = strtotime( $ticket->post_date_gmt );
+		$current_level = swh_get_string_meta( $ticket->ID, '_ticket_sla_status' );
+		if ( $breach_time > 0 && $post_date_ts <= $breach_time ) {
+			if ( 'breach' !== $current_level ) {
+				update_post_meta( $ticket->ID, '_ticket_sla_status', 'breach' );
+				$newly_breached[] = $ticket;
+				++$breach_count;
+			}
+		} elseif ( $warn_time > 0 && $post_date_ts <= $warn_time && 'warn' !== $current_level ) {
+			update_post_meta( $ticket->ID, '_ticket_sla_status', 'warn' );
+		}
+	}
+
+	if ( ! empty( $newly_breached ) ) {
+		$notify_email = swh_get_string_option( 'swh_sla_notify_email' );
+		if ( ! $notify_email ) {
+			$notify_email = swh_get_admin_email();
+		}
+		if ( is_email( $notify_email ) ) {
+			$sla_lines = array();
+			foreach ( $newly_breached as $breached_ticket ) {
+				$uid         = swh_get_string_meta( $breached_ticket->ID, '_ticket_uid' );
+				$title       = $breached_ticket->post_title;
+				$url         = admin_url( 'post.php?post=' . $breached_ticket->ID . '&action=edit' );
+				$sla_lines[] = ( $uid ? $uid . ': ' : '' ) . $title . ' — ' . $url;
+			}
+			$data = array(
+				'sla_count' => $breach_count,
+				'sla_list'  => implode( "\n", $sla_lines ),
+			);
+			swh_send_email( $notify_email, 'swh_em_admin_sla_breach_sub', 'swh_em_admin_sla_breach_body', $data );
+		}
+	}
+
 	delete_transient( $lock_key );
 }
