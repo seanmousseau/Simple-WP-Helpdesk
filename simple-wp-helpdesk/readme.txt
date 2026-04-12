@@ -207,6 +207,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 == Upgrade Notice ==
 
+= 3.1.0 =
+Locale-aware timestamps, unread reply indicators, and the new test-email tool. Upgrade recommended.
+
 = 2.5.0 =
 Security patch: empty portal tokens are now rejected before hash comparison (previously `hash_equals('','')` could bypass access control). Also adds reCAPTCHA Enterprise support, PHPStan L9, PHPUnit tests, and several bug fixes. Upgrade recommended.
 

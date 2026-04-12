@@ -26,6 +26,7 @@ Requirements (testing/.venv):
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -2706,9 +2707,8 @@ def test_48_timestamp_locale(page: Page):
         if time_els_new.count() > 0:
             disp_new = time_els_new.first.inner_text().strip()
             # New format produces YYYY.MM.DD pattern — digits with dots
-            import re as _re
             check("timestamp locale: date_format change is reflected in display",
-                  bool(_re.search(r'\d{4}\.\d{2}\.\d{2}', disp_new)),
+                  bool(re.search(r'\d{4}\.\d{2}\.\d{2}', disp_new)),
                   f"display text after format change: {disp_new!r}")
     finally:
         wpcli(f"option update date_format {json.dumps(wp_date_fmt or 'F j, Y')}")
@@ -2841,10 +2841,6 @@ def test_50_unread_badge(page: Page):
     check("unread badge: _swh_unread flag cleared after admin opens ticket",
           unread_after not in ('1', 'true'),
           f"_swh_unread after opening: {unread_after!r}")
-
-    # Verify this ticket no longer contributes to unread count.
-    check("unread badge: _swh_unread meta is cleared on ticket open (badge count reduced)",
-          unread_after not in ('1', 'true'))
 
     screenshot(page, "61_unread_badge_cleared")
 
