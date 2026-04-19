@@ -2617,24 +2617,36 @@ def test_47_inbound_email_webhook(page: Page):
         wpcli(f"option update swh_inbound_secret {test_secret}")
 
     if WP_MODE == "docker":
-        # In docker mode the endpoint is reachable directly from the test runner.
-        # Use /?rest_route= to bypass .htaccess dependency; pass Authorization as
-        # both header and fallback query param.
-        import requests as _requests
-        webhook_url = f"{WP_URL.rstrip('/')}/?rest_route=/swh/v1/inbound-email"
-        try:
-            resp = _requests.post(
-                webhook_url,
-                data={"subject": subject, "from": ticket_email, "body-plain": body},
-                headers={"Authorization": f"Bearer {test_secret}"},
-                timeout=20,
-                allow_redirects=False,
-            )
-            http_code = str(resp.status_code)
-            body_resp = resp.text[:500]
-        except Exception as exc:
+        # Use wp_remote_post via WP-CLI eval from within the WordPress environment.
+        # Apache strips the Authorization header from external requests in some
+        # configurations; going through Docker's internal network avoids this.
+        repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        php_code = (
+            "$r=wp_remote_post('http://wordpress/?rest_route=/swh/v1/inbound-email',"
+            "['sslverify'=>false,'timeout'=>15,'redirection'=>0,"
+            f"'headers'=>['Authorization'=>'Bearer {test_secret}'],"
+            f"'body'=>['subject'=>'{subject}','from'=>'{ticket_email}','body-plain'=>'{body}']]);"
+            "if(is_wp_error($r)){echo 'WP_ERROR:'.$r->get_error_message();}"
+            "else{echo wp_remote_retrieve_response_code($r).\"\\n\".wp_remote_retrieve_body($r);}"
+        )
+        result = subprocess.run(
+            ["docker", "compose", "-f", "docker-compose.test.yml",
+             "exec", "-T", WP_CONTAINER,
+             "wp", "--allow-root", f"--path={WP_PATH}", "eval", php_code],
+            capture_output=True, text=True, timeout=30, cwd=repo_root
+        )
+        raw_lines = [
+            line for line in result.stdout.splitlines()
+            if not line.startswith(("Deprecated:", "Notice:", "Warning:", "PHP Deprecated:"))
+        ]
+        output = "\n".join(raw_lines).strip()
+        if output.startswith("WP_ERROR:"):
             http_code = ""
-            body_resp = str(exc)
+            body_resp = output
+        else:
+            parts = output.split("\n", 1)
+            http_code = parts[0].strip() if parts else ""
+            body_resp = parts[1].strip() if len(parts) > 1 else ""
     else:
         wp_path_part  = WP_URL.split(".com", 1)[-1].rstrip("/")
         local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
