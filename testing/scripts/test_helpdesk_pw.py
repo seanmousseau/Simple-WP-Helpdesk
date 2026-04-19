@@ -2612,6 +2612,11 @@ def test_47_inbound_email_webhook(page: Page):
     # wpcli option writes which can be unreliable in CI.
     if WP_MODE == "docker":
         test_secret = os.environ.get("WP_INBOUND_SECRET", "swh-ci-webhook-secret")
+        # Always (re-)set the secret immediately before the test call to ensure
+        # it hasn't been cleared by an earlier settings-save in this test run.
+        wpcli(f"option update swh_inbound_secret {test_secret}")
+        stored = wpcli("eval \"echo get_option('swh_inbound_secret');\"")
+        print(f"  [47-diag] stored={stored!r} test_secret={test_secret!r} match={stored==test_secret}")
     else:
         test_secret = "swh-test-secret-47"
         wpcli(f"option update swh_inbound_secret {test_secret}")
@@ -2640,6 +2645,7 @@ def test_47_inbound_email_webhook(page: Page):
             if not line.startswith(("Deprecated:", "Notice:", "Warning:", "PHP Deprecated:"))
         ]
         output = "\n".join(raw_lines).strip()
+        print(f"  [47-diag] wp eval stdout={result.stdout[:200]!r} stderr={result.stderr[:200]!r} output={output[:200]!r}")
         if output.startswith("WP_ERROR:"):
             http_code = ""
             body_resp = output
