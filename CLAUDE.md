@@ -239,6 +239,8 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 - **`expect_navigation()`** — wrap JS-triggered form submits in `with page.expect_navigation():` to avoid race between evaluate and `page.content()`
 - **Canned response persistence check** — use `el.value` via `page.evaluate()`, not `inner_text()` (input values aren't in innerText)
 - **File upload form POST** — a page caching plugin fires an immediate GET after the file POST, overwriting the success HTML in the DOM. Use `expect_navigation()` + `wait_for_load_state("load")` to let it settle, then verify success via WP-CLI meta rather than `page.content()`
+- **`wpcli()` exits non-zero for absent data** — `wp option get`, `wp post meta get`, `wp comment meta get` all exit 1 when the key/meta is absent. This is a normal result (not an infrastructure error); `wpcli()` returns empty string and callers handle it via `check()`. Do NOT raise on non-zero in the helper.
+- **Authorization header stripped in Docker** — Apache drops the `Authorization` header before PHP receives it, regardless of `.htaccess` passthrough rules. For test_47 (inbound webhook), bypass HTTP entirely: construct a `WP_REST_Request` and call `swh_handle_inbound_email()` directly via `wp eval`.
 
 ### Environment variables (testing/.env)
 
