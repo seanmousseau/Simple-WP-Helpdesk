@@ -44,7 +44,7 @@ jobs:
       - name: Start WordPress stack
         env:
           WP_IMAGE: ${{ matrix.wp_image }}
-        run: docker compose -f docker-compose.test.yml up -d db wordpress wpcli
+        run: docker compose -f docker-compose.test.yml up -d db wordpress wpcli mailhog
 
       - name: Wait for WordPress to be ready
         run: |
@@ -79,6 +79,7 @@ jobs:
           WP_LOGIN_URL: http://localhost:8080/wp-login.php
           WP_ADMIN_URL: http://localhost:8080/wp-admin/
           WP_INBOUND_SECRET: swh-ci-webhook-secret
+          MAILHOG_URL: http://localhost:8025
         run: |
           DC="docker compose -f docker-compose.test.yml"
           WP="$DC exec -T wpcli wp --allow-root --path=/var/www/html"

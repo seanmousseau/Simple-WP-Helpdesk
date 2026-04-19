@@ -14,11 +14,19 @@ services:
       timeout: 5s
       retries: 12
 
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   wordpress:
     image: wordpress:${WP_IMAGE:-php8.2-apache}
     depends_on:
       db:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     ports:
       - "8080:80"
     environment:
@@ -26,8 +34,11 @@ services:
       WORDPRESS_DB_USER: wp
       WORDPRESS_DB_PASSWORD: wp
       WORDPRESS_DB_NAME: wordpress
+      MAILHOG_SMTP_HOST: mailhog
+      MAILHOG_SMTP_PORT: 1025
     volumes:
       - ./simple-wp-helpdesk:/var/www/html/wp-content/plugins/simple-wp-helpdesk:ro
+      - ./docker/mailhog-smtp.php:/var/www/html/wp-content/mu-plugins/mailhog-smtp.php:ro
       - wp_data:/var/www/html
 
   wpcli:

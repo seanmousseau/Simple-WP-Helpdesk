@@ -12,6 +12,28 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.2.0] — Unreleased
+
+### Added
+
+- **`make test-docker` — Docker-based full gate (#292):** Runs lint, PHPCS, PHPStan, PHPUnit, and Semgrep inside the `phptest` container. No host PHP or semgrep installation required.
+- **`make e2e-docker` — fully self-contained E2E (#294):** Spins up the Docker test stack, waits for WordPress, runs setup, executes the full Playwright suite with MailHog, then tears down — all in one command.
+- **`make coverage` — PHPUnit coverage report (#301):** Generates `coverage.xml` (Clover format) using pcov. Paired with new `coverage.yml` CI workflow that uploads to Codecov on push/PR.
+- **MailHog automated email assertions (#288, #295, #296, #297):** `mailhog/mailhog:v1.0.1` service added to `docker-compose.test.yml`. `docker/mailhog-smtp.php` MU-plugin routes `wp_mail()` through MailHog when `MAILHOG_SMTP_HOST` is set. `expect_email()` in the E2E suite now asserts delivery via MailHog API when `WP_MODE=docker`; SSH mode retains the manual `EMAIL_CHECKS` fallback.
+- **`release.yml` GH Actions workflow (#302):** Triggered on `v*.*.*` tag push. Builds `simple-wp-helpdesk.zip`, extracts the matching CHANGELOG entry, and creates the GitHub Release with ZIP attached. Replaces the manual ZIP step in the release process.
+- **`coverage.yml` GH Actions workflow (#301):** PHP 8.2 + pcov coverage on every push to `main`/`dev` and PR to `main`/`dev`. Uploads Clover report to Codecov.
+- **phptest Dockerfile upgraded (#291):** Added `make`, Python 3, pip, semgrep 1.157.0 (pinned to match CI), and pcov PHP extension. CMD now runs `composer install && make test` so `make test-docker` delegates entirely to the container.
+- **Pre-push hook upgraded (#293):** Auto-detects Docker (`docker info`); prefers `make test-docker` when available, falls back to `make test` on machines without Docker.
+- **Dependabot allow-list expanded (#298):** Added `php-stubs/wordpress-stubs`, `wp-coding-standards/wpcs`, and `dealerdirect/phpcodesniffer-composer-installer` to the Composer allow-list.
+
+### Changed
+
+- `CLAUDE.md` release process: step 7 is now "push tag → `release.yml` fires automatically" — no manual `zip` command.
+- PR template pre-PR gate updated to reference `make test-docker` as the preferred path.
+- `SWH_VERSION` bumped to `3.2.0`.
+
+---
+
 ## [3.1.0] — Unreleased
 
 ### Added

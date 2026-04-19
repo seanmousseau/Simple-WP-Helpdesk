@@ -59,6 +59,10 @@ echo "→ Creating uploads directory..."
 docker compose -f docker-compose.test.yml exec -T -u root wordpress \
   bash -c "mkdir -p /var/www/html/wp-content/uploads/swh-helpdesk && chown -R www-data:www-data /var/www/html/wp-content/uploads" 2>/dev/null || true
 
+echo "→ Ensuring mu-plugins directory exists..."
+docker compose -f docker-compose.test.yml exec -T -u root wordpress \
+  bash -c "mkdir -p /var/www/html/wp-content/mu-plugins" 2>/dev/null || true
+
 echo "→ Activating plugin..."
 $WP plugin activate simple-wp-helpdesk
 

@@ -9,4 +9,15 @@
             <directory>tests/Unit</directory>
         </testsuite>
     </testsuites>
+
+    <coverage>
+        <include>
+            <directory suffix=".php">simple-wp-helpdesk/includes</directory>
+            <directory suffix=".php">simple-wp-helpdesk/admin</directory>
+            <directory suffix=".php">simple-wp-helpdesk/frontend</directory>
+        </include>
+        <report>
+            <clover outputFile="coverage.xml"/>
+        </report>
+    </coverage>
 </phpunit>

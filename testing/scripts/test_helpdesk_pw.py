@@ -88,6 +88,7 @@ WP_ADMIN_URL   = _optional("WP_ADMIN_URL", WP_URL + "/wp-admin")
 WP_SUBMIT_PAGE  = _require("WP_SUBMIT_PAGE").rstrip("/")
 WP_PORTAL_PAGE  = _optional("WP_PORTAL_PAGE", "").rstrip("/")
 WP_MODE        = _optional("WP_MODE", "ssh")           # "ssh" or "docker"
+MAILHOG_URL    = _optional("MAILHOG_URL", "").rstrip("/")  # e.g. http://localhost:8025
 SSH_HOST       = _optional("SSH_HOST", "")
 WP_CONTAINER   = _optional("WP_CONTAINER", "wpcli")
 WP_PATH        = _optional("WP_PATH", "/var/www/html")
@@ -195,8 +196,63 @@ def skip(name: str, reason: str = ""):
     _results["skipped"].append(msg)
 
 
+def mailhog_get_messages(to_email: str, timeout: int = 10) -> list:
+    """Poll MailHog API until a message for to_email arrives, or timeout (seconds).
+
+    Returns list of MailHog message dicts. Empty list when MAILHOG_URL is unset,
+    MailHog is unreachable, or no matching message arrives before the deadline.
+    """
+    if not MAILHOG_URL:
+        return []
+    import requests as _req
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            resp = _req.get(f"{MAILHOG_URL}/api/v2/messages", params={"limit": 50}, timeout=5)
+            if resp.status_code != 200:
+                return []
+            matched = [
+                m for m in resp.json().get("items", [])
+                if any(
+                    to_email.lower() in (r.get("Mailbox", "") + "@" + r.get("Domain", "")).lower()
+                    for r in m.get("To", [])
+                )
+            ]
+            if matched:
+                return matched
+        except Exception:
+            return []
+        time.sleep(1)
+    return []
+
+
+def mailhog_clear() -> None:
+    """Delete all messages from MailHog (no-op when MAILHOG_URL is unset)."""
+    if not MAILHOG_URL:
+        return
+    import requests as _req
+    try:
+        _req.delete(f"{MAILHOG_URL}/api/v1/messages", timeout=5)
+    except Exception:
+        pass
+
+
 def expect_email(recipient: str, description: str):
-    EMAIL_CHECKS.append({"to": recipient, "description": description})
+    """Assert an email was delivered.
+
+    Docker mode (MAILHOG_URL set): polls MailHog API and calls check() immediately.
+    SSH mode: appends to EMAIL_CHECKS for manual verification after the run.
+    """
+    if WP_MODE == "docker" and MAILHOG_URL:
+        messages = mailhog_get_messages(recipient, timeout=10)
+        check(
+            f"email: {description} → {recipient}",
+            bool(messages),
+            f"No email found in MailHog for {recipient}",
+        )
+        mailhog_clear()
+    else:
+        EMAIL_CHECKS.append({"to": recipient, "description": description})
 
 
 def wp_login(page: Page, username: str, password: str) -> str:
@@ -351,6 +407,7 @@ def test_02_plugin_verification(page: Page):
 @pytest.mark.smoke
 def test_03_ticket_submission(page: Page):
     print("\n[3] Ticket Submission (Frontend — two tickets)")
+    mailhog_clear()  # start with empty inbox so expect_email() assertions are unambiguous
 
     # ── Ticket 1 (CLIENT1) ────────────────────────────────────────────────────
 
