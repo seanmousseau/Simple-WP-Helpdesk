@@ -160,10 +160,8 @@ def wpcli(cmd):
             ["ssh", SSH_HOST, docker_cmd],
             capture_output=True, text=True, timeout=15, check=False
         )
-    if result.returncode != 0:
-        raise subprocess.CalledProcessError(
-            result.returncode, result.args, output=result.stdout, stderr=result.stderr
-        )
+    # WP-CLI exits 1 for "not found" (option/meta absent) — that is a valid result,
+    # not an infrastructure failure. Callers check the return value themselves.
     clean = "\n".join(
         line for line in result.stdout.splitlines()
         if not line.startswith(("Deprecated:", "Notice:", "Warning:", "PHP Deprecated:"))
