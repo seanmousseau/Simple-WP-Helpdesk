@@ -56,6 +56,9 @@ docker compose -f docker-compose.test.yml exec -T -u root wordpress \
 echo "→ Activating plugin..."
 $WP plugin activate simple-wp-helpdesk
 
+echo "→ Setting inbound webhook secret..."
+$WP option update swh_inbound_secret "swh-ci-webhook-secret"
+
 echo "→ Creating technician users..."
 $WP user create "$WP_TECH1_USER" "$WP_TECH1_EMAIL" \
   --role=technician --user_pass="$WP_TECH1_PASS" --porcelain 2>/dev/null || true

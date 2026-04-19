@@ -2606,14 +2606,15 @@ def test_47_inbound_email_webhook(page: Page):
     subject = f"Re: Your ticket [{ticket_uid}] has been updated"
     body    = f"This is a test reply from the inbound email webhook test at {int(time.time())}."
 
-    # Set a test webhook secret so the endpoint is enabled
-    test_secret = "swh-test-secret-47"
-    wpcli(f"option update swh_inbound_secret {test_secret}")
-    # Verify the option was stored correctly before making the HTTP request
-    actual_secret = wpcli("option get swh_inbound_secret")
-    if actual_secret != test_secret:
-        # Fallback: force via wp eval in case option update had quoting issues
-        wpcli(f'eval "update_option(\'swh_inbound_secret\', \'{test_secret}\');"')
+    # Set a test webhook secret so the endpoint is enabled.
+    # In docker mode use the pre-configured secret from setup-test-wp.sh
+    # (set via WP_INBOUND_SECRET env var) so we don't depend on per-test
+    # wpcli option writes which can be unreliable in CI.
+    if WP_MODE == "docker":
+        test_secret = os.environ.get("WP_INBOUND_SECRET", "swh-ci-webhook-secret")
+    else:
+        test_secret = "swh-test-secret-47"
+        wpcli(f"option update swh_inbound_secret {test_secret}")
 
     if WP_MODE == "docker":
         # In docker mode the endpoint is reachable directly from the test runner.

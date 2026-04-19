@@ -75,6 +75,7 @@ jobs:
           WP_URL: http://localhost:8080
           WP_LOGIN_URL: http://localhost:8080/wp-login.php
           WP_ADMIN_URL: http://localhost:8080/wp-admin/
+          WP_INBOUND_SECRET: swh-ci-webhook-secret
         run: |
           DC="docker compose -f docker-compose.test.yml"
           WP="$DC exec -T wpcli wp --allow-root --path=/var/www/html"
