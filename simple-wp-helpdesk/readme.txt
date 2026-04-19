@@ -76,11 +76,21 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 = 3.1.0 =
 * Fixed: Conversation timestamps now use `wp_date()` with UTC source (`comment_date_gmt`), respecting the site timezone and date/time format options (#121)
+* Fixed: Portal ticket title promoted to `<h1>` for correct heading hierarchy (#247)
+* Fixed: Conversation log max-height now uses `60vh` viewport-relative CSS class instead of fixed `400px` inline style (#248)
+* Fixed: Ticket UID block inline styles extracted to `.swh-ticket-uid` CSS class (#249)
 * Added: Dedicated "Send Reply" and "Save Note" buttons in the ticket editor conversation meta box (#97)
 * Added: Unread reply count badge (`.awaiting-mod`) on the admin menu item; clears when the ticket is opened (#101)
 * Added: `swh-has-unread` CSS class on ticket list rows with new client replies; cleared on admin view (#102)
 * Added: "Send Test Email" button in Settings → Email Templates with inline AJAX feedback (#103)
 * Added: `languages/simple-wp-helpdesk.pot` translation file for i18n support (#123)
+* Added: `Makefile` local gate — `make test` (lint/phpcs/phpstan/phpunit/semgrep), `make e2e` (Playwright), `make test-all` (#276)
+* Added: Pre-push git hook runs `make test` before every push (#277)
+* Added: Docker Compose test stack (`docker-compose.test.yml`) with WordPress, MySQL, WP-CLI, and phptest services (#278, #279)
+* Added: GitHub Actions PHP matrix (7.4/8.1/8.2/8.3) with lint, PHPCS, PHPStan, PHPUnit, and Composer audit (#280, #282)
+* Added: GitHub Actions E2E matrix (WP 5.3 + latest) running Playwright in Docker (#281, #287)
+* Added: PR template with pre-PR gate, E2E coverage, and release checklists (#283)
+* Added: `testing/.env.example` documenting all test environment variables (#284)
 * Changed: `swh_send_email()` now returns `bool` (the `wp_mail()` return value) instead of `void`
 * Changed: `SWH_VERSION` bumped to `3.1.0`
 

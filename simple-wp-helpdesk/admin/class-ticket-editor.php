@@ -129,7 +129,7 @@ function swh_status_meta_box_html( $post ) {
 	wp_nonce_field( 'swh_save_ticket', 'swh_ticket_nonce' );
 	$is_new_ticket = empty( $uid );
 	?>
-	<div style="font-size: 16px; font-weight: bold; background: #f0f0f1; padding: 10px; text-align: center; margin-bottom: 15px;">
+	<div class="swh-ticket-uid">
 		<?php echo $is_new_ticket ? esc_html__( 'New Ticket', 'simple-wp-helpdesk' ) : esc_html__( 'ID:', 'simple-wp-helpdesk' ) . ' ' . esc_html( $uid ); ?>
 	</div>
 	<p style="margin-bottom: 5px;"><label for="swh-client-name"><strong><?php esc_html_e( 'Client Name:', 'simple-wp-helpdesk' ); ?></strong></label></p>
@@ -288,7 +288,7 @@ function swh_conversation_meta_box_html( $post ) {
 		)
 	);
 	$comments = is_array( $comments ) ? $comments : array();
-	echo '<div role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '" style="max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">';
+	echo '<div class="swh-conversation-wrap" role="log" aria-label="' . esc_attr__( 'Ticket Conversation', 'simple-wp-helpdesk' ) . '">';
 	if ( $comments ) {
 		foreach ( $comments as $comment ) {
 			if ( ! $comment instanceof WP_Comment ) {

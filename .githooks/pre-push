@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+
+echo ""
+echo "Running pre-push gate (lint → phpcs → phpstan → phpunit → semgrep)..."
+echo "Skip with: git push --no-verify"
+echo ""
+
+make test
+
+echo ""
+echo "Gate passed. Pushing."

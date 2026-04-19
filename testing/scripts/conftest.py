@@ -9,7 +9,6 @@ Provides:
 - EMAIL CHECKS summary appended to the terminal report
 """
 import os
-import subprocess
 
 import pytest
 
@@ -79,16 +78,11 @@ def _suite_init(page, request):
     import test_helpdesk_pw as t
     t._page = page
 
-    ssh_host  = os.environ.get("SSH_HOST", "")
-    container = os.environ.get("WP_CONTAINER", "")
-    wp_path   = os.environ.get("WP_PATH", "")
-    if ssh_host and container and wp_path:
-        subprocess.run(
-            ["ssh", ssh_host,
-             f"docker exec {container} wp option delete swh_restrict_to_assigned"
-             f" --path={wp_path} --allow-root 2>/dev/null"],
-            capture_output=True, timeout=15
-        )
+    # Reset option that may be dirtied by a prior failed technician workflow test
+    try:
+        t.wpcli("option delete swh_restrict_to_assigned")
+    except Exception:
+        pass
 
     def _cleanup():
         """Trash tickets created during the run and log out — runs even on KeyboardInterrupt."""

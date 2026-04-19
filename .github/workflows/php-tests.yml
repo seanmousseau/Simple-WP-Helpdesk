@@ -1,0 +1,94 @@
+name: PHP Tests
+
+on:
+  push:
+    branches: [main, dev, 'release/**']
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  php-tests:
+    name: PHP ${{ matrix.php }} — lint, PHPCS, PHPStan, PHPUnit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.1', '8.2', '8.3']
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: PHP Lint
+        run: make lint
+
+      - name: PHPCS
+        run: make phpcs
+
+      - name: PHPStan
+        # PHPStan 2.x requires PHP 8.1+; 7.4 runs lint and PHPCS only
+        if: matrix.php != '7.4'
+        run: make phpstan
+
+      - name: PHPUnit
+        run: make phpunit
+
+  composer-audit:
+    name: Composer Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Security audit (production deps only)
+        run: composer audit --no-dev
+
+  changelog-check:
+    name: CHANGELOG Updated
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check CHANGELOG.md was modified
+        env:
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Skip for dx or documentation PRs — cosmetic/tooling changes don't need changelog entries
+          if echo "$PR_LABELS" | grep -qE '"dx"|"documentation"'; then
+            echo "Skipping changelog check for dx/documentation PR."
+            exit 0
+          fi
+          if ! git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -q '^CHANGELOG\.md$'; then
+            echo "::error::CHANGELOG.md was not updated in this PR."
+            echo "Add an entry under the appropriate version heading before merging."
+            exit 1
+          fi

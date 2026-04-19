@@ -99,28 +99,38 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 
 ## Test Suite
 
-The full test suite must pass before any release. Run in order:
+The full test suite must pass before any release. Use `make` targets (requires `composer install` first):
 
-### 1. PHPCS — WordPress Coding Standards
+### Local gate (required before opening any PR)
 ```bash
-vendor/bin/phpcs          # zero errors/warnings required
-vendor/bin/phpcbf         # auto-fix if needed, then re-run phpcs
+make test        # lint → phpcs → phpstan → phpunit → semgrep (all 5 must pass)
+make e2e         # Playwright E2E — 52 sections (set WP_MODE=docker or configure SSH vars)
+make test-all    # both of the above
 ```
 
-### 2. PHPStan — Static Analysis (level 9)
+### Individual tools
 ```bash
-vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+make lint        # PHP syntax check on all plugin files
+make phpcs       # WordPress Coding Standards (zero errors/warnings required)
+vendor/bin/phpcbf && make phpcs   # auto-fix then re-check
+make phpstan     # PHPStan level 9 (PHP 8.1+ required)
+make phpunit     # PHPUnit unit tests
+make semgrep     # Semgrep SAST scan
 ```
 
-### 3. PHPUnit — Unit tests
+### Docker test stack (local or CI)
 ```bash
-vendor/bin/phpunit
-```
+# Spin up WordPress + MySQL
+docker compose -f docker-compose.test.yml up -d db wordpress
 
-### 4. Playwright — End-to-end (34 tests, ~4 min)
-```bash
-source testing/.venv/bin/activate
-pytest testing/scripts/test_helpdesk_pw.py -v
+# Install WordPress, activate plugin, create test users and pages
+bash docker/setup-test-wp.sh
+
+# Run E2E against the local stack
+WP_MODE=docker make e2e
+
+# Tear down
+docker compose -f docker-compose.test.yml down -v
 ```
 
 ### 5. CodeRabbit — AI code review (on PR)
@@ -140,6 +150,9 @@ pytest testing/scripts/test_helpdesk_pw.py -k "test_19"
 
 # Visible browser / slow-motion debug
 pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
+
+# Run against local Docker stack instead of SSH dev server
+WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 ```
 
 ## Playwright Test Suite
@@ -210,7 +223,7 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 - **`check()`** — soft-fail helper; failures accumulate and surface after each test via `conftest.py` autouse fixture
 - **`skip()`** — records a skip without aborting
 - **`as_user(page, user, pass)`** — context manager: logout → login → yield → logout
-- **`wpcli(cmd)`** — runs WP-CLI inside the Docker container via SSH
+- **`wpcli(cmd)`** — runs WP-CLI via SSH+docker exec (default) or `docker compose exec` when `WP_MODE=docker`
 - **`_clear_rate_limits()`** — deletes `swh_rl_*` rows from wp_options + flushes object cache (rate limiter uses `get_option()` which checks cache first)
 - **`_navigate_settings(page)`** — navigates to settings page and removes `.wp-pointer` elements (Security Ninja and other admin pointers intercept clicks)
 - **`state` dict** — carries `ticket_id`, `ticket2_id`, `portal_url` etc. across sections
@@ -229,26 +242,45 @@ pytest testing/scripts/test_helpdesk_pw.py --headed --slowmo 500
 
 ### Environment variables (testing/.env)
 
+Copy `testing/.env.example` to `testing/.env` and fill in values. See the example file for descriptions of every variable.
+
 ```
 WP_URL, WP_LOGIN_URL, WP_ADMIN_URL, WP_SUBMIT_PAGE, WP_PORTAL_PAGE
 WP_ADMIN_USER, WP_ADMIN_PASS
 WP_TECH1_EMAIL, WP_TECH1_USER, WP_TECH1_PASS
 WP_TECH2_USER, WP_TECH2_PASS
-WP_CLIENT1_NAME, WP_CLIENT1_EMAIL, WP_CLIENT1_PASS (optional subscriber)
-WP_CLIENT2_NAME, WP_CLIENT2_EMAIL
-SSH_HOST, WP_CONTAINER, WP_PATH
-SUBSCRIBER_USER, SUBSCRIBER_PASS (optional)
+CLIENT1_NAME, CLIENT1_EMAIL
+CLIENT2_NAME, CLIENT2_EMAIL
+WP_MODE          — "ssh" (default, local dev server) or "docker" (local/CI Docker stack)
+SSH_HOST, WP_CONTAINER, WP_PATH   — required when WP_MODE=ssh
 ```
+
+### Test update policy
+
+Every PR that introduces user-facing changes **must** include a new or updated Playwright test section.
+
+| Change type | Required test |
+|-------------|---------------|
+| New user-facing feature | New numbered section in `test_helpdesk_pw.py` |
+| Bug fix (regression) | New or extended section covering the bug scenario |
+| Admin-only UI change | New or extended admin section |
+| Internal refactor, no UX change | None required — existing sections must still pass |
+| Security fix | Extend or add a `security`-marked section |
+
+New sections continue from the next available number (currently 52). Add the section to the table above.
 
 ## Dev Tools
 
-### Static Analysis
+### Static Analysis & Test Gate
 
 | Tool | Command | Notes |
 |------|---------|-------|
-| PHPStan | `vendor/bin/phpstan analyse` | Level 9, WP stubs via `szepeviktor/phpstan-wordpress` |
-| PHPUnit | `vendor/bin/phpunit` | Unit tests in `tests/Unit/`; WP-Mock (`10up/wp_mock`) for WordPress function stubs |
-| Semgrep | MCP tool `semgrep_scan` | Security scanning; configured via `semgrep@claude-plugins-official` plugin |
+| **Local gate** | `make test` | Runs lint → phpcs → phpstan → phpunit → semgrep in sequence |
+| **E2E** | `make e2e` | Playwright suite; set `WP_MODE=docker` or configure SSH vars |
+| PHPStan | `make phpstan` | Level 9, WP stubs via `szepeviktor/phpstan-wordpress` |
+| PHPUnit | `make phpunit` | Unit tests in `tests/Unit/`; WP-Mock (`10up/wp_mock`) for WordPress function stubs |
+| Semgrep | `make semgrep` / MCP `semgrep_scan` | SAST; also runs in CI via `.github/workflows/semgrep.yml` |
+| Docker stack | `docker compose -f docker-compose.test.yml up -d` | Local WP + MySQL; `bash docker/setup-test-wp.sh` to configure |
 
 ### LSP (Language Intelligence)
 

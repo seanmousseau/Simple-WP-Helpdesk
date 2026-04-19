@@ -1,0 +1,99 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+    branches: [main]
+
+# Test credentials for ephemeral Docker containers only — not real production values.
+env:
+  WP_ADMIN_USER: ci_admin
+  WP_ADMIN_PASS: CIadmin99!
+  WP_TECH1_USER: tech1
+  WP_TECH1_PASS: CItech199!
+  WP_TECH1_EMAIL: tech1@swh-ci.local
+  WP_TECH2_USER: tech2
+  WP_TECH2_PASS: CItech299!
+  WP_TECH2_EMAIL: tech2@swh-ci.local
+  CLIENT1_NAME: Test Client One
+  CLIENT1_EMAIL: client1@swh-ci.local
+  CLIENT2_NAME: Test Client Two
+  CLIENT2_EMAIL: client2@swh-ci.local
+
+jobs:
+  e2e:
+    name: Playwright E2E — WP ${{ matrix.wp_version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - wp_version: 'latest'
+            wp_image: 'php8.2-apache'
+          - wp_version: '5.3'
+            wp_image: '5.3-php7.4-apache'
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start WordPress stack
+        env:
+          WP_IMAGE: ${{ matrix.wp_image }}
+        run: docker compose -f docker-compose.test.yml up -d db wordpress
+
+      - name: Wait for WordPress to be ready
+        run: |
+          timeout 90 bash -c 'until curl -sf http://localhost:8080/wp-login.php > /dev/null 2>&1; do sleep 3; done'
+          echo "WordPress is ready."
+
+      - name: Setup WordPress test environment
+        env:
+          WP_URL: http://localhost:8080
+          WP_ADMIN_EMAIL: admin@swh-ci.local
+        run: bash docker/setup-test-wp.sh
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: testing/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r testing/requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Resolve page URLs and run E2E suite
+        env:
+          WP_MODE: docker
+          WP_CONTAINER: wpcli
+          WP_PATH: /var/www/html
+          WP_URL: http://localhost:8080
+          WP_LOGIN_URL: http://localhost:8080/wp-login.php
+          WP_ADMIN_URL: http://localhost:8080/wp-admin/
+        run: |
+          DC="docker compose -f docker-compose.test.yml"
+          WP="$DC exec -T wpcli wp --allow-root --path=/var/www/html"
+          SUBMIT=$($WP post list --post_type=page --name=submit-a-ticket \
+            --field=url --format=csv 2>/dev/null | tail -1)
+          PORTAL=$($WP post list --post_type=page --name=helpdesk-portal \
+            --field=url --format=csv 2>/dev/null | tail -1)
+          export WP_SUBMIT_PAGE="$SUBMIT"
+          export WP_PORTAL_PAGE="$PORTAL"
+          cd testing && pytest scripts/test_helpdesk_pw.py -v --tb=short
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots-wp${{ matrix.wp_version }}
+          path: testing/screenshots/
+          retention-days: 7
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v

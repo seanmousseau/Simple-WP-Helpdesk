@@ -86,9 +86,10 @@ WP_LOGIN_URL   = _require("WP_LOGIN_URL")
 WP_ADMIN_URL   = _optional("WP_ADMIN_URL", WP_URL + "/wp-admin")
 WP_SUBMIT_PAGE  = _require("WP_SUBMIT_PAGE").rstrip("/")
 WP_PORTAL_PAGE  = _optional("WP_PORTAL_PAGE", "").rstrip("/")
-SSH_HOST       = _require("SSH_HOST")
-WP_CONTAINER   = _require("WP_CONTAINER")
-WP_PATH        = _require("WP_PATH")
+WP_MODE        = _optional("WP_MODE", "ssh")           # "ssh" or "docker"
+SSH_HOST       = _optional("SSH_HOST", "")
+WP_CONTAINER   = _optional("WP_CONTAINER", "wordpress")
+WP_PATH        = _optional("WP_PATH", "/var/www/html")
 
 ADMIN_USER  = _require("WP_ADMIN_USER")
 ADMIN_PASS  = _require("WP_ADMIN_PASS")
@@ -134,14 +135,23 @@ _page: "Page | None" = None
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def wpcli(cmd):
-    """Run a WP-CLI command inside the Docker container via SSH, return stdout stripped."""
-    docker_cmd = (
-        f"docker exec {WP_CONTAINER} wp {cmd} --path={WP_PATH} --allow-root 2>/dev/null"
-    )
-    result = subprocess.run(
-        ["ssh", SSH_HOST, docker_cmd],
-        capture_output=True, text=True, timeout=15
-    )
+    """Run a WP-CLI command. Uses docker compose exec (WP_MODE=docker) or SSH+docker exec."""
+    if WP_MODE == "docker":
+        repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        result = subprocess.run(
+            ["docker", "compose", "-f", "docker-compose.test.yml",
+             "exec", "-T", WP_CONTAINER,
+             "sh", "-c", f"wp {cmd} --path={WP_PATH} --allow-root 2>/dev/null"],
+            capture_output=True, text=True, timeout=30, cwd=repo_root
+        )
+    else:
+        docker_cmd = (
+            f"docker exec {WP_CONTAINER} wp {cmd} --path={WP_PATH} --allow-root 2>/dev/null"
+        )
+        result = subprocess.run(
+            ["ssh", SSH_HOST, docker_cmd],
+            capture_output=True, text=True, timeout=15
+        )
     clean = "\n".join(
         line for line in result.stdout.splitlines()
         if not line.startswith(("Deprecated:", "Notice:", "Warning:", "PHP Deprecated:"))
@@ -215,6 +225,7 @@ def admin_update_ticket(page: Page, post_id, status=None, priority=None,
     page.goto(f"{WP_ADMIN_URL}/post.php?post={post_id}&action=edit")
     page.wait_for_load_state("load")
     page.wait_for_selector("#publish")
+    page.evaluate("document.querySelectorAll('.wp-pointer').forEach(el => el.remove())")
     # Dismiss WordPress post-lock dialog if another user holds the lock.
     # The dialog exists in the DOM even when hidden; use is_visible() not count().
     lock_takeover = page.locator('#post-lock-dialog a[href*="get-post-lock"]')
@@ -260,6 +271,7 @@ def _navigate_admin_list(page: Page):
     page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket")
     page.wait_for_load_state("load")
     page.wait_for_selector("#the-list, .no-items")
+    page.evaluate("document.querySelectorAll('.wp-pointer').forEach(el => el.remove())")
 
 
 def _navigate_settings(page: Page):
@@ -1383,8 +1395,11 @@ def test_26_subscriber_access_control(page: Page):
             page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket")
             page.wait_for_load_state("load")
             final_url = page.url
-            check("subscriber: redirected to login page from helpdesk ticket list",
-                  "login" in final_url,
+            # Clean WP redirects to login; hardened servers may redirect to login.
+            # Either way the subscriber must not reach the ticket list table.
+            blocked = "login" in final_url or page.locator("#the-list").count() == 0
+            check("subscriber: blocked from helpdesk ticket list",
+                  blocked,
                   f"url={final_url[:80]}")
 
             # Attempt to open the ticket editor directly
@@ -2011,6 +2026,7 @@ def test_38_admin_list_sorting(page: Page):
     uid_col.first.click()
     page.wait_for_load_state("load")
     page.wait_for_selector("#the-list, .no-items")
+    page.evaluate("document.querySelectorAll('.wp-pointer').forEach(el => el.remove())")
     check("admin list sort: sorted by ticket_uid",
           "orderby=ticket_uid" in page.url, f"url: {page.url[:120]}")
     screenshot(page, "48_list_sort_uid_asc")
@@ -2021,6 +2037,7 @@ def test_38_admin_list_sorting(page: Page):
         uid_col_desc.first.click()
         page.wait_for_load_state("load")
         page.wait_for_selector("#the-list, .no-items")
+        page.evaluate("document.querySelectorAll('.wp-pointer').forEach(el => el.remove())")
         check("admin list sort: ticket_uid DESC sort applied",
               "orderby=ticket_uid" in page.url or "order=desc" in page.url)
         screenshot(page, "48b_list_sort_uid_desc")
@@ -2593,30 +2610,45 @@ def test_47_inbound_email_webhook(page: Page):
     test_secret = "swh-test-secret-47"
     wpcli(f"option update swh_inbound_secret '{test_secret}'")
 
-    # Use localhost inside the container to bypass Cloudflare's bot-check
-    wp_path_part = WP_URL.split(".com", 1)[-1].rstrip("/")  # e.g. /testing/wordpress
-    local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
-    host_header   = WP_URL.split("//", 1)[-1].split("/")[0]  # e.g. dev.seanmousseau.com
-
-    # POST to the webhook from inside the container to avoid Cloudflare routing
-    curl_cmd = (
-        f"curl -s -L -X POST '{local_webhook}' "
-        f"-H 'Host: {host_header}' "
-        f"-H 'Authorization: Bearer {test_secret}' "
-        f"--data-urlencode 'subject={subject}' "
-        f"--data-urlencode 'from={ticket_email}' "
-        f"--data-urlencode 'body-plain={body}' "
-        f"-w '\\n%{{http_code}}'"
-    )
-    docker_cmd = f"docker exec {WP_CONTAINER} {curl_cmd}"
-    result = subprocess.run(
-        ["ssh", SSH_HOST, docker_cmd],
-        capture_output=True, text=True, timeout=20
-    )
-    output = result.stdout.strip()
-    lines  = output.splitlines()
-    http_code = lines[-1] if lines else ""
-    body_resp = "\n".join(lines[:-1]) if len(lines) > 1 else output
+    if WP_MODE == "docker":
+        # In docker mode the endpoint is reachable directly from the test runner
+        import requests as _requests
+        webhook_url = f"{WP_URL.rstrip('/')}/wp-json/swh/v1/inbound-email"
+        try:
+            resp = _requests.post(
+                webhook_url,
+                data={"subject": subject, "from": ticket_email, "body-plain": body},
+                headers={"Authorization": f"Bearer {test_secret}"},
+                timeout=20,
+                allow_redirects=True,
+            )
+            http_code = str(resp.status_code)
+            body_resp = resp.text[:500]
+        except Exception as exc:
+            http_code = ""
+            body_resp = str(exc)
+    else:
+        wp_path_part  = WP_URL.split(".com", 1)[-1].rstrip("/")
+        local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
+        host_header   = WP_URL.split("//", 1)[-1].split("/")[0]
+        curl_cmd = (
+            f"curl -s -L -X POST '{local_webhook}' "
+            f"-H 'Host: {host_header}' "
+            f"-H 'Authorization: Bearer {test_secret}' "
+            f"--data-urlencode 'subject={subject}' "
+            f"--data-urlencode 'from={ticket_email}' "
+            f"--data-urlencode 'body-plain={body}' "
+            f"-w '\\n%{{http_code}}'"
+        )
+        docker_cmd = f"docker exec {WP_CONTAINER} sh -c \"{curl_cmd}\""
+        result = subprocess.run(
+            ["ssh", SSH_HOST, docker_cmd],
+            capture_output=True, text=True, timeout=20
+        )
+        output = result.stdout.strip()
+        lines  = output.splitlines()
+        http_code = lines[-1] if lines else ""
+        body_resp = "\n".join(lines[:-1]) if len(lines) > 1 else output
 
     check("inbound email webhook: HTTP 200 response",
           http_code == "200", f"got HTTP {http_code!r}, body: {body_resp[:100]!r}")

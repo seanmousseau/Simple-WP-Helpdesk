@@ -23,11 +23,22 @@ starting from the next release after 1.8.
 - **`.pot` translation file (#123):** `languages/simple-wp-helpdesk.pot` generated via WP-CLI and shipped with the plugin, enabling translators to create `.po`/`.mo` locale files.
 - **PHPUnit tests for `swh_format_comment_date()`:** Three new unit tests verify WP-timezone-aware formatting, `wp_date()` fallback behavior, and empty-GMT handling.
 - **Playwright tests 48–52:** End-to-end coverage for timestamp locale (48), dedicated reply buttons (49), unread badge (50), unread row highlight (51), and Send Test Email button (52).
+- **`Makefile` local gate (#276):** `make test` chains lint → phpcs → phpstan → phpunit → semgrep in sequence. `make e2e` runs the full Playwright suite. `make test-all` runs both. Individual targets available for each tool.
+- **Pre-push git hook (#277):** `.githooks/pre-push` runs `make test` before every push. Activated automatically via `composer install` (`post-install-cmd`).
+- **Docker Compose test stack (#278, #279):** `docker-compose.test.yml` defines `db`, `wordpress`, `wpcli`, and `phptest` services. `docker/setup-test-wp.sh` installs WordPress, creates users, activates the plugin, and creates submission/portal pages. `WP_MODE=docker` switches the Playwright suite to `docker compose exec` mode.
+- **GitHub Actions — PHP matrix (#280, #282, #286):** `.github/workflows/php-tests.yml` runs lint, PHPCS, PHPStan, and PHPUnit across PHP 7.4/8.1/8.2/8.3. Includes a `composer audit` security job and a `CHANGELOG.md` update check on PRs.
+- **GitHub Actions — E2E matrix (#281, #287):** `.github/workflows/e2e.yml` runs the full Playwright suite against WP 5.3 and latest in Docker, with screenshot artifacts on failure.
+- **PR template (#283):** `.github/pull_request_template.md` with pre-PR gate checklist, E2E coverage checklist, and release checklist.
+- **`testing/.env.example` (#284):** Documents all environment variables used by the test suite, including `WP_MODE` and Docker/SSH configuration.
+- **Test update policy (#285):** Added to `CLAUDE.md` — defines which change types require new or updated Playwright sections.
 
 ### Fixed
 
 - **Timestamps now respect WP site locale and timezone (#121):** Conversation timestamps in both the admin ticket editor and client portal now use `wp_date()` with `comment_date_gmt` (UTC source), ensuring the displayed time respects the site's timezone and `date_format` / `time_format` options.
 - **`swh_send_email()` now returns `bool`:** The function previously returned `void`; it now returns the `wp_mail()` return value so callers (e.g. the test email AJAX handler) can detect delivery failures.
+- **Portal ticket title promoted to `<h1>` (#247):** The ticket title in the client portal now renders as an `<h1>` (class `swh-ticket-title`) and the Conversation History heading as an `<h2>` (class `swh-section-heading`), correcting the heading hierarchy for accessibility and SEO.
+- **Conversation log height changed to viewport-relative (#248):** Replaced `max-height: 400px` inline style with CSS class `.swh-conversation-wrap` (`max-height: 60vh; min-height: 200px`), so the conversation area scales with the viewport rather than being fixed.
+- **Ticket UID block inline styles extracted to CSS class (#249):** Removed inline `style` attribute from the ticket UID display block; styles now live in `.swh-ticket-uid` in `swh-admin.css`.
 
 ### Changed
 
