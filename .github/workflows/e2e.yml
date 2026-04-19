@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 # Test credentials for ephemeral Docker containers only — not real production values.
 env:
   WP_ADMIN_USER: ci_admin

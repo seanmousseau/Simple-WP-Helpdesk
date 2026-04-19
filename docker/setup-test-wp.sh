@@ -29,17 +29,23 @@ echo "→ Waiting for WordPress to be ready..."
 for i in $(seq 1 30); do
   curl -sf "$WP_URL/wp-login.php" > /dev/null 2>&1 && break
   sleep 2
+  if [ "$i" -eq 30 ]; then
+    echo "  ✗ WordPress did not become ready at $WP_URL after 60 seconds." >&2
+    exit 1
+  fi
 done
 echo "  ✓ WordPress is up"
 
 echo "→ Installing WordPress core..."
-$WP core install \
-  --url="$WP_URL" \
-  --title="SWH Test" \
-  --admin_user="$WP_ADMIN_USER" \
-  --admin_password="$WP_ADMIN_PASS" \
-  --admin_email="$WP_ADMIN_EMAIL" \
-  --skip-email 2>/dev/null || true
+if ! $WP core is-installed 2>/dev/null; then
+  $WP core install \
+    --url="$WP_URL" \
+    --title="SWH Test" \
+    --admin_user="$WP_ADMIN_USER" \
+    --admin_password="$WP_ADMIN_PASS" \
+    --admin_email="$WP_ADMIN_EMAIL" \
+    --skip-email
+fi
 
 echo "→ Setting permalink structure..."
 $WP rewrite structure '/%postname%/' --hard

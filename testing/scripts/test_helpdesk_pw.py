@@ -33,6 +33,7 @@ import sys
 import tempfile
 import time
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 import pytest
 from playwright.sync_api import sync_playwright, Page
@@ -88,7 +89,7 @@ WP_SUBMIT_PAGE  = _require("WP_SUBMIT_PAGE").rstrip("/")
 WP_PORTAL_PAGE  = _optional("WP_PORTAL_PAGE", "").rstrip("/")
 WP_MODE        = _optional("WP_MODE", "ssh")           # "ssh" or "docker"
 SSH_HOST       = _optional("SSH_HOST", "")
-WP_CONTAINER   = _optional("WP_CONTAINER", "wordpress")
+WP_CONTAINER   = _optional("WP_CONTAINER", "wpcli")
 WP_PATH        = _optional("WP_PATH", "/var/www/html")
 
 ADMIN_USER  = _require("WP_ADMIN_USER")
@@ -2660,9 +2661,10 @@ def test_47_inbound_email_webhook(page: Page):
             http_code = ""
             body_resp = output
     else:
-        wp_path_part  = WP_URL.split(".com", 1)[-1].rstrip("/")
+        _parsed      = urlparse(WP_URL)
+        wp_path_part = _parsed.path.rstrip("/")
         local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
-        host_header   = WP_URL.split("//", 1)[-1].split("/")[0]
+        host_header   = _parsed.netloc
         curl_cmd = (
             f"curl -s -L -X POST '{local_webhook}' "
             f"-H 'Host: {host_header}' "
