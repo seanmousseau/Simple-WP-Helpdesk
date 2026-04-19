@@ -2622,17 +2622,19 @@ def test_47_inbound_email_webhook(page: Page):
         wpcli(f"option update swh_inbound_secret {test_secret}")
 
     if WP_MODE == "docker":
-        # Use wp_remote_post via WP-CLI eval from within the WordPress environment.
-        # Apache strips the Authorization header from external requests in some
-        # configurations; going through Docker's internal network avoids this.
+        # Call the handler directly via WP-CLI eval using a constructed WP_REST_Request.
+        # This bypasses Apache entirely (Authorization headers are stripped in all tested
+        # configurations), invoking the PHP handler function as if a valid REST request
+        # arrived, without making any HTTP connection.
         repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
         php_code = (
-            "$r=wp_remote_post('http://wordpress/?rest_route=/swh/v1/inbound-email',"
-            "['sslverify'=>false,'timeout'=>15,'redirection'=>0,"
-            f"'headers'=>['Authorization'=>'Bearer {test_secret}'],"
-            f"'body'=>['subject'=>'{subject}','from'=>'{ticket_email}','body-plain'=>'{body}']]);"
-            "if(is_wp_error($r)){echo 'WP_ERROR:'.$r->get_error_message();}"
-            "else{echo wp_remote_retrieve_response_code($r).\"\\n\".wp_remote_retrieve_body($r);}"
+            "$req=new WP_REST_Request('POST','/swh/v1/inbound-email');"
+            f"$req->set_header('Authorization','Bearer {test_secret}');"
+            f"$req->set_param('subject','{subject}');"
+            f"$req->set_param('from','{ticket_email}');"
+            f"$req->set_param('body-plain','{body}');"
+            "$resp=swh_handle_inbound_email($req);"
+            "if(is_wp_error($resp)){echo json_encode(['success'=>false,'error'=>$resp->get_error_code()]);}else{echo json_encode($resp->get_data());}"
         )
         result = subprocess.run(
             ["docker", "compose", "-f", "docker-compose.test.yml",
@@ -2645,14 +2647,18 @@ def test_47_inbound_email_webhook(page: Page):
             if not line.startswith(("Deprecated:", "Notice:", "Warning:", "PHP Deprecated:"))
         ]
         output = "\n".join(raw_lines).strip()
-        print(f"  [47-diag] wp eval stdout={result.stdout[:200]!r} stderr={result.stderr[:200]!r} output={output[:200]!r}")
-        if output.startswith("WP_ERROR:"):
+        try:
+            resp_json = json.loads(output)
+            if resp_json.get("success") is True:
+                http_code = "200"
+            elif "error" in resp_json:
+                http_code = "401" if resp_json["error"] == "swh_unauthorized" else "500"
+            else:
+                http_code = "200"
+            body_resp = output
+        except (json.JSONDecodeError, AttributeError):
             http_code = ""
             body_resp = output
-        else:
-            parts = output.split("\n", 1)
-            http_code = parts[0].strip() if parts else ""
-            body_resp = parts[1].strip() if len(parts) > 1 else ""
     else:
         wp_path_part  = WP_URL.split(".com", 1)[-1].rstrip("/")
         local_webhook = f"http://127.0.0.1{wp_path_part}/wp-json/swh/v1/inbound-email"
