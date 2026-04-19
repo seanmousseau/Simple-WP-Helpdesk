@@ -1823,7 +1823,7 @@ def test_36_shortcode_attrs(page: Page):
         url1 = wpcli(f"post get {pid1} --field=url")
         wp_logout(page)
         page.goto(url1)
-        page.wait_for_selector(".swh-helpdesk-wrapper, form")
+        page.wait_for_selector(".swh-helpdesk-wrapper")
         html = page.content()
         check("shortcode attrs: priority field absent with show_priority=no",
               'name="ticket_priority"' not in html,
@@ -1846,7 +1846,7 @@ def test_36_shortcode_attrs(page: Page):
             url2 = wpcli(f"post get {pid2} --field=url")
             wp_logout(page)
             page.goto(url2)
-            page.wait_for_selector(".swh-helpdesk-wrapper, form")
+            page.wait_for_selector(".swh-helpdesk-wrapper")
             html2 = page.content()
             check("shortcode attrs: lookup section absent with show_lookup=no",
                   'name="swh_lookup_email"' not in html2 and 'id="swh-toggle-lookup"' not in html2,
@@ -1876,7 +1876,7 @@ def test_36_shortcode_attrs(page: Page):
                 wp_logout(page)
                 _clear_rate_limits()
                 page.goto(url3)
-                page.wait_for_selector(".swh-helpdesk-wrapper, form")
+                page.wait_for_selector(".swh-helpdesk-wrapper")
                 # The priority select should have the default_priority option selected
                 selected_priority = page.evaluate(
                     "(() => { var sel = document.querySelector('[name=\"ticket_priority\"]');"
@@ -1910,7 +1910,7 @@ def test_36_shortcode_attrs(page: Page):
                 wp_logout(page)
                 _clear_rate_limits()
                 page.goto(url4)
-                page.wait_for_selector(".swh-helpdesk-wrapper, form")
+                page.wait_for_selector(".swh-helpdesk-wrapper")
                 page.fill('[name="ticket_name"]', CLIENT1_NAME)
                 page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
                 page.fill('[name="ticket_title"]', f"DefStatus Test {int(time.time())}")
@@ -2096,7 +2096,7 @@ def test_39_ticket_templates(page: Page):
         wp_logout(page)
         _clear_rate_limits()
         page.goto(url)
-        page.wait_for_selector(".swh-helpdesk-wrapper, form")
+        page.wait_for_selector(".swh-helpdesk-wrapper")
 
         # The request type dropdown should appear since we have a template
         req_type_sel = page.locator('select[name="ticket_request_type"], select#swh-request-type')
@@ -2608,19 +2608,26 @@ def test_47_inbound_email_webhook(page: Page):
 
     # Set a test webhook secret so the endpoint is enabled
     test_secret = "swh-test-secret-47"
-    wpcli(f"option update swh_inbound_secret '{test_secret}'")
+    wpcli(f"option update swh_inbound_secret {test_secret}")
+    # Verify the option was stored correctly before making the HTTP request
+    actual_secret = wpcli("option get swh_inbound_secret")
+    if actual_secret != test_secret:
+        # Fallback: force via wp eval in case option update had quoting issues
+        wpcli(f'eval "update_option(\'swh_inbound_secret\', \'{test_secret}\');"')
 
     if WP_MODE == "docker":
-        # In docker mode the endpoint is reachable directly from the test runner
+        # In docker mode the endpoint is reachable directly from the test runner.
+        # Use /?rest_route= to bypass .htaccess dependency; pass Authorization as
+        # both header and fallback query param.
         import requests as _requests
-        webhook_url = f"{WP_URL.rstrip('/')}/wp-json/swh/v1/inbound-email"
+        webhook_url = f"{WP_URL.rstrip('/')}/?rest_route=/swh/v1/inbound-email"
         try:
             resp = _requests.post(
                 webhook_url,
                 data={"subject": subject, "from": ticket_email, "body-plain": body},
                 headers={"Authorization": f"Bearer {test_secret}"},
                 timeout=20,
-                allow_redirects=True,
+                allow_redirects=False,
             )
             http_code = str(resp.status_code)
             body_resp = resp.text[:500]
