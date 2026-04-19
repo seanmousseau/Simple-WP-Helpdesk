@@ -92,6 +92,13 @@ SSH_HOST       = _optional("SSH_HOST", "")
 WP_CONTAINER   = _optional("WP_CONTAINER", "wpcli")
 WP_PATH        = _optional("WP_PATH", "/var/www/html")
 
+if WP_MODE not in {"ssh", "docker"}:
+    print(f"ERROR: WP_MODE must be 'ssh' or 'docker' (got {WP_MODE!r})", file=sys.stderr)
+    sys.exit(1)
+if WP_MODE == "ssh" and not SSH_HOST:
+    print("ERROR: SSH_HOST is required when WP_MODE=ssh", file=sys.stderr)
+    sys.exit(1)
+
 ADMIN_USER  = _require("WP_ADMIN_USER")
 ADMIN_PASS  = _require("WP_ADMIN_PASS")
 
@@ -143,7 +150,7 @@ def wpcli(cmd):
             ["docker", "compose", "-f", "docker-compose.test.yml",
              "exec", "-T", WP_CONTAINER,
              "sh", "-c", f"wp {cmd} --path={WP_PATH} --allow-root 2>/dev/null"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root
+            capture_output=True, text=True, timeout=30, cwd=repo_root, check=False
         )
     else:
         docker_cmd = (
@@ -151,7 +158,11 @@ def wpcli(cmd):
         )
         result = subprocess.run(
             ["ssh", SSH_HOST, docker_cmd],
-            capture_output=True, text=True, timeout=15
+            capture_output=True, text=True, timeout=15, check=False
+        )
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode, result.args, output=result.stdout, stderr=result.stderr
         )
     clean = "\n".join(
         line for line in result.stdout.splitlines()
@@ -2641,8 +2652,12 @@ def test_47_inbound_email_webhook(page: Page):
             ["docker", "compose", "-f", "docker-compose.test.yml",
              "exec", "-T", WP_CONTAINER,
              "wp", "--allow-root", f"--path={WP_PATH}", "eval", php_code],
-            capture_output=True, text=True, timeout=30, cwd=repo_root
+            capture_output=True, text=True, timeout=30, cwd=repo_root, check=False
         )
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args, output=result.stdout, stderr=result.stderr
+            )
         raw_lines = [
             line for line in result.stdout.splitlines()
             if not line.startswith(("Deprecated:", "Notice:", "Warning:", "PHP Deprecated:"))
@@ -2677,8 +2692,12 @@ def test_47_inbound_email_webhook(page: Page):
         docker_cmd = f"docker exec {WP_CONTAINER} sh -c \"{curl_cmd}\""
         result = subprocess.run(
             ["ssh", SSH_HOST, docker_cmd],
-            capture_output=True, text=True, timeout=20
+            capture_output=True, text=True, timeout=20, check=False
         )
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args, output=result.stdout, stderr=result.stderr
+            )
         output = result.stdout.strip()
         lines  = output.splitlines()
         http_code = lines[-1] if lines else ""

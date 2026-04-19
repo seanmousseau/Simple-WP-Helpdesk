@@ -14,7 +14,7 @@
         }
     },
     "scripts": {
-        "post-install-cmd": ["git config core.hooksPath .githooks || true"],
-        "post-update-cmd": ["git config core.hooksPath .githooks || true"]
+        "post-install-cmd": ["@php -r \"if (is_dir('.git')) { exec('git config core.hooksPath .githooks'); }\""],
+        "post-update-cmd": ["@php -r \"if (is_dir('.git')) { exec('git config core.hooksPath .githooks'); }\""]
     }
 }

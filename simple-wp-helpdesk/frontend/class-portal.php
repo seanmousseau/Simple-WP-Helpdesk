@@ -323,6 +323,7 @@ function swh_render_client_portal() {
 		<p class="swh-cta-secondary"><?php esc_html_e( 'Still need help?', 'simple-wp-helpdesk' ); ?> <a href="#swh-reply-text"><?php esc_html_e( 'Reply below &#8595;', 'simple-wp-helpdesk' ); ?></a></p>
 	<?php endif; ?>
 	<?php if ( $closed_status !== $data['status'] ) : ?>
+		<h2 class="swh-section-heading"><?php esc_html_e( 'Reply', 'simple-wp-helpdesk' ); ?></h2>
 		<form method="POST" action="" enctype="multipart/form-data">
 			<?php wp_nonce_field( 'swh_user_reply', 'swh_reply_nonce' ); ?>
 			<div class="swh-form-group">

@@ -78,11 +78,9 @@ def _suite_init(page, request):
     import test_helpdesk_pw as t
     t._page = page
 
-    # Reset option that may be dirtied by a prior failed technician workflow test
-    try:
-        t.wpcli("option delete swh_restrict_to_assigned")
-    except Exception:
-        pass
+    # Reset option that may be dirtied by a prior failed technician workflow test.
+    # Use eval so delete_option() always exits 0 (wp option delete exits 1 if absent).
+    t.wpcli("eval 'delete_option(\"swh_restrict_to_assigned\");'")
 
     def _cleanup():
         """Trash tickets created during the run and log out — runs even on KeyboardInterrupt."""
