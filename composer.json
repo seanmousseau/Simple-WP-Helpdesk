@@ -12,5 +12,9 @@
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true
         }
+    },
+    "scripts": {
+        "post-install-cmd": ["@php -r \"if (is_dir('.git')) { exec('git config core.hooksPath .githooks'); }\""],
+        "post-update-cmd": ["@php -r \"if (is_dir('.git')) { exec('git config core.hooksPath .githooks'); }\""]
     }
 }

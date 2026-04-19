@@ -1,0 +1,58 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp
+      MYSQL_PASSWORD: wp
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "wp", "-pwp"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  wordpress:
+    image: wordpress:${WP_IMAGE:-php8.2-apache}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ./simple-wp-helpdesk:/var/www/html/wp-content/plugins/simple-wp-helpdesk:ro
+      - wp_data:/var/www/html
+
+  wpcli:
+    image: wordpress:cli-php8.2
+    depends_on:
+      - wordpress
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ./simple-wp-helpdesk:/var/www/html/wp-content/plugins/simple-wp-helpdesk:ro
+    entrypoint: ["sh", "-c", "sleep infinity"]
+
+  phptest:
+    build:
+      context: docker/phptest
+    volumes:
+      - .:/workspace
+      - composer_cache:/root/.composer/cache
+    working_dir: /workspace
+
+volumes:
+  db_data:
+  wp_data:
+  composer_cache:

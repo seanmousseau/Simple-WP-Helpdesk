@@ -236,7 +236,7 @@ function swh_render_client_portal() {
 	<div class="swh-helpdesk-wrapper">
 	<div class="swh-card">
 		<div style="float: right; font-weight: bold; color: #666; font-size: 1.2em;"><?php echo esc_html( $data['ticket_id'] ); ?></div>
-		<h3 style="margin-top:0; font-size: 22px; color: #222;"><?php echo esc_html( $data['title'] ); ?></h3>
+		<h1 class="swh-ticket-title"><?php echo esc_html( $data['title'] ); ?></h1>
 		<p style="margin: 0 0 15px 0;"><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong> <span class="swh-badge <?php echo ( $closed_status === $data['status'] ) ? 'swh-badge-closed' : 'swh-badge-open'; ?>"><?php echo esc_html( $data['status'] ); ?></span>
 		&nbsp;|&nbsp; <strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong> <?php echo esc_html( $data['priority'] ); ?></p>
 		<hr>
@@ -255,7 +255,7 @@ function swh_render_client_portal() {
 		}
 		?>
 	</div>
-	<h4 style="margin-bottom: 15px;"><?php esc_html_e( 'Conversation History', 'simple-wp-helpdesk' ); ?></h4>
+	<h2 class="swh-section-heading"><?php esc_html_e( 'Conversation History', 'simple-wp-helpdesk' ); ?></h2>
 	<div style="margin-bottom: 20px;">
 	<?php
 	$comments = get_comments(
@@ -323,6 +323,7 @@ function swh_render_client_portal() {
 		<p class="swh-cta-secondary"><?php esc_html_e( 'Still need help?', 'simple-wp-helpdesk' ); ?> <a href="#swh-reply-text"><?php esc_html_e( 'Reply below &#8595;', 'simple-wp-helpdesk' ); ?></a></p>
 	<?php endif; ?>
 	<?php if ( $closed_status !== $data['status'] ) : ?>
+		<h2 class="swh-section-heading"><?php esc_html_e( 'Reply', 'simple-wp-helpdesk' ); ?></h2>
 		<form method="POST" action="" enctype="multipart/form-data">
 			<?php wp_nonce_field( 'swh_user_reply', 'swh_reply_nonce' ); ?>
 			<div class="swh-form-group">
