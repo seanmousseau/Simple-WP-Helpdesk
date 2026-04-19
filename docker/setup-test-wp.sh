@@ -44,6 +44,11 @@ $WP core install \
 echo "→ Setting permalink structure..."
 $WP rewrite structure '/%postname%/' --hard
 
+echo "→ Writing .htaccess with Authorization header passthrough..."
+docker compose -f docker-compose.test.yml exec -T -u root wordpress \
+  bash -c "printf '# BEGIN WordPress\n<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteBase /\nRewriteRule ^index\\.php$ - [L]\nRewriteCond %%{HTTP:Authorization} .\nRewriteRule .* - [E=HTTP_AUTHORIZATION:%%{HTTP:Authorization}]\nRewriteCond %%{REQUEST_FILENAME} !-f\nRewriteCond %%{REQUEST_FILENAME} !-d\nRewriteRule . /index.php [L]\n</IfModule>\n# END WordPress\n' > /var/www/html/.htaccess" 2>/dev/null || true
+echo "  ✓ .htaccess written"
+
 echo "→ Creating uploads directory..."
 docker compose -f docker-compose.test.yml exec -T -u root wordpress \
   bash -c "mkdir -p /var/www/html/wp-content/uploads/swh-helpdesk && chown -R www-data:www-data /var/www/html/wp-content/uploads" 2>/dev/null || true

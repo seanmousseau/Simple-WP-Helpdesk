@@ -1820,7 +1820,7 @@ def test_36_shortcode_attrs(page: Page):
             return
         page_ids.append(pid1)
 
-        url1 = wpcli(f"post get {pid1} --field=guid")
+        url1 = wpcli(f"post get {pid1} --field=url")
         wp_logout(page)
         page.goto(url1)
         page.wait_for_selector(".swh-helpdesk-wrapper, form")
@@ -1843,7 +1843,7 @@ def test_36_shortcode_attrs(page: Page):
         )
         if pid2.isdigit():
             page_ids.append(pid2)
-            url2 = wpcli(f"post get {pid2} --field=guid")
+            url2 = wpcli(f"post get {pid2} --field=url")
             wp_logout(page)
             page.goto(url2)
             page.wait_for_selector(".swh-helpdesk-wrapper, form")
@@ -1872,7 +1872,7 @@ def test_36_shortcode_attrs(page: Page):
             )
             if pid3.isdigit():
                 page_ids.append(pid3)
-                url3 = wpcli(f"post get {pid3} --field=guid")
+                url3 = wpcli(f"post get {pid3} --field=url")
                 wp_logout(page)
                 _clear_rate_limits()
                 page.goto(url3)
@@ -1906,7 +1906,7 @@ def test_36_shortcode_attrs(page: Page):
             )
             if pid4.isdigit():
                 page_ids.append(pid4)
-                url4 = wpcli(f"post get {pid4} --field=guid")
+                url4 = wpcli(f"post get {pid4} --field=url")
                 wp_logout(page)
                 _clear_rate_limits()
                 page.goto(url4)
@@ -2092,7 +2092,7 @@ def test_39_ticket_templates(page: Page):
         return
 
     try:
-        url = wpcli(f"post get {pid} --field=guid")
+        url = wpcli(f"post get {pid} --field=url")
         wp_logout(page)
         _clear_rate_limits()
         page.goto(url)
