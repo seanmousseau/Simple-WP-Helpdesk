@@ -39,7 +39,7 @@ jobs:
           cat release_notes.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           TAG: ${{ github.ref_name }}
           VERSION: ${{ steps.version.outputs.VERSION }}
