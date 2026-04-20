@@ -43,6 +43,9 @@ function swh_ticket_frontend( $atts = array() ) {
 
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-frontend' ), SWH_VERSION );
+	}
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
 	/**
 	 * Filters the list of allowed file extensions for ticket attachments.
@@ -80,6 +83,9 @@ function swh_ticket_frontend( $atts = array() ) {
 				'sizeExceeded'   => __( 'File "%1$s" exceeds the %2$dMB size limit.', 'simple-wp-helpdesk' ),
 				/* translators: shown as first option in the Request Type dropdown */
 				'selectTemplate' => __( '— Select a request type —', 'simple-wp-helpdesk' ),
+				'uploading'      => __( 'Uploading…', 'simple-wp-helpdesk' ),
+				'uploadError'    => __( 'Upload failed. Please try again.', 'simple-wp-helpdesk' ),
+				'submitLabel'    => __( 'Submit Ticket', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -328,6 +334,7 @@ function swh_render_submission_form( $atts = array() ) {
 		}
 	}
 	?>
+	<h2 class="screen-reader-text"><?php esc_html_e( 'Submit a Support Ticket', 'simple-wp-helpdesk' ); ?></h2>
 	<form id="swh-ticket-form" method="POST" action="" enctype="multipart/form-data">
 		<?php wp_nonce_field( 'swh_create_ticket', 'swh_ticket_nonce' ); ?>
 		<div class="swh-form-group">
@@ -392,7 +399,7 @@ function swh_render_submission_form( $atts = array() ) {
 		</div>
 		<div class="swh-form-group">
 			<label for="swh-attachments"><?php esc_html_e( 'Attachments (Optional):', 'simple-wp-helpdesk' ); ?></label>
-			<input type="file" id="swh-attachments" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input" style="padding: 5px;" aria-describedby="swh-file-hint">
+			<input type="file" id="swh-attachments" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input" aria-describedby="swh-file-hint">
 			<small id="swh-file-hint" class="swh-text-muted" style="display:block; margin-top:5px;">
 			<?php
 				/* translators: 1: max upload size in MB, 2: max file count */
@@ -493,6 +500,9 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-frontend' ), SWH_VERSION );
+	}
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET params used for routing only; form actions verified via nonces.

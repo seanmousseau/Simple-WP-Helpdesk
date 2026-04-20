@@ -45,19 +45,19 @@ button.nav-tab {
 }
 
 button.nav-tab:focus {
-	outline: 2px solid #005fcc;
+	outline: 2px solid var( --swh-color-focus );
 	outline-offset: 2px;
 	box-shadow: none;
 }
 
 .swh-tab-tools {
-	color: #d63638;
+	color: var( --swh-color-danger );
 }
 
 /* Ticket list row: unread client reply indicator. */
 .swh-has-unread {
 	border-left: 3px solid var( --swh-color-primary );
-	background-color: #f0f8ff;
+	background-color: var( --swh-color-bg-highlight );
 }
 
 .swh-has-unread .column-title a {
@@ -67,7 +67,7 @@ button.nav-tab:focus {
 .swh-ticket-uid {
 	font-size: 16px;
 	font-weight: bold;
-	background: #f0f0f1;
+	background: var( --swh-color-surface );
 	padding: 10px;
 	text-align: center;
 	margin-bottom: 15px;
@@ -78,7 +78,7 @@ button.nav-tab:focus {
 	max-height: 60vh;
 	min-height: 200px;
 	overflow-y: auto;
-	background: #fff;
+	background: var( --swh-color-bg );
 	padding: 15px;
 	border: 1px solid var( --swh-color-border );
 	margin-bottom: 20px;
@@ -99,4 +99,134 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 .swh-merge-body.swh-merge-visible {
 	max-height: 600px;
 	opacity: 1;
+}
+
+/* ── Conversation bubbles (#253) ────────────────────────────────────────── */
+.swh-bubble {
+	padding: var( --swh-space-sm ) var( --swh-space-md );
+	margin-bottom: var( --swh-space-sm );
+	border-left: 4px solid var( --swh-color-primary );
+	border-radius: var( --swh-radius-sm );
+}
+
+.swh-bubble-note {
+	background: var( --swh-color-warning-bg );
+	border-left-color: var( --swh-color-warning-bd );
+}
+
+.swh-bubble-user {
+	background: var( --swh-color-bg-subtle );
+	border-left-color: var( --swh-color-border-subtle );
+}
+
+.swh-bubble-tech {
+	background: var( --swh-color-info-bg );
+	border-left-color: var( --swh-color-primary );
+}
+
+.swh-bubble-meta {
+	display: block;
+	margin-bottom: var( --swh-space-xs );
+}
+
+.swh-bubble-timestamp {
+	font-weight: normal;
+	font-size: 0.8em;
+	color: var( --swh-color-muted );
+}
+
+.swh-bubble-attachments {
+	margin-top: var( --swh-space-sm );
+}
+
+.swh-conversation-empty {
+	color: var( --swh-color-muted );
+	font-style: italic;
+}
+
+/* ── Reply / Note input areas (#253) ────────────────────────────────────── */
+.swh-reply-note-wrap {
+	display: flex;
+	gap: var( --swh-space-lg );
+}
+
+.swh-reply-area,
+.swh-note-area {
+	flex: 1;
+}
+
+.swh-note-area {
+	background: var( --swh-color-warning-bg );
+	padding: var( --swh-space-md );
+	border-radius: var( --swh-radius-md );
+	border: 1px solid var( --swh-color-warning-bd );
+}
+
+.swh-note-area h4,
+.swh-note-area p {
+	color: var( --swh-color-warning-text );
+}
+
+.swh-note-btn {
+	background: var( --swh-color-note-bg );
+	border-color: var( --swh-color-note-border );
+	color: var( --swh-color-note-text );
+}
+
+.swh-note-btn:hover {
+	background: var( --swh-color-note-bg-hover );
+	border-color: var( --swh-color-note-bd-hover );
+	color: var( --swh-color-note-text );
+}
+
+/* ── Reports page (#254) ────────────────────────────────────────────────── */
+.swh-report-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var( --swh-space-lg );
+	margin-top: var( --swh-space-lg );
+}
+
+.swh-report-card {
+	background: var( --swh-color-bg );
+	border: 1px solid var( --swh-color-border );
+	border-radius: var( --swh-radius-sm );
+	padding: var( --swh-space-lg );
+}
+
+.swh-chart-empty {
+	padding: var( --swh-space-xl ) var( --swh-space-md );
+	text-align: center;
+	color: var( --swh-color-muted );
+	font-style: italic;
+}
+
+.swh-stat-value {
+	font-size: 2em;
+	font-weight: bold;
+	text-align: center;
+}
+
+/* ── Responsive (#251, #254) ─────────────────────────────────────────────── */
+
+/* Tablet: WP sidebar collapses at 782px */
+@media ( max-width: 782px ) {
+	.swh-report-grid {
+		grid-template-columns: 1fr;
+	}
+	.swh-conversation-wrap {
+		max-height: 40vh;
+	}
+	.swh-reply-note-wrap {
+		flex-direction: column;
+	}
+}
+
+/* Narrow admin: hide lower-priority ticket list columns */
+@media ( max-width: 600px ) {
+	.column-ticket_uid,
+	.column-ticket_assigned,
+	.column-ticket_client {
+		display: none;
+	}
 }

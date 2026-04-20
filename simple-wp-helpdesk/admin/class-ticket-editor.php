@@ -263,6 +263,10 @@ function swh_status_meta_box_html( $post ) {
 						msgEl.style.color = 'red';
 						msgEl.textContent = json.data && json.data.message ? json.data.message : '<?php echo esc_js( __( 'Merge failed.', 'simple-wp-helpdesk' ) ); ?>';
 					}
+				} )
+				.catch(function() {
+					msgEl.style.color = 'red';
+					msgEl.textContent = '<?php echo esc_js( __( 'Network error. Please try again.', 'simple-wp-helpdesk' ) ); ?>';
 				} );
 		} );
 	}());
@@ -302,22 +306,20 @@ function swh_conversation_meta_box_html( $post ) {
 			if ( $is_internal ) {
 				/* translators: %s: comment author name */
 				$author_label = sprintf( __( 'Internal Note (%s)', 'simple-wp-helpdesk' ), $comment->comment_author );
-				$bg_color     = '#fff3cd';
-				$border       = '#ffeeba';
+				$bubble_class = 'swh-bubble-note';
 			} else {
 				/* translators: %s: comment author name */
 				$author_label = $is_user ? sprintf( __( 'Client (%s)', 'simple-wp-helpdesk' ), $comment->comment_author ) : sprintf( __( 'Technician (%s)', 'simple-wp-helpdesk' ), $comment->comment_author );
-				$bg_color     = $is_user ? '#f9f9f9' : '#e6f7ff';
-				$border       = '#0073aa';
+				$bubble_class = $is_user ? 'swh-bubble-user' : 'swh-bubble-tech';
 			}
 
-			echo '<div style="background: ' . esc_attr( $bg_color ) . '; padding: 10px 15px; margin-bottom: 10px; border-left: 4px solid ' . esc_attr( $border ) . '; border-radius: 3px;">';
-			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_label ) . ' <span style="font-weight:normal; font-size: 0.8em; color: #666;">(' . esc_html( swh_format_comment_date( $comment ) ) . ')</span></strong>';
+			echo '<div class="swh-bubble ' . esc_attr( $bubble_class ) . '">';
+			echo '<strong class="swh-bubble-meta">' . esc_html( $author_label ) . ' <span class="swh-bubble-timestamp">(' . esc_html( swh_format_comment_date( $comment ) ) . ')</span></strong>';
 			echo nl2br( esc_html( $comment->comment_content ) );
 
 			$attachments = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
 			if ( ! empty( $attachments ) && is_array( $attachments ) ) {
-				echo '<div style="margin-top: 10px;">';
+				echo '<div class="swh-bubble-attachments">';
 				foreach ( $attachments as $url ) {
 					if ( ! is_string( $url ) ) {
 						continue;
@@ -329,12 +331,12 @@ function swh_conversation_meta_box_html( $post ) {
 			echo '</div>';
 		}
 	} else {
-		echo '<p style="color: #666; font-style: italic;">' . esc_html__( 'No replies yet. Use the boxes below to start the conversation.', 'simple-wp-helpdesk' ) . '</p>';
+		echo '<p class="swh-conversation-empty">' . esc_html__( 'No replies yet. Use the boxes below to start the conversation.', 'simple-wp-helpdesk' ) . '</p>';
 	}
 	echo '</div>';
 	?>
-	<div style="display:flex; gap: 20px;">
-		<div style="flex:1;">
+	<div class="swh-reply-note-wrap">
+		<div class="swh-reply-area">
 			<h4 style="margin-top:0;"><label for="swh-tech-reply-text"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px;"><?php esc_html_e( 'This will be emailed to the client.', 'simple-wp-helpdesk' ); ?></p>
 			<?php
@@ -365,12 +367,12 @@ function swh_conversation_meta_box_html( $post ) {
 				<button type="button" id="swh-send-reply-btn" class="button button-primary"><?php esc_html_e( 'Send Reply', 'simple-wp-helpdesk' ); ?></button>
 			</p>
 		</div>
-		<div style="flex:1; background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba;">
-			<h4 style="margin-top:0; color: #856404;"><label for="swh-tech-note-text"><?php esc_html_e( 'Add Internal Note', 'simple-wp-helpdesk' ); ?></label></h4>
-			<p style="font-size:12px; color: #856404;"><?php esc_html_e( 'Hidden from client. For staff only.', 'simple-wp-helpdesk' ); ?></p>
+		<div class="swh-note-area">
+			<h4 style="margin-top:0;"><label for="swh-tech-note-text"><?php esc_html_e( 'Add Internal Note', 'simple-wp-helpdesk' ); ?></label></h4>
+			<p style="font-size:12px;"><?php esc_html_e( 'Hidden from client. For staff only.', 'simple-wp-helpdesk' ); ?></p>
 			<textarea id="swh-tech-note-text" name="swh_tech_note_text" style="width: 100%;" rows="5" placeholder="<?php esc_attr_e( 'Type private note here...', 'simple-wp-helpdesk' ); ?>"></textarea>
 			<p style="margin-top:10px;">
-				<button type="button" id="swh-save-note-btn" class="button" style="background:#f0c040; border-color:#d4a017; color:#3d3000;"><?php esc_html_e( 'Save Note', 'simple-wp-helpdesk' ); ?></button>
+				<button type="button" id="swh-save-note-btn" class="button swh-note-btn"><?php esc_html_e( 'Save Note', 'simple-wp-helpdesk' ); ?></button>
 			</p>
 		</div>
 	</div>

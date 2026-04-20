@@ -416,26 +416,98 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Upload progress indicator — shows indeterminate bar on file submission.
+	 * Upload progress indicator (#256) — determinate XHR bar when files are attached.
+	 *
+	 * Intercepts submit when files are selected. Uses XHR upload.onprogress for a
+	 * real percentage bar (0–90% upload, 90–100% server processing). On completion,
+	 * navigates to the server's response URL (follows redirects transparently).
+	 * Falls back to standard form submit on XHR network error.
+	 *
+	 * Note: when server-side validation fails (same URL returned, no redirect), the
+	 * browser navigates to the form URL via GET and the form renders without error
+	 * detail — this is an intentional tradeoff to avoid injecting arbitrary server HTML.
 	 */
 	const ticketForm = document.getElementById( 'swh-ticket-form' );
 	if ( ticketForm ) {
-		ticketForm.addEventListener( 'submit', function () {
+		ticketForm.addEventListener( 'submit', function ( e ) {
 			const fileInput = ticketForm.querySelector( '.swh-file-input' );
-			if ( ! fileInput || fileInput.files.length === 0 ) { return; }
+			if ( ! fileInput || fileInput.files.length === 0 ) { return; } // No files — standard submit.
+
+			e.preventDefault();
 
 			const submitBtn = ticketForm.querySelector( '[type="submit"]' );
 			if ( submitBtn ) {
-				submitBtn.value = 'Uploading\u2026';
-				setTimeout( function () { submitBtn.disabled = true; }, 0 );
+				submitBtn.disabled = true;
+				submitBtn.value    = ( swhConfig.i18n && swhConfig.i18n.uploading ) || 'Uploading\u2026';
 			}
 
 			const wrap     = document.createElement( 'div' );
-			wrap.className = 'swh-progress-bar swh-progress-bar--indeterminate';
+			wrap.className = 'swh-progress-bar';
 			const fill     = document.createElement( 'div' );
 			fill.className = 'swh-progress-fill';
+			fill.style.width = '0%';
 			wrap.appendChild( fill );
 			ticketForm.appendChild( wrap );
+
+			const xhr = new XMLHttpRequest();
+
+			xhr.upload.addEventListener( 'progress', function ( ev ) {
+				if ( ev.lengthComputable ) {
+					// Cap at 90%: last 10% reserved for server-side processing.
+					fill.style.width = Math.round( ( ev.loaded / ev.total ) * 90 ) + '%';
+				}
+			} );
+
+			xhr.addEventListener( 'load', function () {
+				if ( xhr.status >= 200 && xhr.status < 300 ) {
+					fill.style.width = '100%';
+					// Replace the wrapper with the server-rendered response so the
+					// inline success notice and ticket link are preserved.  If the
+					// wrapper cannot be located in the response, fall back to a GET
+					// reload of the same URL.
+					var parser  = new window.DOMParser();
+					var respDoc = parser.parseFromString( xhr.responseText, 'text/html' );
+					var respWrap = respDoc.querySelector( '.swh-helpdesk-wrapper' );
+					var curWrap  = ticketForm.closest( '.swh-helpdesk-wrapper' );
+					if ( respWrap && curWrap ) {
+						curWrap.replaceWith( document.adoptNode( respWrap ) );
+					} else {
+						window.location.href = xhr.responseURL || ticketForm.action;
+					}
+				} else {
+					_xhrRestore();
+					swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload failed. Please try again.' );
+				}
+			} );
+
+			function _xhrRestore() {
+				if ( submitBtn ) {
+					submitBtn.disabled = false;
+					submitBtn.value    = ( swhConfig.i18n && swhConfig.i18n.submitLabel ) || 'Submit Ticket';
+				}
+				wrap.remove();
+			}
+
+			xhr.addEventListener( 'error', function () {
+				_xhrRestore();
+				swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload failed. Please try again.' );
+			} );
+
+			xhr.addEventListener( 'timeout', function () {
+				_xhrRestore();
+				swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload timed out. Please try again.' );
+			} );
+
+			// FormData(form) omits submit buttons per spec; append manually so the
+			// PHP handler's isset($_POST['swh_submit_ticket']) guard is satisfied.
+			var formData = new FormData( ticketForm );
+			if ( submitBtn && submitBtn.name ) {
+				formData.append( submitBtn.name, submitBtn.value );
+			}
+
+			xhr.open( 'POST', ticketForm.action );
+			xhr.timeout = 120000;
+			xhr.send( formData );
 		} );
 	}
 } );

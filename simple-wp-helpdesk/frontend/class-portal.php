@@ -313,7 +313,7 @@ function swh_render_client_portal() {
 	<?php if ( $resolved_status === $data['status'] ) : ?>
 		<div class="swh-cta-primary">
 			<div class="swh-cta-primary-content">
-				<h4><?php esc_html_e( '&#10003; Your issue is resolved?', 'simple-wp-helpdesk' ); ?></h4>
+				<h3><?php esc_html_e( '&#10003; Your issue is resolved?', 'simple-wp-helpdesk' ); ?></h3>
 				<p><?php esc_html_e( 'Mark this ticket as closed once your issue is fully resolved.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 			<form method="POST" action="" style="margin:0;">
@@ -440,7 +440,7 @@ function swh_render_portal_no_token() {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		$tickets = is_array( $tickets ) ? $tickets : array();
 
-		echo '<h3 style="margin-top:0;">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h3>';
+		echo '<h3 class="swh-my-tickets-heading">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h3>';
 
 		if ( empty( $tickets ) ) {
 			echo '<p>' . esc_html__( 'You have no open tickets.', 'simple-wp-helpdesk' ) . '</p>';
