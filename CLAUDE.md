@@ -90,10 +90,12 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 4. Update `simple-wp-helpdesk/readme.txt` stable tag and changelog.
 5. Update `docs/` files for any changed behaviour or new features.
 6. **Run full test suite** (all four must pass — see Test Suite below).
-7. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
-8. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
-9. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-10. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
+7. **Ask the user before creating a PR** — never open one autonomously.
+8. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
+9. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
+10. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+11. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
+12. **After pushing, do not monitor CI run status.** Wait for the user to report results before taking further action.
 
 > ZIP is built by `release.yml` on every `v*.*.*` tag push — no manual zip command needed.
 
@@ -103,12 +105,13 @@ The full test suite must pass before any release. Use `make` targets (requires `
 
 ### Local gate (required before opening any PR)
 ```bash
-make test-docker  # full gate inside Docker — no host PHP/semgrep needed (preferred)
-make test         # full gate on host — requires PHP 8.1+, semgrep
-make e2e          # Playwright E2E — 54 sections (set WP_MODE=docker or configure SSH vars)
+make test-docker  # full gate inside Docker — required (no host PHP fallback)
+make e2e          # Playwright E2E — 56 sections (set WP_MODE=docker or configure SSH vars)
 make e2e-docker   # fully self-contained E2E: up + setup + test + teardown in one command
 make test-all     # make test + make e2e
 ```
+
+> **Docker required.** The pre-push hook calls `make test-docker` and aborts if Docker is unavailable. There is no host-PHP fallback.
 
 ### Individual tools
 ```bash
