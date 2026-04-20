@@ -43,6 +43,9 @@ function swh_ticket_frontend( $atts = array() ) {
 
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-frontend' ), SWH_VERSION );
+	}
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
 	/**
 	 * Filters the list of allowed file extensions for ticket attachments.
@@ -495,6 +498,9 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-frontend' ), SWH_VERSION );
+	}
 	wp_enqueue_script( 'swh-frontend', SWH_PLUGIN_URL . 'assets/swh-frontend.js', array(), SWH_VERSION, true );
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only GET params used for routing only; form actions verified via nonces.

@@ -1,0 +1,48 @@
+/* RTL overrides (#125) — loaded in addition to swh-frontend.css when is_rtl(). */
+
+.swh-helpdesk-wrapper,
+.swh-form-group {
+	text-align: right !important;
+}
+
+/* Chat bubbles: flip left-border accent to right */
+.swh-chat-bubble {
+	border-left: none;
+	border-right: 4px solid var( --swh-color-primary );
+}
+
+/* CTA primary: flip left-border accent to right */
+.swh-cta-primary {
+	border-left: 1px solid var( --swh-color-success-bd );
+	border-right: 4px solid var( --swh-color-success-accent );
+}
+
+/* Attachment items: reverse gap direction */
+.swh-attachment-item {
+	flex-direction: row-reverse;
+}
+
+/* Lookup section text direction */
+.swh-lookup-section {
+	direction: rtl;
+}
+
+/* Admin: unread row — flip left indicator to right */
+.swh-has-unread {
+	border-left: none;
+	border-right: 3px solid var( --swh-color-primary );
+}
+
+/* Admin: conversation bubbles — flip left accent to right */
+.swh-bubble {
+	border-left: none;
+	border-right: 4px solid var( --swh-color-primary );
+}
+
+.swh-bubble-note {
+	border-right-color: var( --swh-color-warning-bd );
+}
+
+.swh-bubble-user {
+	border-right-color: var( --swh-color-border-subtle );
+}
