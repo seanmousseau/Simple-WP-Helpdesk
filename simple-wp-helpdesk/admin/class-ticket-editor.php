@@ -127,21 +127,29 @@ function swh_status_meta_box_html( $post ) {
 		$priorities[] = $priority;
 	}
 	wp_nonce_field( 'swh_save_ticket', 'swh_ticket_nonce' );
-	$is_new_ticket = empty( $uid );
+	$is_new_ticket        = empty( $uid );
 	$main_attachments_raw = get_post_meta( $post->ID, '_ticket_attachments', true );
 	$main_attachments     = is_array( $main_attachments_raw ) ? $main_attachments_raw : array();
 	$main_orignames       = get_post_meta( $post->ID, '_swh_attachment_orignames', true );
 	$main_orignames       = is_array( $main_orignames ) ? $main_orignames : array();
-	$comments             = get_comments( array( 'post_id' => $post->ID, 'order' => 'ASC' ) );
+	$comments             = get_comments(
+		array(
+			'post_id' => $post->ID,
+			'order'   => 'ASC',
+		)
+	);
 	$comments             = is_array( $comments ) ? $comments : array();
 	$reply_attachments    = array();
 	$reply_orignames      = array();
 	foreach ( $comments as $c ) {
-		if ( ! $c instanceof WP_Comment ) { continue; }
+		if ( ! $c instanceof WP_Comment ) {
+			continue; }
 		$atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
-		if ( ! empty( $atts ) && is_array( $atts ) ) { $reply_attachments = array_merge( $reply_attachments, $atts ); }
+		if ( ! empty( $atts ) && is_array( $atts ) ) {
+			$reply_attachments = array_merge( $reply_attachments, $atts ); }
 		$c_names = get_comment_meta( (int) $c->comment_ID, '_swh_reply_orignames', true );
-		if ( ! empty( $c_names ) && is_array( $c_names ) ) { $reply_orignames = array_merge( $reply_orignames, $c_names ); }
+		if ( ! empty( $c_names ) && is_array( $c_names ) ) {
+			$reply_orignames = array_merge( $reply_orignames, $c_names ); }
 	}
 	$all_attachments   = array_merge( $main_attachments, $reply_attachments );
 	$all_orignames     = array_merge( $main_orignames, $reply_orignames );
@@ -193,9 +201,12 @@ function swh_status_meta_box_html( $post ) {
 			<?php endif; ?>
 			<?php if ( ! empty( $all_attachments ) ) : ?>
 			<p><strong><?php esc_html_e( 'Attachments:', 'simple-wp-helpdesk' ); ?></strong><br>
-			<?php foreach ( $all_attachments as $url ) : ?>
-				<?php if ( ! is_string( $url ) ) { continue; } ?>
-				<?php $label = ! empty( $all_orignames[ $url ] ) && is_string( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url ); ?>
+				<?php foreach ( $all_attachments as $url ) : ?>
+					<?php
+					if ( ! is_string( $url ) ) {
+						continue; }
+					?>
+					<?php $label = ! empty( $all_orignames[ $url ] ) && is_string( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url ); ?>
 				<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( $label ); ?></a>
 			<?php endforeach; ?></p>
 			<?php endif; ?>

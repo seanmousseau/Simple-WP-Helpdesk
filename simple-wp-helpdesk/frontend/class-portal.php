@@ -476,6 +476,7 @@ function swh_render_portal_no_token() {
 				echo '</p>';
 				echo '</div>';
 				if ( $link ) {
+					/* translators: %s: ticket subject */
 					echo '<a href="' . esc_url( $link ) . '" class="swh-btn swh-btn-sm" aria-label="' . esc_attr( sprintf( __( 'View ticket: %s', 'simple-wp-helpdesk' ), $ticket->post_title ) ) . '">' . esc_html__( 'View', 'simple-wp-helpdesk' ) . ' &rarr;</a>';
 				} else {
 					echo '<span class="swh-muted">' . esc_html__( 'Link unavailable', 'simple-wp-helpdesk' ) . '</span>';
