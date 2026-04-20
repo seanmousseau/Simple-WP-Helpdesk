@@ -1,10 +1,11 @@
 FROM php:8.2-cli-alpine
 
-RUN apk add --no-cache git unzip curl bash make python3 py3-pip $PHPIZE_DEPS \
+RUN apk add --no-cache git unzip curl bash python3 py3-pip $PHPIZE_DEPS \
     && pip3 install --no-cache-dir --break-system-packages semgrep==1.157.0 \
     && pecl install pcov \
     && docker-php-ext-enable pcov \
     && apk del $PHPIZE_DEPS \
+    && apk add --no-cache make \
     && addgroup -S phptest \
     && adduser -S phptest -G phptest
 
