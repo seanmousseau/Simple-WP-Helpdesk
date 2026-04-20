@@ -403,7 +403,7 @@ function swh_render_submission_form( $atts = array() ) {
 		<?php
 		// Explicit rendering for anti-spam.
 		if ( 'honeypot' === $spam_method ) {
-			echo '<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
+			echo '<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true">' . esc_html__( 'Leave this empty', 'simple-wp-helpdesk' ) . '</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
 		} elseif ( 'recaptcha' === $spam_method ) {
 			$key            = swh_get_string_option( 'swh_recaptcha_site_key' );
 			$recaptcha_type = swh_get_string_option( 'swh_recaptcha_type', 'v2' );
@@ -444,7 +444,7 @@ function swh_render_submission_form( $atts = array() ) {
 	<?php if ( $show_lookup ) : ?>
 	<div class="swh-lookup-section">
 		<p><a href="#" id="swh-toggle-lookup" aria-expanded="false" aria-controls="swh-lookup-form"><?php esc_html_e( 'Already submitted a ticket? Resend my ticket links', 'simple-wp-helpdesk' ); ?></a></p>
-		<div id="swh-lookup-form">
+		<div id="swh-lookup-form" hidden aria-hidden="true">
 			<form method="POST" action="">
 				<?php wp_nonce_field( 'swh_ticket_lookup', 'swh_lookup_nonce' ); ?>
 				<div class="swh-form-group">
@@ -452,7 +452,7 @@ function swh_render_submission_form( $atts = array() ) {
 					<input type="email" id="swh-lookup-email" name="swh_lookup_email" required class="swh-form-control">
 				</div>
 				<?php if ( 'honeypot' === $spam_method ) : ?>
-					<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+					<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true"><?php esc_html_e( 'Leave this empty', 'simple-wp-helpdesk' ); ?></label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
 				<?php endif; ?>
 				<div class="swh-form-group">
 					<input type="submit" name="swh_ticket_lookup" value="<?php esc_attr_e( 'Send My Ticket Links', 'simple-wp-helpdesk' ); ?>" class="swh-btn">

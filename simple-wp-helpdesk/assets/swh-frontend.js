@@ -259,7 +259,21 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		toggleLink.addEventListener( 'click', function ( e ) {
 			e.preventDefault();
 			const expanded = lookupForm.classList.contains( 'swh-lookup-visible' );
-			lookupForm.classList.toggle( 'swh-lookup-visible', ! expanded );
+			if ( ! expanded ) {
+				lookupForm.removeAttribute( 'hidden' );
+				lookupForm.setAttribute( 'aria-hidden', 'false' );
+				lookupForm.classList.add( 'swh-lookup-visible' );
+			} else {
+				lookupForm.classList.remove( 'swh-lookup-visible' );
+				lookupForm.setAttribute( 'aria-hidden', 'true' );
+				lookupForm.addEventListener(
+					'transitionend',
+					function onEnd() {
+						lookupForm.setAttribute( 'hidden', '' );
+						lookupForm.removeEventListener( 'transitionend', onEnd );
+					}
+				);
+			}
 			toggleLink.setAttribute( 'aria-expanded', String( ! expanded ) );
 		} );
 	}
@@ -345,6 +359,9 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				} catch ( err ) {
 					// Malformed response — leave widget visible so the client can retry.
 				}
+			};
+			xhr.onerror = function () {
+				// Network failure — leave widget visible so the client can retry.
 			};
 			xhr.send( body );
 		}

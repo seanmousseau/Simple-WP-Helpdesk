@@ -172,7 +172,7 @@
 .swh-attachment-item .swh-file-icon {
 	width: 14px;
 	height: 14px;
-	fill: currentColor;
+	fill: currentcolor;
 	flex-shrink: 0;
 }
 

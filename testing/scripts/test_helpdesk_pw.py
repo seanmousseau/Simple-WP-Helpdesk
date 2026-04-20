@@ -210,7 +210,8 @@ def mailhog_get_messages(to_email: str, timeout: int = 10) -> list:
         try:
             resp = _req.get(f"{MAILHOG_URL}/api/v2/messages", params={"limit": 50}, timeout=5)
             if resp.status_code != 200:
-                return []
+                time.sleep(1)
+                continue
             matched = [
                 m for m in resp.json().get("items", [])
                 if any(
@@ -221,7 +222,8 @@ def mailhog_get_messages(to_email: str, timeout: int = 10) -> list:
             if matched:
                 return matched
         except Exception:
-            return []
+            time.sleep(1)
+            continue
         time.sleep(1)
     return []
 
@@ -3218,38 +3220,38 @@ def test_53_ux_a11y(page: Page):
     page.goto(WP_SUBMIT_PAGE)
     page.wait_for_load_state("load")
 
-    # ── #272 lookup toggle CSS class (not display:none) ───────────────────────
+    # ── #272 lookup toggle: hidden attribute + aria-hidden ────────────────────
     lookup_form = page.locator('#swh-lookup-form')
     if lookup_form.count() > 0:
-        lookup_has_display_none = lookup_form.evaluate(
-            "el => window.getComputedStyle(el).display === 'none'"
-        )
-        check("ux #272: lookup form hidden via CSS class (not inline display:none)",
-              not lookup_has_display_none,
-              "element has computed display:none — may not be using CSS transition")
-        has_inline_display = lookup_form.evaluate(
-            "el => el.style.display === 'none'"
-        )
-        check("ux #272: lookup form has no inline display:none",
-              not has_inline_display,
-              "inline style.display is 'none' — should use CSS class instead")
+        is_hidden_attr = lookup_form.evaluate("el => el.hasAttribute('hidden')")
+        check("ux #272: lookup form starts with hidden attribute (semantically hidden)",
+              is_hidden_attr,
+              "element lacks hidden attribute — keyboard/AT can reach collapsed form")
+        is_aria_hidden = lookup_form.evaluate("el => el.getAttribute('aria-hidden') === 'true'")
+        check("ux #272: lookup form starts with aria-hidden=true",
+              is_aria_hidden,
+              "element lacks aria-hidden='true' in collapsed state")
 
     # ── #270 honeypot clip-path technique ─────────────────────────────────────
-    honeypot_style = page.evaluate("""
+    honeypot_info = page.evaluate("""
         () => {
-            var hp = document.querySelector('input[name="swh_hp_email"]');
+            var hp = document.querySelector('input[name="swh_website_url_hp"]');
             if (!hp) return null;
-            var style = hp.getAttribute('style') || '';
-            return style;
+            var wrap = hp.parentElement;
+            var wrapStyle = wrap ? (wrap.getAttribute('style') || '') : '';
+            return { inputTabIndex: hp.tabIndex, wrapStyle: wrapStyle };
         }
     """)
-    if honeypot_style is not None:
+    if honeypot_info is not None:
+        check("security #270: honeypot input has tabindex=-1",
+              honeypot_info['inputTabIndex'] == -1,
+              f"honeypot tabIndex: {honeypot_info['inputTabIndex']}")
         check("security #270: honeypot does not use left:-9999px",
-              'left' not in honeypot_style or '-9999' not in honeypot_style,
-              f"honeypot style: {honeypot_style!r}")
+              '-9999' not in honeypot_info['wrapStyle'],
+              f"honeypot wrap style: {honeypot_info['wrapStyle']!r}")
         check("security #270: honeypot uses clip-path technique",
-              'clip-path' in honeypot_style,
-              f"honeypot style: {honeypot_style!r}")
+              'clip-path' in honeypot_info['wrapStyle'],
+              f"honeypot wrap style: {honeypot_info['wrapStyle']!r}")
 
     # ── #273 drag-and-drop zone wraps file input ──────────────────────────────
     drop_zone = page.locator('.swh-drop-zone')
@@ -3257,19 +3259,37 @@ def test_53_ux_a11y(page: Page):
           drop_zone.count() > 0,
           "no .swh-drop-zone found on submit page")
 
-    # ── #262 CSAT — verified via portal after submit; skip if not on CSAT page
-    # ── #258 expired token recovery link ─────────────────────────────────────
-    if state.get('portal_url'):
+    # ── #262 CSAT stars have role/aria attributes ─────────────────────────────
+    portal_url = state.get('portal_url')
+    if portal_url:
+        page.goto(portal_url)
+        page.wait_for_load_state("load")
+        csat_stars = page.locator('.swh-csat-star')
+        if csat_stars.count() > 0:
+            star_role = csat_stars.first.get_attribute('role')
+            check("a11y #262: CSAT stars have role=radio",
+                  star_role == 'radio',
+                  f"first star role: {star_role!r}")
+            star_checked = csat_stars.first.get_attribute('aria-checked')
+            check("a11y #262: CSAT stars have aria-checked attribute",
+                  star_checked is not None,
+                  "first star missing aria-checked attribute")
+
+    # ── #258 expired token shows inline lookup form ────────────────────────────
+    if portal_url:
         # Use a fake/expired token to trigger the expired state.
-        bad_token_url = re.sub(r'token=[^&]+', 'token=expiredtokentest', state['portal_url'])
+        bad_token_url = re.sub(r'token=[^&]+', 'token=expiredtokentest', portal_url)
         page.goto(bad_token_url)
         page.wait_for_load_state("load")
         body = page.inner_text("body")
-        # Could be "invalid" or "expired" depending on token length/format.
-        # Just verify the page doesn't show a blank error without any text.
         check("ux #258: portal error page has descriptive text",
               any(w in body.lower() for w in ('expired', 'invalid', 'look up', 'lookup', 'ticket')),
               f"portal error body: {body[:200]!r}")
+        # Lookup form should be rendered inline (not just a link).
+        lookup_on_expired = page.locator('#swh-lookup-email, input[name="swh_lookup_email"]')
+        check("ux #258: expired token page renders lookup form inline",
+              lookup_on_expired.count() > 0,
+              "no lookup email input found on expired-token page")
 
     screenshot(page, "65c_ux_a11y_frontend")
 
