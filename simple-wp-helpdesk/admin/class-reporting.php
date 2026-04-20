@@ -292,10 +292,12 @@ function swh_report_kpi_data() {
 	$cached_first_response = get_transient( 'swh_report_first_response_time' );
 	$first_response        = is_array( $cached_first_response ) ? $cached_first_response : swh_report_first_response_time();
 
+	$avg_res_raw  = $resolution['avg_seconds'] ?? null;
+	$avg_fres_raw = $first_response['avg_seconds'] ?? null;
 	return array(
 		'total'              => $total,
 		'open'               => $open,
-		'avg_resolution'     => $resolution['avg_seconds'],
-		'avg_first_response' => $first_response['avg_seconds'],
+		'avg_resolution'     => is_int( $avg_res_raw ) ? $avg_res_raw : 0,
+		'avg_first_response' => is_int( $avg_fres_raw ) ? $avg_fres_raw : 0,
 	);
 }
