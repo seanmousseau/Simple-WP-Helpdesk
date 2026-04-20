@@ -443,7 +443,13 @@ function swh_render_portal_no_token() {
 		echo '<h3 class="swh-my-tickets-heading">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h3>';
 
 		if ( empty( $tickets ) ) {
-			echo '<p>' . esc_html__( 'You have no open tickets.', 'simple-wp-helpdesk' ) . '</p>';
+			echo '<div class="swh-empty-state">' .
+				'<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' .
+				'<path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zM4 8V6h16v2H4z"/>' .
+				'</svg>' .
+				'<p class="swh-empty-state-title">' . esc_html__( 'No open tickets', 'simple-wp-helpdesk' ) . '</p>' .
+				'<p class="swh-empty-state-desc">' . esc_html__( 'Submit a ticket to get started.', 'simple-wp-helpdesk' ) . '</p>' .
+				'</div>';
 		} else {
 			echo '<table class="swh-ticket-table">';
 			echo '<thead><tr>';

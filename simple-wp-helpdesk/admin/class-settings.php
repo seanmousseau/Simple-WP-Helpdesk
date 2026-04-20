@@ -511,6 +511,15 @@ function swh_render_settings_page() {
 						<th></th>
 					</tr></thead>
 					<tbody id="swh-rules-body">
+					<?php if ( empty( $assignment_rules ) ) : ?>
+						<tr id="swh-rules-empty"><td colspan="3">
+							<div class="swh-empty-state">
+								<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+								<p class="swh-empty-state-title"><?php esc_html_e( 'No rules configured', 'simple-wp-helpdesk' ); ?></p>
+								<p class="swh-empty-state-desc"><?php esc_html_e( 'Tickets will use the default assignee.', 'simple-wp-helpdesk' ); ?></p>
+							</div>
+						</td></tr>
+					<?php endif; ?>
 					<?php foreach ( $assignment_rules as $rule ) : ?>
 						<?php
 						$rule      = is_array( $rule ) ? $rule : array();
@@ -806,6 +815,15 @@ function swh_render_settings_page() {
 				if ( ! is_array( $canned_responses ) ) {
 					$canned_responses = array();
 				}
+				if ( empty( $canned_responses ) ) :
+					?>
+					<div class="swh-empty-state">
+						<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 2H6C4.9 2 4 2.9 4 4v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8z"/></svg>
+						<p class="swh-empty-state-title"><?php esc_html_e( 'No canned responses yet', 'simple-wp-helpdesk' ); ?></p>
+						<p class="swh-empty-state-desc"><?php esc_html_e( 'Add a template below to speed up replies.', 'simple-wp-helpdesk' ); ?></p>
+					</div>
+					<?php
+				endif;
 				foreach ( $canned_responses as $canned_item ) :
 					?>
 					<div class="swh-canned-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">

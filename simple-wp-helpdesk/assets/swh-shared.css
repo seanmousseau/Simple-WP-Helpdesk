@@ -59,6 +59,30 @@
 	--swh-transition-normal: 0.2s;
 }
 
+/* ── Empty state component — shared across admin and frontend (#319) ─────── */
+.swh-empty-state {
+	text-align: center;
+	padding: var(--swh-space-xl) var(--swh-space-lg);
+}
+.swh-empty-state-icon {
+	display: block;
+	width: 48px;
+	height: 48px;
+	fill: var(--swh-color-muted);
+	margin: 0 auto var(--swh-space-sm);
+}
+.swh-empty-state-title {
+	font-size: var(--swh-font-md);
+	font-weight: 500;
+	color: var(--swh-color-text);
+	margin: 0 0 var(--swh-space-xs);
+}
+.swh-empty-state-desc {
+	font-size: var(--swh-font-sm);
+	color: var(--swh-color-text-secondary);
+	margin: 0 0 var(--swh-space-md);
+}
+
 /* ── Dark mode token overrides — frontend portal only (#321) ─────────────── */
 /* Admin dark mode is controlled by WordPress color schemes; do not add here. */
 @media (prefers-color-scheme: dark) {
