@@ -3267,11 +3267,15 @@ def test_53_ux_a11y(page: Page):
     portal_url = state.get('portal_url')
     ticket_id  = state.get('ticket_id')
     if portal_url and ticket_id:
-        # Reset CSAT so the widget renders even if already submitted in test_33.
+        # Force closed status + clear CSAT rating so the widget always renders.
+        wpcli(f"post meta update {ticket_id} _ticket_status closed")
         wpcli(f"post meta delete {ticket_id} _ticket_csat 2>/dev/null")
         page.goto(portal_url)
         page.wait_for_load_state("load")
         csat_stars = page.locator('.swh-csat-star')
+        check("a11y #262: 5 CSAT stars rendered on closed ticket portal",
+              csat_stars.count() == 5,
+              f"expected 5 .swh-csat-star, got {csat_stars.count()}")
         if csat_stars.count() > 0:
             star_role = csat_stars.first.get_attribute('role')
             check("a11y #262: CSAT stars have role=radio",
@@ -3281,8 +3285,6 @@ def test_53_ux_a11y(page: Page):
             check("a11y #262: CSAT stars have aria-checked attribute",
                   star_checked is not None,
                   "first star missing aria-checked attribute")
-        else:
-            skip("a11y #262: CSAT stars not in DOM — cannot verify ARIA attributes")
 
     # ── #258 expired token shows inline lookup form ────────────────────────────
     if portal_url and ticket_id:

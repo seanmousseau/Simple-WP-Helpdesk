@@ -214,6 +214,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			if ( attached && swhValidateFiles( input, input.files ) ) {
 				updateSelected( input.files );
 			} else {
+				if ( attached ) { input.value = ''; }
 				updateSelected( null );
 			}
 		} );
