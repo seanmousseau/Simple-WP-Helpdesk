@@ -410,3 +410,26 @@
 	margin-top: var( --swh-space-sm );
 	font-size: 14px;
 }
+
+/* ── Responsive (#251) ───────────────────────────────────────────────────── */
+@media ( max-width: 480px ) {
+	/* Ticket table: horizontal scroll instead of overflow on narrow screens */
+	.swh-ticket-table {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Drop zone: reduce padding on mobile */
+	.swh-drop-zone {
+		padding: var( --swh-space-md ) var( --swh-space-sm );
+	}
+
+	/* Primary action button: full-width on mobile */
+	.swh-btn {
+		display: block;
+		width: 100%;
+		text-align: center;
+		box-sizing: border-box;
+	}
+}

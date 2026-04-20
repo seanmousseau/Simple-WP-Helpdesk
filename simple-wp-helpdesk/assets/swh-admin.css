@@ -100,3 +100,21 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	max-height: 600px;
 	opacity: 1;
 }
+
+/* ── Responsive (#251) ───────────────────────────────────────────────────── */
+
+/* Tablet: WP sidebar collapses at 782px */
+@media ( max-width: 782px ) {
+	.swh-conversation-wrap {
+		max-height: 40vh;
+	}
+}
+
+/* Narrow admin: hide lower-priority ticket list columns */
+@media ( max-width: 600px ) {
+	.column-ticket_uid,
+	.column-ticket_assigned,
+	.column-ticket_client {
+		display: none;
+	}
+}
