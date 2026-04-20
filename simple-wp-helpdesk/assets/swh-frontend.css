@@ -183,6 +183,10 @@
 	text-decoration: none;
 }
 
+.swh-my-tickets-heading {
+	margin-top: 0;
+}
+
 .swh-lookup-section {
 	margin-top: var( --swh-space-lg );
 	padding-top: var( --swh-space-lg );

@@ -333,6 +333,7 @@ function swh_render_submission_form( $atts = array() ) {
 		}
 	}
 	?>
+	<h2 class="screen-reader-text"><?php esc_html_e( 'Submit a Support Ticket', 'simple-wp-helpdesk' ); ?></h2>
 	<form id="swh-ticket-form" method="POST" action="" enctype="multipart/form-data">
 		<?php wp_nonce_field( 'swh_create_ticket', 'swh_ticket_nonce' ); ?>
 		<div class="swh-form-group">
