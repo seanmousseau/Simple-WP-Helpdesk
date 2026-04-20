@@ -1,10 +1,12 @@
+/* Design tokens are defined in swh-shared.css (loaded as a dependency). */
+
 .swh-helpdesk-wrapper {
 	max-width: 800px;
 	margin: 0 auto;
 	text-align: left !important;
 	font-family: inherit;
-	line-height: 1.6;
-	color: #333;
+	line-height: var( --swh-line-height );
+	color: var( --swh-color-text );
 }
 
 .swh-helpdesk-wrapper * {
@@ -12,92 +14,92 @@
 }
 
 .swh-form-group {
-	margin-bottom: 15px;
+	margin-bottom: var( --swh-space-md );
 	text-align: left !important;
 }
 
 .swh-form-group label {
 	display: block;
 	font-weight: 600;
-	margin-bottom: 5px;
-	color: #333;
+	margin-bottom: var( --swh-space-xs );
+	color: var( --swh-color-text );
 }
 
 .swh-form-control {
 	width: 100%;
 	max-width: 100%;
-	padding: 10px;
+	padding: var( --swh-space-sm );
 	border: 1px solid #ccc;
-	border-radius: 4px;
+	border-radius: var( --swh-radius-sm );
 	font-family: inherit;
-	font-size: 15px;
-	background: #fff;
-	color: #333;
+	font-size: var( --swh-font-base );
+	background: var( --swh-color-bg );
+	color: var( --swh-color-text );
 }
 
 .swh-form-control:focus {
-	border-color: #0073aa;
-	outline: 2px solid #0073aa;
+	border-color: var( --swh-color-primary );
+	outline: 2px solid var( --swh-color-primary );
 	outline-offset: 2px;
 	box-shadow: 0 0 3px rgba( 0, 115, 170, 0.3 );
 }
 
 .swh-btn {
 	display: inline-block;
-	padding: 10px 20px;
-	background-color: #0073aa;
-	color: #fff;
+	padding: var( --swh-space-sm ) var( --swh-space-lg );
+	background-color: var( --swh-color-primary );
+	color: var( --swh-color-bg );
 	border: none;
-	border-radius: 4px;
+	border-radius: var( --swh-radius-sm );
 	cursor: pointer;
-	font-size: 15px;
+	font-size: var( --swh-font-base );
 	font-weight: 600;
 	text-decoration: none;
-	transition: background 0.2s;
+	transition: background var( --swh-transition-normal );
 }
 
 .swh-btn:hover {
-	background-color: #005177;
-	color: #fff;
+	background-color: var( --swh-color-primary-dark );
+	color: var( --swh-color-bg );
 }
 
 .swh-btn:focus {
-	outline: 2px solid #005177;
+	outline: 2px solid var( --swh-color-primary-dark );
 	outline-offset: 2px;
 }
 
 .swh-btn-danger {
-	background-color: #dc3232;
+	background-color: var( --swh-color-danger );
 }
 
 .swh-btn-danger:hover {
-	background-color: #a02222;
+	background-color: var( --swh-color-danger-dark );
 }
 
 .swh-alert {
-	padding: 15px;
-	border-radius: 4px;
-	margin-bottom: 20px;
+	padding: var( --swh-space-md );
+	border-radius: var( --swh-radius-sm );
+	margin-bottom: var( --swh-space-lg );
 	font-weight: 500;
 	border: 1px solid transparent;
 }
 
 .swh-alert-success {
-	background-color: #d4edda;
-	border-color: #c3e6cb;
-	color: #155724;
+	background-color: var( --swh-color-success-bg );
+	border-color: var( --swh-color-success-bd );
+	color: var( --swh-color-success-text );
 }
 
 .swh-alert-error {
-	background-color: #f8d7da;
-	border-color: #f5c6cb;
-	color: #721c24;
+	background-color: var( --swh-color-error-bg );
+	border-color: var( --swh-color-error-bd );
+	color: var( --swh-color-error-text );
 }
 
 .swh-alert-warning {
-	background-color: #fff3cd;
-	border-color: #ffeeba;
-	color: #856404;
+	background-color: var( --swh-color-warning-bg );
+	border-color: var( --swh-color-warning-bd );
+	color: var( --swh-color-warning-text );
 }
 
 .swh-alert-info {
@@ -105,79 +107,106 @@
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 15px;
-	background-color: #e6f7ff;
-	border-color: #b3e0ff;
-	color: #005980;
+	gap: var( --swh-space-md );
+	background-color: var( --swh-color-info-bg );
+	border-color: var( --swh-color-info-bd );
+	color: var( --swh-color-info-text );
 }
 
 .swh-card {
-	border: 1px solid #ddd;
-	padding: 20px;
-	border-radius: 5px;
-	margin-bottom: 20px;
-	background: #fff;
+	border: 1px solid var( --swh-color-border );
+	padding: var( --swh-space-lg );
+	border-radius: var( --swh-radius-md );
+	margin-bottom: var( --swh-space-lg );
+	background: var( --swh-color-bg );
 }
 
+/* Pill-style status badges (#259) */
 .swh-badge {
 	display: inline-block;
-	padding: 4px 8px;
-	border-radius: 3px;
-	font-size: 12px;
+	padding: 3px 10px;
+	border-radius: var( --swh-radius-pill );
+	font-size: var( --swh-font-sm );
 	font-weight: 600;
+	letter-spacing: 0.02em;
 }
 
 .swh-badge-closed {
-	background-color: #f8d7da;
-	color: #721c24;
+	background-color: var( --swh-color-error-bg );
+	color: var( --swh-color-error-text );
 }
 
 .swh-badge-open {
-	background-color: #d4edda;
-	color: #155724;
+	background-color: var( --swh-color-success-bg );
+	color: var( --swh-color-success-text );
 }
 
 .swh-chat-bubble {
-	padding: 15px;
-	margin-bottom: 15px;
-	border-radius: 4px;
-	border-left: 4px solid #0073aa;
+	padding: var( --swh-space-md );
+	margin-bottom: var( --swh-space-md );
+	border-radius: var( --swh-radius-sm );
+	border-left: 4px solid var( --swh-color-primary );
 }
 
 .swh-chat-user {
-	background-color: #f9f9f9;
+	background-color: var( --swh-color-bg-subtle );
 	border-color: #aaa;
 }
 
 .swh-chat-tech {
-	background-color: #e6f7ff;
-	border-color: #0073aa;
+	background-color: var( --swh-color-info-bg );
+	border-color: var( --swh-color-primary );
+}
+
+/* Attachment item: filename + size + type icon (#274) */
+.swh-attachment-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin-right: var( --swh-space-sm );
+	text-decoration: underline;
+	color: var( --swh-color-primary );
+	font-size: 13px;
+}
+
+.swh-attachment-item .swh-file-icon {
+	width: 14px;
+	height: 14px;
+	fill: currentColor;
+	flex-shrink: 0;
+}
+
+.swh-attachment-item .swh-file-size {
+	color: var( --swh-color-muted );
+	font-size: 11px;
+	font-weight: normal;
+	text-decoration: none;
 }
 
 .swh-lookup-section {
-	margin-top: 20px;
-	padding-top: 20px;
-	border-top: 1px solid #ddd;
+	margin-top: var( --swh-space-lg );
+	padding-top: var( --swh-space-lg );
+	border-top: 1px solid var( --swh-color-border );
 }
 
 .swh-lookup-section a {
-	color: #0073aa;
+	color: var( --swh-color-primary );
 	text-decoration: underline;
 }
 
 .swh-file-error {
-	padding: 10px;
+	padding: var( --swh-space-sm );
 	margin-top: 8px;
-	border: 1px solid #f5c6cb;
-	border-radius: 4px;
-	background-color: #f8d7da;
-	color: #721c24;
+	border: 1px solid var( --swh-color-error-bd );
+	border-radius: var( --swh-radius-sm );
+	background-color: var( --swh-color-error-bg );
+	color: var( --swh-color-error-text );
 	font-size: 14px;
 	white-space: pre-line;
 }
 
 .swh-text-muted {
-	color: #767676;
+	color: var( --swh-color-muted );
 }
 
 .swh-cta-primary {
@@ -185,107 +214,176 @@
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 15px;
-	background-color: #d4edda;
-	border: 1px solid #c3e6cb;
+	gap: var( --swh-space-md );
+	background-color: var( --swh-color-success-bg );
+	border: 1px solid var( --swh-color-success-bd );
 	border-left: 4px solid #28a745;
-	border-radius: 4px;
-	padding: 15px;
-	margin-bottom: 10px;
+	border-radius: var( --swh-radius-sm );
+	padding: var( --swh-space-md );
+	margin-bottom: var( --swh-space-sm );
 }
 
 .swh-cta-primary-content h4 {
 	margin: 0 0 4px 0;
-	color: #155724;
+	color: var( --swh-color-success-text );
 }
 
 .swh-cta-primary-content p {
 	margin: 0;
 	font-size: 13px;
-	color: #155724;
+	color: var( --swh-color-success-text );
 }
 
 .swh-cta-secondary {
-	margin: 0 0 20px 0;
+	margin: 0 0 var( --swh-space-lg ) 0;
 	font-size: 13px;
 	color: #555;
 }
 
 .swh-cta-secondary a {
-	color: #0073aa;
+	color: var( --swh-color-primary );
 	text-decoration: underline;
 }
 
+/* Upload progress bar */
 .swh-progress-bar {
 	height: 6px;
 	background: #e0e0e0;
 	border-radius: 3px;
-	margin-top: 10px;
+	margin-top: var( --swh-space-sm );
 	overflow: hidden;
 }
 
 .swh-progress-fill {
 	height: 100%;
-	background: #0073aa;
+	background: var( --swh-color-primary );
 	border-radius: 3px;
-	transition: width 0.2s ease;
+	transition: width var( --swh-transition-normal ) ease;
 }
 
-@keyframes swh-progress-slide {
-	0%   { transform: translateX( -100% ); }
-	100% { transform: translateX( 400% ); }
+/* #268: prefers-reduced-motion — only animate when user hasn't requested reduced motion */
+@media ( prefers-reduced-motion: no-preference ) {
+	@keyframes swh-progress-slide {
+		0%   { transform: translateX( -100% ); }
+		100% { transform: translateX( 400% ); }
+	}
+
+	.swh-progress-bar--indeterminate .swh-progress-fill {
+		width: 25%;
+		transition: none;
+		animation: swh-progress-slide 1.4s ease-in-out infinite;
+	}
 }
 
-.swh-progress-bar--indeterminate .swh-progress-fill {
-	width: 25%;
-	transition: none;
-	animation: swh-progress-slide 1.4s ease-in-out infinite;
+/* ── Drag-and-drop file upload zone (#273) ───────────────────────────────── */
+.swh-drop-zone {
+	border: 2px dashed #ccc;
+	border-radius: var( --swh-radius-sm );
+	padding: var( --swh-space-lg ) var( --swh-space-md );
+	text-align: center;
+	cursor: pointer;
+	transition: border-color var( --swh-transition-normal ), background var( --swh-transition-normal );
+	position: relative;
 }
 
+.swh-drop-zone:focus-within {
+	border-color: var( --swh-color-primary );
+	outline: 2px solid var( --swh-color-primary );
+	outline-offset: 2px;
+}
+
+.swh-drop-zone--dragover {
+	border-color: var( --swh-color-primary );
+	background: var( --swh-color-info-bg );
+}
+
+.swh-drop-zone input[type="file"] {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+	width: 100%;
+	height: 100%;
+}
+
+.swh-drop-zone-label {
+	pointer-events: none;
+	color: var( --swh-color-muted );
+	font-size: 14px;
+}
+
+.swh-drop-zone-label strong {
+	color: var( --swh-color-primary );
+}
+
+.swh-drop-zone-selected {
+	margin-top: 6px;
+	font-size: 13px;
+	color: var( --swh-color-text );
+}
+
+/* ── CSAT star widget (#262 keyboard, #269 mobile size, #275 auto-dismiss) ── */
 .swh-csat-stars {
 	display: flex;
 	gap: 4px;
 }
 
+/* #269: responsive star size — clamp between 22px mobile and 28px desktop */
 .swh-csat-star {
 	background: none;
 	border: none;
 	cursor: pointer;
-	font-size: 28px;
+	font-size: clamp( 22px, 5vw, 28px );
 	color: #ccc;
-	padding: 0;
+	padding: 2px;
 	line-height: 1;
-	transition: color 0.1s;
+	transition: color var( --swh-transition-fast );
+	border-radius: 2px;
 }
 
 .swh-csat-star:hover,
 .swh-csat-star--active {
-	color: #f0ad00;
+	color: var( --swh-color-star );
 }
 
+/* #262: keyboard focus for CSAT stars */
 .swh-csat-star:focus {
-	outline: 2px solid #0073aa;
+	outline: 2px solid var( --swh-color-primary );
 	outline-offset: 2px;
 }
 
+/* ── Lookup toggle slide transition (#272) ───────────────────────────────── */
+#swh-lookup-form {
+	overflow: hidden;
+	transition: max-height 0.3s ease, opacity 0.25s ease;
+	max-height: 0;
+	opacity: 0;
+}
+
+#swh-lookup-form.swh-lookup-visible {
+	max-height: 600px;
+	opacity: 1;
+}
+
+/* ── Ticket table ──────────────────────────────────────────────────────────── */
 .swh-ticket-table {
 	width: 100%;
 	border-collapse: collapse;
-	margin-bottom: 20px;
+	margin-bottom: var( --swh-space-lg );
 	font-size: 14px;
 }
 
 .swh-ticket-table th,
 .swh-ticket-table td {
-	padding: 10px 12px;
+	padding: var( --swh-space-sm ) 12px;
 	text-align: left;
-	border-bottom: 1px solid #ddd;
+	border-bottom: 1px solid var( --swh-color-border );
 }
 
 .swh-ticket-table th {
 	font-weight: 600;
-	background: #f9f9f9;
-	color: #333;
+	background: var( --swh-color-bg-subtle );
+	color: var( --swh-color-text );
 }
 
 .swh-ticket-row:hover {
@@ -294,11 +392,17 @@
 
 .swh-ticket-title {
 	font-weight: 600;
-	margin-bottom: 10px;
+	margin-bottom: var( --swh-space-sm );
 }
 
 .swh-section-heading {
 	font-size: 1.2em;
 	font-weight: 600;
-	margin-bottom: 10px;
+	margin-bottom: var( --swh-space-sm );
+}
+
+/* ── Token expiry recovery link (#258) ──────────────────────────────────── */
+.swh-expired-recovery {
+	margin-top: var( --swh-space-sm );
+	font-size: 14px;
 }

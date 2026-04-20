@@ -94,8 +94,39 @@ PORTAL_ID=$($WP post create \
 echo "→ Saving portal page ID to plugin settings..."
 $WP option update swh_ticket_page_id "$PORTAL_ID"
 
+echo "→ Setting default ticket assignee to tech1..."
+TECH1_ID=$($WP user get "$WP_TECH1_USER" --field=ID 2>/dev/null || echo "")
+if [ -n "$TECH1_ID" ]; then
+  $WP option update swh_default_assignee "$TECH1_ID"
+fi
+
 SUBMIT_URL=$($WP post get "$SUBMIT_ID" --field=url)
 PORTAL_URL=$($WP post get "$PORTAL_ID" --field=url)
+
+# Write Docker env file so `make e2e-docker` can source it (overrides testing/.env).
+cat > /tmp/swh-docker-test.env << ENVEOF
+WP_URL=$WP_URL
+WP_LOGIN_URL=$WP_URL/wp-login.php
+WP_ADMIN_URL=$WP_URL/wp-admin/
+WP_SUBMIT_PAGE=$SUBMIT_URL
+WP_PORTAL_PAGE=$PORTAL_URL
+WP_ADMIN_USER=$WP_ADMIN_USER
+WP_ADMIN_PASS=$WP_ADMIN_PASS
+WP_TECH1_USER=$WP_TECH1_USER
+WP_TECH1_PASS=$WP_TECH1_PASS
+WP_TECH1_EMAIL=$WP_TECH1_EMAIL
+WP_TECH2_USER=$WP_TECH2_USER
+WP_TECH2_PASS=$WP_TECH2_PASS
+WP_TECH2_EMAIL=$WP_TECH2_EMAIL
+CLIENT1_NAME="$CLIENT1_NAME"
+CLIENT1_EMAIL=$CLIENT1_EMAIL
+CLIENT2_NAME="$CLIENT2_NAME"
+CLIENT2_EMAIL=$CLIENT2_EMAIL
+WP_MODE=docker
+WP_CONTAINER=wpcli
+WP_PATH=/var/www/html
+MAILHOG_URL=http://localhost:8025
+ENVEOF
 
 echo ""
 echo "✅ WordPress setup complete."

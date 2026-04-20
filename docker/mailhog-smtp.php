@@ -13,6 +13,8 @@ if ( ! $swh_mailhog_host ) {
 	return;
 }
 
+add_filter( 'wp_mail_from', fn() => 'wordpress@example.com' );
+
 add_action(
 	'phpmailer_init',
 	function ( $phpmailer ) use ( $swh_mailhog_host ) {

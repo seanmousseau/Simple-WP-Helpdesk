@@ -34,11 +34,14 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		if ( activeTabInput ) { activeTabInput.value = tabId; }
 	}
 
-	// Restore active tab from URL param (set after redirect on save).
-	const urlParams = new URLSearchParams( window.location.search );
-	const savedTab  = urlParams.get( 'swh_tab' );
-	if ( savedTab && document.getElementById( savedTab ) ) {
-		activateTab( savedTab );
+	// Restore active tab: URL param wins (post-save redirect), then sessionStorage (#267).
+	const urlParams    = new URLSearchParams( window.location.search );
+	const savedTab     = urlParams.get( 'swh_tab' );
+	const sessionTab   = sessionStorage.getItem( 'swh_active_tab' );
+	const restoreTab   = ( savedTab && document.getElementById( savedTab ) ) ? savedTab
+		: ( sessionTab && document.getElementById( sessionTab ) ) ? sessionTab : null;
+	if ( restoreTab ) {
+		activateTab( restoreTab );
 	}
 
 	/**
@@ -50,6 +53,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		tab.addEventListener( 'click', function ( e ) {
 			e.preventDefault();
 			activateTab( tab.dataset.tab );
+			sessionStorage.setItem( 'swh_active_tab', tab.dataset.tab );
 			tab.focus();
 		} );
 	} );
@@ -239,6 +243,20 @@ document.addEventListener( 'DOMContentLoaded', function () {
 					form.submit();
 				}
 			}
+		} );
+	}
+
+	// Ticket editor: merge form expand/collapse (#271).
+	const mergeToggle = document.getElementById( 'swh-merge-toggle' );
+	const mergeBody   = document.getElementById( 'swh-merge-section' );
+
+	if ( mergeToggle && mergeBody ) {
+		mergeToggle.addEventListener( 'click', function () {
+			const expanded = mergeToggle.getAttribute( 'aria-expanded' ) === 'true';
+			mergeToggle.setAttribute( 'aria-expanded', String( ! expanded ) );
+			mergeBody.classList.toggle( 'swh-merge-visible', ! expanded );
+			mergeToggle.textContent = ( ! expanded ? '\u25BC ' : '\u25BA ' )
+				+ mergeToggle.textContent.replace( /^[\u25BC\u25BA]\s*/, '' );
 		} );
 	}
 

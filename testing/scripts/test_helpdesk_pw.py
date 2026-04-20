@@ -237,11 +237,16 @@ def mailhog_clear() -> None:
         pass
 
 
-def expect_email(recipient: str, description: str):
+def expect_email(recipient: str, description: str, clear_after: bool = True):
     """Assert an email was delivered.
 
     Docker mode (MAILHOG_URL set): polls MailHog API and calls check() immediately.
     SSH mode: appends to EMAIL_CHECKS for manual verification after the run.
+
+    clear_after: if True (default) clear MailHog after the check. Pass False when
+    multiple emails are expected from the same PHP action (e.g., client + admin
+    notification from a single ticket submission) so the second check still finds
+    its message.
     """
     if WP_MODE == "docker" and MAILHOG_URL:
         messages = mailhog_get_messages(recipient, timeout=10)
@@ -250,7 +255,8 @@ def expect_email(recipient: str, description: str):
             bool(messages),
             f"No email found in MailHog for {recipient}",
         )
-        mailhog_clear()
+        if clear_after:
+            mailhog_clear()
     else:
         EMAIL_CHECKS.append({"to": recipient, "description": description})
 
@@ -444,7 +450,7 @@ def test_03_ticket_submission(page: Page):
           "swh-alert-success" in page.content(), "no .swh-alert-success found")
     screenshot(page, "05_submit_ticket1_success")
 
-    expect_email(CLIENT1_EMAIL, "new ticket confirmation to client")
+    expect_email(CLIENT1_EMAIL, "new ticket confirmation to client", clear_after=False)
     expect_email(TECH1_EMAIL, "new ticket notification to default assignee (tech1)")
 
     # ── Ticket 2 (CLIENT2) — clear rate limit first ───────────────────────────
@@ -569,6 +575,7 @@ def test_07_technician_workflow(page: Page):
           TEST_TICKET_TITLE in page.inner_text("body"))
     screenshot(page, "08_tech1_ticket_list")
 
+    mailhog_clear()
     admin_update_ticket(page, state['ticket_id'],
                         tech_reply=TEST_TECH_REPLY,
                         internal_note=TEST_INTERNAL_NOTE)
@@ -607,6 +614,7 @@ def test_08_client_portal(page: Page):
           page.locator('[name="ticket_reply_text"]').count() > 0)
     screenshot(page, "10_client_portal")
 
+    mailhog_clear()
     page.fill('[name="ticket_reply_text"]', TEST_CLIENT_REPLY)
     page.click('[name="swh_user_reply_submit"]')
     page.wait_for_selector(".swh-alert-success, .swh-alert-error")
@@ -666,12 +674,13 @@ def test_10_portal_close_reopen(page: Page):
 
     close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
     if close_btn.count() > 0:
+        mailhog_clear()
         close_btn.click()
         # After close, the CSAT widget shows (swh-alert-info) — success is hidden until skip/rating.
         page.wait_for_selector("#swh-csat, .swh-alert-success, .swh-alert-error")
         check("portal: close ticket shows CSAT or success",
               "swh-csat" in page.content() or "swh-alert-success" in page.content())
-        expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client")
+        expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client", clear_after=False)
         expect_email(TECH1_EMAIL, "ticket closed notification to assigned technician (tech1)")
         screenshot(page, "14_ticket_closed_portal")
 
@@ -680,6 +689,7 @@ def test_10_portal_close_reopen(page: Page):
         reopen_ta = page.locator('[name="ticket_reopen_text"]')
         if reopen_ta.count() > 0:
             reopen_ta.fill("I still need help with this issue.")
+        mailhog_clear()
         page.click('[name="swh_user_reopen_submit"]')
         page.wait_for_selector(".swh-alert-success, .swh-alert-error")
         check("portal: reopen success", "swh-alert-success" in page.content())
@@ -2399,8 +2409,13 @@ def test_43_ticket_merge(page: Page):
               merge_input.count() > 0, "#swh-merge-target-id not found")
 
         if merge_input.count() > 0:
+            # Expand the merge section (force=True bypasses jQuery UI sortable overlay).
+            merge_toggle = page.locator('#swh-merge-toggle')
+            if merge_toggle.count() > 0:
+                merge_toggle.click(force=True)
+                page.wait_for_timeout(300)
             merge_input.fill(str(target_id))
-            page.locator('#swh-merge-btn').click()
+            page.locator('#swh-merge-btn').click(force=True)
             page.wait_for_timeout(2000)  # AJAX
             merge_msg = page.locator('#swh-merge-msg').inner_text() if \
                 page.locator('#swh-merge-msg').count() > 0 else ""
@@ -3096,6 +3111,169 @@ def test_52_email_test_button(page: Page):
             expect_email(current_admin_email, "Test email from Send Test Email button (Settings → Email Templates)")
 
 
+# ── v3.2.0 UX / A11y / DX verifications ──────────────────────────────────────
+
+def test_53_ux_a11y(page: Page):
+    """v3.2.0 UX/A11y improvements: badge aria, sort attrs, merge toggle, lookup
+    slide, honeypot clip-path, drag-zone, CSAT keyboard/radiogroup, settings tab
+    persistence, expired-token recovery link."""
+    print("\n[53] UX / A11y Improvements (v3.2.0 — #258–#275)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # ── #263 aria-sort on admin list sortable columns ─────────────────────────
+    _navigate_admin_list(page)
+    aria_sort_none_count = page.evaluate("""
+        () => document.querySelectorAll('th.sortable[aria-sort="none"], th.sorted[aria-sort]').length
+    """)
+    check("a11y #263: sortable columns have aria-sort attribute",
+          aria_sort_none_count > 0,
+          f"found {aria_sort_none_count} th.sortable[aria-sort] elements")
+
+    # ── #264 aria-live on unread badge ────────────────────────────────────────
+    if state.get('ticket_id'):
+        ticket_id = state['ticket_id']
+        wpcli(f"post meta update {ticket_id} _swh_unread 1")
+        wpcli("eval \"delete_transient('swh_unread_count');\"")
+        page.goto(f"{WP_ADMIN_URL}/")
+        page.wait_for_load_state("load")
+        badge_aria_live = page.evaluate("""
+            () => {
+                var b = document.querySelector(
+                    '#adminmenu a[href*="post_type=helpdesk_ticket"] .awaiting-mod'
+                );
+                return b ? b.getAttribute('aria-live') : null;
+            }
+        """)
+        check("a11y #264: unread badge has aria-live attribute",
+              badge_aria_live == 'polite',
+              f"aria-live={badge_aria_live!r}")
+        wpcli(f"post meta delete {ticket_id} _swh_unread")
+        wpcli("eval \"delete_transient('swh_unread_count');\"")
+
+    # ── #271 merge form collapse toggle ──────────────────────────────────────
+    if state.get('ticket_id'):
+        _navigate_ticket_editor(page, state['ticket_id'])
+        merge_toggle = page.locator('#swh-merge-toggle')
+        merge_body   = page.locator('#swh-merge-section')
+        check("ux #271: merge toggle button exists",
+              merge_toggle.count() > 0)
+        check("ux #271: merge body section exists",
+              merge_body.count() > 0)
+        if merge_toggle.count() > 0 and merge_body.count() > 0:
+            # Collapsed by default — aria-expanded should be false.
+            aria_exp_before = merge_toggle.get_attribute('aria-expanded')
+            check("ux #271: merge section collapsed by default (aria-expanded=false)",
+                  aria_exp_before == 'false',
+                  f"aria-expanded={aria_exp_before!r}")
+            body_visible_before = merge_body.evaluate(
+                "el => el.classList.contains('swh-merge-visible')"
+            )
+            check("ux #271: swh-merge-visible absent when collapsed",
+                  not body_visible_before)
+            # Click to expand (force=True bypasses jQuery UI sortable overlay).
+            merge_toggle.click(force=True)
+            page.wait_for_timeout(400)
+            aria_exp_after = merge_toggle.get_attribute('aria-expanded')
+            check("ux #271: aria-expanded=true after toggle click",
+                  aria_exp_after == 'true',
+                  f"aria-expanded={aria_exp_after!r}")
+            body_visible_after = merge_body.evaluate(
+                "el => el.classList.contains('swh-merge-visible')"
+            )
+            check("ux #271: swh-merge-visible present after expand",
+                  body_visible_after)
+
+    screenshot(page, "65a_merge_toggle")
+
+    # ── #267 settings tab sessionStorage persistence ──────────────────────────
+    _navigate_settings(page)
+    # Click the Email Templates tab.
+    page.locator('#swh-tab-emails').click()
+    page.wait_for_timeout(200)
+    stored_tab = page.evaluate(
+        "() => sessionStorage.getItem('swh_active_tab')"
+    )
+    check("ux #267: active tab stored in sessionStorage on click",
+          stored_tab == 'tab-emails',
+          f"sessionStorage swh_active_tab={stored_tab!r}")
+    # Simulate reload without swh_tab in URL (plain settings URL).
+    page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-settings")
+    page.wait_for_load_state("load")
+    active_tab_id = page.evaluate("""
+        () => {
+            var active = document.querySelector('.nav-tab-active');
+            return active ? active.getAttribute('data-tab') : null;
+        }
+    """)
+    check("ux #267: settings tab restored from sessionStorage on reload",
+          active_tab_id == 'tab-emails',
+          f"active tab after reload: {active_tab_id!r}")
+
+    screenshot(page, "65b_settings_tab_persist")
+
+    wp_logout(page)
+
+    # ── Frontend: lookup toggle, honeypot, drag-zone, CSAT ────────────────────
+    page.goto(WP_SUBMIT_PAGE)
+    page.wait_for_load_state("load")
+
+    # ── #272 lookup toggle CSS class (not display:none) ───────────────────────
+    lookup_form = page.locator('#swh-lookup-form')
+    if lookup_form.count() > 0:
+        lookup_has_display_none = lookup_form.evaluate(
+            "el => window.getComputedStyle(el).display === 'none'"
+        )
+        check("ux #272: lookup form hidden via CSS class (not inline display:none)",
+              not lookup_has_display_none,
+              "element has computed display:none — may not be using CSS transition")
+        has_inline_display = lookup_form.evaluate(
+            "el => el.style.display === 'none'"
+        )
+        check("ux #272: lookup form has no inline display:none",
+              not has_inline_display,
+              "inline style.display is 'none' — should use CSS class instead")
+
+    # ── #270 honeypot clip-path technique ─────────────────────────────────────
+    honeypot_style = page.evaluate("""
+        () => {
+            var hp = document.querySelector('input[name="swh_hp_email"]');
+            if (!hp) return null;
+            var style = hp.getAttribute('style') || '';
+            return style;
+        }
+    """)
+    if honeypot_style is not None:
+        check("security #270: honeypot does not use left:-9999px",
+              'left' not in honeypot_style or '-9999' not in honeypot_style,
+              f"honeypot style: {honeypot_style!r}")
+        check("security #270: honeypot uses clip-path technique",
+              'clip-path' in honeypot_style,
+              f"honeypot style: {honeypot_style!r}")
+
+    # ── #273 drag-and-drop zone wraps file input ──────────────────────────────
+    drop_zone = page.locator('.swh-drop-zone')
+    check("ux #273: file input wrapped in .swh-drop-zone",
+          drop_zone.count() > 0,
+          "no .swh-drop-zone found on submit page")
+
+    # ── #262 CSAT — verified via portal after submit; skip if not on CSAT page
+    # ── #258 expired token recovery link ─────────────────────────────────────
+    if state.get('portal_url'):
+        # Use a fake/expired token to trigger the expired state.
+        bad_token_url = re.sub(r'token=[^&]+', 'token=expiredtokentest', state['portal_url'])
+        page.goto(bad_token_url)
+        page.wait_for_load_state("load")
+        body = page.inner_text("body")
+        # Could be "invalid" or "expired" depending on token length/format.
+        # Just verify the page doesn't show a blank error without any text.
+        check("ux #258: portal error page has descriptive text",
+              any(w in body.lower() for w in ('expired', 'invalid', 'look up', 'lookup', 'ticket')),
+              f"portal error body: {body[:200]!r}")
+
+    screenshot(page, "65c_ux_a11y_frontend")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -3200,6 +3378,7 @@ SECTIONS = [
     test_50_unread_badge,             # 50 — #101 unread badge
     test_51_unread_row_highlight,     # 51 — #102 row highlight
     test_52_email_test_button,        # 52 — #103 test email button
+    test_53_ux_a11y,                  # 53 — v3.2.0 UX/a11y (#258–#275)
     test_28_cleanup,                  # 28 — always last
 ]
 

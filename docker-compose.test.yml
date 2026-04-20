@@ -39,6 +39,7 @@ services:
     volumes:
       - ./simple-wp-helpdesk:/var/www/html/wp-content/plugins/simple-wp-helpdesk:ro
       - ./docker/mailhog-smtp.php:/var/www/html/wp-content/mu-plugins/mailhog-smtp.php:ro
+      - ./docker/opcache-disable.ini:/usr/local/etc/php/conf.d/opcache-disable.ini:ro
       - wp_data:/var/www/html
 
   wpcli:

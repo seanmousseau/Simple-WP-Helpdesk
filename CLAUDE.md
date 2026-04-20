@@ -105,7 +105,7 @@ The full test suite must pass before any release. Use `make` targets (requires `
 ```bash
 make test-docker  # full gate inside Docker — no host PHP/semgrep needed (preferred)
 make test         # full gate on host — requires PHP 8.1+, semgrep
-make e2e          # Playwright E2E — 52 sections (set WP_MODE=docker or configure SSH vars)
+make e2e          # Playwright E2E — 53 sections (set WP_MODE=docker or configure SSH vars)
 make e2e-docker   # fully self-contained E2E: up + setup + test + teardown in one command
 make test-all     # make test + make e2e
 ```
@@ -123,7 +123,7 @@ make coverage    # PHPUnit coverage → coverage.xml (requires pcov or xdebug)
 
 ### Docker test stack (local or CI)
 ```bash
-# Fully self-contained — one command spins up, runs all 52 E2E sections, tears down
+# Fully self-contained — one command spins up, runs all 53 E2E sections, tears down
 make e2e-docker
 
 # Or manually:
@@ -164,7 +164,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 52 test sections (34 original + 11 v3.0.0 + 7 v3.1.0)
+### 53 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -217,6 +217,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 | 50 | unread_badge | |
 | 51 | unread_row_highlight | |
 | 52 | email_test_button | |
+| 53 | ux_a11y | |
 | 28 | cleanup | |
 
 ### Architecture
@@ -272,7 +273,7 @@ Every PR that introduces user-facing changes **must** include a new or updated P
 | Internal refactor, no UX change | None required — existing sections must still pass |
 | Security fix | Extend or add a `security`-marked section |
 
-New sections continue from the next available number (currently 52). Add the section to the table above.
+New sections continue from the next available number (currently 53). Add the section to the table above.
 
 ## Dev Tools
 

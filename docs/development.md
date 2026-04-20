@@ -129,23 +129,48 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 ---
 
+## Testing
+
+The full test suite must pass before any PR is opened or release is cut.
+
+```bash
+make test-docker   # full PHP gate inside Docker (preferred — no host PHP needed)
+make test          # full PHP gate on host (requires PHP 8.1+, semgrep)
+make e2e           # Playwright E2E suite (set WP_MODE=docker or configure SSH vars)
+make e2e-docker    # self-contained E2E: up → setup → Playwright → teardown in one command
+make coverage      # PHPUnit + pcov → coverage.xml (Clover)
+```
+
+Individual tools:
+
+| Command | Purpose |
+|---------|---------|
+| `make lint` | PHP syntax check |
+| `make phpcs` | WordPress Coding Standards (zero errors) |
+| `make phpstan` | Static analysis level 9 |
+| `make phpunit` | Unit tests |
+| `make semgrep` | SAST security scan |
+
+**MailHog email assertions:** when `MAILHOG_URL` is set and `WP_MODE=docker`, `expect_email()` calls in the E2E suite assert delivery via the MailHog API automatically. In SSH mode they fall back to the manual `EMAIL_CHECKS` summary printed at the end of the run.
+
+---
+
 ## Release Process
 
 1. **Bump the version** in `simple-wp-helpdesk.php`:
    - `Version:` in the plugin header comment
-   - `define( 'SWH_VERSION', 'X.Y' )`
+   - `define( 'SWH_VERSION', 'X.Y.Z' )`
 
-2. **Update `CHANGELOG.md`** and any relevant `docs/` pages.
+2. **Update `CHANGELOG.md`**, `simple-wp-helpdesk/readme.txt` (stable tag + changelog section), and any relevant `docs/` pages.
 
-3. **Build the release ZIP** and commit it under `releases/vX.Y/`:
-   ```bash
-   mkdir -p releases/vX.Y
-   zip -r releases/vX.Y/simple-wp-helpdesk.zip simple-wp-helpdesk/
-   ```
-   > The ZIP must be named `simple-wp-helpdesk.zip` (not versioned) so WordPress treats it as an update to the existing plugin rather than a new install.
+3. **Run the full gate** — `make test-docker && make e2e-docker` must both exit 0.
 
 4. **Close any GitHub issues** addressed by the release.
 
 5. **Open a PR** from `release/vX.Y.Z` to `main`.
 
-6. **Create a GitHub Release** with a tag that **exactly matches** the `Version:` header (e.g. `1.6`, a `v` prefix is fine). **Attach `simple-wp-helpdesk.zip` as a release asset** — without an attached asset the auto-updater falls back to the raw source archive, which is unreliable.
+6. **Merge to `main`**, then push the version tag:
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+   `release.yml` fires automatically on the tag push — it builds `simple-wp-helpdesk.zip` and creates the GitHub Release with the ZIP attached. No manual ZIP step required.

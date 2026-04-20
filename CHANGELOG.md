@@ -26,6 +26,25 @@ starting from the next release after 1.8.
 - **Pre-push hook upgraded (#293):** Auto-detects Docker (`docker info`); prefers `make test-docker` when available, falls back to `make test` on machines without Docker.
 - **Dependabot allow-list expanded (#298):** Added `php-stubs/wordpress-stubs`, `wp-coding-standards/wpcs`, and `dealerdirect/phpcodesniffer-composer-installer` to the Composer allow-list.
 
+### UX / A11y / DX
+
+- **#258 — Expired portal token recovery link:** Expired-token page now displays an error alert with a direct link to the ticket lookup form, instead of a blank/generic error.
+- **#259 — Pill-style status badges:** Status badges in admin ticket list and frontend portal now use modern pill styling (`border-radius: 9999px`, `letter-spacing: 0.02em`) replacing the legacy Bootstrap-era alert style.
+- **#260 — Shared design tokens extracted to `swh-shared.css`:** All CSS custom properties (`--swh-color-*`, `--swh-radius-*`, `--swh-space-*`, `--swh-font-*`, `--swh-transition-*`) now live in a single shared stylesheet loaded as a dependency of both `swh-frontend.css` and `swh-admin.css`, eliminating the duplicated `:root` block.
+- **#262 — CSAT star widget keyboard & ARIA support:** Star rating widget now uses `role="radiogroup"` / `role="radio"` ARIA semantics with roving tabindex and `ArrowLeft`/`ArrowRight` keyboard navigation. Previously mouse-only.
+- **#263 — `aria-sort` on admin ticket list sortable columns:** Sortable column headers that are not the active sort now receive `aria-sort="none"` via an inline script injected by `wp_add_inline_script()`. Active column `aria-sort` was already set by WordPress core.
+- **#264 — `aria-live` on unread reply badge:** Admin menu unread badge now carries `aria-live="polite"` and a descriptive `aria-label` so assistive technologies announce updates without requiring focus.
+- **#265 / #266 — CSS typography and spacing scale:** All font sizes and spacing values now reference design tokens (`--swh-font-*`, `--swh-space-*`) rather than ad-hoc pixel values.
+- **#267 — Settings tab position persisted across form submissions:** Active tab is now saved to `sessionStorage` on click. On page reload (e.g. after a form submission that doesn't redirect), the tab position is restored from `sessionStorage` if the URL `swh_tab` param is absent.
+- **#268 — `prefers-reduced-motion` respected:** Progress bar indeterminate animation is now wrapped in `@media (prefers-reduced-motion: no-preference)` so animations do not run for users who have requested reduced motion.
+- **#269 — Responsive CSAT star size:** Star rating font size now uses `clamp(22px, 5vw, 28px)` to scale correctly on mobile instead of a fixed `28px`.
+- **#270 — Modern honeypot technique:** Honeypot fields in all three forms (submit, portal reply, portal lookup) now use the clip-path off-screen technique (`clip-path:inset(50%); height:1px; overflow:hidden; position:absolute; white-space:nowrap; width:1px;`) instead of `position:absolute; left:-9999px`.
+- **#271 — Merge form expand/collapse transition:** The "Merge Ticket" section in the ticket editor is now collapsed by default behind a toggle button. Expanding/collapsing uses a CSS `max-height` + `opacity` transition (0.2 s) instead of appearing instantly.
+- **#272 — Ticket lookup form slide transition:** The lookup form toggle now animates with a CSS `max-height` + `opacity` slide (0.3 s) instead of an instant `display:none` toggle.
+- **#273 — Drag-and-drop file attachments:** All file attachment inputs on the frontend are now wrapped in a styled drop zone (`swh-drop-zone`) that accepts `dragover`/`drop` events. Files dropped onto the zone are assigned to the underlying `<input type="file">` via `DataTransfer`.
+- **#274 — File attachment size and type icon:** After selecting or dropping files, the UI displays a per-file summary (inline SVG type icon + filename + human-readable size). All DOM mutations use `createElement`/`createElementNS`/`textContent` exclusively — no `innerHTML`.
+- **#275 — CSAT widget auto-dismiss:** The CSAT rating prompt auto-dismisses after 60 seconds if the client ignores it, preventing it from persisting indefinitely.
+
 ### Changed
 
 - `CLAUDE.md` release process: step 7 is now "push tag → `release.yml` fires automatically" — no manual `zip` command.

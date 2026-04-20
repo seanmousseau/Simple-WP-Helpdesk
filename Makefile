@@ -48,13 +48,16 @@ e2e-docker: ## Full E2E in Docker — spin up stack, run suite, tear down
 	@echo "→ Starting Docker stack..."
 	@docker compose -f docker-compose.test.yml up -d db wordpress wpcli mailhog
 	@echo "→ Waiting for WordPress (up to 90s)..."
-	@timeout 90 bash -c 'until curl -sf http://localhost:8080/wp-login.php >/dev/null 2>&1; do sleep 3; done'
+	@i=0; until curl -sf http://localhost:8080/wp-login.php >/dev/null 2>&1; do \
+		sleep 3; i=$$((i+3)); if [ $$i -ge 90 ]; then echo "ERROR: WordPress did not start in 90s"; exit 1; fi; \
+	done
 	@echo "→ Setting up WordPress test environment..."
 	@bash docker/setup-test-wp.sh
 	@echo "→ Running Playwright E2E..."
 	@set +e; \
 	 cd testing && source .venv/bin/activate && \
-	 WP_MODE=docker MAILHOG_URL=http://localhost:8025 pytest scripts/test_helpdesk_pw.py -v; \
+	 set -a && source /tmp/swh-docker-test.env && set +a && \
+	 pytest scripts/test_helpdesk_pw.py -v; \
 	 EXIT=$$?; \
 	 cd .. && docker compose -f docker-compose.test.yml down -v; \
 	 exit $$EXIT

@@ -1,9 +1,9 @@
 /**
  * Simple WP Helpdesk — frontend ticket form interactions.
  *
- * Handles file type/size validation, inline error display, and the
- * ticket lookup form toggle on the [submit_ticket] and [helpdesk_portal]
- * shortcode pages.
+ * Handles file type/size validation, inline error display, the
+ * ticket lookup form toggle, CSAT widget, template selector,
+ * drag-and-drop file upload, and upload progress.
  *
  * @since 2.0.0
  * @package Simple_WP_Helpdesk
@@ -39,37 +39,186 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	const maxBytes = swhConfig.maxMb * 1024 * 1024;
 
 	/**
-	 * Validates file type and size when the user selects files, showing inline errors.
+	 * Returns an SVG DOM element for a file icon matching the given extension.
+	 *
+	 * Uses hardcoded SVG path data (no user input); built via DOM to avoid innerHTML.
+	 *
+	 * @param {string} ext - Lowercase file extension.
+	 * @return {SVGElement} SVG element with aria-hidden.
+	 */
+	function swhFileIconEl( ext ) {
+		const imgExts = [ 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg' ];
+		const docExts = [ 'doc', 'docx', 'txt', 'rtf', 'odt' ];
+		let pathD;
+		if ( imgExts.indexOf( ext ) !== -1 ) {
+			pathD = 'M21 15l-5-5L5 21M3 3h18v18H3z M8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z';
+		} else if ( [ 'pdf' ].indexOf( ext ) !== -1 ) {
+			pathD = 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5M8 13h8M8 17h8M8 9h2';
+		} else if ( docExts.indexOf( ext ) !== -1 ) {
+			pathD = 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5M8 13h8M8 17h5';
+		} else {
+			pathD = 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5';
+		}
+		const ns  = 'http://www.w3.org/2000/svg';
+		const svg = document.createElementNS( ns, 'svg' );
+		svg.setAttribute( 'class', 'swh-file-icon' );
+		svg.setAttribute( 'viewBox', '0 0 24 24' );
+		svg.setAttribute( 'fill', 'none' );
+		svg.setAttribute( 'stroke', 'currentColor' );
+		svg.setAttribute( 'stroke-width', '2' );
+		svg.setAttribute( 'stroke-linecap', 'round' );
+		svg.setAttribute( 'stroke-linejoin', 'round' );
+		svg.setAttribute( 'aria-hidden', 'true' );
+		const path = document.createElementNS( ns, 'path' );
+		path.setAttribute( 'd', pathD );
+		svg.appendChild( path );
+		return svg;
+	}
+
+	/**
+	 * Formats a byte count as a human-readable string.
+	 *
+	 * @param {number} bytes - File size in bytes.
+	 * @return {string} E.g. "1.2 MB" or "340 KB".
+	 */
+	function swhFormatSize( bytes ) {
+		if ( bytes >= 1048576 ) { return ( bytes / 1048576 ).toFixed( 1 ) + ' MB'; }
+		if ( bytes >= 1024 )    { return Math.round( bytes / 1024 ) + ' KB'; }
+		return bytes + ' B';
+	}
+
+	/**
+	 * Validates the given FileList; calls swhShowFileError on failure.
+	 *
+	 * @param {HTMLInputElement} input - The file input.
+	 * @param {FileList}         files - Files to validate.
+	 * @return {boolean} True if all files pass validation.
+	 */
+	function swhValidateFiles( input, files ) {
+		swhShowFileError( input, '' );
+		if ( swhConfig.maxFiles > 0 && files.length > swhConfig.maxFiles ) {
+			swhShowFileError( input, swhConfig.i18n.maxFilesError.replace( '%d', swhConfig.maxFiles ) );
+			return false;
+		}
+		let errorMsg = '';
+		for ( let i = 0; i < files.length; i++ ) {
+			const file = files[ i ];
+			const ext  = file.name.split( '.' ).pop().toLowerCase();
+			if ( swhConfig.allowedExts.indexOf( ext ) === -1 ) {
+				errorMsg += swhConfig.i18n.invalidType.replace( '%s', file.name ) + '\n';
+			}
+			if ( file.size > maxBytes ) {
+				errorMsg += swhConfig.i18n.sizeExceeded.replace( '%s', file.name ).replace( '%d', swhConfig.maxMb ) + '\n';
+			}
+		}
+		if ( errorMsg !== '' ) {
+			swhShowFileError( input, errorMsg );
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Builds a file-summary line showing icon + name + size using safe DOM methods.
+	 *
+	 * @param {File} file - A File object from a FileList.
+	 * @return {HTMLElement} A span containing the icon, name, and size.
+	 */
+	function swhBuildFileSummary( file ) {
+		const ext  = file.name.split( '.' ).pop().toLowerCase();
+		const span = document.createElement( 'span' );
+		span.className = 'swh-attachment-item';
+		span.appendChild( swhFileIconEl( ext ) );
+		const name      = document.createElement( 'span' );
+		name.textContent = file.name;
+		const size      = document.createElement( 'span' );
+		size.className  = 'swh-file-size';
+		size.textContent = '(' + swhFormatSize( file.size ) + ')';
+		span.appendChild( name );
+		span.appendChild( size );
+		return span;
+	}
+
+	/**
+	 * Upgrades all .swh-file-input elements: drag-and-drop (#273),
+	 * file summary with icons and sizes (#274), and validation.
 	 */
 	document.querySelectorAll( '.swh-file-input' ).forEach( function ( input ) {
+		const wrap = input.parentNode;
+
+		if ( wrap.classList.contains( 'swh-drop-zone' ) ) {
+			return; // Already upgraded.
+		}
+
+		const zone      = document.createElement( 'div' );
+		zone.className  = 'swh-drop-zone';
+
+		const lbl       = document.createElement( 'div' );
+		lbl.className   = 'swh-drop-zone-label';
+		const strong    = document.createElement( 'strong' );
+		strong.textContent = ( swhConfig.i18n && swhConfig.i18n.dropLabel ) || 'Choose files or drag & drop here';
+		lbl.appendChild( strong );
+
+		const selected      = document.createElement( 'div' );
+		selected.className  = 'swh-drop-zone-selected';
+
+		wrap.insertBefore( zone, input );
+		zone.appendChild( input );
+		zone.appendChild( lbl );
+		zone.appendChild( selected );
+
+		function updateSelected( files ) {
+			while ( selected.firstChild ) { selected.removeChild( selected.firstChild ); }
+			if ( ! files || files.length === 0 ) { return; }
+			Array.from( files ).forEach( function ( f ) {
+				selected.appendChild( swhBuildFileSummary( f ) );
+			} );
+		}
+
 		input.addEventListener( 'change', function () {
-			swhShowFileError( this, '' );
-			if ( swhConfig.maxFiles > 0 && this.files.length > swhConfig.maxFiles ) {
-				swhShowFileError( this, swhConfig.i18n.maxFilesError.replace( '%d', swhConfig.maxFiles ) );
-				this.value = '';
-				return;
+			if ( swhValidateFiles( input, input.files ) ) {
+				updateSelected( input.files );
+			} else {
+				input.value = '';
+				updateSelected( null );
 			}
-			let errorMsg = '';
-			for ( let i = 0; i < this.files.length; i++ ) {
-				const file = this.files[ i ];
-				const ext  = file.name.split( '.' ).pop().toLowerCase();
-				if ( swhConfig.allowedExts.indexOf( ext ) === -1 ) {
-					errorMsg += swhConfig.i18n.invalidType.replace( '%s', file.name ) + '\n';
-				}
-				if ( file.size > maxBytes ) {
-					errorMsg += swhConfig.i18n.sizeExceeded.replace( '%s', file.name ).replace( '%d', swhConfig.maxMb ) + '\n';
-				}
+		} );
+
+		// Drag-and-drop events.
+		zone.addEventListener( 'dragover', function ( e ) {
+			e.preventDefault();
+			zone.classList.add( 'swh-drop-zone--dragover' );
+		} );
+
+		zone.addEventListener( 'dragleave', function ( e ) {
+			if ( ! zone.contains( e.relatedTarget ) ) {
+				zone.classList.remove( 'swh-drop-zone--dragover' );
 			}
-			if ( errorMsg !== '' ) {
-				swhShowFileError( this, errorMsg );
-				this.value = '';
+		} );
+
+		zone.addEventListener( 'drop', function ( e ) {
+			e.preventDefault();
+			zone.classList.remove( 'swh-drop-zone--dragover' );
+			const dt = e.dataTransfer;
+			if ( ! dt || ! dt.files || dt.files.length === 0 ) { return; }
+			try {
+				// Assign dropped files to the input (modern browsers support DataTransfer constructor).
+				const transfer = new DataTransfer();
+				Array.from( dt.files ).forEach( function ( f ) { transfer.items.add( f ); } );
+				input.files = transfer.files;
+			} catch ( err ) {
+				// DataTransfer constructor not supported — validation only.
+			}
+			if ( swhValidateFiles( input, dt.files ) ) {
+				updateSelected( dt.files );
+			} else {
+				updateSelected( null );
 			}
 		} );
 	} );
 
 	/**
-	 * Replaces .swh-timestamp text content with a human-relative string ("3 hours ago", etc.).
-	 * The ISO8601 datetime attribute preserves machine-readable time; absolute date stays in title.
+	 * Replaces .swh-timestamp text with a human-relative string ("3 hours ago", etc.).
 	 */
 	document.querySelectorAll( '.swh-timestamp' ).forEach( function ( el ) {
 		const iso  = el.getAttribute( 'datetime' );
@@ -96,61 +245,105 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	} );
 
 	/**
-	 * Toggles the ticket lookup form visibility and updates aria-expanded on the trigger link.
+	 * Lookup form toggle with CSS slide/fade transition (#272).
+	 * The form starts hidden via CSS (max-height: 0); toggling the
+	 * .swh-lookup-visible class triggers the transition.
 	 */
 	const toggleLink = document.getElementById( 'swh-toggle-lookup' );
 	if ( toggleLink ) {
+		const lookupForm = document.getElementById( 'swh-lookup-form' );
 		toggleLink.setAttribute( 'aria-expanded', 'false' );
+
 		toggleLink.addEventListener( 'click', function ( e ) {
 			e.preventDefault();
-			const form     = document.getElementById( 'swh-lookup-form' );
-			const expanded = form.style.display !== 'none';
-			form.style.display = expanded ? 'none' : 'block';
+			const expanded = lookupForm.classList.contains( 'swh-lookup-visible' );
+			lookupForm.classList.toggle( 'swh-lookup-visible', ! expanded );
 			toggleLink.setAttribute( 'aria-expanded', String( ! expanded ) );
 		} );
 	}
 
 	/**
-	 * CSAT star widget — shown after a client closes a ticket.
+	 * CSAT star widget (#262 keyboard, #275 auto-dismiss).
 	 *
-	 * Reads ticket_id, nonce, and ajaxurl from data attributes on #swh-csat.
-	 * On star click: submits rating via AJAX, shows #swh-csat-thanks.
-	 * On skip: hides widget, shows #swh-close-success.
+	 * Radiogroup semantics: arrow keys cycle focus; Enter/Space selects.
+	 * Auto-dismisses after 60 s if the client ignores the widget.
 	 */
 	const csatBox = document.getElementById( 'swh-csat' );
 	if ( csatBox ) {
-		const stars      = csatBox.querySelectorAll( '.swh-csat-star' );
+		const stars      = Array.from( csatBox.querySelectorAll( '.swh-csat-star' ) );
 		const skipLink   = document.getElementById( 'swh-csat-skip' );
 		const thanksBox  = document.getElementById( 'swh-csat-thanks' );
 		const successBox = document.getElementById( 'swh-close-success' );
 
-		stars.forEach( function ( btn ) {
-			btn.addEventListener( 'mouseenter', function () {
-				const hovered = parseInt( btn.getAttribute( 'data-rating' ), 10 );
-				stars.forEach( function ( s ) {
-					s.classList.toggle( 'swh-csat-star--active', parseInt( s.getAttribute( 'data-rating' ), 10 ) <= hovered );
-				} );
-			} );
+		// Apply radiogroup semantics to the star container (#262).
+		const starsContainer = csatBox.querySelector( '.swh-csat-stars' );
+		if ( starsContainer ) {
+			starsContainer.setAttribute( 'role', 'radiogroup' );
+			starsContainer.setAttribute( 'aria-label',
+				( swhConfig.i18n && swhConfig.i18n.csatGroupLabel ) || 'Rate your support experience' );
+		}
+		stars.forEach( function ( btn, idx ) {
+			btn.setAttribute( 'role', 'radio' );
+			btn.setAttribute( 'aria-checked', 'false' );
+			btn.setAttribute( 'tabindex', idx === 0 ? '0' : '-1' );
 		} );
 
+		function swhHighlightUpTo( upTo ) {
+			stars.forEach( function ( s, i ) {
+				s.classList.toggle( 'swh-csat-star--active', i <= upTo );
+			} );
+		}
+
+		// Hover.
+		stars.forEach( function ( btn, idx ) {
+			btn.addEventListener( 'mouseenter', function () { swhHighlightUpTo( idx ); } );
+		} );
 		csatBox.addEventListener( 'mouseleave', function () {
 			stars.forEach( function ( s ) { s.classList.remove( 'swh-csat-star--active' ); } );
 		} );
 
-		stars.forEach( function ( btn ) {
+		// Arrow-key navigation (#262).
+		stars.forEach( function ( btn, idx ) {
+			btn.addEventListener( 'keydown', function ( e ) {
+				let next = idx;
+				if ( e.key === 'ArrowRight' || e.key === 'ArrowUp' ) {
+					next = Math.min( idx + 1, stars.length - 1 );
+				} else if ( e.key === 'ArrowLeft' || e.key === 'ArrowDown' ) {
+					next = Math.max( idx - 1, 0 );
+				} else if ( e.key === 'Enter' || e.key === ' ' ) {
+					e.preventDefault();
+					btn.click();
+					return;
+				} else {
+					return;
+				}
+				e.preventDefault();
+				stars.forEach( function ( s, i ) { s.setAttribute( 'tabindex', i === next ? '0' : '-1' ); } );
+				stars[ next ].focus();
+				swhHighlightUpTo( next );
+			} );
+		} );
+
+		function swhSubmitCsat( rating ) {
+			const ticketId = csatBox.getAttribute( 'data-ticket' );
+			const nonce    = csatBox.getAttribute( 'data-nonce' );
+			const ajaxUrl  = csatBox.getAttribute( 'data-ajaxurl' );
+			const body     = 'action=swh_submit_csat&ticket_id=' + encodeURIComponent( ticketId ) +
+				'&rating=' + encodeURIComponent( rating ) + '&nonce=' + encodeURIComponent( nonce );
+			const xhr = new XMLHttpRequest();
+			xhr.open( 'POST', ajaxUrl );
+			xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+			xhr.send( body );
+			csatBox.style.display = 'none';
+			if ( thanksBox ) { thanksBox.style.display = ''; }
+		}
+
+		stars.forEach( function ( btn, idx ) {
 			btn.addEventListener( 'click', function () {
-				const rating   = btn.getAttribute( 'data-rating' );
-				const ticketId = csatBox.getAttribute( 'data-ticket' );
-				const nonce    = csatBox.getAttribute( 'data-nonce' );
-				const ajaxUrl  = csatBox.getAttribute( 'data-ajaxurl' );
-				const body     = 'action=swh_submit_csat&ticket_id=' + encodeURIComponent( ticketId ) +
-					'&rating=' + encodeURIComponent( rating ) + '&nonce=' + encodeURIComponent( nonce );
-				const xhr2 = new XMLHttpRequest();
-				xhr2.open( 'POST', ajaxUrl );
-				xhr2.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
-				xhr2.send( body );
-				csatBox.style.display = 'none';
-				if ( thanksBox ) { thanksBox.style.display = ''; }
+				stars.forEach( function ( s ) { s.setAttribute( 'aria-checked', 'false' ); } );
+				btn.setAttribute( 'aria-checked', 'true' );
+				swhHighlightUpTo( idx );
+				swhSubmitCsat( btn.getAttribute( 'data-rating' ) );
 			} );
 		} );
 
@@ -161,11 +354,18 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				if ( successBox ) { successBox.style.display = ''; }
 			} );
 		}
+
+		// #275: Auto-dismiss after 60 s if the client ignores the widget.
+		setTimeout( function () {
+			if ( csatBox.style.display !== 'none' ) {
+				csatBox.style.display = 'none';
+				if ( successBox ) { successBox.style.display = ''; }
+			}
+		}, 60000 );
 	}
 
 	/**
-	 * Ticket template selector — pre-fills the description textarea when a
-	 * request type is selected. Only runs if swhConfig.templates is populated.
+	 * Ticket template selector — pre-fills the description textarea.
 	 */
 	const requestTypeSelect = document.getElementById( 'swh-request-type' );
 	if ( requestTypeSelect && swhConfig.templates && swhConfig.templates.length > 0 ) {
@@ -173,12 +373,9 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		requestTypeSelect.addEventListener( 'change', function () {
 			if ( ! descField ) { return; }
 			const selected = this.value;
-			if ( ! selected ) {
-				return; // "— Select a request type —" chosen; leave textarea as-is.
-			}
+			if ( ! selected ) { return; }
 			const tmpl = swhConfig.templates.find( function ( t ) { return t.label === selected; } );
 			if ( tmpl ) {
-				// Only pre-fill if the textarea is blank or already contains a previous template body.
 				if ( descField.value === '' || swhConfig.templates.some( function ( t ) { return t.body === descField.value; } ) ) {
 					descField.value = tmpl.body;
 				}
@@ -187,25 +384,17 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Upload progress indicator for the ticket submission form.
-	 *
-	 * When the user submits a form with files selected, shows an animated
-	 * (indeterminate) progress bar and disables the submit button to prevent
-	 * double-submissions. The native form POST proceeds normally — no XHR
-	 * interception — so Cloudflare/CDN proxies handle the request unchanged.
+	 * Upload progress indicator — shows indeterminate bar on file submission.
 	 */
 	const ticketForm = document.getElementById( 'swh-ticket-form' );
 	if ( ticketForm ) {
 		ticketForm.addEventListener( 'submit', function () {
 			const fileInput = ticketForm.querySelector( '.swh-file-input' );
-			if ( ! fileInput || fileInput.files.length === 0 ) {
-				return; // No files — nothing extra to show.
-			}
+			if ( ! fileInput || fileInput.files.length === 0 ) { return; }
 
 			const submitBtn = ticketForm.querySelector( '[type="submit"]' );
 			if ( submitBtn ) {
 				submitBtn.value = 'Uploading\u2026';
-				// Defer disabled so the browser doesn't cancel the in-flight form POST.
 				setTimeout( function () { submitBtn.disabled = true; }, 0 );
 			}
 
@@ -215,7 +404,6 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			fill.className = 'swh-progress-fill';
 			wrap.appendChild( fill );
 			ticketForm.appendChild( wrap );
-			// Native form submit continues; browser navigates on completion.
 		} );
 	}
 } );
