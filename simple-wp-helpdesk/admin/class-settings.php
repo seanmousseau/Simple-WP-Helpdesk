@@ -77,6 +77,7 @@ function swh_enqueue_admin_assets( $hook ) {
 				/* translators: Shown after a test email is successfully dispatched. */
 				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
 				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
+				'testEmailNetworkError'  => __( 'Network error. Please try again.', 'simple-wp-helpdesk' ),
 			),
 		)
 	);

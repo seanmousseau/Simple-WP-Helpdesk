@@ -263,6 +263,10 @@ function swh_status_meta_box_html( $post ) {
 						msgEl.style.color = 'red';
 						msgEl.textContent = json.data && json.data.message ? json.data.message : '<?php echo esc_js( __( 'Merge failed.', 'simple-wp-helpdesk' ) ); ?>';
 					}
+				} )
+				.catch(function() {
+					msgEl.style.color = 'red';
+					msgEl.textContent = '<?php echo esc_js( __( 'Network error. Please try again.', 'simple-wp-helpdesk' ) ); ?>';
 				} );
 		} );
 	}());

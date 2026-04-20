@@ -295,12 +295,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 					testEmailMsg.textContent = json.success
 						? ( json.data && json.data.message ? json.data.message : ( i18n.testEmailSuccess || 'Test email sent.' ) )
 						: ( json.data && json.data.message ? json.data.message : ( i18n.testEmailError || 'Failed to send.' ) );
-					testEmailMsg.style.color = json.success ? 'green' : '#d63638';
+					testEmailMsg.style.color = json.success ? 'green' : 'red';
 				} )
 				.catch( function () {
 					testEmailBtn.disabled    = false;
-					testEmailMsg.textContent = i18n.testEmailError || 'Failed to send.';
-					testEmailMsg.style.color = '#d63638';
+					testEmailMsg.textContent = i18n.testEmailNetworkError || i18n.testEmailError || 'Network error. Please try again.';
+					testEmailMsg.style.color = 'red';
 				} );
 		} );
 	}
