@@ -103,7 +103,7 @@
 }
 
 /* ── Light mode escape hatch — add data-swh-theme="light" to override dark ─ */
-[data-swh-theme="light"] {
+.swh-helpdesk-wrapper[data-swh-theme="light"] {
 	--swh-color-bg:             #fff;
 	--swh-color-bg-subtle:      #f9f9f9;
 	--swh-color-surface:        #f0f0f1;

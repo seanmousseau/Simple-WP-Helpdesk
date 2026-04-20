@@ -242,8 +242,8 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	margin-right: 3px;
 }
 
-/* Active tab accent */
-.nav-tab-active {
+/* Active tab accent — scoped to plugin settings tabs only */
+#swh-tabs .nav-tab-active {
 	border-bottom-color: var( --swh-color-primary ) !important;
 	font-weight: 600;
 	color: var( --swh-color-primary );
