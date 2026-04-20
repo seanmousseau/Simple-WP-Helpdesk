@@ -268,9 +268,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				lookupForm.setAttribute( 'aria-hidden', 'true' );
 				lookupForm.addEventListener(
 					'transitionend',
-					function onEnd() {
-						lookupForm.setAttribute( 'hidden', '' );
+					function onEnd( event ) {
+						if ( event.target !== lookupForm ) { return; }
 						lookupForm.removeEventListener( 'transitionend', onEnd );
+						if ( ! lookupForm.classList.contains( 'swh-lookup-visible' ) ) {
+							lookupForm.setAttribute( 'hidden', '' );
+						}
 					}
 				);
 			}

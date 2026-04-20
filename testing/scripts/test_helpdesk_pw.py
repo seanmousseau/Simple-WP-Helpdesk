@@ -215,7 +215,7 @@ def mailhog_get_messages(to_email: str, timeout: int = 10) -> list:
             matched = [
                 m for m in resp.json().get("items", [])
                 if any(
-                    to_email.lower() in (r.get("Mailbox", "") + "@" + r.get("Domain", "")).lower()
+                    to_email.lower() == (r.get("Mailbox", "") + "@" + r.get("Domain", "")).lower()
                     for r in m.get("To", [])
                 )
             ]
@@ -3293,21 +3293,23 @@ def test_53_ux_a11y(page: Page):
         ).strip()
         expired_ts = int(time.time()) - (100 * 86400)
         wpcli(f"post meta update {ticket_id} _ticket_token_created {expired_ts}")
-        page.goto(portal_url)
-        page.wait_for_load_state("load")
-        body = page.inner_text("body")
-        check("ux #258: expired-token page has descriptive error text",
-              any(w in body.lower() for w in ('expired', 'look up', 'lookup', 'ticket')),
-              f"portal expired body: {body[:200]!r}")
-        lookup_on_expired = page.locator('#swh-lookup-email, input[name="swh_lookup_email"]')
-        check("ux #258: expired token page renders lookup form inline",
-              lookup_on_expired.count() > 0,
-              "no lookup email input found on expired-token page")
-        # Restore original creation time.
-        if orig_created:
-            wpcli(f"post meta update {ticket_id} _ticket_token_created {orig_created}")
-        else:
-            wpcli(f"post meta delete {ticket_id} _ticket_token_created")
+        try:
+            page.goto(portal_url)
+            page.wait_for_load_state("load")
+            body = page.inner_text("body")
+            check("ux #258: expired-token page has descriptive error text",
+                  any(w in body.lower() for w in ('expired', 'look up', 'lookup', 'ticket')),
+                  f"portal expired body: {body[:200]!r}")
+            lookup_on_expired = page.locator('#swh-lookup-email, input[name="swh_lookup_email"]')
+            check("ux #258: expired token page renders lookup form inline",
+                  lookup_on_expired.count() > 0,
+                  "no lookup email input found on expired-token page")
+        finally:
+            # Always restore original creation time so later portal sections work.
+            if orig_created:
+                wpcli(f"post meta update {ticket_id} _ticket_token_created {orig_created}")
+            else:
+                wpcli(f"post meta delete {ticket_id} _ticket_token_created")
 
     screenshot(page, "65c_ux_a11y_frontend")
 
