@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.4.0
+Stable tag: 3.4.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,11 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.4.1 =
+* Added: Frontend Portal Theme setting — "Force light mode" option pins portal to light mode on sites without dark mode support (#327)
+* Fixed: `make e2e-docker` teardown trap now uses absolute path via `$(CURDIR)` so Docker containers reliably stop when make is run from an OneDrive alias path (#325)
+* Fixed: Reporting KPI endpoint now checks individual sub-function transients before running SQL, eliminating redundant queries on a KPI cache miss (#326)
 
 = 3.4.0 =
 * Added: Frontend dark mode via `prefers-color-scheme: dark` token overrides in `swh-shared.css`; escape hatch via `[data-swh-theme="light"]` (#321)
