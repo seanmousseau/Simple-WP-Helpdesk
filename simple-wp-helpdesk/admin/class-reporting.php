@@ -250,8 +250,9 @@ function swh_report_first_response_time() {
  * @return array{total: int, open: int, avg_resolution: int, avg_first_response: int}
  */
 function swh_report_kpi_data() {
-	$defs          = swh_get_defaults();
-	$closed_status = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
+	$defs            = swh_get_defaults();
+	$closed_status   = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
+	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
 
 	$total = (int) ( new WP_Query(
 		array(
@@ -270,9 +271,15 @@ function swh_report_kpi_data() {
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'meta_query'     => array(
+				'relation' => 'AND',
 				array(
 					'key'     => '_ticket_status',
 					'value'   => $closed_status,
+					'compare' => '!=',
+				),
+				array(
+					'key'     => '_ticket_status',
+					'value'   => $resolved_status,
 					'compare' => '!=',
 				),
 			),

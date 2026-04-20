@@ -52,20 +52,10 @@ function swh_admin_list_styles() {
 		}());',
 		'after'
 	);
-}
 
-add_action( 'admin_footer', 'swh_ticket_list_empty_state' );
-/**
- * Injects an empty-state component into the ticket list when no tickets exist.
- * Replaces the WP-default "No items found." cell with a styled .swh-empty-state block.
- *
- * @return void
- */
-function swh_ticket_list_empty_state() {
-	$screen = get_current_screen();
-	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
-		return;
-	}
+	// Empty-state: replace WP's "No items found." with .swh-empty-state.
+	// Must run here (admin_enqueue_scripts) — wp_add_inline_script is silently
+	// dropped when called from admin_footer after scripts have already printed.
 	$icon  = '<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l-4-4 1.41-1.41L12 14.17l6.59-6.59L20 9l-8 8z"/></svg>';
 	$title = esc_html__( 'No tickets yet', 'simple-wp-helpdesk' );
 	$desc  = esc_html__( 'Tickets submitted via the helpdesk form appear here.', 'simple-wp-helpdesk' );
