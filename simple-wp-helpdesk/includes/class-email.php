@@ -161,12 +161,34 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
 		}
 		$attachment_html .= '</p>';
 	}
+
+	$site_name   = get_bloginfo( 'name' );
+	$logo_url    = swh_get_string_option( 'swh_email_logo_url' );
+	$icon_url    = $logo_url ? $logo_url : get_site_icon_url( 48 );
+	$header_logo = $icon_url
+		? '<img src="' . esc_url( $icon_url ) . '" alt="" width="32" height="32" style="vertical-align:middle;margin-right:10px;border-radius:4px;">'
+		: '';
+	$footer_note = sprintf(
+		/* translators: %s: site name */
+		__( 'You received this email because a helpdesk ticket was submitted at %s.', 'simple-wp-helpdesk' ),
+		esc_html( $site_name )
+	);
+
 	return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
 		. '<body style="margin:0;padding:0;background:#f5f5f5;">'
 		. '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0;">'
 		. '<tr><td align="center">'
-		. '<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #ddd;border-radius:4px;padding:30px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;">'
-		. '<tr><td>' . $html_body . $attachment_html . '</td></tr>'
+		. '<table width="600" cellpadding="0" cellspacing="0" style="border:1px solid #ddd;border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;">'
+		. '<tr><td style="background:#0073aa;padding:20px 30px;">'
+		. $header_logo
+		. '<span style="color:#ffffff;font-size:18px;font-weight:600;vertical-align:middle;">' . esc_html( $site_name ) . '</span>'
+		. '</td></tr>'
+		. '<tr><td style="background:#ffffff;padding:30px;font-size:15px;line-height:1.6;color:#333333;">'
+		. $html_body . $attachment_html
+		. '</td></tr>'
+		. '<tr><td style="background:#f5f5f5;padding:16px 30px;font-size:12px;color:#767676;border-top:1px solid #ddd;">'
+		. $footer_note
+		. '</td></tr>'
 		. '</table>'
 		. '</td></tr></table></body></html>';
 }

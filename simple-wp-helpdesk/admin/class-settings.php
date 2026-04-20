@@ -664,6 +664,13 @@ function swh_render_settings_page() {
 						</td>
 					</tr>
 					<tr>
+						<th scope="row"><?php esc_html_e( 'Email Header Logo URL', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="url" name="swh_email_logo_url" value="<?php echo esc_attr( swh_get_string_option( 'swh_email_logo_url' ) ); ?>" class="regular-text" placeholder="https://">
+							<p class="description"><?php esc_html_e( 'Optional. A logo image to display in the HTML email header. Leave blank to use the site icon (if set). Displayed at 32×32px.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><?php esc_html_e( 'Reply-by-Email Webhook URL', 'simple-wp-helpdesk' ); ?></th>
 						<td>
 							<code><?php echo esc_html( rest_url( 'swh/v1/inbound-email' ) ); ?></code>

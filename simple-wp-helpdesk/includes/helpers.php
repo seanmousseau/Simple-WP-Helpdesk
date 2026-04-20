@@ -39,6 +39,7 @@ function swh_get_defaults() {
 			'swh_restrict_to_assigned'       => 'no',
 			// Email Format.
 			'swh_email_format'               => 'html',
+			'swh_email_logo_url'             => '',
 			// Anti-Spam.
 			'swh_spam_method'                => 'honeypot',
 			'swh_recaptcha_site_key'         => '',
