@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.1.0
+Stable tag: 3.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,33 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.2.0 =
+* Added: `make test-docker` — full gate (lint/PHPCS/PHPStan/PHPUnit/Semgrep) inside the phptest container; no host PHP or semgrep required (#292)
+* Added: `make e2e-docker` — self-contained E2E; spins up Docker stack, runs Playwright suite with MailHog, tears down in one command (#294)
+* Added: `make coverage` — PHPUnit coverage report (Clover) via pcov (#301)
+* Added: MailHog automated email assertions in E2E suite (#288); `mailhog/mailhog:v1.0.1` service added to `docker-compose.test.yml` (#295)
+* Added: `docker/mailhog-smtp.php` MU-plugin routes `wp_mail()` through MailHog SMTP when `MAILHOG_SMTP_HOST` is set (#296)
+* Added: `coverage.yml` CI workflow — PHP 8.2 + pcov, uploads Clover report to Codecov (#301)
+* Added: `release.yml` CI workflow — builds ZIP and creates GitHub Release on `v*.*.*` tag push; replaces manual ZIP step (#302)
+* Added: Pre-push hook auto-detects Docker; prefers `make test-docker`, falls back to `make test` (#293)
+* Fixed: Expired portal token page now shows an error alert with a direct link to the ticket lookup form instead of a blank error (#258)
+* Changed: Status badges use modern pill styling (`border-radius:9999px`) replacing the legacy Bootstrap-era alert colours (#259)
+* Changed: CSS custom properties extracted to `swh-shared.css` — single source for colour, spacing, radius, and font tokens (#260)
+* Changed: CSAT star widget upgraded with `role="radiogroup"` / `role="radio"` ARIA semantics and keyboard navigation (#262)
+* Changed: Sortable admin column headers receive `aria-sort="none"` via inline script (#263)
+* Changed: Admin menu unread badge has `aria-live="polite"` and descriptive `aria-label` (#264)
+* Changed: All font sizes and spacing now reference design tokens — `--swh-font-*`, `--swh-space-*` (#265, #266)
+* Changed: Active settings tab position persisted in `sessionStorage` and restored on reload/form submission (#267)
+* Changed: Progress bar indeterminate animation wrapped in `prefers-reduced-motion: no-preference` (#268)
+* Changed: CSAT star rating uses `clamp(22px, 5vw, 28px)` for responsive sizing instead of fixed `28px` (#269)
+* Changed: Honeypot fields use `clip-path:inset(50%)` off-screen technique instead of `left:-9999px` (#270)
+* Changed: Merge Ticket section collapsed by default with a `max-height`/`opacity` expand transition (#271)
+* Changed: Ticket lookup form toggle animates with `max-height`/`opacity` slide instead of instant show/hide (#272)
+* Changed: File attachment inputs wrapped in a drag-and-drop zone accepting `dragover`/`drop` events (#273)
+* Changed: After file selection/drop, UI displays per-file type icon + filename + human-readable size (#274)
+* Changed: CSAT rating prompt auto-dismisses after 60 seconds (#275)
+* Changed: `SWH_VERSION` bumped to `3.2.0`
 
 = 3.1.0 =
 * Fixed: Conversation timestamps now use `wp_date()` with UTC source (`comment_date_gmt`), respecting the site timezone and date/time format options (#121)

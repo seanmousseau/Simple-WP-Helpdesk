@@ -231,11 +231,13 @@ function swh_status_meta_box_html( $post ) {
 	<?php endif; ?>
 	<?php if ( ! $is_new_ticket ) : ?>
 	<hr>
-	<p><strong><?php esc_html_e( 'Merge Ticket', 'simple-wp-helpdesk' ); ?></strong></p>
-	<p class="description" style="font-size:11px; color:#666; margin-bottom:8px;"><?php esc_html_e( 'Move all replies from this ticket into another. This ticket will be closed after merging.', 'simple-wp-helpdesk' ); ?></p>
+	<button type="button" id="swh-merge-toggle" class="button" aria-expanded="false" aria-controls="swh-merge-section" style="width:100%; text-align:left;"><?php esc_html_e( '▶ Merge Ticket', 'simple-wp-helpdesk' ); ?></button>
+	<div id="swh-merge-section" class="swh-merge-body" hidden aria-hidden="true">
+	<p class="description" style="font-size:11px; color:#666; margin-bottom:8px; margin-top:8px;"><?php esc_html_e( 'Move all replies from this ticket into another. This ticket will be closed after merging.', 'simple-wp-helpdesk' ); ?></p>
 	<input type="number" id="swh-merge-target-id" placeholder="<?php esc_attr_e( 'Target ticket ID', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;" min="1">
 	<button type="button" id="swh-merge-btn" class="button" style="width:100%;"><?php esc_html_e( 'Merge into Target', 'simple-wp-helpdesk' ); ?></button>
 	<p id="swh-merge-msg" style="margin-top:6px; font-size:12px;"></p>
+	</div>
 	<script>
 	(function() {
 		document.getElementById('swh-merge-btn').addEventListener('click', function() {

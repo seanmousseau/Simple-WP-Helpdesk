@@ -1,0 +1,43 @@
+/* ── Shared design tokens — used by both admin and frontend (#260) ────────── */
+:root {
+	--swh-color-primary:       #0073aa;
+	--swh-color-primary-dark:  #005177;
+	--swh-color-danger:        #dc3232;
+	--swh-color-danger-dark:   #a02222;
+	--swh-color-success-bg:    #d4edda;
+	--swh-color-success-bd:    #c3e6cb;
+	--swh-color-success-text:  #155724;
+	--swh-color-error-bg:      #f8d7da;
+	--swh-color-error-bd:      #f5c6cb;
+	--swh-color-error-text:    #721c24;
+	--swh-color-warning-bg:    #fff3cd;
+	--swh-color-warning-bd:    #ffeeba;
+	--swh-color-warning-text:  #856404;
+	--swh-color-info-bg:       #e6f7ff;
+	--swh-color-info-bd:       #b3e0ff;
+	--swh-color-info-text:     #005980;
+	--swh-color-text:          #333;
+	--swh-color-muted:         #767676;
+	--swh-color-border:        #ddd;
+	--swh-color-bg:            #fff;
+	--swh-color-bg-subtle:     #f9f9f9;
+	--swh-color-star:          #f0ad00;
+
+	--swh-radius-sm:    4px;
+	--swh-radius-md:    5px;
+	--swh-radius-pill:  9999px;
+
+	--swh-space-xs:  5px;
+	--swh-space-sm:  10px;
+	--swh-space-md:  15px;
+	--swh-space-lg:  20px;
+	--swh-space-xl:  30px;
+
+	--swh-font-sm:    12px;
+	--swh-font-base:  15px;
+	--swh-font-md:    16px;
+	--swh-line-height: 1.6;
+
+	--swh-transition-fast:   0.1s;
+	--swh-transition-normal: 0.2s;
+}

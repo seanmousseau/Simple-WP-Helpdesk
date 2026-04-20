@@ -43,6 +43,7 @@ function swh_render_client_portal() {
 	if ( swh_is_token_expired( $ticket_id ) ) {
 		echo '<div class="swh-helpdesk-wrapper">';
 		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( swh_get_string_option( 'swh_msg_err_expired', is_string( $defs['swh_msg_err_expired'] ) ? $defs['swh_msg_err_expired'] : '' ) ) . '</div>';
+		swh_render_lookup_form();
 		echo '</div>';
 		return;
 	}
@@ -342,7 +343,7 @@ function swh_render_client_portal() {
 			</div>
 			<?php
 			if ( 'honeypot' === $spam_method ) {
-				echo '<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
+				echo '<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true">' . esc_html__( 'Leave this empty', 'simple-wp-helpdesk' ) . '</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
 			} elseif ( 'recaptcha' === $spam_method ) {
 				$key            = swh_get_string_option( 'swh_recaptcha_site_key' );
 				$recaptcha_type = swh_get_string_option( 'swh_recaptcha_type', 'v2' );
@@ -388,7 +389,7 @@ function swh_render_client_portal() {
 					</small>
 				</div>
 				<?php if ( 'honeypot' === $spam_method ) : ?>
-					<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+					<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true"><?php esc_html_e( 'Leave this empty', 'simple-wp-helpdesk' ); ?></label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
 				<?php endif; ?>
 				<div class="swh-form-group">
 					<input type="submit" name="swh_user_reopen_submit" value="<?php esc_attr_e( 'Re-open Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn swh-btn-danger">
@@ -571,7 +572,7 @@ function swh_render_lookup_form() {
 			<input type="email" id="swh-lookup-email" name="swh_lookup_email" required class="swh-form-control">
 		</div>
 		<?php if ( 'honeypot' === $spam_method ) : ?>
-			<div aria-hidden="true" style="position: absolute; left: -9999px;"><label aria-hidden="true">Leave this empty</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
+			<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true"><?php esc_html_e( 'Leave this empty', 'simple-wp-helpdesk' ); ?></label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
 		<?php endif; ?>
 		<div class="swh-form-group">
 			<input type="submit" name="swh_ticket_lookup" value="<?php esc_attr_e( 'Send My Ticket Links', 'simple-wp-helpdesk' ); ?>" class="swh-btn">

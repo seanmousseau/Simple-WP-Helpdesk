@@ -9,15 +9,14 @@
 
 ---
 
-## Pre-PR gate — run `make test` locally before opening
+## Pre-PR gate — run `make test-docker` (or `make test`) locally before opening
 
 All five steps must exit 0:
 
-- [ ] `make lint` — PHP syntax check passes
-- [ ] `make phpcs` — zero PHPCS errors/warnings
-- [ ] `make phpstan` — PHPStan level 9 passes
-- [ ] `make phpunit` — all unit tests pass
-- [ ] `make semgrep` — no Semgrep findings
+- [ ] `make test-docker` — full gate in Docker (preferred; no host PHP/semgrep needed)
+- [ ] OR `make test` — fallback if Docker is unavailable (requires host PHP 8.1+, semgrep)
+
+Individual targets if you need to run one at a time: `make lint`, `make phpcs`, `make phpstan`, `make phpunit`, `make semgrep`
 
 ---
 
@@ -38,4 +37,4 @@ All five steps must exit 0:
 - [ ] New options added to `swh_get_defaults()` in `includes/helpers.php`
 - [ ] New meta keys documented in `CLAUDE.md` — Common Pitfalls section
 - [ ] Version bumped in `simple-wp-helpdesk/simple-wp-helpdesk.php`
-- [ ] ZIP built: `zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/`
+- [ ] ZIP and GitHub Release created automatically by `release.yml` on tag push (no manual ZIP step needed)

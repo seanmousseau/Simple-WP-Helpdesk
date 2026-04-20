@@ -88,6 +88,7 @@ WP_ADMIN_URL   = _optional("WP_ADMIN_URL", WP_URL + "/wp-admin")
 WP_SUBMIT_PAGE  = _require("WP_SUBMIT_PAGE").rstrip("/")
 WP_PORTAL_PAGE  = _optional("WP_PORTAL_PAGE", "").rstrip("/")
 WP_MODE        = _optional("WP_MODE", "ssh")           # "ssh" or "docker"
+MAILHOG_URL    = _optional("MAILHOG_URL", "").rstrip("/")  # e.g. http://localhost:8025
 SSH_HOST       = _optional("SSH_HOST", "")
 WP_CONTAINER   = _optional("WP_CONTAINER", "wpcli")
 WP_PATH        = _optional("WP_PATH", "/var/www/html")
@@ -195,8 +196,75 @@ def skip(name: str, reason: str = ""):
     _results["skipped"].append(msg)
 
 
-def expect_email(recipient: str, description: str):
-    EMAIL_CHECKS.append({"to": recipient, "description": description})
+def mailhog_get_messages(to_email: str, timeout: int = 10) -> list:
+    """Poll MailHog API until a message for to_email arrives, or timeout (seconds).
+
+    Returns list of MailHog message dicts. Empty list when MAILHOG_URL is unset,
+    MailHog is unreachable, or no matching message arrives before the deadline.
+    """
+    if not MAILHOG_URL:
+        return []
+    import requests as _req
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            resp = _req.get(f"{MAILHOG_URL}/api/v2/messages", params={"limit": 50}, timeout=5)
+            if resp.status_code != 200:
+                time.sleep(1)
+                continue
+            matched = [
+                m for m in resp.json().get("items", [])
+                if any(
+                    to_email.lower() in (r.get("Mailbox", "") + "@" + r.get("Domain", "")).lower()
+                    for r in m.get("To", [])
+                )
+            ]
+            if matched:
+                return matched
+        except Exception:
+            time.sleep(1)
+            continue
+        time.sleep(1)
+    return []
+
+
+def mailhog_clear() -> None:
+    """Delete all messages from MailHog (no-op when MAILHOG_URL is unset)."""
+    if not MAILHOG_URL:
+        return
+    import requests as _req
+    try:
+        resp = _req.delete(f"{MAILHOG_URL}/api/v1/messages", timeout=5)
+        check("mailhog_clear: inbox cleared",
+              resp.status_code in (200, 204),
+              f"MailHog DELETE returned {resp.status_code} — stale messages may cause false email assertions")
+    except Exception as exc:
+        check("mailhog_clear: inbox cleared", False,
+              f"MailHog DELETE failed: {exc} — stale messages may cause false email assertions")
+
+
+def expect_email(recipient: str, description: str, clear_after: bool = True):
+    """Assert an email was delivered.
+
+    Docker mode (MAILHOG_URL set): polls MailHog API and calls check() immediately.
+    SSH mode: appends to EMAIL_CHECKS for manual verification after the run.
+
+    clear_after: if True (default) clear MailHog after the check. Pass False when
+    multiple emails are expected from the same PHP action (e.g., client + admin
+    notification from a single ticket submission) so the second check still finds
+    its message.
+    """
+    if WP_MODE == "docker" and MAILHOG_URL:
+        messages = mailhog_get_messages(recipient, timeout=10)
+        check(
+            f"email: {description} → {recipient}",
+            bool(messages),
+            f"No email found in MailHog for {recipient}",
+        )
+        if clear_after:
+            mailhog_clear()
+    else:
+        EMAIL_CHECKS.append({"to": recipient, "description": description})
 
 
 def wp_login(page: Page, username: str, password: str) -> str:
@@ -351,6 +419,7 @@ def test_02_plugin_verification(page: Page):
 @pytest.mark.smoke
 def test_03_ticket_submission(page: Page):
     print("\n[3] Ticket Submission (Frontend — two tickets)")
+    mailhog_clear()  # start with empty inbox so expect_email() assertions are unambiguous
 
     # ── Ticket 1 (CLIENT1) ────────────────────────────────────────────────────
 
@@ -387,7 +456,7 @@ def test_03_ticket_submission(page: Page):
           "swh-alert-success" in page.content(), "no .swh-alert-success found")
     screenshot(page, "05_submit_ticket1_success")
 
-    expect_email(CLIENT1_EMAIL, "new ticket confirmation to client")
+    expect_email(CLIENT1_EMAIL, "new ticket confirmation to client", clear_after=False)
     expect_email(TECH1_EMAIL, "new ticket notification to default assignee (tech1)")
 
     # ── Ticket 2 (CLIENT2) — clear rate limit first ───────────────────────────
@@ -512,6 +581,7 @@ def test_07_technician_workflow(page: Page):
           TEST_TICKET_TITLE in page.inner_text("body"))
     screenshot(page, "08_tech1_ticket_list")
 
+    mailhog_clear()
     admin_update_ticket(page, state['ticket_id'],
                         tech_reply=TEST_TECH_REPLY,
                         internal_note=TEST_INTERNAL_NOTE)
@@ -550,6 +620,7 @@ def test_08_client_portal(page: Page):
           page.locator('[name="ticket_reply_text"]').count() > 0)
     screenshot(page, "10_client_portal")
 
+    mailhog_clear()
     page.fill('[name="ticket_reply_text"]', TEST_CLIENT_REPLY)
     page.click('[name="swh_user_reply_submit"]')
     page.wait_for_selector(".swh-alert-success, .swh-alert-error")
@@ -609,12 +680,13 @@ def test_10_portal_close_reopen(page: Page):
 
     close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
     if close_btn.count() > 0:
+        mailhog_clear()
         close_btn.click()
         # After close, the CSAT widget shows (swh-alert-info) — success is hidden until skip/rating.
         page.wait_for_selector("#swh-csat, .swh-alert-success, .swh-alert-error")
         check("portal: close ticket shows CSAT or success",
               "swh-csat" in page.content() or "swh-alert-success" in page.content())
-        expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client")
+        expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client", clear_after=False)
         expect_email(TECH1_EMAIL, "ticket closed notification to assigned technician (tech1)")
         screenshot(page, "14_ticket_closed_portal")
 
@@ -623,6 +695,7 @@ def test_10_portal_close_reopen(page: Page):
         reopen_ta = page.locator('[name="ticket_reopen_text"]')
         if reopen_ta.count() > 0:
             reopen_ta.fill("I still need help with this issue.")
+        mailhog_clear()
         page.click('[name="swh_user_reopen_submit"]')
         page.wait_for_selector(".swh-alert-success, .swh-alert-error")
         check("portal: reopen success", "swh-alert-success" in page.content())
@@ -2342,8 +2415,13 @@ def test_43_ticket_merge(page: Page):
               merge_input.count() > 0, "#swh-merge-target-id not found")
 
         if merge_input.count() > 0:
+            # Expand the merge section (force=True bypasses jQuery UI sortable overlay).
+            merge_toggle = page.locator('#swh-merge-toggle')
+            if merge_toggle.count() > 0:
+                merge_toggle.click(force=True)
+                page.wait_for_timeout(300)
             merge_input.fill(str(target_id))
-            page.locator('#swh-merge-btn').click()
+            page.locator('#swh-merge-btn').click(force=True)
             page.wait_for_timeout(2000)  # AJAX
             merge_msg = page.locator('#swh-merge-msg').inner_text() if \
                 page.locator('#swh-merge-msg').count() > 0 else ""
@@ -3039,6 +3117,201 @@ def test_52_email_test_button(page: Page):
             expect_email(current_admin_email, "Test email from Send Test Email button (Settings → Email Templates)")
 
 
+# ── v3.2.0 UX / A11y / DX verifications ──────────────────────────────────────
+
+def test_53_ux_a11y(page: Page):
+    """v3.2.0 UX/A11y improvements: badge aria, sort attrs, merge toggle, lookup
+    slide, honeypot clip-path, drag-zone, CSAT keyboard/radiogroup, settings tab
+    persistence, expired-token recovery link."""
+    print("\n[53] UX / A11y Improvements (v3.2.0 — #258–#275)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # ── #263 aria-sort on admin list sortable columns ─────────────────────────
+    _navigate_admin_list(page)
+    aria_sort_none_count = page.evaluate("""
+        () => document.querySelectorAll('th.sortable[aria-sort="none"], th.sorted[aria-sort]').length
+    """)
+    check("a11y #263: sortable columns have aria-sort attribute",
+          aria_sort_none_count > 0,
+          f"found {aria_sort_none_count} th.sortable[aria-sort] elements")
+
+    # ── #264 aria-live on unread badge ────────────────────────────────────────
+    if state.get('ticket_id'):
+        ticket_id = state['ticket_id']
+        wpcli(f"post meta update {ticket_id} _swh_unread 1")
+        wpcli("eval \"delete_transient('swh_unread_count');\"")
+        page.goto(f"{WP_ADMIN_URL}/")
+        page.wait_for_load_state("load")
+        badge_aria_live = page.evaluate("""
+            () => {
+                var b = document.querySelector(
+                    '#adminmenu a[href*="post_type=helpdesk_ticket"] .awaiting-mod'
+                );
+                return b ? b.getAttribute('aria-live') : null;
+            }
+        """)
+        check("a11y #264: unread badge has aria-live attribute",
+              badge_aria_live == 'polite',
+              f"aria-live={badge_aria_live!r}")
+        wpcli(f"post meta delete {ticket_id} _swh_unread")
+        wpcli("eval \"delete_transient('swh_unread_count');\"")
+
+    # ── #271 merge form collapse toggle ──────────────────────────────────────
+    if state.get('ticket_id'):
+        _navigate_ticket_editor(page, state['ticket_id'])
+        merge_toggle = page.locator('#swh-merge-toggle')
+        merge_body   = page.locator('#swh-merge-section')
+        check("ux #271: merge toggle button exists",
+              merge_toggle.count() > 0)
+        check("ux #271: merge body section exists",
+              merge_body.count() > 0)
+        if merge_toggle.count() > 0 and merge_body.count() > 0:
+            # Collapsed by default — aria-expanded should be false.
+            aria_exp_before = merge_toggle.get_attribute('aria-expanded')
+            check("ux #271: merge section collapsed by default (aria-expanded=false)",
+                  aria_exp_before == 'false',
+                  f"aria-expanded={aria_exp_before!r}")
+            body_visible_before = merge_body.evaluate(
+                "el => el.classList.contains('swh-merge-visible')"
+            )
+            check("ux #271: swh-merge-visible absent when collapsed",
+                  not body_visible_before)
+            # Click to expand (force=True bypasses jQuery UI sortable overlay).
+            merge_toggle.click(force=True)
+            page.wait_for_timeout(400)
+            aria_exp_after = merge_toggle.get_attribute('aria-expanded')
+            check("ux #271: aria-expanded=true after toggle click",
+                  aria_exp_after == 'true',
+                  f"aria-expanded={aria_exp_after!r}")
+            body_visible_after = merge_body.evaluate(
+                "el => el.classList.contains('swh-merge-visible')"
+            )
+            check("ux #271: swh-merge-visible present after expand",
+                  body_visible_after)
+
+    screenshot(page, "65a_merge_toggle")
+
+    # ── #267 settings tab sessionStorage persistence ──────────────────────────
+    _navigate_settings(page)
+    # Click the Email Templates tab.
+    page.locator('#swh-tab-emails').click()
+    page.wait_for_timeout(200)
+    stored_tab = page.evaluate(
+        "() => sessionStorage.getItem('swh_active_tab')"
+    )
+    check("ux #267: active tab stored in sessionStorage on click",
+          stored_tab == 'tab-emails',
+          f"sessionStorage swh_active_tab={stored_tab!r}")
+    # Simulate reload without swh_tab in URL (plain settings URL).
+    page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-settings")
+    page.wait_for_load_state("load")
+    active_tab_id = page.evaluate("""
+        () => {
+            var active = document.querySelector('.nav-tab-active');
+            return active ? active.getAttribute('data-tab') : null;
+        }
+    """)
+    check("ux #267: settings tab restored from sessionStorage on reload",
+          active_tab_id == 'tab-emails',
+          f"active tab after reload: {active_tab_id!r}")
+
+    screenshot(page, "65b_settings_tab_persist")
+
+    wp_logout(page)
+
+    # ── Frontend: lookup toggle, honeypot, drag-zone, CSAT ────────────────────
+    page.goto(WP_SUBMIT_PAGE)
+    page.wait_for_load_state("load")
+
+    # ── #272 lookup toggle: hidden attribute + aria-hidden ────────────────────
+    lookup_form = page.locator('#swh-lookup-form')
+    if lookup_form.count() > 0:
+        is_hidden_attr = lookup_form.evaluate("el => el.hasAttribute('hidden')")
+        check("ux #272: lookup form starts with hidden attribute (semantically hidden)",
+              is_hidden_attr,
+              "element lacks hidden attribute — keyboard/AT can reach collapsed form")
+        is_aria_hidden = lookup_form.evaluate("el => el.getAttribute('aria-hidden') === 'true'")
+        check("ux #272: lookup form starts with aria-hidden=true",
+              is_aria_hidden,
+              "element lacks aria-hidden='true' in collapsed state")
+
+    # ── #270 honeypot clip-path technique ─────────────────────────────────────
+    honeypot_info = page.evaluate("""
+        () => {
+            var hp = document.querySelector('input[name="swh_website_url_hp"]');
+            if (!hp) return null;
+            var wrap = hp.parentElement;
+            var wrapStyle = wrap ? (wrap.getAttribute('style') || '') : '';
+            return { inputTabIndex: hp.tabIndex, wrapStyle: wrapStyle };
+        }
+    """)
+    if honeypot_info is not None:
+        check("security #270: honeypot input has tabindex=-1",
+              honeypot_info['inputTabIndex'] == -1,
+              f"honeypot tabIndex: {honeypot_info['inputTabIndex']}")
+        check("security #270: honeypot does not use left:-9999px",
+              '-9999' not in honeypot_info['wrapStyle'],
+              f"honeypot wrap style: {honeypot_info['wrapStyle']!r}")
+        check("security #270: honeypot uses clip-path technique",
+              'clip-path' in honeypot_info['wrapStyle'],
+              f"honeypot wrap style: {honeypot_info['wrapStyle']!r}")
+
+    # ── #273 drag-and-drop zone wraps file input ──────────────────────────────
+    drop_zone = page.locator('.swh-drop-zone')
+    check("ux #273: file input wrapped in .swh-drop-zone",
+          drop_zone.count() > 0,
+          "no .swh-drop-zone found on submit page")
+
+    # ── #262 CSAT stars have role/aria attributes ─────────────────────────────
+    portal_url = state.get('portal_url')
+    ticket_id  = state.get('ticket_id')
+    if portal_url and ticket_id:
+        # Reset CSAT so the widget renders even if already submitted in test_33.
+        wpcli(f"post meta delete {ticket_id} _ticket_csat 2>/dev/null")
+        page.goto(portal_url)
+        page.wait_for_load_state("load")
+        csat_stars = page.locator('.swh-csat-star')
+        if csat_stars.count() > 0:
+            star_role = csat_stars.first.get_attribute('role')
+            check("a11y #262: CSAT stars have role=radio",
+                  star_role == 'radio',
+                  f"first star role: {star_role!r}")
+            star_checked = csat_stars.first.get_attribute('aria-checked')
+            check("a11y #262: CSAT stars have aria-checked attribute",
+                  star_checked is not None,
+                  "first star missing aria-checked attribute")
+        else:
+            skip("a11y #262: CSAT stars not in DOM — cannot verify ARIA attributes")
+
+    # ── #258 expired token shows inline lookup form ────────────────────────────
+    if portal_url and ticket_id:
+        # Force-expire the token via WP-CLI (set creation time 100 days ago).
+        # This ensures hash_equals passes but swh_is_token_expired() returns true.
+        orig_created = wpcli(
+            f"eval 'echo get_post_meta({ticket_id}, \"_ticket_token_created\", true);'"
+        ).strip()
+        expired_ts = int(time.time()) - (100 * 86400)
+        wpcli(f"post meta update {ticket_id} _ticket_token_created {expired_ts}")
+        page.goto(portal_url)
+        page.wait_for_load_state("load")
+        body = page.inner_text("body")
+        check("ux #258: expired-token page has descriptive error text",
+              any(w in body.lower() for w in ('expired', 'look up', 'lookup', 'ticket')),
+              f"portal expired body: {body[:200]!r}")
+        lookup_on_expired = page.locator('#swh-lookup-email, input[name="swh_lookup_email"]')
+        check("ux #258: expired token page renders lookup form inline",
+              lookup_on_expired.count() > 0,
+              "no lookup email input found on expired-token page")
+        # Restore original creation time.
+        if orig_created:
+            wpcli(f"post meta update {ticket_id} _ticket_token_created {orig_created}")
+        else:
+            wpcli(f"post meta delete {ticket_id} _ticket_token_created")
+
+    screenshot(page, "65c_ux_a11y_frontend")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -3143,6 +3416,7 @@ SECTIONS = [
     test_50_unread_badge,             # 50 — #101 unread badge
     test_51_unread_row_highlight,     # 51 — #102 row highlight
     test_52_email_test_button,        # 52 — #103 test email button
+    test_53_ux_a11y,                  # 53 — v3.2.0 UX/a11y (#258–#275)
     test_28_cleanup,                  # 28 — always last
 ]
 

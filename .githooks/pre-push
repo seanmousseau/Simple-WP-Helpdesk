@@ -6,7 +6,13 @@ echo "Running pre-push gate (lint → phpcs → phpstan → phpunit → semgrep)
 echo "Skip with: git push --no-verify"
 echo ""
 
-make test
+if docker info > /dev/null 2>&1; then
+    echo "Docker detected — using make test-docker (no host PHP required)."
+    make test-docker
+else
+    echo "Docker not available — falling back to make test (requires host PHP 8.1+, semgrep)."
+    make test
+fi
 
 echo ""
 echo "Gate passed. Pushing."

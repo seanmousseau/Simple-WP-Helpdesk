@@ -120,6 +120,12 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         import test_helpdesk_pw as t
     except ImportError:
         return
+    if t.MAILHOG_URL and t.WP_MODE == "docker":
+        terminalreporter.write_sep("=", "EMAIL CHECKS — automated via MailHog")
+        terminalreporter.write_line(
+            f"  Email assertions validated automatically via MailHog API ({t.MAILHOG_URL})."
+        )
+        return
     if not t.EMAIL_CHECKS:
         return
     terminalreporter.write_sep("=", "EMAIL CHECKS — verify via Gmail MCP")
