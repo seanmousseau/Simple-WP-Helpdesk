@@ -80,6 +80,8 @@ function swh_ticket_frontend( $atts = array() ) {
 				'sizeExceeded'   => __( 'File "%1$s" exceeds the %2$dMB size limit.', 'simple-wp-helpdesk' ),
 				/* translators: shown as first option in the Request Type dropdown */
 				'selectTemplate' => __( '— Select a request type —', 'simple-wp-helpdesk' ),
+				'uploading'      => __( 'Uploading\u{2026}', 'simple-wp-helpdesk' ),
+				'submitLabel'    => __( 'Submit Ticket', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -392,7 +394,7 @@ function swh_render_submission_form( $atts = array() ) {
 		</div>
 		<div class="swh-form-group">
 			<label for="swh-attachments"><?php esc_html_e( 'Attachments (Optional):', 'simple-wp-helpdesk' ); ?></label>
-			<input type="file" id="swh-attachments" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input" style="padding: 5px;" aria-describedby="swh-file-hint">
+			<input type="file" id="swh-attachments" name="ticket_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input" aria-describedby="swh-file-hint">
 			<small id="swh-file-hint" class="swh-text-muted" style="display:block; margin-top:5px;">
 			<?php
 				/* translators: 1: max upload size in MB, 2: max file count */
