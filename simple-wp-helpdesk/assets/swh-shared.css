@@ -31,6 +31,11 @@
 	--swh-color-success-accent: #28a745;  /* solid success left-border accent */
 	--swh-color-text-secondary: #555;     /* secondary body text */
 	--swh-color-track:          #e0e0e0;  /* progress track / inactive indicator */
+	--swh-color-note-bg:        #f0c040;  /* internal note button background */
+	--swh-color-note-border:    #d4a017;  /* internal note button border */
+	--swh-color-note-text:      #3d3000;  /* internal note button text */
+	--swh-color-note-bg-hover:  #d4a017;  /* internal note button hover background */
+	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;

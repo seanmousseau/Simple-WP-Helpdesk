@@ -168,15 +168,15 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 }
 
 .swh-note-btn {
-	background: #f0c040;
-	border-color: #d4a017;
-	color: #3d3000;
+	background: var( --swh-color-note-bg );
+	border-color: var( --swh-color-note-border );
+	color: var( --swh-color-note-text );
 }
 
 .swh-note-btn:hover {
-	background: #d4a017;
-	border-color: #b38800;
-	color: #3d3000;
+	background: var( --swh-color-note-bg-hover );
+	border-color: var( --swh-color-note-bd-hover );
+	color: var( --swh-color-note-text );
 }
 
 /* ── Reports page (#254) ────────────────────────────────────────────────── */
@@ -207,16 +207,13 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	text-align: center;
 }
 
+/* ── Responsive (#251, #254) ─────────────────────────────────────────────── */
+
+/* Tablet: WP sidebar collapses at 782px */
 @media ( max-width: 782px ) {
 	.swh-report-grid {
 		grid-template-columns: 1fr;
 	}
-}
-
-/* ── Responsive (#251) ───────────────────────────────────────────────────── */
-
-/* Tablet: WP sidebar collapses at 782px */
-@media ( max-width: 782px ) {
 	.swh-conversation-wrap {
 		max-height: 40vh;
 	}

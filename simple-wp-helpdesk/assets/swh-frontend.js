@@ -464,17 +464,26 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				window.location.href = xhr.responseURL || ticketForm.action;
 			} );
 
-			xhr.addEventListener( 'error', function () {
-				// Network failure — restore button and fall through to standard submit.
+			function _xhrRestore() {
 				if ( submitBtn ) {
 					submitBtn.disabled = false;
 					submitBtn.value    = ( swhConfig.i18n && swhConfig.i18n.submitLabel ) || 'Submit Ticket';
 				}
 				wrap.remove();
+			}
+
+			xhr.addEventListener( 'error', function () {
+				_xhrRestore();
+				ticketForm.submit();
+			} );
+
+			xhr.addEventListener( 'timeout', function () {
+				_xhrRestore();
 				ticketForm.submit();
 			} );
 
 			xhr.open( 'POST', ticketForm.action );
+			xhr.timeout = 120000;
 			xhr.send( new FormData( ticketForm ) );
 		} );
 	}

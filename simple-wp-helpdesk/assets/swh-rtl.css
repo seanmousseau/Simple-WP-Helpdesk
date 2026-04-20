@@ -1,8 +1,8 @@
 /* RTL overrides (#125) — loaded in addition to swh-frontend.css when is_rtl(). */
 
-.swh-helpdesk-wrapper,
-.swh-form-group {
-	text-align: right !important;
+[dir="rtl"] .swh-helpdesk-wrapper,
+[dir="rtl"] .swh-form-group {
+	text-align: right;
 }
 
 /* Chat bubbles: flip left-border accent to right */
