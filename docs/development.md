@@ -170,7 +170,9 @@ Individual tools:
 5. **Open a PR** from `release/vX.Y.Z` to `main`.
 
 6. **Merge to `main`**, then push the version tag:
+
    ```bash
    git tag vX.Y.Z && git push origin vX.Y.Z
    ```
+
    `release.yml` fires automatically on the tag push — it builds `simple-wp-helpdesk.zip` and creates the GitHub Release with the ZIP attached. No manual ZIP step required.

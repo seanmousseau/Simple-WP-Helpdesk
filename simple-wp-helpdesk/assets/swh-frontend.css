@@ -358,11 +358,15 @@
 	transition: max-height 0.3s ease, opacity 0.25s ease;
 	max-height: 0;
 	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
 }
 
 #swh-lookup-form.swh-lookup-visible {
 	max-height: 600px;
 	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
 }
 
 /* ── Ticket table ──────────────────────────────────────────────────────────── */

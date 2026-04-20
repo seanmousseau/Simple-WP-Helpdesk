@@ -45,22 +45,19 @@ e2e: ## Playwright E2E tests (requires WP environment — set WP_MODE=docker or 
 	@cd testing && source .venv/bin/activate && pytest scripts/test_helpdesk_pw.py -v
 
 e2e-docker: ## Full E2E in Docker — spin up stack, run suite, tear down
-	@echo "→ Starting Docker stack..."
-	@docker compose -f docker-compose.test.yml up -d db wordpress wpcli mailhog
-	@echo "→ Waiting for WordPress (up to 90s)..."
-	@i=0; until curl -sf http://localhost:8080/wp-login.php >/dev/null 2>&1; do \
-		sleep 3; i=$$((i+3)); if [ $$i -ge 90 ]; then echo "ERROR: WordPress did not start in 90s"; exit 1; fi; \
-	done
-	@echo "→ Setting up WordPress test environment..."
-	@bash docker/setup-test-wp.sh
-	@echo "→ Running Playwright E2E..."
-	@set +e; \
+	@trap 'docker compose -f docker-compose.test.yml down -v' EXIT; \
+	 echo "→ Starting Docker stack..."; \
+	 docker compose -f docker-compose.test.yml up -d db wordpress wpcli mailhog; \
+	 echo "→ Waiting for WordPress (up to 90s)..."; \
+	 i=0; until curl -sf http://localhost:8080/wp-login.php >/dev/null 2>&1; do \
+	   sleep 3; i=$$((i+3)); if [ $$i -ge 90 ]; then echo "ERROR: WordPress did not start in 90s"; exit 1; fi; \
+	 done; \
+	 echo "→ Setting up WordPress test environment..."; \
+	 bash docker/setup-test-wp.sh; \
+	 echo "→ Running Playwright E2E..."; \
 	 cd testing && source .venv/bin/activate && \
 	 set -a && source /tmp/swh-docker-test.env && set +a && \
-	 pytest scripts/test_helpdesk_pw.py -v; \
-	 EXIT=$$?; \
-	 cd .. && docker compose -f docker-compose.test.yml down -v; \
-	 exit $$EXIT
+	 pytest scripts/test_helpdesk_pw.py -v
 
 coverage: ## Generate PHPUnit coverage report (requires pcov or xdebug; outputs coverage.xml)
 	@echo "→ PHPUnit with coverage..."

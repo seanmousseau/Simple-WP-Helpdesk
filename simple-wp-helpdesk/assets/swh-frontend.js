@@ -201,16 +201,18 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			zone.classList.remove( 'swh-drop-zone--dragover' );
 			const dt = e.dataTransfer;
 			if ( ! dt || ! dt.files || dt.files.length === 0 ) { return; }
+			let attached = false;
 			try {
 				// Assign dropped files to the input (modern browsers support DataTransfer constructor).
 				const transfer = new DataTransfer();
 				Array.from( dt.files ).forEach( function ( f ) { transfer.items.add( f ); } );
 				input.files = transfer.files;
+				attached = input.files && input.files.length > 0;
 			} catch ( err ) {
-				// DataTransfer constructor not supported — validation only.
+				// DataTransfer constructor not supported — files cannot be attached.
 			}
-			if ( swhValidateFiles( input, dt.files ) ) {
-				updateSelected( dt.files );
+			if ( attached && swhValidateFiles( input, input.files ) ) {
+				updateSelected( input.files );
 			} else {
 				updateSelected( null );
 			}
@@ -333,9 +335,18 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			const xhr = new XMLHttpRequest();
 			xhr.open( 'POST', ajaxUrl );
 			xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+			xhr.onload = function () {
+				try {
+					const json = JSON.parse( xhr.responseText );
+					if ( json.success ) {
+						csatBox.style.display = 'none';
+						if ( thanksBox ) { thanksBox.style.display = ''; }
+					}
+				} catch ( err ) {
+					// Malformed response — leave widget visible so the client can retry.
+				}
+			};
 			xhr.send( body );
-			csatBox.style.display = 'none';
-			if ( thanksBox ) { thanksBox.style.display = ''; }
 		}
 
 		stars.forEach( function ( btn, idx ) {

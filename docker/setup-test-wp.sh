@@ -104,29 +104,30 @@ SUBMIT_URL=$($WP post get "$SUBMIT_ID" --field=url)
 PORTAL_URL=$($WP post get "$PORTAL_ID" --field=url)
 
 # Write Docker env file so `make e2e-docker` can source it (overrides testing/.env).
-cat > /tmp/swh-docker-test.env << ENVEOF
-WP_URL=$WP_URL
-WP_LOGIN_URL=$WP_URL/wp-login.php
-WP_ADMIN_URL=$WP_URL/wp-admin/
-WP_SUBMIT_PAGE=$SUBMIT_URL
-WP_PORTAL_PAGE=$PORTAL_URL
-WP_ADMIN_USER=$WP_ADMIN_USER
-WP_ADMIN_PASS=$WP_ADMIN_PASS
-WP_TECH1_USER=$WP_TECH1_USER
-WP_TECH1_PASS=$WP_TECH1_PASS
-WP_TECH1_EMAIL=$WP_TECH1_EMAIL
-WP_TECH2_USER=$WP_TECH2_USER
-WP_TECH2_PASS=$WP_TECH2_PASS
-WP_TECH2_EMAIL=$WP_TECH2_EMAIL
-CLIENT1_NAME="$CLIENT1_NAME"
-CLIENT1_EMAIL=$CLIENT1_EMAIL
-CLIENT2_NAME="$CLIENT2_NAME"
-CLIENT2_EMAIL=$CLIENT2_EMAIL
-WP_MODE=docker
-WP_CONTAINER=wpcli
-WP_PATH=/var/www/html
-MAILHOG_URL=http://localhost:8025
-ENVEOF
+# Use printf '%q' to shell-escape each value so metacharacters in credentials are safe.
+{
+  printf 'WP_URL=%q\n'          "$WP_URL"
+  printf 'WP_LOGIN_URL=%q\n'    "$WP_URL/wp-login.php"
+  printf 'WP_ADMIN_URL=%q\n'    "$WP_URL/wp-admin/"
+  printf 'WP_SUBMIT_PAGE=%q\n'  "$SUBMIT_URL"
+  printf 'WP_PORTAL_PAGE=%q\n'  "$PORTAL_URL"
+  printf 'WP_ADMIN_USER=%q\n'   "$WP_ADMIN_USER"
+  printf 'WP_ADMIN_PASS=%q\n'   "$WP_ADMIN_PASS"
+  printf 'WP_TECH1_USER=%q\n'   "$WP_TECH1_USER"
+  printf 'WP_TECH1_PASS=%q\n'   "$WP_TECH1_PASS"
+  printf 'WP_TECH1_EMAIL=%q\n'  "$WP_TECH1_EMAIL"
+  printf 'WP_TECH2_USER=%q\n'   "$WP_TECH2_USER"
+  printf 'WP_TECH2_PASS=%q\n'   "$WP_TECH2_PASS"
+  printf 'WP_TECH2_EMAIL=%q\n'  "$WP_TECH2_EMAIL"
+  printf 'CLIENT1_NAME=%q\n'    "$CLIENT1_NAME"
+  printf 'CLIENT1_EMAIL=%q\n'   "$CLIENT1_EMAIL"
+  printf 'CLIENT2_NAME=%q\n'    "$CLIENT2_NAME"
+  printf 'CLIENT2_EMAIL=%q\n'   "$CLIENT2_EMAIL"
+  printf 'WP_MODE=docker\n'
+  printf 'WP_CONTAINER=wpcli\n'
+  printf 'WP_PATH=/var/www/html\n'
+  printf 'MAILHOG_URL=http://localhost:8025\n'
+} > /tmp/swh-docker-test.env
 
 echo ""
 echo "✅ WordPress setup complete."

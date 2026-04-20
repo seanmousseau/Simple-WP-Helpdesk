@@ -32,6 +32,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		if ( tabEl ) { tabEl.style.display = 'block'; }
 		if ( saveBtn ) { saveBtn.style.display = ( tabId === 'tab-tools' ) ? 'none' : 'block'; }
 		if ( activeTabInput ) { activeTabInput.value = tabId; }
+		sessionStorage.setItem( 'swh_active_tab', tabId );
 	}
 
 	// Restore active tab: URL param wins (post-save redirect), then sessionStorage (#267).
@@ -53,7 +54,6 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		tab.addEventListener( 'click', function ( e ) {
 			e.preventDefault();
 			activateTab( tab.dataset.tab );
-			sessionStorage.setItem( 'swh_active_tab', tab.dataset.tab );
 			tab.focus();
 		} );
 	} );
@@ -255,6 +255,13 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			const expanded = mergeToggle.getAttribute( 'aria-expanded' ) === 'true';
 			mergeToggle.setAttribute( 'aria-expanded', String( ! expanded ) );
 			mergeBody.classList.toggle( 'swh-merge-visible', ! expanded );
+			if ( ! expanded ) {
+				mergeBody.removeAttribute( 'hidden' );
+				mergeBody.setAttribute( 'aria-hidden', 'false' );
+			} else {
+				mergeBody.setAttribute( 'hidden', '' );
+				mergeBody.setAttribute( 'aria-hidden', 'true' );
+			}
 			mergeToggle.textContent = ( ! expanded ? '\u25BC ' : '\u25BA ' )
 				+ mergeToggle.textContent.replace( /^[\u25BC\u25BA]\s*/, '' );
 		} );
