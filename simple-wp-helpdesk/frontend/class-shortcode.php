@@ -139,7 +139,7 @@ function swh_render_submission_form( $atts = array() ) {
 		}
 	}
 	?>
-	<div class="swh-helpdesk-wrapper" data-swh-theme="auto">
+	<div class="swh-helpdesk-wrapper">
 	<?php
 	$current_user = wp_get_current_user();
 	$form_name    = is_user_logged_in() ? ( is_string( $current_user->display_name ) ? $current_user->display_name : '' ) : '';

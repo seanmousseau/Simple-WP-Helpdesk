@@ -265,6 +265,8 @@ function swh_handle_settings_save() {
 				$val = is_scalar( $_POST[ $opt ] ) ? absint( $_POST[ $opt ] ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} elseif ( strpos( $opt, '_body' ) !== false ) {
 				$val = is_string( $_POST[ $opt ] ) ? wp_kses_post( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			} elseif ( 'swh_email_logo_url' === $opt ) {
+				$val = is_string( $_POST[ $opt ] ) ? esc_url_raw( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} else {
 				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
