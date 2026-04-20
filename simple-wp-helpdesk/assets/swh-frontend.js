@@ -482,9 +482,16 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				ticketForm.submit();
 			} );
 
+			// FormData(form) omits submit buttons per spec; append manually so the
+			// PHP handler's isset($_POST['swh_submit_ticket']) guard is satisfied.
+			var formData = new FormData( ticketForm );
+			if ( submitBtn && submitBtn.name ) {
+				formData.append( submitBtn.name, submitBtn.value );
+			}
+
 			xhr.open( 'POST', ticketForm.action );
 			xhr.timeout = 120000;
-			xhr.send( new FormData( ticketForm ) );
+			xhr.send( formData );
 		} );
 	}
 } );
