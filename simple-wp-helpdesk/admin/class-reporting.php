@@ -14,7 +14,7 @@ add_action( 'wp_ajax_swh_report_data', 'swh_ajax_report_data' );
  * AJAX handler that returns reporting data as JSON.
  *
  * Accepts a `type` parameter: 'status_breakdown', 'avg_resolution_time',
- * 'weekly_trend', or 'first_response_time'. Results are cached in a 1-hour transient.
+ * 'weekly_trend', 'first_response_time', or 'kpi'. Results are cached in a 1-hour transient.
  *
  * @since 3.0.0
  * @return void
