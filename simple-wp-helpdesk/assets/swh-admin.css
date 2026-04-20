@@ -233,8 +233,8 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 
 /* ── Settings page visual hierarchy (#323) ───────────────────────────────── */
 
-/* Dashicon alignment in tab buttons */
-.nav-tab-wrapper .dashicons {
+/* Dashicon alignment in plugin settings tabs only */
+#swh-tabs .dashicons {
 	font-size: 16px;
 	line-height: 1;
 	vertical-align: middle;
