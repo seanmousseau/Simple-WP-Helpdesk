@@ -23,8 +23,19 @@
 	--swh-color-border-subtle:  #aaa;
 	--swh-color-bg:             #fff;
 	--swh-color-bg-subtle:      #f9f9f9;
+	--swh-color-bg-highlight:   #f0f8ff;  /* highlighted row background (e.g. unread) */
+	--swh-color-surface:        #f0f0f1;  /* WP admin surface / chip background */
 	--swh-color-star:           #f0ad00;
 	--swh-color-primary-shadow: rgba( 0, 115, 170, 0.3 );
+	--swh-color-focus:          #005fcc;  /* keyboard focus ring — WP admin focus blue */
+	--swh-color-success-accent: #28a745;  /* solid success left-border accent */
+	--swh-color-text-secondary: #555;     /* secondary body text */
+	--swh-color-track:          #e0e0e0;  /* progress track / inactive indicator */
+	--swh-color-note-bg:        #f0c040;  /* internal note button background */
+	--swh-color-note-border:    #d4a017;  /* internal note button border */
+	--swh-color-note-text:      #3d3000;  /* internal note button text */
+	--swh-color-note-bg-hover:  #d4a017;  /* internal note button hover background */
+	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;

@@ -60,6 +60,9 @@ function swh_enqueue_admin_assets( $hook ) {
 
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-admin' ), SWH_VERSION );
+	}
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 	wp_localize_script(
 		'swh-admin',
@@ -77,6 +80,7 @@ function swh_enqueue_admin_assets( $hook ) {
 				/* translators: Shown after a test email is successfully dispatched. */
 				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
 				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
+				'testEmailNetworkError'  => __( 'Network error. Please try again.', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -386,7 +390,7 @@ function swh_render_settings_page() {
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
 		</div>
-		<form method="POST" action="">
+		<form id="swh-settings-form" method="POST" action="">
 			<?php wp_nonce_field( 'swh_save_settings_action', 'swh_settings_nonce' ); ?>
 			<input type="hidden" name="swh_active_tab" id="swh_active_tab" value="tab-general">
 

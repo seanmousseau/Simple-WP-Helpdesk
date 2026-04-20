@@ -32,11 +32,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from urllib.parse import urlparse
 
 import pytest
-from playwright.sync_api import sync_playwright, Page
+from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
 
 # ── Load .env file ────────────────────────────────────────────────────────────
 
@@ -595,6 +595,12 @@ def test_07_technician_workflow(page: Page):
           TEST_INTERNAL_NOTE in conv_html)
     check("tech1 note: internal note has yellow/note styling",
           "Internal Note" in page.inner_text("body"))
+    check("note distinction #253: note bubble has swh-bubble-note class",
+          "swh-bubble-note" in conv_html)
+    check("note distinction #253: reply/note areas have CSS classes (not inline styles)",
+          "swh-note-area" in conv_html and "swh-reply-note-wrap" in conv_html)
+    check("conversation height #248: no inline max-height:400px on conversation area",
+          'max-height: 400px' not in conv_html and 'max-height:400px' not in conv_html)
     screenshot(page, "09_tech1_conversation")
     expect_email(CLIENT1_EMAIL, "tech reply notification to client")
 
@@ -973,6 +979,14 @@ def test_18_settings_persistence(page: Page):
     page.wait_for_load_state("load")
     screenshot(page, "21_settings_email_persisted")
 
+    # ── #257 Unsaved-changes warning: form has id=swh-settings-form ──────────
+    _navigate_settings(page)
+    form_id = page.evaluate(
+        "() => { var f = document.getElementById('swh-settings-form'); return f ? f.id : null; }"
+    )
+    check("unsaved changes #257: settings form has id=swh-settings-form for JS hook",
+          form_id == 'swh-settings-form', f"got: {form_id!r}")
+
 
 def test_19_canned_responses(page: Page):
     print("\n[19] Canned Responses — Save in Settings, Use in Editor")  # closes issue #197
@@ -1214,11 +1228,14 @@ def test_23_file_attachments(page: Page):
         page.fill('[name="ticket_title"]', f"Attachment Test {int(time.time())}")
         page.fill('[name="ticket_desc"]', "Testing file attachment upload.")
         page.set_input_files('[name="ticket_attachments[]"]', tmp_txt)
-        with page.expect_navigation(timeout=30000):
-            page.click('[name="swh_submit_ticket"]')
-        # A cache-invalidation GET may fire immediately after the file POST and
-        # overwrite the success view with the empty form.  Wait for that to settle
-        # before reading page state or logging in.
+        page.click('[name="swh_submit_ticket"]')
+        # With a file attached the XHR path is used: PHP processes the POST and
+        # the response HTML is injected into .swh-helpdesk-wrapper in-place
+        # (no navigation event).  Wait for either alert then assert success.
+        page.wait_for_selector('.swh-alert-success, .swh-alert-error', timeout=30000)
+        check("attachment: upload completed without error alert",
+              page.locator('.swh-alert-success').count() > 0,
+              "error alert shown after upload — ticket may not have been created")
         page.wait_for_load_state("load", timeout=10000)
 
         screenshot(page, "30_attachment_submitted")
@@ -2669,6 +2686,28 @@ def test_46_reporting_dashboard(page: Page):
     else:
         skip("reporting dashboard AJAX", "swhReports.nonce not available")
 
+    # ── #254 Empty-state elements present in DOM ──────────────────────────────
+    page.goto(reports_url)
+    page.wait_for_load_state("load")
+    check("reporting dashboard #254: status empty-state element present in DOM",
+          page.locator('#swh-chart-status-empty').count() > 0,
+          "#swh-chart-status-empty not found")
+    check("reporting dashboard #254: trend empty-state element present in DOM",
+          page.locator('#swh-chart-trend-empty').count() > 0,
+          "#swh-chart-trend-empty not found")
+    with suppress(PlaywrightTimeoutError):
+        page.wait_for_function(
+            "() => { var el = document.getElementById('swh-chart-status-empty'); return el !== null && el.hidden === true; }",
+            timeout=5000,
+        )
+    status_empty_hidden = page.evaluate(
+        "() => { var el = document.getElementById('swh-chart-status-empty'); "
+        "return el ? el.hidden : null; }"
+    )
+    check("reporting dashboard #254: status empty-state hidden when tickets exist",
+          status_empty_hidden is True,
+          f"swh-chart-status-empty hidden={status_empty_hidden!r}")
+
 
 def test_47_inbound_email_webhook(page: Page):
     print("\n[47] Inbound Email Webhook — POST /wp-json/swh/v1/inbound-email (#131)")
@@ -3324,7 +3363,65 @@ def test_53_ux_a11y(page: Page):
             else:
                 wpcli(f"post meta delete {ticket_id} _ticket_token_created")
 
+    # ── #170 WCAG 2.2 AA: submission form has screen-reader heading ─────────────
+    wp_logout(page)
+    page.goto(WP_SUBMIT_PAGE)
+    page.wait_for_load_state("load")
+    sr_heading_count = page.locator('h2.screen-reader-text').count()
+    check("a11y #170: submission form has screen-reader-text h2 heading landmark",
+          sr_heading_count > 0,
+          f"found {sr_heading_count} h2.screen-reader-text elements")
+
+    # ── #170 close-ticket CTA: no h4 heading skip (h2→h3, not h2→h4) ─────────
+    if state.get('portal_url'):
+        page.goto(state['portal_url'])
+        page.wait_for_load_state("load")
+        cta_present = page.locator('.swh-cta-primary').count() > 0
+        if cta_present:
+            h4_in_cta = page.evaluate("""
+                () => {
+                    var cta = document.querySelector('.swh-cta-primary');
+                    return cta ? cta.querySelectorAll('h4').length : 0;
+                }
+            """)
+            check("a11y #170: close-ticket CTA uses h3, not h4 (no heading skip)",
+                  h4_in_cta == 0,
+                  f"found {h4_in_cta} h4 element(s) inside .swh-cta-primary")
+
     screenshot(page, "65c_ux_a11y_frontend")
+
+
+# ── v3.3.0 Responsive layout (#251) ──────────────────────────────────────────
+
+def test_54_responsive(page: Page):
+    """v3.3.0 Responsive layout (#251): no horizontal overflow at 375px viewport."""
+    print("\n[54] Responsive Layout — 375px viewport (#251)")
+
+    page.set_viewport_size({"width": 375, "height": 812})
+
+    try:
+        wp_logout(page)
+        page.goto(WP_SUBMIT_PAGE)
+        page.wait_for_load_state("load")
+        overflow = page.evaluate(
+            "() => document.documentElement.scrollWidth > document.documentElement.clientWidth"
+        )
+        check("responsive #251: no horizontal overflow on submission form at 375px",
+              not overflow,
+              f"scrollWidth={page.evaluate('document.documentElement.scrollWidth')}")
+        screenshot(page, "66_responsive_375_submit")
+
+        wp_login(page, ADMIN_USER, ADMIN_PASS)
+        _navigate_admin_list(page)
+        overflow_admin = page.evaluate(
+            "() => document.documentElement.scrollWidth > document.documentElement.clientWidth"
+        )
+        check("responsive #251: no horizontal overflow on admin ticket list at 375px",
+              not overflow_admin,
+              f"scrollWidth={page.evaluate('document.documentElement.scrollWidth')}")
+        screenshot(page, "66b_responsive_375_admin")
+    finally:
+        page.set_viewport_size({"width": 1280, "height": 800})
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
@@ -3432,6 +3529,7 @@ SECTIONS = [
     test_51_unread_row_highlight,     # 51 — #102 row highlight
     test_52_email_test_button,        # 52 — #103 test email button
     test_53_ux_a11y,                  # 53 — v3.2.0 UX/a11y (#258–#275)
+    test_54_responsive,               # 54 — v3.3.0 responsive layout (#251)
     test_28_cleanup,                  # 28 — always last
 ]
 

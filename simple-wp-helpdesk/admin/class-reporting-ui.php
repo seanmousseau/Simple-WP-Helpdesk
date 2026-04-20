@@ -76,22 +76,24 @@ function swh_render_reports_page() {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Helpdesk Reports', 'simple-wp-helpdesk' ); ?></h1>
-		<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
-			<div style="background:#fff; border:1px solid #ddd; border-radius:4px; padding:20px;">
+		<div class="swh-report-grid">
+			<div class="swh-report-card">
 				<h2><?php esc_html_e( 'Tickets by Status', 'simple-wp-helpdesk' ); ?></h2>
 				<canvas id="swh-chart-status" height="200"></canvas>
+				<p id="swh-chart-status-empty" class="swh-chart-empty" hidden><?php esc_html_e( 'No ticket data yet.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
-			<div style="background:#fff; border:1px solid #ddd; border-radius:4px; padding:20px;">
+			<div class="swh-report-card">
 				<h2><?php esc_html_e( 'Weekly Trend (8 Weeks)', 'simple-wp-helpdesk' ); ?></h2>
 				<canvas id="swh-chart-trend" height="200"></canvas>
+				<p id="swh-chart-trend-empty" class="swh-chart-empty" hidden><?php esc_html_e( 'No ticket data yet.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
-			<div style="background:#fff; border:1px solid #ddd; border-radius:4px; padding:20px;">
+			<div class="swh-report-card">
 				<h2><?php esc_html_e( 'Avg. Resolution Time (30 Days)', 'simple-wp-helpdesk' ); ?></h2>
-				<p id="swh-avg-resolution" style="font-size:2em; font-weight:bold; text-align:center;">&mdash;</p>
+				<p id="swh-avg-resolution" class="swh-stat-value">&mdash;</p>
 			</div>
-			<div style="background:#fff; border:1px solid #ddd; border-radius:4px; padding:20px;">
+			<div class="swh-report-card">
 				<h2><?php esc_html_e( 'Avg. First Response Time (30 Days)', 'simple-wp-helpdesk' ); ?></h2>
-				<p id="swh-avg-first-response" style="font-size:2em; font-weight:bold; text-align:center;">&mdash;</p>
+				<p id="swh-avg-first-response" class="swh-stat-value">&mdash;</p>
 			</div>
 		</div>
 	</div>

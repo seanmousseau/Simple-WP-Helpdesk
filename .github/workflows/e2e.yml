@@ -67,6 +67,13 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r testing/requirements.txt
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('testing/requirements.txt') }}
+
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
 

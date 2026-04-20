@@ -29,6 +29,9 @@ function swh_admin_list_styles() {
 	}
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-admin' ), SWH_VERSION );
+	}
 
 	// #263: Inject aria-sort="none" on sortable column headers that aren't the active sort column.
 	// WordPress core adds aria-sort on the active column; this fills in the "none" state for others.

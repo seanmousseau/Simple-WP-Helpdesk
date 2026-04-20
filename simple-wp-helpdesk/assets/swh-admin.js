@@ -271,6 +271,33 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	const testEmailBtn = document.getElementById( 'swh-test-email-btn' );
 	const testEmailMsg = document.getElementById( 'swh-test-email-msg' );
 
+	// Settings: Unsaved-changes warning (#257).
+	const settingsForm = document.getElementById( 'swh-settings-form' );
+	if ( settingsForm ) {
+		let swhDirty = false;
+
+		/**
+		 * Sets the dirty flag when any form field changes.
+		 */
+		settingsForm.addEventListener( 'input', function () { swhDirty = true; } );
+		settingsForm.addEventListener( 'change', function () { swhDirty = true; } );
+
+		/**
+		 * Clears the dirty flag when the form is submitted (user chose to save).
+		 */
+		settingsForm.addEventListener( 'submit', function () { swhDirty = false; } );
+
+		/**
+		 * Warns the user before leaving the page with unsaved changes.
+		 *
+		 * @param {BeforeUnloadEvent} e - The beforeunload event.
+		 */
+		window.addEventListener( 'beforeunload', function ( e ) {
+			if ( ! swhDirty ) { return; }
+			e.preventDefault();
+		} );
+	}
+
 	if ( testEmailBtn && testEmailMsg ) {
 		/**
 		 * Sends a test email via AJAX and shows the result inline.
@@ -295,12 +322,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 					testEmailMsg.textContent = json.success
 						? ( json.data && json.data.message ? json.data.message : ( i18n.testEmailSuccess || 'Test email sent.' ) )
 						: ( json.data && json.data.message ? json.data.message : ( i18n.testEmailError || 'Failed to send.' ) );
-					testEmailMsg.style.color = json.success ? 'green' : '#d63638';
+					testEmailMsg.style.color = json.success ? 'green' : 'red';
 				} )
 				.catch( function () {
 					testEmailBtn.disabled    = false;
-					testEmailMsg.textContent = i18n.testEmailError || 'Failed to send.';
-					testEmailMsg.style.color = '#d63638';
+					testEmailMsg.textContent = i18n.testEmailNetworkError || i18n.testEmailError || 'Network error. Please try again.';
+					testEmailMsg.style.color = 'red';
 				} );
 		} );
 	}
