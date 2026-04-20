@@ -286,8 +286,11 @@ function swh_report_kpi_data() {
 		)
 	) )->found_posts;
 
-	$resolution     = swh_report_avg_resolution_time();
-	$first_response = swh_report_first_response_time();
+	$cached_resolution = get_transient( 'swh_report_avg_resolution_time' );
+	$resolution        = is_array( $cached_resolution ) ? $cached_resolution : swh_report_avg_resolution_time();
+
+	$cached_first_response = get_transient( 'swh_report_first_response_time' );
+	$first_response        = is_array( $cached_first_response ) ? $cached_first_response : swh_report_first_response_time();
 
 	return array(
 		'total'              => $total,
