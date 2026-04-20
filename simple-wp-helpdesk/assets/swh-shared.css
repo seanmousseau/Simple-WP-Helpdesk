@@ -23,8 +23,14 @@
 	--swh-color-border-subtle:  #aaa;
 	--swh-color-bg:             #fff;
 	--swh-color-bg-subtle:      #f9f9f9;
+	--swh-color-bg-highlight:   #f0f8ff;  /* highlighted row background (e.g. unread) */
+	--swh-color-surface:        #f0f0f1;  /* WP admin surface / chip background */
 	--swh-color-star:           #f0ad00;
 	--swh-color-primary-shadow: rgba( 0, 115, 170, 0.3 );
+	--swh-color-focus:          #005fcc;  /* keyboard focus ring — WP admin focus blue */
+	--swh-color-success-accent: #28a745;  /* solid success left-border accent */
+	--swh-color-text-secondary: #555;     /* secondary body text */
+	--swh-color-track:          #e0e0e0;  /* progress track / inactive indicator */
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;

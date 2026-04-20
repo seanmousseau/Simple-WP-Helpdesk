@@ -217,7 +217,7 @@
 	gap: var( --swh-space-md );
 	background-color: var( --swh-color-success-bg );
 	border: 1px solid var( --swh-color-success-bd );
-	border-left: 4px solid #28a745;
+	border-left: 4px solid var( --swh-color-success-accent );
 	border-radius: var( --swh-radius-sm );
 	padding: var( --swh-space-md );
 	margin-bottom: var( --swh-space-sm );
@@ -237,7 +237,7 @@
 .swh-cta-secondary {
 	margin: 0 0 var( --swh-space-lg ) 0;
 	font-size: 13px;
-	color: #555;
+	color: var( --swh-color-text-secondary );
 }
 
 .swh-cta-secondary a {
@@ -248,7 +248,7 @@
 /* Upload progress bar */
 .swh-progress-bar {
 	height: 6px;
-	background: #e0e0e0;
+	background: var( --swh-color-track );
 	border-radius: 3px;
 	margin-top: var( --swh-space-sm );
 	overflow: hidden;
@@ -277,7 +277,7 @@
 
 /* ── Drag-and-drop file upload zone (#273) ───────────────────────────────── */
 .swh-drop-zone {
-	border: 2px dashed #ccc;
+	border: 2px dashed var( --swh-color-border-input );
 	border-radius: var( --swh-radius-sm );
 	padding: var( --swh-space-lg ) var( --swh-space-md );
 	text-align: center;
@@ -334,7 +334,7 @@
 	border: none;
 	cursor: pointer;
 	font-size: clamp( 22px, 5vw, 28px );
-	color: #ccc;
+	color: var( --swh-color-border-input );
 	padding: 2px;
 	line-height: 1;
 	transition: color var( --swh-transition-fast );
@@ -391,7 +391,7 @@
 }
 
 .swh-ticket-row:hover {
-	background: #f5f5f5;
+	background: var( --swh-color-bg-subtle );
 }
 
 .swh-ticket-title {

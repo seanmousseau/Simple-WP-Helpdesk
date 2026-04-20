@@ -45,19 +45,19 @@ button.nav-tab {
 }
 
 button.nav-tab:focus {
-	outline: 2px solid #005fcc;
+	outline: 2px solid var( --swh-color-focus );
 	outline-offset: 2px;
 	box-shadow: none;
 }
 
 .swh-tab-tools {
-	color: #d63638;
+	color: var( --swh-color-danger );
 }
 
 /* Ticket list row: unread client reply indicator. */
 .swh-has-unread {
 	border-left: 3px solid var( --swh-color-primary );
-	background-color: #f0f8ff;
+	background-color: var( --swh-color-bg-highlight );
 }
 
 .swh-has-unread .column-title a {
@@ -67,7 +67,7 @@ button.nav-tab:focus {
 .swh-ticket-uid {
 	font-size: 16px;
 	font-weight: bold;
-	background: #f0f0f1;
+	background: var( --swh-color-surface );
 	padding: 10px;
 	text-align: center;
 	margin-bottom: 15px;
@@ -78,7 +78,7 @@ button.nav-tab:focus {
 	max-height: 60vh;
 	min-height: 200px;
 	overflow-y: auto;
-	background: #fff;
+	background: var( --swh-color-bg );
 	padding: 15px;
 	border: 1px solid var( --swh-color-border );
 	margin-bottom: 20px;
