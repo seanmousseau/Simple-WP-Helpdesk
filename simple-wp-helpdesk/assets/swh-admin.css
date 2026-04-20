@@ -230,3 +230,53 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 		display: none;
 	}
 }
+
+/* ── Settings page visual hierarchy (#323) ───────────────────────────────── */
+
+/* Dashicon alignment in tab buttons */
+.nav-tab-wrapper .dashicons {
+	font-size: 16px;
+	line-height: 1;
+	vertical-align: middle;
+	margin-top: -2px;
+	margin-right: 3px;
+}
+
+/* Active tab accent */
+.nav-tab-active {
+	border-bottom-color: var( --swh-color-primary ) !important;
+	font-weight: 600;
+	color: var( --swh-color-primary );
+}
+
+/* Settings group fieldsets */
+.swh-settings-group {
+	border: none;
+	border-top: 1px solid var( --swh-color-border );
+	padding: 0;
+	margin: 0 0 var( --swh-space-xl ) 0;
+}
+
+.swh-settings-group legend {
+	font-size: var( --swh-font-sm );
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --swh-color-text-secondary );
+	font-weight: 600;
+	padding: 0 var( --swh-space-xs );
+	margin-bottom: var( --swh-space-sm );
+}
+
+/* Danger zone */
+.swh-danger-zone {
+	border-left: 3px solid var( --swh-color-danger );
+	background: var( --swh-color-danger-surface );
+	padding: var( --swh-space-md );
+	border-radius: var( --swh-radius-sm );
+	margin-top: var( --swh-space-xl );
+}
+
+.swh-danger-zone h3 {
+	margin-top: 0;
+	color: var( --swh-color-danger );
+}
