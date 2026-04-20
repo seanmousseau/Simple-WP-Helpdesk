@@ -122,6 +122,7 @@ make coverage    # PHPUnit coverage → coverage.xml (requires pcov or xdebug)
 ```
 
 ### Docker test stack (local or CI)
+
 ```bash
 # Fully self-contained — one command spins up, runs all 53 E2E sections, tears down
 make e2e-docker

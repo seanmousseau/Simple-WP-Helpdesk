@@ -3269,8 +3269,8 @@ def test_53_ux_a11y(page: Page):
     if portal_url and ticket_id:
         # CSAT widget only renders in the POST response right after the close
         # action — not on a plain GET of an already-closed ticket.  Set status
-        # to open so the close button appears, submit the form, then check ARIA.
-        wpcli(f"post meta update {ticket_id} _ticket_status open")
+        # to resolved so the portal shows the "Close ticket" confirmation button.
+        wpcli(f"post meta update {ticket_id} _ticket_status resolved")
         wpcli(f"post meta delete {ticket_id} _ticket_csat")
         page.goto(portal_url)
         page.wait_for_load_state("load")

@@ -97,6 +97,6 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 }
 
 .swh-merge-body.swh-merge-visible {
-	max-height: 200px;
+	max-height: 600px;
 	opacity: 1;
 }

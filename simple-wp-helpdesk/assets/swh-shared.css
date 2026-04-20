@@ -16,12 +16,15 @@
 	--swh-color-info-bg:       #e6f7ff;
 	--swh-color-info-bd:       #b3e0ff;
 	--swh-color-info-text:     #005980;
-	--swh-color-text:          #333;
-	--swh-color-muted:         #767676;
-	--swh-color-border:        #ddd;
-	--swh-color-bg:            #fff;
-	--swh-color-bg-subtle:     #f9f9f9;
-	--swh-color-star:          #f0ad00;
+	--swh-color-text:           #333;
+	--swh-color-muted:          #767676;
+	--swh-color-border:         #ddd;
+	--swh-color-border-input:   #ccc;
+	--swh-color-border-subtle:  #aaa;
+	--swh-color-bg:             #fff;
+	--swh-color-bg-subtle:      #f9f9f9;
+	--swh-color-star:           #f0ad00;
+	--swh-color-primary-shadow: rgba( 0, 115, 170, 0.3 );
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;

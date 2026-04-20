@@ -29,7 +29,7 @@
 	width: 100%;
 	max-width: 100%;
 	padding: var( --swh-space-sm );
-	border: 1px solid #ccc;
+	border: 1px solid var( --swh-color-border-input );
 	border-radius: var( --swh-radius-sm );
 	font-family: inherit;
 	font-size: var( --swh-font-base );
@@ -41,7 +41,7 @@
 	border-color: var( --swh-color-primary );
 	outline: 2px solid var( --swh-color-primary );
 	outline-offset: 2px;
-	box-shadow: 0 0 3px rgba( 0, 115, 170, 0.3 );
+	box-shadow: 0 0 3px var( --swh-color-primary-shadow );
 }
 
 .swh-btn {
@@ -150,7 +150,7 @@
 
 .swh-chat-user {
 	background-color: var( --swh-color-bg-subtle );
-	border-color: #aaa;
+	border-color: var( --swh-color-border-subtle );
 }
 
 .swh-chat-tech {
@@ -355,7 +355,7 @@
 /* ── Lookup toggle slide transition (#272) ───────────────────────────────── */
 #swh-lookup-form {
 	overflow: hidden;
-	transition: max-height 0.3s ease, opacity 0.25s ease;
+	transition: max-height var( --swh-transition-normal ) ease, opacity var( --swh-transition-fast ) ease;
 	max-height: 0;
 	opacity: 0;
 	visibility: hidden;

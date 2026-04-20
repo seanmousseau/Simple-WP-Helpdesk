@@ -263,7 +263,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				mergeBody.setAttribute( 'aria-hidden', 'true' );
 			}
 			mergeToggle.textContent = ( ! expanded ? '\u25BC ' : '\u25BA ' )
-				+ mergeToggle.textContent.replace( /^[\u25BC\u25BA]\s*/, '' );
+				+ mergeToggle.textContent.replace( /^[\u25BC\u25BA\u25B6]\s*/, '' );
 		} );
 	}
 
