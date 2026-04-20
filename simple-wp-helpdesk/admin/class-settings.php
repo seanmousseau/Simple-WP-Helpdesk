@@ -387,7 +387,7 @@ function swh_render_settings_page() {
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
 		</div>
-		<form method="POST" action="">
+		<form id="swh-settings-form" method="POST" action="">
 			<?php wp_nonce_field( 'swh_save_settings_action', 'swh_settings_nonce' ); ?>
 			<input type="hidden" name="swh_active_tab" id="swh_active_tab" value="tab-general">
 
