@@ -303,7 +303,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 }
 
 .swh-kpi-card--success {
-	border-top-color: var( --swh-color-success );
+	border-top-color: var( --swh-color-success-accent );
 }
 
 .swh-kpi-icon {
@@ -315,7 +315,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 }
 
 .swh-kpi-card--warning .swh-kpi-icon { fill: var( --swh-color-warning ); }
-.swh-kpi-card--success .swh-kpi-icon { fill: var( --swh-color-success ); }
+.swh-kpi-card--success .swh-kpi-icon { fill: var( --swh-color-success-accent ); }
 
 .swh-kpi-value {
 	font-size: 2rem;
@@ -326,7 +326,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 }
 
 .swh-kpi-card--warning .swh-kpi-value { color: var( --swh-color-warning ); }
-.swh-kpi-card--success .swh-kpi-value { color: var( --swh-color-success ); }
+.swh-kpi-card--success .swh-kpi-value { color: var( --swh-color-success-accent ); }
 
 .swh-kpi-label {
 	font-size: var( --swh-font-sm );

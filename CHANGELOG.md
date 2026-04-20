@@ -23,7 +23,7 @@ starting from the next release after 1.8.
 - **Reporting KPI cards (#318):** Four stat cards above the chart grid on the Reports page: Total Tickets, Open Tickets, Avg. Resolution (30d), Avg. First Response (30d). Populated via AJAX on page load (`type=kpi`). 4-col grid, responsive to 2-col at 782px and 1-col at 480px.
 - **Settings visual hierarchy (#323):** Dashicons added to all 8 settings tab buttons. General tab reorganised into three labelled fieldsets (Ticket Workflow / Auto-Close / File Uploads). Danger Zone uses `.swh-danger-zone` CSS class instead of inline styles.
 - **Ticket editor side panel (#322):** Meta box content reorganised into `.swh-ticket-panel` with three `.swh-panel-group` sections (Ticket / Client / Assignment). Status colour dot updates dynamically via JS. `.swh-select` class added to all selects.
-- **New CSS tokens (#321):** `--swh-color-warning` (#d97706), `--swh-color-success` (#28a745), `--swh-color-danger-surface` (#fef2f2), `--swh-color-note-*` variants.
+- **New CSS tokens (#321):** `--swh-color-warning` (#d97706), `--swh-color-danger-surface` (#fef2f2).
 
 ### Changed
 

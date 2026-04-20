@@ -36,7 +36,6 @@
 	--swh-color-note-text:      #3d3000;  /* internal note button text */
 	--swh-color-note-bg-hover:  #d4a017;  /* internal note button hover background */
 	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
-	--swh-color-success:        #28a745;  /* solid success — KPI cards, positive indicators */
 	--swh-color-warning:        #d97706;  /* solid amber — KPI warning card, danger zone icons */
 	--swh-color-danger-surface: #fef2f2;  /* light red surface — settings danger zone background */
 
