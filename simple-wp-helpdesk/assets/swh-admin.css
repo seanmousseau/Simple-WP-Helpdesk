@@ -101,6 +101,84 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	opacity: 1;
 }
 
+/* ── Conversation bubbles (#253) ────────────────────────────────────────── */
+.swh-bubble {
+	padding: var( --swh-space-sm ) var( --swh-space-md );
+	margin-bottom: var( --swh-space-sm );
+	border-left: 4px solid var( --swh-color-primary );
+	border-radius: var( --swh-radius-sm );
+}
+
+.swh-bubble-note {
+	background: var( --swh-color-warning-bg );
+	border-left-color: var( --swh-color-warning-bd );
+}
+
+.swh-bubble-user {
+	background: var( --swh-color-bg-subtle );
+	border-left-color: var( --swh-color-border-subtle );
+}
+
+.swh-bubble-tech {
+	background: var( --swh-color-info-bg );
+	border-left-color: var( --swh-color-primary );
+}
+
+.swh-bubble-meta {
+	display: block;
+	margin-bottom: var( --swh-space-xs );
+}
+
+.swh-bubble-timestamp {
+	font-weight: normal;
+	font-size: 0.8em;
+	color: var( --swh-color-muted );
+}
+
+.swh-bubble-attachments {
+	margin-top: var( --swh-space-sm );
+}
+
+.swh-conversation-empty {
+	color: var( --swh-color-muted );
+	font-style: italic;
+}
+
+/* ── Reply / Note input areas (#253) ────────────────────────────────────── */
+.swh-reply-note-wrap {
+	display: flex;
+	gap: var( --swh-space-lg );
+}
+
+.swh-reply-area,
+.swh-note-area {
+	flex: 1;
+}
+
+.swh-note-area {
+	background: var( --swh-color-warning-bg );
+	padding: var( --swh-space-md );
+	border-radius: var( --swh-radius-md );
+	border: 1px solid var( --swh-color-warning-bd );
+}
+
+.swh-note-area h4,
+.swh-note-area p {
+	color: var( --swh-color-warning-text );
+}
+
+.swh-note-btn {
+	background: #f0c040;
+	border-color: #d4a017;
+	color: #3d3000;
+}
+
+.swh-note-btn:hover {
+	background: #d4a017;
+	border-color: #b38800;
+	color: #3d3000;
+}
+
 /* ── Responsive (#251) ───────────────────────────────────────────────────── */
 
 /* Tablet: WP sidebar collapses at 782px */
