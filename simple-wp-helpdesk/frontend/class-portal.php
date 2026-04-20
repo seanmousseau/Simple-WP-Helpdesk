@@ -25,6 +25,7 @@ function swh_render_client_portal() {
 	$reopened_status = swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' );
 	$default_status  = swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : '' );
 	$spam_method     = swh_get_string_option( 'swh_spam_method', 'none' );
+	$theme_attr      = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
 
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Token-based auth; params verified via hash_equals() below; isset() checked by callers.
 	$ticket_id = isset( $_GET['swh_ticket'] ) && is_scalar( $_GET['swh_ticket'] ) ? absint( $_GET['swh_ticket'] ) : 0;
@@ -34,14 +35,14 @@ function swh_render_client_portal() {
 	$db_token = swh_get_string_meta( $ticket_id, '_ticket_token' );
 
 	if ( ! $post || 'helpdesk_ticket' !== $post->post_type || '' === $db_token || '' === $token || ! hash_equals( $db_token, $token ) ) {
-		echo '<div class="swh-helpdesk-wrapper">';
+		echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( swh_get_string_option( 'swh_msg_err_invalid', is_string( $defs['swh_msg_err_invalid'] ) ? $defs['swh_msg_err_invalid'] : '' ) ) . '</div>';
 		echo '</div>';
 		return;
 	}
 
 	if ( swh_is_token_expired( $ticket_id ) ) {
-		echo '<div class="swh-helpdesk-wrapper">';
+		echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( swh_get_string_option( 'swh_msg_err_expired', is_string( $defs['swh_msg_err_expired'] ) ? $defs['swh_msg_err_expired'] : '' ) ) . '</div>';
 		swh_render_lookup_form();
 		echo '</div>';
@@ -234,7 +235,7 @@ function swh_render_client_portal() {
 		} // end anti-spam else
 	}
 	?>
-	<div class="swh-helpdesk-wrapper">
+	<div class="swh-helpdesk-wrapper"<?php echo $theme_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string ?>>
 	<div class="swh-card">
 		<div style="float: right; font-weight: bold; color: #666; font-size: 1.2em;"><?php echo esc_html( $data['ticket_id'] ); ?></div>
 		<h1 class="swh-ticket-title"><?php echo esc_html( $data['title'] ); ?></h1>
@@ -410,7 +411,8 @@ function swh_render_client_portal() {
  * @return void
  */
 function swh_render_portal_no_token() {
-	echo '<div class="swh-helpdesk-wrapper">';
+	$theme_attr = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
+	echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 
 	if ( is_user_logged_in() ) {
 		$current_user  = wp_get_current_user();

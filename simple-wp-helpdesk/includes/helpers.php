@@ -113,6 +113,8 @@ function swh_get_defaults() {
 			// Email templates: ticket merge notification.
 			'swh_em_user_merged_sub'         => 'Your ticket has been merged: {ticket_id}',
 			'swh_em_user_merged_body'        => "Hi {name},\n\nYour ticket ({ticket_id}) has been merged into ticket {target_ticket_id}.\n\nYou can continue viewing your conversation here:\n{target_ticket_url}",
+			// Frontend portal appearance.
+			'swh_portal_theme'               => 'auto',
 		);
 	}
 	return $defaults;
