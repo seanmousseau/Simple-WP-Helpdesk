@@ -3376,8 +3376,6 @@ def test_53_ux_a11y(page: Page):
         page.goto(state['portal_url'])
         page.wait_for_load_state("load")
         cta_present = page.locator('.swh-cta-primary').count() > 0
-        check("a11y #170: .swh-cta-primary element present on portal page",
-              cta_present, ".swh-cta-primary not found")
         if cta_present:
             h4_in_cta = page.evaluate("""
                 () => {

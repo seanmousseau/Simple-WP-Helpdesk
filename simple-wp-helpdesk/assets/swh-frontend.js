@@ -461,8 +461,19 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			xhr.addEventListener( 'load', function () {
 				if ( xhr.status >= 200 && xhr.status < 300 ) {
 					fill.style.width = '100%';
-					// Navigate to the response URL (XHR follows redirects transparently).
-					window.location.href = xhr.responseURL || ticketForm.action;
+					// Replace the wrapper with the server-rendered response so the
+					// inline success notice and ticket link are preserved.  If the
+					// wrapper cannot be located in the response, fall back to a GET
+					// reload of the same URL.
+					var parser  = new window.DOMParser();
+					var respDoc = parser.parseFromString( xhr.responseText, 'text/html' );
+					var respWrap = respDoc.querySelector( '.swh-helpdesk-wrapper' );
+					var curWrap  = ticketForm.closest( '.swh-helpdesk-wrapper' );
+					if ( respWrap && curWrap ) {
+						curWrap.replaceWith( document.adoptNode( respWrap ) );
+					} else {
+						window.location.href = xhr.responseURL || ticketForm.action;
+					}
 				} else {
 					_xhrRestore();
 					swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload failed. Please try again.' );

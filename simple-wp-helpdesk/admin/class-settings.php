@@ -60,6 +60,9 @@ function swh_enqueue_admin_assets( $hook ) {
 
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
+	if ( is_rtl() ) {
+		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-admin' ), SWH_VERSION );
+	}
 	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 	wp_localize_script(
 		'swh-admin',
