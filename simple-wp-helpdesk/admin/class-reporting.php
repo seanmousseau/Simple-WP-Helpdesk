@@ -46,6 +46,9 @@ function swh_ajax_report_data() {
 		case 'first_response_time':
 			$data = swh_report_first_response_time();
 			break;
+		case 'kpi':
+			$data = swh_report_kpi_data();
+			break;
 		default:
 			wp_send_json_error( array( 'message' => __( 'Unknown report type.', 'simple-wp-helpdesk' ) ) );
 	}
@@ -237,5 +240,59 @@ function swh_report_first_response_time() {
 	return array(
 		'avg_seconds' => $count > 0 ? (int) round( $total / $count ) : 0,
 		'count'       => $count,
+	);
+}
+
+/**
+ * Returns top-level KPI summary data for the reporting dashboard.
+ *
+ * @since 3.4.0
+ * @return array{total: int, open: int, avg_resolution: int, avg_first_response: int}
+ */
+function swh_report_kpi_data() {
+	$defs            = swh_get_defaults();
+	$closed_status   = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
+	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
+
+	$total = (int) ( new WP_Query(
+		array(
+			'post_type'      => 'helpdesk_ticket',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		)
+	) )->found_posts;
+
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+	$open = (int) ( new WP_Query(
+		array(
+			'post_type'      => 'helpdesk_ticket',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_ticket_status',
+					'value'   => $closed_status,
+					'compare' => '!=',
+				),
+				array(
+					'key'     => '_ticket_status',
+					'value'   => $resolved_status,
+					'compare' => '!=',
+				),
+			),
+		)
+	) )->found_posts;
+
+	$resolution     = swh_report_avg_resolution_time();
+	$first_response = swh_report_first_response_time();
+
+	return array(
+		'total'              => $total,
+		'open'               => $open,
+		'avg_resolution'     => $resolution['avg_seconds'],
+		'avg_first_response' => $first_response['avg_seconds'],
 	);
 }

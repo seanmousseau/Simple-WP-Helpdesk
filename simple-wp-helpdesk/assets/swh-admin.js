@@ -332,3 +332,27 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		} );
 	}
 } );
+
+/* Status dot color update — ticket editor (#322) */
+( function () {
+	var statusSelect = document.getElementById( 'swh-status' );
+	var statusDot    = document.getElementById( 'swh-status-dot' );
+	if ( ! statusSelect || ! statusDot ) { return; }
+
+	var colorMap = {
+		'open':        '#28a745',
+		'in progress': '#d97706',
+		'in-progress': '#d97706',
+		'resolved':    '#0073aa',
+		'closed':      '#767676',
+	};
+
+	function updateDot( val ) {
+		var key   = val ? val.toLowerCase() : '';
+		var color = colorMap[ key ] || '#767676';
+		statusDot.style.background = color;
+	}
+
+	updateDot( statusSelect.value );
+	statusSelect.addEventListener( 'change', function () { updateDot( this.value ); } );
+}() );

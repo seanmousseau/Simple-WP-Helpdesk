@@ -415,6 +415,65 @@
 	font-size: 14px;
 }
 
+/* ── Ticket card list — My Tickets portal (#320) ─────────────────────────── */
+.swh-ticket-card-list {
+	list-style: none;
+	margin: 0 0 var( --swh-space-lg );
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var( --swh-space-sm );
+}
+
+.swh-ticket-card {
+	display: flex;
+	align-items: center;
+	gap: var( --swh-space-md );
+	padding: var( --swh-space-md );
+	background: var( --swh-color-bg );
+	border: 1px solid var( --swh-color-border );
+	border-radius: var( --swh-radius-md );
+	transition: box-shadow var( --swh-transition-normal ) ease,
+	            border-color var( --swh-transition-normal ) ease;
+}
+
+.swh-ticket-card:hover {
+	border-color: var( --swh-color-border-subtle );
+	box-shadow: 0 1px 4px rgba( 0, 0, 0, 0.06 );
+}
+
+.swh-ticket-card--unread {
+	border-left: 3px solid var( --swh-color-primary );
+	background: var( --swh-color-bg-highlight );
+}
+
+.swh-ticket-card-body {
+	flex: 1;
+	min-width: 0;
+}
+
+.swh-ticket-card-title {
+	font-weight: 500;
+	margin: 0 0 2px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var( --swh-color-text );
+}
+
+.swh-ticket-card-meta {
+	font-size: var( --swh-font-sm );
+	color: var( --swh-color-text-secondary );
+	margin: 0;
+}
+
+.swh-btn-sm {
+	padding: 5px 12px;
+	font-size: var( --swh-font-sm );
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
 /* ── Responsive (#251) ───────────────────────────────────────────────────── */
 @media ( max-width: 480px ) {
 	/* Ticket table: horizontal scroll instead of overflow on narrow screens */
@@ -422,6 +481,20 @@
 		display: block;
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Ticket cards: stack vertically on narrow screens */
+	.swh-ticket-card {
+		flex-wrap: wrap;
+		gap: var( --swh-space-sm );
+	}
+
+	.swh-ticket-card-title {
+		white-space: normal;
+	}
+
+	.swh-btn-sm {
+		align-self: flex-end;
 	}
 
 	/* Drop zone: reduce padding on mobile */

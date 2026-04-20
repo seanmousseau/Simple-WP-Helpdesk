@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.3.0
+Stable tag: 3.4.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,17 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.4.0 =
+* Added: Frontend dark mode via `prefers-color-scheme: dark` token overrides in `swh-shared.css`; escape hatch via `[data-swh-theme="light"]` (#321)
+* Added: Shared `.swh-empty-state` component applied to My Tickets portal, admin ticket list, canned responses, and assignment rules (#319)
+* Added: Portal My Tickets replaced table with accessible `.swh-ticket-card-list` card layout (#320)
+* Added: Email template branded header band with logo, site name, and footer; `swh_email_logo_url` option (#317)
+* Added: Reporting KPI stats cards (Total Tickets, Open, Avg Resolution, Avg First Response) above chart grid (#318)
+* Added: Settings tab dashicons, General tab fieldset groups, and `.swh-danger-zone` CSS class (#323)
+* Added: Ticket editor `.swh-ticket-panel` group layout with status colour dot (#322)
+* Changed: Pre-push hook requires Docker (no host PHP fallback) (#313)
+* Removed: Claude Code Review CI workflow — replaced by manual `/review` invocation (#312)
 
 = 3.3.0 =
 * Added: RTL stylesheet (`swh-rtl.css`) with directional overrides; loaded conditionally via `is_rtl()` (#125)

@@ -80,7 +80,12 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **Inbound webhook** — `POST /wp-json/swh/v1/inbound-email`. Validates `Authorization: Bearer <swh_inbound_secret>`. Parses `[TKT-XXXX]` from subject, validates sender vs `_ticket_email` via `hash_equals`. Strips `>`-prefixed quoted lines.
 - **Assignment rules** — stored as JSON in `swh_assignment_rules` option (array of `{category_term_id, assignee_user_id}`). Applied at ticket creation via `swh_apply_assignment_rules()`. First matching rule wins; falls back to `swh_default_assignee`.
 - **SLA cron** — `swh_sla_check_event` runs hourly. Lock transient: `swh_lock_sla`. Open statuses filtered via `swh_sla_open_statuses` filter hook.
-- **Reporting transients** — `swh_report_{type}` cached for `HOUR_IN_SECONDS`. Types: `status_breakdown`, `avg_resolution_time`, `weekly_trend`, `first_response_time`.
+- **Reporting transients** — `swh_report_{type}` cached for `HOUR_IN_SECONDS`. Types: `status_breakdown`, `avg_resolution_time`, `weekly_trend`, `first_response_time`, `kpi`.
+- **`.swh-empty-state`** — shared component in `swh-shared.css`; apply to all "nothing here" states. Three required elements: `.swh-empty-state-icon` (SVG), `.swh-empty-state-title`, `.swh-empty-state-desc`. CTA link is optional.
+- **Dark mode tokens** — frontend only (`swh-shared.css` `@media (prefers-color-scheme: dark)` block). Do NOT add dark mode to `swh-admin.css` — WP admin handles its own colour schemes. Use `[data-swh-theme="light"]` escape hatch on `.swh-helpdesk-wrapper` for sites that control the theme themselves.
+- **Email HTML wrapper** — all CSS must be inlined. `swh_wrap_html_email()` in `class-email.php`. No `<link>` or `<style>` tags — email clients strip them.
+- **`swh_email_logo_url` option** — stored in `swh_options` via `swh_get_defaults()`; falls back to `get_site_icon_url(48)` if empty. Displayed at 32×32px in the email header band.
+- **Ticket editor panel groups** — `.swh-panel-group` + `.swh-panel-group-label` in `class-ticket-editor.php`. Do NOT change form field `name` attributes or the save handler will break. IDs `#swh-status`, `#swh-priority`, `#swh-assigned-to` must remain.
 
 ## Release Process
 
@@ -90,10 +95,12 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 4. Update `simple-wp-helpdesk/readme.txt` stable tag and changelog.
 5. Update `docs/` files for any changed behaviour or new features.
 6. **Run full test suite** (all four must pass — see Test Suite below).
-7. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
-8. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
-9. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-10. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
+7. **Ask the user before creating a PR** — never open one autonomously.
+8. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
+9. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
+10. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+11. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
+12. **After pushing, do not monitor CI run status.** Wait for the user to report results before taking further action.
 
 > ZIP is built by `release.yml` on every `v*.*.*` tag push — no manual zip command needed.
 
@@ -103,12 +110,13 @@ The full test suite must pass before any release. Use `make` targets (requires `
 
 ### Local gate (required before opening any PR)
 ```bash
-make test-docker  # full gate inside Docker — no host PHP/semgrep needed (preferred)
-make test         # full gate on host — requires PHP 8.1+, semgrep
-make e2e          # Playwright E2E — 54 sections (set WP_MODE=docker or configure SSH vars)
+make test-docker  # full gate inside Docker — required (no host PHP fallback)
+make e2e          # Playwright E2E — 56 sections (set WP_MODE=docker or configure SSH vars)
 make e2e-docker   # fully self-contained E2E: up + setup + test + teardown in one command
 make test-all     # make test + make e2e
 ```
+
+> **Docker required.** The pre-push hook calls `make test-docker` and aborts if Docker is unavailable. There is no host-PHP fallback.
 
 ### Individual tools
 ```bash
@@ -124,7 +132,7 @@ make coverage    # PHPUnit coverage → coverage.xml (requires pcov or xdebug)
 ### Docker test stack (local or CI)
 
 ```bash
-# Fully self-contained — one command spins up, runs all 54 E2E sections, tears down
+# Fully self-contained — one command spins up, runs all 56 E2E sections, tears down
 make e2e-docker
 
 # Or manually:
@@ -165,7 +173,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 54 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0)
+### 56 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -220,6 +228,8 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 | 52 | email_test_button | |
 | 53 | ux_a11y | |
 | 54 | responsive | |
+| 55 | email_branding | |
+| 56 | dark_mode | |
 | 28 | cleanup | |
 
 ### Architecture

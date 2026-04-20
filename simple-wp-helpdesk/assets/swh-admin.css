@@ -230,3 +230,163 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 		display: none;
 	}
 }
+
+/* ── Settings page visual hierarchy (#323) ───────────────────────────────── */
+
+/* Dashicon alignment in plugin settings tabs only */
+#swh-tabs .dashicons {
+	font-size: 16px;
+	line-height: 1;
+	vertical-align: middle;
+	margin-top: -2px;
+	margin-right: 3px;
+}
+
+/* Active tab accent — scoped to plugin settings tabs only */
+#swh-tabs .nav-tab-active {
+	border-bottom-color: var( --swh-color-primary ) !important;
+	font-weight: 600;
+	color: var( --swh-color-primary );
+}
+
+/* Settings group fieldsets */
+.swh-settings-group {
+	border: none;
+	border-top: 1px solid var( --swh-color-border );
+	padding: 0;
+	margin: 0 0 var( --swh-space-xl ) 0;
+}
+
+.swh-settings-group legend {
+	font-size: var( --swh-font-sm );
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --swh-color-text-secondary );
+	font-weight: 600;
+	padding: 0 var( --swh-space-xs );
+	margin-bottom: var( --swh-space-sm );
+}
+
+/* Danger zone */
+.swh-danger-zone {
+	border-left: 3px solid var( --swh-color-danger );
+	background: var( --swh-color-danger-surface );
+	padding: var( --swh-space-md );
+	border-radius: var( --swh-radius-sm );
+	margin-top: var( --swh-space-xl );
+}
+
+.swh-danger-zone h3 {
+	margin-top: 0;
+	color: var( --swh-color-danger );
+}
+
+/* ── Reporting KPI cards (#318) ──────────────────────────────────────────── */
+.swh-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat( 4, 1fr );
+	gap: var( --swh-space-md );
+	margin-bottom: var( --swh-space-lg );
+}
+
+.swh-kpi-card {
+	background: var( --swh-color-bg );
+	border: 1px solid var( --swh-color-border );
+	border-top: 3px solid var( --swh-color-primary );
+	border-radius: var( --swh-radius-md );
+	padding: var( --swh-space-md );
+	text-align: center;
+}
+
+.swh-kpi-card--warning {
+	border-top-color: var( --swh-color-warning );
+}
+
+.swh-kpi-card--success {
+	border-top-color: var( --swh-color-success-accent );
+}
+
+.swh-kpi-icon {
+	display: block;
+	width: 28px;
+	height: 28px;
+	fill: var( --swh-color-muted );
+	margin: 0 auto var( --swh-space-xs );
+}
+
+.swh-kpi-card--warning .swh-kpi-icon { fill: var( --swh-color-warning ); }
+.swh-kpi-card--success .swh-kpi-icon { fill: var( --swh-color-success-accent ); }
+
+.swh-kpi-value {
+	font-size: 2rem;
+	font-weight: 700;
+	margin: var( --swh-space-xs ) 0;
+	color: var( --swh-color-primary );
+	line-height: 1.1;
+}
+
+.swh-kpi-card--warning .swh-kpi-value { color: var( --swh-color-warning ); }
+.swh-kpi-card--success .swh-kpi-value { color: var( --swh-color-success-accent ); }
+
+.swh-kpi-label {
+	font-size: var( --swh-font-sm );
+	color: var( --swh-color-text-secondary );
+	margin: 0;
+}
+
+@media ( max-width: 782px ) {
+	.swh-kpi-grid { grid-template-columns: repeat( 2, 1fr ); }
+}
+
+@media ( max-width: 480px ) {
+	.swh-kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Ticket editor side panel (#322) ─────────────────────────────────────── */
+.swh-ticket-panel {
+	display: flex;
+	flex-direction: column;
+}
+
+.swh-panel-group {
+	padding: var( --swh-space-sm ) 0;
+	border-bottom: 1px solid var( --swh-color-border-subtle );
+}
+
+.swh-panel-group:last-child {
+	border-bottom: none;
+}
+
+.swh-panel-group-label {
+	display: block;
+	font-size: var( --swh-font-sm );
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --swh-color-text-secondary );
+	font-weight: 600;
+	margin-bottom: var( --swh-space-xs );
+}
+
+.swh-panel-group p {
+	margin: var( --swh-space-xs ) 0 2px;
+}
+
+.swh-panel-meta {
+	font-size: var( --swh-font-sm );
+	color: var( --swh-color-text-secondary );
+}
+
+.swh-select {
+	width: 100%;
+	margin-bottom: var( --swh-space-xs );
+}
+
+.swh-status-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var( --swh-color-muted );
+	margin-left: 4px;
+	vertical-align: middle;
+}

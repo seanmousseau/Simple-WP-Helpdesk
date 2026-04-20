@@ -12,6 +12,30 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.4.0] — 2026-04-20
+
+### Added
+
+- **Frontend dark mode (#321):** `@media (prefers-color-scheme: dark)` token overrides in `swh-shared.css` using slate palette (slate-900 bg, indigo-400 primary). `[data-swh-theme="light"]` escape hatch on `.swh-helpdesk-wrapper` for sites that manage their own theme.
+- **Consistent empty states (#319):** Shared `.swh-empty-state` component (icon + title + desc) applied to My Tickets portal, admin ticket list, canned responses, and assignment rules.
+- **Portal card layout (#320):** My Tickets dashboard replaced `<table>` with `.swh-ticket-card-list` flex card layout. Cards show status badge, title, meta line, and accessible "View →" CTA. Unread tickets get a primary-colour left border accent.
+- **Email template visual branding (#317):** `swh_wrap_html_email()` now renders a branded header band (primary colour `#0073aa`, optional logo, site name) and a footer note. New `swh_email_logo_url` option (Email Templates tab) for a custom logo URL.
+- **Reporting KPI cards (#318):** Four stat cards above the chart grid on the Reports page: Total Tickets, Open Tickets, Avg. Resolution (30d), Avg. First Response (30d). Populated via AJAX on page load (`type=kpi`). 4-col grid, responsive to 2-col at 782px and 1-col at 480px.
+- **Settings visual hierarchy (#323):** Dashicons added to all 8 settings tab buttons. General tab reorganised into three labelled fieldsets (Ticket Workflow / Auto-Close / File Uploads). Danger Zone uses `.swh-danger-zone` CSS class instead of inline styles.
+- **Ticket editor side panel (#322):** Meta box content reorganised into `.swh-ticket-panel` with three `.swh-panel-group` sections (Ticket / Client / Assignment). Status colour dot updates dynamically via JS. `.swh-select` class added to all selects.
+- **New CSS tokens (#321):** `--swh-color-warning` (#d97706), `--swh-color-danger-surface` (#fef2f2).
+
+### Changed
+
+- **Pre-push hook (#313):** Docker is now required — no host PHP fallback. Push aborts if Docker is unavailable.
+- **`swh_email_logo_url` default:** Empty string (falls back to `get_site_icon_url(48)` at send time).
+
+### Removed
+
+- **Claude Code Review CI workflow (#312):** Removed `.github/workflows/claude-code-review.yml`; CodeRabbit review is now invoked manually via `/review` on the PR.
+
+---
+
 ## [3.3.0] — 2026-04-20
 
 ### Added
@@ -38,7 +62,7 @@ starting from the next release after 1.8.
 
 ---
 
-## [3.2.0] — Unreleased
+## [3.2.0] — 2026-04-20
 
 ### Added
 

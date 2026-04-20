@@ -265,6 +265,8 @@ function swh_handle_settings_save() {
 				$val = is_scalar( $_POST[ $opt ] ) ? absint( $_POST[ $opt ] ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} elseif ( strpos( $opt, '_body' ) !== false ) {
 				$val = is_string( $_POST[ $opt ] ) ? wp_kses_post( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			} elseif ( 'swh_email_logo_url' === $opt ) {
+				$val = is_string( $_POST[ $opt ] ) ? esc_url_raw( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} else {
 				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
@@ -381,34 +383,45 @@ function swh_render_settings_page() {
 			<?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?>
 		</h2>
 		<div class="nav-tab-wrapper" id="swh-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings Sections', 'simple-wp-helpdesk' ); ?>">
-			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab" role="tab" id="swh-tab-emails" data-tab="tab-emails" aria-selected="false" aria-controls="tab-emails" tabindex="-1"><?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab" role="tab" id="swh-tab-canned" data-tab="tab-canned" aria-selected="false" aria-controls="tab-canned" tabindex="-1"><?php esc_html_e( 'Canned Responses', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
-			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><span class="dashicons dashicons-admin-generic" aria-hidden="true"></span> <?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span> <?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-emails" data-tab="tab-emails" aria-selected="false" aria-controls="tab-emails" tabindex="-1"><span class="dashicons dashicons-email-alt" aria-hidden="true"></span> <?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><span class="dashicons dashicons-format-chat" aria-hidden="true"></span> <?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><span class="dashicons dashicons-shield" aria-hidden="true"></span> <?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-canned" data-tab="tab-canned" aria-selected="false" aria-controls="tab-canned" tabindex="-1"><span class="dashicons dashicons-text-page" aria-hidden="true"></span> <?php esc_html_e( 'Canned Responses', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><span class="dashicons dashicons-layout" aria-hidden="true"></span> <?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><span class="dashicons dashicons-admin-tools" aria-hidden="true"></span> <?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
 		</div>
 		<form id="swh-settings-form" method="POST" action="">
 			<?php wp_nonce_field( 'swh_save_settings_action', 'swh_settings_nonce' ); ?>
 			<input type="hidden" name="swh_active_tab" id="swh_active_tab" value="tab-general">
 
 			<div id="tab-general" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-general" tabindex="0">
-				<table class="form-table">
-					<tr><th scope="row"><?php esc_html_e( 'Custom Priorities', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_ticket_priorities', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Default Priority', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_default_priority', $defs ); ?></td></tr>
-					<tr><td colspan="2"><hr></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Custom Statuses', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_ticket_statuses', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Default New Status', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_default_status', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( '"Resolved" Status', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Triggers Auto-close', 'simple-wp-helpdesk' ); ?>)</small></th><td><?php swh_field( 'swh_resolved_status', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( '"Closed" Status', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Disables replies', 'simple-wp-helpdesk' ); ?>)</small></th><td><?php swh_field( 'swh_closed_status', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( '"Re-Opened" Status', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_reopened_status', $defs ); ?></td></tr>
-					<tr><td colspan="2"><hr></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Auto-Close Days', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_autoclose_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_autoclose_days', '3' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'If a ticket is Resolved and the user doesn\'t reply in this many days, it automatically closes. Set to 0 to disable.', 'simple-wp-helpdesk' ); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Max File Upload Size', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_size" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_size', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'MB', 'simple-wp-helpdesk' ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Max Files Per Upload', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_count" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_count', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'files', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'Maximum number of files a user can attach per submission. Set to 0 for unlimited.', 'simple-wp-helpdesk' ); ?></p></td></tr>
-				</table>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Ticket Workflow', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr><th scope="row"><?php esc_html_e( 'Custom Priorities', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_ticket_priorities', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Default Priority', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_default_priority', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Custom Statuses', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_ticket_statuses', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Default New Status', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_default_status', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( '"Resolved" Status', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Triggers Auto-close', 'simple-wp-helpdesk' ); ?>)</small></th><td><?php swh_field( 'swh_resolved_status', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( '"Closed" Status', 'simple-wp-helpdesk' ); ?> <br><small>(<?php esc_html_e( 'Disables replies', 'simple-wp-helpdesk' ); ?>)</small></th><td><?php swh_field( 'swh_closed_status', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( '"Re-Opened" Status', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_reopened_status', $defs ); ?></td></tr>
+					</table>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Auto-Close', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr><th scope="row"><?php esc_html_e( 'Auto-Close Days', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_autoclose_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_autoclose_days', '3' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'days', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'If a ticket is Resolved and the user doesn\'t reply in this many days, it automatically closes. Set to 0 to disable.', 'simple-wp-helpdesk' ); ?></p></td></tr>
+					</table>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'File Uploads', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr><th scope="row"><?php esc_html_e( 'Max File Upload Size', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_size" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_size', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'MB', 'simple-wp-helpdesk' ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Max Files Per Upload', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_count" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_count', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'files', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'Maximum number of files a user can attach per submission. Set to 0 for unlimited.', 'simple-wp-helpdesk' ); ?></p></td></tr>
+					</table>
+				</fieldset>
 			</div>
 
 			<div id="tab-routing" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-routing" tabindex="0" style="display:none;">
@@ -511,6 +524,15 @@ function swh_render_settings_page() {
 						<th></th>
 					</tr></thead>
 					<tbody id="swh-rules-body">
+					<?php if ( empty( $assignment_rules ) ) : ?>
+						<tr id="swh-rules-empty"><td colspan="3">
+							<div class="swh-empty-state">
+								<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+								<p class="swh-empty-state-title"><?php esc_html_e( 'No rules configured', 'simple-wp-helpdesk' ); ?></p>
+								<p class="swh-empty-state-desc"><?php esc_html_e( 'Tickets will use the default assignee.', 'simple-wp-helpdesk' ); ?></p>
+							</div>
+						</td></tr>
+					<?php endif; ?>
 					<?php foreach ( $assignment_rules as $rule ) : ?>
 						<?php
 						$rule      = is_array( $rule ) ? $rule : array();
@@ -641,6 +663,13 @@ function swh_render_settings_page() {
 								<option value="plain" <?php selected( $email_format, 'plain' ); ?>><?php esc_html_e( 'Plain Text', 'simple-wp-helpdesk' ); ?></option>
 							</select>
 							<p class="description"><?php esc_html_e( 'HTML emails include clickable links and a clean layout. Switch to Plain Text for basic SMTP setups.', 'simple-wp-helpdesk' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Email Header Logo URL', 'simple-wp-helpdesk' ); ?></th>
+						<td>
+							<input type="url" name="swh_email_logo_url" value="<?php echo esc_attr( swh_get_string_option( 'swh_email_logo_url' ) ); ?>" class="regular-text" placeholder="https://">
+							<p class="description"><?php esc_html_e( 'Optional. A logo image to display in the HTML email header. Leave blank to use the site icon (if set). Displayed at 32×32px.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -806,6 +835,15 @@ function swh_render_settings_page() {
 				if ( ! is_array( $canned_responses ) ) {
 					$canned_responses = array();
 				}
+				if ( empty( $canned_responses ) ) :
+					?>
+					<div class="swh-empty-state">
+						<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 2H6C4.9 2 4 2.9 4 4v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8z"/></svg>
+						<p class="swh-empty-state-title"><?php esc_html_e( 'No canned responses yet', 'simple-wp-helpdesk' ); ?></p>
+						<p class="swh-empty-state-desc"><?php esc_html_e( 'Add a template below to speed up replies.', 'simple-wp-helpdesk' ); ?></p>
+					</div>
+					<?php
+				endif;
 				foreach ( $canned_responses as $canned_item ) :
 					?>
 					<div class="swh-canned-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
@@ -933,8 +971,8 @@ function swh_render_settings_page() {
 				<p><input type="submit" name="swh_save_settings" class="button button-primary" value="<?php esc_attr_e( 'Save Retention Settings', 'simple-wp-helpdesk' ); ?>"></p>
 			</form>
 			<hr>
-			<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 5px; color: #721c24; margin-top: 20px;">
-				<h3 style="margin-top:0;"><?php esc_html_e( 'Danger Zone (Manual Cleanup)', 'simple-wp-helpdesk' ); ?></h3>
+			<div class="swh-danger-zone">
+				<h3><?php esc_html_e( 'Danger Zone (Manual Cleanup)', 'simple-wp-helpdesk' ); ?></h3>
 				<p><?php esc_html_e( 'These manual actions are permanent and cannot be undone.', 'simple-wp-helpdesk' ); ?></p>
 				<form method="POST" action="">
 					<?php wp_nonce_field( 'swh_danger_action', 'swh_danger_nonce' ); ?>

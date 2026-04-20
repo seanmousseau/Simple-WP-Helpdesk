@@ -127,21 +127,7 @@ function swh_status_meta_box_html( $post ) {
 		$priorities[] = $priority;
 	}
 	wp_nonce_field( 'swh_save_ticket', 'swh_ticket_nonce' );
-	$is_new_ticket = empty( $uid );
-	?>
-	<div class="swh-ticket-uid">
-		<?php echo $is_new_ticket ? esc_html__( 'New Ticket', 'simple-wp-helpdesk' ) : esc_html__( 'ID:', 'simple-wp-helpdesk' ) . ' ' . esc_html( $uid ); ?>
-	</div>
-	<p style="margin-bottom: 5px;"><label for="swh-client-name"><strong><?php esc_html_e( 'Client Name:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<input type="text" id="swh-client-name" name="ticket_client_name" value="<?php echo esc_attr( 'Unknown User' !== $name ? $name : '' ); ?>" placeholder="<?php esc_attr_e( 'Client name', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:8px;">
-	<p style="margin-bottom: 5px;"><label for="swh-client-email"><strong><?php esc_html_e( 'Client Email:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<input type="email" id="swh-client-email" name="ticket_client_email" value="<?php echo esc_attr( $email ); ?>" placeholder="client@example.com" style="width:100%; margin-bottom:8px;">
-	<?php if ( $is_new_ticket ) : ?>
-	<p><label><input type="checkbox" name="swh_send_client_email" value="1"> <?php esc_html_e( 'Send confirmation email to client', 'simple-wp-helpdesk' ); ?></label></p>
-	<?php elseif ( $email ) : ?>
-	<p style="font-size:12px; color:#666;"><a href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a></p>
-	<?php endif; ?>
-	<?php
+	$is_new_ticket        = empty( $uid );
 	$main_attachments_raw = get_post_meta( $post->ID, '_ticket_attachments', true );
 	$main_attachments     = is_array( $main_attachments_raw ) ? $main_attachments_raw : array();
 	$main_orignames       = get_post_meta( $post->ID, '_swh_attachment_orignames', true );
@@ -157,78 +143,94 @@ function swh_status_meta_box_html( $post ) {
 	$reply_orignames      = array();
 	foreach ( $comments as $c ) {
 		if ( ! $c instanceof WP_Comment ) {
-			continue;
-		}
+			continue; }
 		$atts = get_comment_meta( (int) $c->comment_ID, '_attachments', true );
 		if ( ! empty( $atts ) && is_array( $atts ) ) {
-			$reply_attachments = array_merge( $reply_attachments, $atts );
-		}
+			$reply_attachments = array_merge( $reply_attachments, $atts ); }
 		$c_names = get_comment_meta( (int) $c->comment_ID, '_swh_reply_orignames', true );
 		if ( ! empty( $c_names ) && is_array( $c_names ) ) {
-			$reply_orignames = array_merge( $reply_orignames, $c_names );
-		}
+			$reply_orignames = array_merge( $reply_orignames, $c_names ); }
 	}
-	$all_attachments = array_merge( $main_attachments, $reply_attachments );
-	$all_orignames   = array_merge( $main_orignames, $reply_orignames );
-	if ( ! empty( $all_attachments ) ) :
-		?>
-		<p><strong><?php esc_html_e( 'All Attachments:', 'simple-wp-helpdesk' ); ?></strong><br>
-		<?php foreach ( $all_attachments as $url ) : ?>
-			<?php
-			if ( ! is_string( $url ) ) {
-				continue;
-			}
-			$label = ! empty( $all_orignames[ $url ] ) && is_string( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url );
-			?>
-			<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( $label ); ?></a>
-		<?php endforeach; ?></p>
-	<?php endif; ?>
-	<?php
-	$ticket_tmpl = swh_get_string_meta( $post->ID, '_ticket_template' );
-	if ( $ticket_tmpl ) :
-		?>
-		<p><strong><?php esc_html_e( 'Request Type:', 'simple-wp-helpdesk' ); ?></strong> <?php echo esc_html( $ticket_tmpl ); ?></p>
-	<?php endif; ?>
-	<hr>
-	<p><label for="swh-cc-emails"><strong><?php esc_html_e( 'CC / Watchers:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<input type="text" id="swh-cc-emails" name="ticket_cc_emails" value="<?php echo esc_attr( swh_get_string_meta( $post->ID, '_ticket_cc_emails' ) ); ?>" placeholder="cc@example.com, manager@example.com" style="width:100%; margin-bottom:8px;">
-	<p class="description" style="font-size:11px; color:#666;"><?php esc_html_e( 'Comma-separated email addresses to CC on all client notifications for this ticket.', 'simple-wp-helpdesk' ); ?></p>
-	<?php
+	$all_attachments   = array_merge( $main_attachments, $reply_attachments );
+	$all_orignames     = array_merge( $main_orignames, $reply_orignames );
+	$ticket_tmpl       = swh_get_string_meta( $post->ID, '_ticket_template' );
 	$first_response_ts = swh_get_int_meta( $post->ID, '_ticket_first_response_at' );
-	if ( $first_response_ts ) :
-		$submitted_ts = (int) get_post_time( 'U', true, $post );
-		?>
-		<p style="margin-top:8px;"><strong><?php esc_html_e( 'First Response:', 'simple-wp-helpdesk' ); ?></strong>
-		<?php echo esc_html( human_time_diff( $submitted_ts, $first_response_ts ) ); ?> <?php esc_html_e( 'after submission', 'simple-wp-helpdesk' ); ?></p>
-	<?php endif; ?>
-	<hr>
-	<p><label for="swh-assigned-to"><strong><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<select id="swh-assigned-to" name="ticket_assigned_to" style="width: 100%; margin-bottom: 10px;">
-		<option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
-		<?php foreach ( $techs as $t ) : ?>
-			<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( $assignee, $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
-		<?php endforeach; ?>
-	</select>
-	<p><label for="swh-priority"><strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<select id="swh-priority" name="ticket_priority" style="width: 100%; margin-bottom: 10px;">
-		<?php foreach ( $priorities as $p ) : ?>
-			<option value="<?php echo esc_attr( $p ); ?>" <?php selected( $priority, $p ); ?>><?php echo esc_html( $p ); ?></option>
-		<?php endforeach; ?>
-	</select>
-	<p><label for="swh-status"><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong></label></p>
-	<select id="swh-status" name="ticket_status" style="width: 100%;">
-		<?php foreach ( $statuses as $s ) : ?>
-			<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $status, $s ); ?>><?php echo esc_html( $s ); ?></option>
-		<?php endforeach; ?>
-	</select>
-	<?php
-	$sla_status = swh_get_string_meta( $post->ID, '_ticket_sla_status' );
-	if ( $sla_status ) :
-		$sla_bg    = 'breach' === $sla_status ? '#d63638' : '#dba617';
-		$sla_label = 'breach' === $sla_status ? __( 'SLA Breach', 'simple-wp-helpdesk' ) : __( 'SLA Warning', 'simple-wp-helpdesk' );
-		?>
-		<div style="margin-top:10px; padding:6px 10px; background:<?php echo esc_attr( $sla_bg ); ?>; color:#fff; border-radius:3px; font-weight:bold; font-size:12px;"><?php echo esc_html( $sla_label ); ?></div>
-	<?php endif; ?>
+	$sla_status        = swh_get_string_meta( $post->ID, '_ticket_sla_status' );
+	?>
+	<div class="swh-ticket-panel">
+
+		<div class="swh-panel-group">
+			<span class="swh-panel-group-label"><?php esc_html_e( 'Ticket', 'simple-wp-helpdesk' ); ?></span>
+			<div class="swh-ticket-uid">
+				<?php echo $is_new_ticket ? esc_html__( 'New Ticket', 'simple-wp-helpdesk' ) : esc_html__( 'ID:', 'simple-wp-helpdesk' ) . ' ' . esc_html( $uid ); ?>
+			</div>
+			<p><label for="swh-status"><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?> <span class="swh-status-dot" id="swh-status-dot" aria-hidden="true"></span></label></p>
+			<select id="swh-status" name="ticket_status" class="swh-select">
+				<?php foreach ( $statuses as $s ) : ?>
+					<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $status, $s ); ?>><?php echo esc_html( $s ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<p><label for="swh-priority"><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></label></p>
+			<select id="swh-priority" name="ticket_priority" class="swh-select">
+				<?php foreach ( $priorities as $p ) : ?>
+					<option value="<?php echo esc_attr( $p ); ?>" <?php selected( $priority, $p ); ?>><?php echo esc_html( $p ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<?php if ( $sla_status ) : ?>
+				<?php
+				$sla_bg    = 'breach' === $sla_status ? '#d63638' : '#dba617';
+				$sla_label = 'breach' === $sla_status ? __( 'SLA Breach', 'simple-wp-helpdesk' ) : __( 'SLA Warning', 'simple-wp-helpdesk' );
+				?>
+				<div style="margin-top:8px; padding:6px 10px; background:<?php echo esc_attr( $sla_bg ); ?>; color:#fff; border-radius:3px; font-weight:bold; font-size:12px;"><?php echo esc_html( $sla_label ); ?></div>
+			<?php endif; ?>
+		</div>
+
+		<div class="swh-panel-group">
+			<span class="swh-panel-group-label"><?php esc_html_e( 'Client', 'simple-wp-helpdesk' ); ?></span>
+			<p><label for="swh-client-name"><?php esc_html_e( 'Name:', 'simple-wp-helpdesk' ); ?></label></p>
+			<input type="text" id="swh-client-name" name="ticket_client_name" value="<?php echo esc_attr( 'Unknown User' !== $name ? $name : '' ); ?>" placeholder="<?php esc_attr_e( 'Client name', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:8px;">
+			<p><label for="swh-client-email"><?php esc_html_e( 'Email:', 'simple-wp-helpdesk' ); ?></label></p>
+			<input type="email" id="swh-client-email" name="ticket_client_email" value="<?php echo esc_attr( $email ); ?>" placeholder="client@example.com" style="width:100%; margin-bottom:8px;">
+			<?php if ( $is_new_ticket ) : ?>
+			<p><label><input type="checkbox" name="swh_send_client_email" value="1"> <?php esc_html_e( 'Send confirmation email to client', 'simple-wp-helpdesk' ); ?></label></p>
+			<?php elseif ( $email ) : ?>
+			<p class="swh-panel-meta"><a href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a></p>
+			<?php endif; ?>
+			<?php if ( $ticket_tmpl ) : ?>
+			<p class="swh-panel-meta"><strong><?php esc_html_e( 'Type:', 'simple-wp-helpdesk' ); ?></strong> <?php echo esc_html( $ticket_tmpl ); ?></p>
+			<?php endif; ?>
+			<?php if ( ! empty( $all_attachments ) ) : ?>
+			<p><strong><?php esc_html_e( 'Attachments:', 'simple-wp-helpdesk' ); ?></strong><br>
+				<?php foreach ( $all_attachments as $url ) : ?>
+					<?php
+					if ( ! is_string( $url ) ) {
+						continue; }
+					?>
+					<?php $label = ! empty( $all_orignames[ $url ] ) && is_string( $all_orignames[ $url ] ) ? $all_orignames[ $url ] : basename( $url ); ?>
+				<a href="<?php echo esc_url( swh_get_file_proxy_url( $url, $post->ID ) ); ?>" target="_blank" class="button button-secondary button-small" style="margin-top:5px; margin-right:5px;"><?php echo esc_html( $label ); ?></a>
+			<?php endforeach; ?></p>
+			<?php endif; ?>
+		</div>
+
+		<div class="swh-panel-group">
+			<span class="swh-panel-group-label"><?php esc_html_e( 'Assignment', 'simple-wp-helpdesk' ); ?></span>
+			<p><label for="swh-assigned-to"><?php esc_html_e( 'Assigned To:', 'simple-wp-helpdesk' ); ?></label></p>
+			<select id="swh-assigned-to" name="ticket_assigned_to" class="swh-select">
+				<option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
+				<?php foreach ( $techs as $t ) : ?>
+					<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( $assignee, $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<p><label for="swh-cc-emails"><?php esc_html_e( 'CC / Watchers:', 'simple-wp-helpdesk' ); ?></label></p>
+			<input type="text" id="swh-cc-emails" name="ticket_cc_emails" value="<?php echo esc_attr( swh_get_string_meta( $post->ID, '_ticket_cc_emails' ) ); ?>" placeholder="cc@example.com, manager@example.com" style="width:100%; margin-bottom:8px;">
+			<p class="description" style="font-size:11px; color:#666;"><?php esc_html_e( 'Comma-separated email addresses to CC on all client notifications for this ticket.', 'simple-wp-helpdesk' ); ?></p>
+			<?php if ( $first_response_ts ) : ?>
+				<?php $submitted_ts = (int) get_post_time( 'U', true, $post ); ?>
+				<p class="swh-panel-meta"><strong><?php esc_html_e( 'First Response:', 'simple-wp-helpdesk' ); ?></strong> <?php echo esc_html( human_time_diff( $submitted_ts, $first_response_ts ) ); ?> <?php esc_html_e( 'after submission', 'simple-wp-helpdesk' ); ?></p>
+			<?php endif; ?>
+		</div>
+
+	</div><!-- .swh-ticket-panel -->
 	<?php if ( ! $is_new_ticket ) : ?>
 	<hr>
 	<button type="button" id="swh-merge-toggle" class="button" aria-expanded="false" aria-controls="swh-merge-section" style="width:100%; text-align:left;"><?php esc_html_e( '▶ Merge Ticket', 'simple-wp-helpdesk' ); ?></button>

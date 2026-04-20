@@ -36,6 +36,8 @@
 	--swh-color-note-text:      #3d3000;  /* internal note button text */
 	--swh-color-note-bg-hover:  #d4a017;  /* internal note button hover background */
 	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
+	--swh-color-warning:        #d97706;  /* solid amber — KPI warning card, danger zone icons */
+	--swh-color-danger-surface: #fef2f2;  /* light red surface — settings danger zone background */
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;
@@ -54,4 +56,63 @@
 
 	--swh-transition-fast:   0.1s;
 	--swh-transition-normal: 0.2s;
+}
+
+/* ── Empty state component — shared across admin and frontend (#319) ─────── */
+.swh-empty-state {
+	text-align: center;
+	padding: var(--swh-space-xl) var(--swh-space-lg);
+}
+.swh-empty-state-icon {
+	display: block;
+	width: 48px;
+	height: 48px;
+	fill: var(--swh-color-muted);
+	margin: 0 auto var(--swh-space-sm);
+}
+.swh-empty-state-title {
+	font-size: var(--swh-font-md);
+	font-weight: 500;
+	color: var(--swh-color-text);
+	margin: 0 0 var(--swh-space-xs);
+}
+.swh-empty-state-desc {
+	font-size: var(--swh-font-sm);
+	color: var(--swh-color-text-secondary);
+	margin: 0 0 var(--swh-space-md);
+}
+
+/* ── Dark mode token overrides — frontend portal only (#321) ─────────────── */
+/* Scoped to .swh-helpdesk-wrapper so these tokens never bleed into WP admin. */
+@media (prefers-color-scheme: dark) {
+	.swh-helpdesk-wrapper {
+		--swh-color-bg:             #0f172a;  /* slate-900: 16:1 against #F1F5F9 text */
+		--swh-color-bg-subtle:      #1e293b;  /* slate-800 */
+		--swh-color-surface:        #1e293b;
+		--swh-color-bg-highlight:   #1e3a5f;  /* dark blue tint for unread indicator */
+		--swh-color-border:         #334155;  /* slate-700 */
+		--swh-color-border-input:   #475569;  /* slate-600 */
+		--swh-color-border-subtle:  #475569;
+		--swh-color-text:           #f1f5f9;  /* slate-100: 16:1 on #0F172A */
+		--swh-color-text-secondary: #94a3b8;  /* slate-400: 4.6:1 on #1E293B */
+		--swh-color-muted:          #64748b;  /* slate-500 */
+		--swh-color-primary:        #818cf8;  /* indigo-400: sufficient contrast on dark bg */
+		--swh-color-track:          #334155;
+	}
+}
+
+/* ── Light mode escape hatch — add data-swh-theme="light" to override dark ─ */
+.swh-helpdesk-wrapper[data-swh-theme="light"] {
+	--swh-color-bg:             #fff;
+	--swh-color-bg-subtle:      #f9f9f9;
+	--swh-color-surface:        #f0f0f1;
+	--swh-color-bg-highlight:   #f0f8ff;
+	--swh-color-border:         #ddd;
+	--swh-color-border-input:   #ccc;
+	--swh-color-border-subtle:  #aaa;
+	--swh-color-text:           #333;
+	--swh-color-text-secondary: #555;
+	--swh-color-muted:          #767676;
+	--swh-color-primary:        #0073aa;
+	--swh-color-track:          #e0e0e0;
 }
