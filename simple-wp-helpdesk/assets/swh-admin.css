@@ -179,6 +179,40 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	color: #3d3000;
 }
 
+/* ── Reports page (#254) ────────────────────────────────────────────────── */
+.swh-report-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var( --swh-space-lg );
+	margin-top: var( --swh-space-lg );
+}
+
+.swh-report-card {
+	background: var( --swh-color-bg );
+	border: 1px solid var( --swh-color-border );
+	border-radius: var( --swh-radius-sm );
+	padding: var( --swh-space-lg );
+}
+
+.swh-chart-empty {
+	padding: var( --swh-space-xl ) var( --swh-space-md );
+	text-align: center;
+	color: var( --swh-color-muted );
+	font-style: italic;
+}
+
+.swh-stat-value {
+	font-size: 2em;
+	font-weight: bold;
+	text-align: center;
+}
+
+@media ( max-width: 782px ) {
+	.swh-report-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* ── Responsive (#251) ───────────────────────────────────────────────────── */
 
 /* Tablet: WP sidebar collapses at 782px */

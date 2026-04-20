@@ -36,6 +36,17 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	 * @param {string} type - The report type key.
 	 * @returns {Promise<*>} Resolves with the data payload on success.
 	 */
+	/**
+	 * Shows the empty-state placeholder and hides the canvas for a chart.
+	 *
+	 * @param {HTMLElement} canvas   - The chart canvas element.
+	 * @param {HTMLElement} emptyEl  - The empty-state paragraph element.
+	 */
+	function showEmpty( canvas, emptyEl ) {
+		if ( canvas ) { canvas.hidden = true; }
+		if ( emptyEl ) { emptyEl.hidden = false; }
+	}
+
 	function fetchReport( type ) {
 		var body = new URLSearchParams();
 		body.append( 'action', 'swh_report_data' );
@@ -46,16 +57,18 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			.then( function ( json ) {
 				if ( json.success ) { return json.data; }
 				return null;
-			} );
+			} )
+			.catch( function () { return null; } );
 	}
 
 	// Status breakdown — doughnut chart.
 	fetchReport( 'status_breakdown' ).then( function ( data ) {
-		if ( ! data ) { return; }
+		var ctx      = document.getElementById( 'swh-chart-status' );
+		var emptyEl  = document.getElementById( 'swh-chart-status-empty' );
+		var isEmpty  = ! data || ! Object.keys( data ).length || Object.values( data ).every( function ( v ) { return v === 0; } );
+		if ( ! ctx || isEmpty ) { showEmpty( ctx, emptyEl ); return; }
 		var labels = Object.keys( data );
 		var counts = labels.map( function ( k ) { return data[ k ]; } );
-		var ctx    = document.getElementById( 'swh-chart-status' );
-		if ( ! ctx ) { return; }
 		new Chart( ctx, {
 			type: 'doughnut',
 			data: {
@@ -68,12 +81,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 	// Weekly trend — bar chart.
 	fetchReport( 'weekly_trend' ).then( function ( data ) {
-		if ( ! data || ! data.length ) { return; }
+		var ctx     = document.getElementById( 'swh-chart-trend' );
+		var emptyEl = document.getElementById( 'swh-chart-trend-empty' );
+		if ( ! ctx || ! data || ! data.length ) { showEmpty( ctx, emptyEl ); return; }
 		var labels  = data.map( function ( d ) { return d.week; } );
 		var opened  = data.map( function ( d ) { return d.opened; } );
 		var closed  = data.map( function ( d ) { return d.closed; } );
-		var ctx     = document.getElementById( 'swh-chart-trend' );
-		if ( ! ctx ) { return; }
 		new Chart( ctx, {
 			type: 'bar',
 			data: {
