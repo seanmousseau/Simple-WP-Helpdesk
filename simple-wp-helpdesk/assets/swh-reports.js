@@ -76,6 +76,19 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		}
 	}
 
+	// KPI summary cards.
+	fetchReport( 'kpi' ).then( function ( data ) {
+		if ( ! data || data.__error ) { return; }
+		var total = document.getElementById( 'swh-kpi-total' );
+		var open  = document.getElementById( 'swh-kpi-open' );
+		var res   = document.getElementById( 'swh-kpi-resolution' );
+		var frt   = document.getElementById( 'swh-kpi-first-response' );
+		if ( total ) { total.textContent = data.total; }
+		if ( open )  { open.textContent  = data.open; }
+		if ( res )   { res.textContent   = formatDuration( data.avg_resolution ); }
+		if ( frt )   { frt.textContent   = formatDuration( data.avg_first_response ); }
+	} );
+
 	// Status breakdown — doughnut chart.
 	fetchReport( 'status_breakdown' ).then( function ( data ) {
 		var ctx      = document.getElementById( 'swh-chart-status' );
