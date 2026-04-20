@@ -27,7 +27,28 @@ function swh_admin_list_styles() {
 	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
 		return;
 	}
-	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array(), SWH_VERSION );
+	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
+	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
+
+	// #263: Inject aria-sort="none" on sortable column headers that aren't the active sort column.
+	// WordPress core adds aria-sort on the active column; this fills in the "none" state for others.
+	wp_add_inline_script(
+		'jquery',
+		'(function(){
+			document.addEventListener("DOMContentLoaded", function() {
+				document.querySelectorAll("th.sortable, th.sorted").forEach(function(th) {
+					if (!th.getAttribute("aria-sort")) {
+						th.setAttribute("aria-sort", "none");
+					}
+					var inner = th.querySelector("span:last-child");
+					if (inner && !inner.classList.contains("sorting-indicator")) {
+						inner.classList.add("sorting-indicator");
+					}
+				});
+			});
+		}());',
+		'after'
+	);
 }
 
 /**
@@ -587,8 +608,14 @@ function swh_admin_menu_unread_badge() {
 			continue;
 		}
 		if ( 'edit.php?post_type=helpdesk_ticket' === $item[2] && isset( $item[0] ) && is_string( $item[0] ) ) {
-			/* translators: %d: number of tickets with unread client replies */
-			$item[0]     .= ' <span class="awaiting-mod" title="' . esc_attr( sprintf( __( '%d ticket(s) with unread client replies', 'simple-wp-helpdesk' ), $count ) ) . '">' . esc_html( (string) $count ) . '</span>';
+			$aria_label = esc_attr(
+				sprintf(
+				/* translators: %d: number of tickets with unread client replies */
+					_n( '%d ticket with unread client reply', '%d tickets with unread client replies', $count, 'simple-wp-helpdesk' ),
+					$count
+				)
+			);
+			$item[0]     .= ' <span class="awaiting-mod" aria-live="polite" aria-label="' . $aria_label . '" title="' . $aria_label . '">' . esc_html( (string) $count ) . '</span>';
 			$menu[ $key ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- intentional badge injection
 			break;
 		}

@@ -90,12 +90,12 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 4. Update `simple-wp-helpdesk/readme.txt` stable tag and changelog.
 5. Update `docs/` files for any changed behaviour or new features.
 6. **Run full test suite** (all four must pass — see Test Suite below).
-7. Build ZIP: `zip -r releases/vX.Y.Z/simple-wp-helpdesk.zip simple-wp-helpdesk/`
-8. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
-9. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
-10. Create GitHub Release with ZIP attached as a release asset.
+7. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
+8. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
+9. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+10. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
 
-> ZIP must be named `simple-wp-helpdesk.zip` — WordPress uses it as the plugin slug.
+> ZIP is built by `release.yml` on every `v*.*.*` tag push — no manual zip command needed.
 
 ## Test Suite
 
@@ -103,9 +103,11 @@ The full test suite must pass before any release. Use `make` targets (requires `
 
 ### Local gate (required before opening any PR)
 ```bash
-make test        # lint → phpcs → phpstan → phpunit → semgrep (all 5 must pass)
-make e2e         # Playwright E2E — 52 sections (set WP_MODE=docker or configure SSH vars)
-make test-all    # both of the above
+make test-docker  # full gate inside Docker — no host PHP/semgrep needed (preferred)
+make test         # full gate on host — requires PHP 8.1+, semgrep
+make e2e          # Playwright E2E — 53 sections (set WP_MODE=docker or configure SSH vars)
+make e2e-docker   # fully self-contained E2E: up + setup + test + teardown in one command
+make test-all     # make test + make e2e
 ```
 
 ### Individual tools
@@ -116,22 +118,22 @@ vendor/bin/phpcbf && make phpcs   # auto-fix then re-check
 make phpstan     # PHPStan level 9 (PHP 8.1+ required)
 make phpunit     # PHPUnit unit tests
 make semgrep     # Semgrep SAST scan
+make coverage    # PHPUnit coverage → coverage.xml (requires pcov or xdebug)
 ```
 
 ### Docker test stack (local or CI)
 ```bash
-# Spin up WordPress + MySQL
-docker compose -f docker-compose.test.yml up -d db wordpress
+# Fully self-contained — one command spins up, runs all 53 E2E sections, tears down
+make e2e-docker
 
-# Install WordPress, activate plugin, create test users and pages
+# Or manually:
+docker compose -f docker-compose.test.yml up -d db wordpress wpcli mailhog
 bash docker/setup-test-wp.sh
-
-# Run E2E against the local stack
-WP_MODE=docker make e2e
-
-# Tear down
+WP_MODE=docker MAILHOG_URL=http://localhost:8025 make e2e
 docker compose -f docker-compose.test.yml down -v
 ```
+
+**MailHog:** When `MAILHOG_URL` is set and `WP_MODE=docker`, `expect_email()` calls in the test suite assert email delivery automatically via the MailHog API (`http://localhost:8025`). In SSH mode, `expect_email()` falls back to the manual `EMAIL_CHECKS` summary printed after the run.
 
 ### 5. CodeRabbit — AI code review (on PR)
 Run `/review` after opening the PR. Address all actionable findings before merge.
@@ -162,7 +164,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 52 test sections (34 original + 11 v3.0.0 + 7 v3.1.0)
+### 53 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -215,6 +217,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 | 50 | unread_badge | |
 | 51 | unread_row_highlight | |
 | 52 | email_test_button | |
+| 53 | ux_a11y | |
 | 28 | cleanup | |
 
 ### Architecture
@@ -239,6 +242,8 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 - **`expect_navigation()`** — wrap JS-triggered form submits in `with page.expect_navigation():` to avoid race between evaluate and `page.content()`
 - **Canned response persistence check** — use `el.value` via `page.evaluate()`, not `inner_text()` (input values aren't in innerText)
 - **File upload form POST** — a page caching plugin fires an immediate GET after the file POST, overwriting the success HTML in the DOM. Use `expect_navigation()` + `wait_for_load_state("load")` to let it settle, then verify success via WP-CLI meta rather than `page.content()`
+- **`wpcli()` exits non-zero for absent data** — `wp option get`, `wp post meta get`, `wp comment meta get` all exit 1 when the key/meta is absent. This is a normal result (not an infrastructure error); `wpcli()` returns empty string and callers handle it via `check()`. Do NOT raise on non-zero in the helper.
+- **Authorization header stripped in Docker** — Apache drops the `Authorization` header before PHP receives it, regardless of `.htaccess` passthrough rules. For test_47 (inbound webhook), bypass HTTP entirely: construct a `WP_REST_Request` and call `swh_handle_inbound_email()` directly via `wp eval`.
 
 ### Environment variables (testing/.env)
 
@@ -253,6 +258,7 @@ CLIENT1_NAME, CLIENT1_EMAIL
 CLIENT2_NAME, CLIENT2_EMAIL
 WP_MODE          — "ssh" (default, local dev server) or "docker" (local/CI Docker stack)
 SSH_HOST, WP_CONTAINER, WP_PATH   — required when WP_MODE=ssh
+MAILHOG_URL      — MailHog API base URL (e.g. http://localhost:8025); enables automated email assertions when WP_MODE=docker
 ```
 
 ### Test update policy
@@ -267,7 +273,7 @@ Every PR that introduces user-facing changes **must** include a new or updated P
 | Internal refactor, no UX change | None required — existing sections must still pass |
 | Security fix | Extend or add a `security`-marked section |
 
-New sections continue from the next available number (currently 52). Add the section to the table above.
+New sections continue from the next available number (currently 53). Add the section to the table above.
 
 ## Dev Tools
 
@@ -275,12 +281,15 @@ New sections continue from the next available number (currently 52). Add the sec
 
 | Tool | Command | Notes |
 |------|---------|-------|
-| **Local gate** | `make test` | Runs lint → phpcs → phpstan → phpunit → semgrep in sequence |
+| **Local gate (Docker)** | `make test-docker` | Full gate inside phptest container — no host PHP/semgrep needed (preferred) |
+| **Local gate (host)** | `make test` | Runs lint → phpcs → phpstan → phpunit → semgrep; requires host PHP 8.1+, semgrep |
 | **E2E** | `make e2e` | Playwright suite; set `WP_MODE=docker` or configure SSH vars |
+| **E2E (self-contained)** | `make e2e-docker` | Spins up Docker stack + setup + E2E + teardown in one command |
 | PHPStan | `make phpstan` | Level 9, WP stubs via `szepeviktor/phpstan-wordpress` |
 | PHPUnit | `make phpunit` | Unit tests in `tests/Unit/`; WP-Mock (`10up/wp_mock`) for WordPress function stubs |
+| Coverage | `make coverage` | PHPUnit + pcov → `coverage.xml` (Clover); requires pcov or xdebug |
 | Semgrep | `make semgrep` / MCP `semgrep_scan` | SAST; also runs in CI via `.github/workflows/semgrep.yml` |
-| Docker stack | `docker compose -f docker-compose.test.yml up -d` | Local WP + MySQL; `bash docker/setup-test-wp.sh` to configure |
+| Docker stack | `docker compose -f docker-compose.test.yml up -d` | Local WP + MySQL + MailHog; `bash docker/setup-test-wp.sh` to configure |
 
 ### LSP (Language Intelligence)
 

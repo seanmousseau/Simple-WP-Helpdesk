@@ -7,7 +7,10 @@ updates:
     open-pull-requests-limit: 5
     allow:
       - dependency-name: "szepeviktor/phpstan-wordpress"
+      - dependency-name: "php-stubs/wordpress-stubs"
       - dependency-name: "squizlabs/php_codesniffer"
+      - dependency-name: "wp-coding-standards/wpcs"
+      - dependency-name: "dealerdirect/phpcodesniffer-composer-installer"
       - dependency-name: "phpunit/phpunit"
       - dependency-name: "10up/wp_mock"
 

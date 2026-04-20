@@ -1,10 +1,14 @@
+/* Design tokens are defined in swh-shared.css (loaded as a dependency). */
+
+/* #259: Pill-style status badges */
 .swh-status-badge {
 	display: inline-block;
-	padding: 3px 8px;
-	border-radius: 3px;
-	font-size: 12px;
+	padding: 3px 10px;
+	border-radius: var( --swh-radius-pill );
+	font-size: var( --swh-font-sm );
 	font-weight: 600;
 	white-space: nowrap;
+	letter-spacing: 0.02em;
 }
 
 .column-ticket_uid {
@@ -52,7 +56,7 @@ button.nav-tab:focus {
 
 /* Ticket list row: unread client reply indicator. */
 .swh-has-unread {
-	border-left: 3px solid #0073aa;
+	border-left: 3px solid var( --swh-color-primary );
 	background-color: #f0f8ff;
 }
 
@@ -76,6 +80,23 @@ button.nav-tab:focus {
 	overflow-y: auto;
 	background: #fff;
 	padding: 15px;
-	border: 1px solid #ddd;
+	border: 1px solid var( --swh-color-border );
 	margin-bottom: 20px;
+}
+
+/* #263: aria-sort visual indicator on sortable column headers */
+th[aria-sort="ascending"] .sorting-indicator::after  { content: " ▲"; font-size: 10px; }
+th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-size: 10px; }
+
+/* #271: Merge form expand/collapse with CSS transition */
+.swh-merge-body {
+	overflow: hidden;
+	transition: max-height var( --swh-transition-normal ) ease-out, opacity var( --swh-transition-normal ) ease;
+	max-height: 0;
+	opacity: 0;
+}
+
+.swh-merge-body.swh-merge-visible {
+	max-height: 200px;
+	opacity: 1;
 }

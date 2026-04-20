@@ -59,6 +59,10 @@ echo "→ Creating uploads directory..."
 docker compose -f docker-compose.test.yml exec -T -u root wordpress \
   bash -c "mkdir -p /var/www/html/wp-content/uploads/swh-helpdesk && chown -R www-data:www-data /var/www/html/wp-content/uploads" 2>/dev/null || true
 
+echo "→ Ensuring mu-plugins directory exists..."
+docker compose -f docker-compose.test.yml exec -T -u root wordpress \
+  bash -c "mkdir -p /var/www/html/wp-content/mu-plugins" 2>/dev/null || true
+
 echo "→ Activating plugin..."
 $WP plugin activate simple-wp-helpdesk
 
@@ -90,8 +94,40 @@ PORTAL_ID=$($WP post create \
 echo "→ Saving portal page ID to plugin settings..."
 $WP option update swh_ticket_page_id "$PORTAL_ID"
 
+echo "→ Setting default ticket assignee to tech1..."
+TECH1_ID=$($WP user get "$WP_TECH1_USER" --field=ID 2>/dev/null || echo "")
+if [ -n "$TECH1_ID" ]; then
+  $WP option update swh_default_assignee "$TECH1_ID"
+fi
+
 SUBMIT_URL=$($WP post get "$SUBMIT_ID" --field=url)
 PORTAL_URL=$($WP post get "$PORTAL_ID" --field=url)
+
+# Write Docker env file so `make e2e-docker` can source it (overrides testing/.env).
+# Use printf '%q' to shell-escape each value so metacharacters in credentials are safe.
+{
+  printf 'WP_URL=%q\n'          "$WP_URL"
+  printf 'WP_LOGIN_URL=%q\n'    "$WP_URL/wp-login.php"
+  printf 'WP_ADMIN_URL=%q\n'    "$WP_URL/wp-admin/"
+  printf 'WP_SUBMIT_PAGE=%q\n'  "$SUBMIT_URL"
+  printf 'WP_PORTAL_PAGE=%q\n'  "$PORTAL_URL"
+  printf 'WP_ADMIN_USER=%q\n'   "$WP_ADMIN_USER"
+  printf 'WP_ADMIN_PASS=%q\n'   "$WP_ADMIN_PASS"
+  printf 'WP_TECH1_USER=%q\n'   "$WP_TECH1_USER"
+  printf 'WP_TECH1_PASS=%q\n'   "$WP_TECH1_PASS"
+  printf 'WP_TECH1_EMAIL=%q\n'  "$WP_TECH1_EMAIL"
+  printf 'WP_TECH2_USER=%q\n'   "$WP_TECH2_USER"
+  printf 'WP_TECH2_PASS=%q\n'   "$WP_TECH2_PASS"
+  printf 'WP_TECH2_EMAIL=%q\n'  "$WP_TECH2_EMAIL"
+  printf 'CLIENT1_NAME=%q\n'    "$CLIENT1_NAME"
+  printf 'CLIENT1_EMAIL=%q\n'   "$CLIENT1_EMAIL"
+  printf 'CLIENT2_NAME=%q\n'    "$CLIENT2_NAME"
+  printf 'CLIENT2_EMAIL=%q\n'   "$CLIENT2_EMAIL"
+  printf 'WP_MODE=docker\n'
+  printf 'WP_CONTAINER=wpcli\n'
+  printf 'WP_PATH=/var/www/html\n'
+  printf 'MAILHOG_URL=http://localhost:8025\n'
+} > /tmp/swh-docker-test.env
 
 echo ""
 echo "✅ WordPress setup complete."
