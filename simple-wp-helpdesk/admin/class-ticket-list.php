@@ -608,11 +608,13 @@ function swh_admin_menu_unread_badge() {
 			continue;
 		}
 		if ( 'edit.php?post_type=helpdesk_ticket' === $item[2] && isset( $item[0] ) && is_string( $item[0] ) ) {
-			$aria_label   = esc_attr( sprintf(
+			$aria_label = esc_attr(
+				sprintf(
 				/* translators: %d: number of tickets with unread client replies */
-				_n( '%d ticket with unread client reply', '%d tickets with unread client replies', $count, 'simple-wp-helpdesk' ),
-				$count
-			) );
+					_n( '%d ticket with unread client reply', '%d tickets with unread client replies', $count, 'simple-wp-helpdesk' ),
+					$count
+				)
+			);
 			$item[0]     .= ' <span class="awaiting-mod" aria-live="polite" aria-label="' . $aria_label . '" title="' . $aria_label . '">' . esc_html( (string) $count ) . '</span>';
 			$menu[ $key ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- intentional badge injection
 			break;
