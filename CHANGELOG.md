@@ -38,7 +38,7 @@ starting from the next release after 1.8.
 
 ---
 
-## [3.2.0] — Unreleased
+## [3.2.0] — 2026-04-20
 
 ### Added
 
