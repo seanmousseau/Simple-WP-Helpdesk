@@ -32,11 +32,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from urllib.parse import urlparse
 
 import pytest
-from playwright.sync_api import sync_playwright, Page
+from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
 
 # ── Load .env file ────────────────────────────────────────────────────────────
 
@@ -1231,8 +1231,11 @@ def test_23_file_attachments(page: Page):
         page.click('[name="swh_submit_ticket"]')
         # With a file attached the XHR path is used: PHP processes the POST and
         # the response HTML is injected into .swh-helpdesk-wrapper in-place
-        # (no navigation event).  Wait for the server-rendered alert to appear.
+        # (no navigation event).  Wait for either alert then assert success.
         page.wait_for_selector('.swh-alert-success, .swh-alert-error', timeout=30000)
+        check("attachment: upload completed without error alert",
+              page.locator('.swh-alert-success').count() > 0,
+              "error alert shown after upload — ticket may not have been created")
         page.wait_for_load_state("load", timeout=10000)
 
         screenshot(page, "30_attachment_submitted")
@@ -2692,13 +2695,11 @@ def test_46_reporting_dashboard(page: Page):
     check("reporting dashboard #254: trend empty-state element present in DOM",
           page.locator('#swh-chart-trend-empty').count() > 0,
           "#swh-chart-trend-empty not found")
-    try:
+    with suppress(PlaywrightTimeoutError):
         page.wait_for_function(
             "() => { var el = document.getElementById('swh-chart-status-empty'); return el !== null && el.hidden === true; }",
             timeout=5000,
         )
-    except Exception:
-        pass  # element may not exist if Chart.js is slow; subsequent check records the result
     status_empty_hidden = page.evaluate(
         "() => { var el = document.getElementById('swh-chart-status-empty'); "
         "return el ? el.hidden : null; }"
