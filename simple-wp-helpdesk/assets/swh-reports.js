@@ -53,18 +53,34 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		body.append( 'nonce', swhReports.nonce );
 		body.append( 'type', type );
 		return fetch( swhReports.ajaxurl, { method: 'POST', body: body } )
-			.then( function ( r ) { return r.json(); } )
+			.then( function ( r ) {
+				if ( ! r.ok ) {
+					throw new Error( 'HTTP ' + r.status );
+				}
+				return r.json();
+			} )
 			.then( function ( json ) {
 				if ( json.success ) { return json.data; }
-				return null;
+				return { __error: true, message: ( json.data && json.data.message ) ? json.data.message : 'Report unavailable.' };
 			} )
-			.catch( function () { return null; } );
+			.catch( function ( e ) {
+				return { __error: true, message: ( e && e.message ) ? e.message : 'Request failed.' };
+			} );
+	}
+
+	function showError( canvas, emptyEl, message ) {
+		if ( canvas ) { canvas.hidden = true; }
+		if ( emptyEl ) {
+			emptyEl.hidden = false;
+			emptyEl.textContent = message || 'Could not load report data.';
+		}
 	}
 
 	// Status breakdown — doughnut chart.
 	fetchReport( 'status_breakdown' ).then( function ( data ) {
 		var ctx      = document.getElementById( 'swh-chart-status' );
 		var emptyEl  = document.getElementById( 'swh-chart-status-empty' );
+		if ( data && data.__error ) { showError( ctx, emptyEl, data.message ); return; }
 		var isEmpty  = ! data || ! Object.keys( data ).length || Object.values( data ).every( function ( v ) { return v === 0; } );
 		if ( ! ctx || isEmpty ) { showEmpty( ctx, emptyEl ); return; }
 		var labels = Object.keys( data );
@@ -83,6 +99,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	fetchReport( 'weekly_trend' ).then( function ( data ) {
 		var ctx     = document.getElementById( 'swh-chart-trend' );
 		var emptyEl = document.getElementById( 'swh-chart-trend-empty' );
+		if ( data && data.__error ) { showError( ctx, emptyEl, data.message ); return; }
 		if ( ! ctx || ! data || ! data.length ) { showEmpty( ctx, emptyEl ); return; }
 		var labels  = data.map( function ( d ) { return d.week; } );
 		var opened  = data.map( function ( d ) { return d.opened; } );
@@ -104,13 +121,13 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	fetchReport( 'avg_resolution_time' ).then( function ( data ) {
 		var el = document.getElementById( 'swh-avg-resolution' );
 		if ( ! el ) { return; }
-		el.textContent = data ? formatDuration( data.avg_seconds ) + ( data.count ? ' (' + data.count + ' tickets)' : '' ) : 'N/A';
+		el.textContent = ( data && ! data.__error ) ? formatDuration( data.avg_seconds ) + ( data.count ? ' (' + data.count + ' tickets)' : '' ) : 'N/A';
 	} );
 
 	// Average first response time.
 	fetchReport( 'first_response_time' ).then( function ( data ) {
 		var el = document.getElementById( 'swh-avg-first-response' );
 		if ( ! el ) { return; }
-		el.textContent = data ? formatDuration( data.avg_seconds ) + ( data.count ? ' (' + data.count + ' tickets)' : '' ) : 'N/A';
+		el.textContent = ( data && ! data.__error ) ? formatDuration( data.avg_seconds ) + ( data.count ? ' (' + data.count + ' tickets)' : '' ) : 'N/A';
 	} );
 } );

@@ -1228,11 +1228,11 @@ def test_23_file_attachments(page: Page):
         page.fill('[name="ticket_title"]', f"Attachment Test {int(time.time())}")
         page.fill('[name="ticket_desc"]', "Testing file attachment upload.")
         page.set_input_files('[name="ticket_attachments[]"]', tmp_txt)
-        with page.expect_navigation(timeout=30000):
-            page.click('[name="swh_submit_ticket"]')
-        # A cache-invalidation GET may fire immediately after the file POST and
-        # overwrite the success view with the empty form.  Wait for that to settle
-        # before reading page state or logging in.
+        page.click('[name="swh_submit_ticket"]')
+        # With a file attached the XHR path is used: PHP processes the POST and
+        # the response HTML is injected into .swh-helpdesk-wrapper in-place
+        # (no navigation event).  Wait for the server-rendered alert to appear.
+        page.wait_for_selector('.swh-alert-success, .swh-alert-error', timeout=30000)
         page.wait_for_load_state("load", timeout=10000)
 
         screenshot(page, "30_attachment_submitted")
