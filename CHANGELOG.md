@@ -12,6 +12,32 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.3.0] — Unreleased
+
+### Added
+
+- **RTL stylesheet (`assets/swh-rtl.css`) (#125):** Directional overrides (text-align, border sides, flex-direction, direction) for all LTR-specific layout rules. Loaded conditionally via `is_rtl()` alongside `swh-frontend.css`.
+- **WCAG 2.2 AA heading hierarchy (#170):** Added `screen-reader-text` h2 landmark to the submission form. Fixed heading skip (h2→h4) in close-ticket CTA — changed to h3.
+- **Responsive breakpoints (#251):** `@media (max-width: 782px)` and `(max-width: 600px)` blocks added to `swh-admin.css` for ticket list, meta boxes, and settings. `@media (max-width: 480px)` added to `swh-frontend.css` for form, drop zone, and buttons.
+- **Empty-state placeholders for report charts (#254):** Status and trend charts now show a "No ticket data yet" message instead of an invisible/broken canvas when the dataset is empty.
+- **Styled file input (#255):** Removed inline `style="padding:5px"` from file inputs — styling now driven by CSS class.
+- **Real upload progress bar (#256):** File attachment upload now uses `XMLHttpRequest.upload.onprogress` to fill a determinate progress bar. Replaces the previous indeterminate indicator.
+- **Unsaved-changes warning (#257):** Settings form now warns with a browser `beforeunload` dialog when navigating away with unsaved changes. Dirty state cleared on form submit.
+- **Semantic CSS conversation bubbles (#253):** Ticket editor conversation bubbles now use `.swh-bubble`, `.swh-bubble-note`, `.swh-bubble-user`, `.swh-bubble-tech` classes for visual distinction between internal notes and public replies, replacing all inline styles.
+- **CSS design token extensions (#250):** Added `--swh-color-surface`, `--swh-color-focus`, `--swh-color-success-accent`, `--swh-color-text-secondary`, `--swh-color-bg-highlight`, `--swh-color-track` to `swh-shared.css`.
+
+### Changed
+
+- Hard-coded hex color values in `swh-admin.css` and `swh-frontend.css` replaced with semantic design tokens from `swh-shared.css`.
+- My Tickets h3 heading inline style (`margin-top:0`) replaced with `.swh-my-tickets-heading` CSS class.
+- `SWH_VERSION` bumped to `3.3.0`.
+
+### Fixed
+
+- AJAX network errors in ticket editor merge form now display a visible error message instead of failing silently (#252).
+
+---
+
 ## [3.2.0] — Unreleased
 
 ### Added

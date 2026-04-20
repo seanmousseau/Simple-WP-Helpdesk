@@ -74,6 +74,20 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 == Changelog ==
 
+= 3.3.0 =
+* Added: RTL stylesheet (`swh-rtl.css`) with directional overrides; loaded conditionally via `is_rtl()` (#125)
+* Added: WCAG 2.2 AA heading hierarchy — screen-reader h2 on submission form; h2→h4 skip fixed in portal close CTA (#170)
+* Added: Responsive breakpoints for admin ticket list, meta boxes, settings tabs, and frontend form (#251)
+* Added: Empty-state messages for report charts when no ticket data is available (#254)
+* Added: Styled file input — removed last inline style; CSS class-driven (#255)
+* Added: Real upload progress bar via `XMLHttpRequest.upload.onprogress` (#256)
+* Added: Unsaved-changes `beforeunload` warning on the settings page (#257)
+* Changed: Ticket editor conversation bubbles use semantic CSS classes instead of inline styles; notes visually distinct from public replies (#253)
+* Changed: Additional design tokens added to `swh-shared.css` — surface, focus, success-accent, text-secondary, bg-highlight, track (#250)
+* Changed: Remaining hard-coded hex values in `swh-admin.css` and `swh-frontend.css` replaced with design tokens
+* Fixed: Ticket editor merge form AJAX network errors now display an inline error message (#252)
+* Changed: `SWH_VERSION` bumped to `3.3.0`
+
 = 3.2.0 =
 * Added: `make test-docker` — full gate (lint/PHPCS/PHPStan/PHPUnit/Semgrep) inside the phptest container; no host PHP or semgrep required (#292)
 * Added: `make e2e-docker` — self-contained E2E; spins up Docker stack, runs Playwright suite with MailHog, tears down in one command (#294)

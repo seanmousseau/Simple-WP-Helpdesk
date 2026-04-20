@@ -4,7 +4,7 @@
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 3.1.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 3.3.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 
 ## Repository Structure
 
@@ -105,7 +105,7 @@ The full test suite must pass before any release. Use `make` targets (requires `
 ```bash
 make test-docker  # full gate inside Docker — no host PHP/semgrep needed (preferred)
 make test         # full gate on host — requires PHP 8.1+, semgrep
-make e2e          # Playwright E2E — 53 sections (set WP_MODE=docker or configure SSH vars)
+make e2e          # Playwright E2E — 54 sections (set WP_MODE=docker or configure SSH vars)
 make e2e-docker   # fully self-contained E2E: up + setup + test + teardown in one command
 make test-all     # make test + make e2e
 ```
@@ -165,7 +165,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 53 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0)
+### 54 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -219,6 +219,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 | 51 | unread_row_highlight | |
 | 52 | email_test_button | |
 | 53 | ux_a11y | |
+| 54 | responsive | |
 | 28 | cleanup | |
 
 ### Architecture
