@@ -84,9 +84,9 @@
 }
 
 /* ── Dark mode token overrides — frontend portal only (#321) ─────────────── */
-/* Admin dark mode is controlled by WordPress color schemes; do not add here. */
+/* Scoped to .swh-helpdesk-wrapper so these tokens never bleed into WP admin. */
 @media (prefers-color-scheme: dark) {
-	:root {
+	.swh-helpdesk-wrapper {
 		--swh-color-bg:             #0f172a;  /* slate-900: 16:1 against #F1F5F9 text */
 		--swh-color-bg-subtle:      #1e293b;  /* slate-800 */
 		--swh-color-surface:        #1e293b;
