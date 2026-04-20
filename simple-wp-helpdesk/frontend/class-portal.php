@@ -451,18 +451,12 @@ function swh_render_portal_no_token() {
 				'<p class="swh-empty-state-desc">' . esc_html__( 'Submit a ticket to get started.', 'simple-wp-helpdesk' ) . '</p>' .
 				'</div>';
 		} else {
-			echo '<table class="swh-ticket-table">';
-			echo '<thead><tr>';
-			echo '<th>' . esc_html__( 'Ticket #', 'simple-wp-helpdesk' ) . '</th>';
-			echo '<th>' . esc_html__( 'Summary', 'simple-wp-helpdesk' ) . '</th>';
-			echo '<th>' . esc_html__( 'Status', 'simple-wp-helpdesk' ) . '</th>';
-			echo '<th>' . esc_html__( 'Last Updated', 'simple-wp-helpdesk' ) . '</th>';
-			echo '<th></th>';
-			echo '</tr></thead>';
-			echo '<tbody>';
+			echo '<ul class="swh-ticket-card-list" role="list" aria-label="' . esc_attr__( 'My open tickets', 'simple-wp-helpdesk' ) . '">';
 			foreach ( $tickets as $ticket ) {
 				$uid          = swh_get_string_meta( $ticket->ID, '_ticket_uid' );
 				$status       = swh_get_string_meta( $ticket->ID, '_ticket_status' );
+				$status_slug  = sanitize_title( $status );
+				$unread       = get_post_meta( $ticket->ID, '_swh_unread', true );
 				$link         = swh_get_secure_ticket_link( $ticket->ID );
 				$modified_gmt = $ticket->post_modified_gmt;
 				$utc_ts       = $modified_gmt ? strtotime( $modified_gmt . ' UTC' ) : false;
@@ -472,21 +466,23 @@ function swh_render_portal_no_token() {
 				$fmt          = ( is_string( $date_fmt ) ? $date_fmt : 'F j, Y' ) . ' ' . ( is_string( $time_fmt ) ? $time_fmt : 'g:i a' );
 				$disp         = wp_date( $fmt, $utc_ts );
 				$disp         = is_string( $disp ) ? $disp : gmdate( 'Y-m-d H:i', $utc_ts );
-				echo '<tr class="swh-ticket-row">';
-				echo '<td>' . esc_html( $uid ) . '</td>';
-				echo '<td>' . esc_html( $ticket->post_title ) . '</td>';
-				echo '<td><span class="swh-badge swh-badge-open">' . esc_html( $status ) . '</span></td>';
-				echo '<td><time class="swh-timestamp" datetime="' . esc_attr( gmdate( 'c', $utc_ts ) ) . '" title="' . esc_attr( $disp ) . '">' . esc_html( $disp ) . '</time></td>';
-				echo '<td>';
+				$card_class   = 'swh-ticket-card' . ( $unread ? ' swh-ticket-card--unread' : '' );
+				echo '<li class="' . esc_attr( $card_class ) . '">';
+				echo '<span class="swh-badge swh-badge-' . esc_attr( $status_slug ) . '">' . esc_html( $status ) . '</span>';
+				echo '<div class="swh-ticket-card-body">';
+				echo '<p class="swh-ticket-card-title">' . esc_html( $ticket->post_title ) . '</p>';
+				echo '<p class="swh-ticket-card-meta">' . esc_html( $uid ) . ' &middot; ';
+				echo '<time class="swh-timestamp" datetime="' . esc_attr( gmdate( 'c', $utc_ts ) ) . '" title="' . esc_attr( $disp ) . '">' . esc_html( $disp ) . '</time>';
+				echo '</p>';
+				echo '</div>';
 				if ( $link ) {
-					echo '<a href="' . esc_url( $link ) . '" class="swh-btn" style="padding:6px 12px; font-size:13px;">' . esc_html__( 'View', 'simple-wp-helpdesk' ) . '</a>';
+					echo '<a href="' . esc_url( $link ) . '" class="swh-btn swh-btn-sm" aria-label="' . esc_attr( sprintf( __( 'View ticket: %s', 'simple-wp-helpdesk' ), $ticket->post_title ) ) . '">' . esc_html__( 'View', 'simple-wp-helpdesk' ) . ' &rarr;</a>';
 				} else {
 					echo '<span class="swh-muted">' . esc_html__( 'Link unavailable', 'simple-wp-helpdesk' ) . '</span>';
 				}
-				echo '</td>';
-				echo '</tr>';
+				echo '</li>';
 			}
-			echo '</tbody></table>';
+			echo '</ul>';
 		}
 	} else {
 		swh_render_lookup_form();
