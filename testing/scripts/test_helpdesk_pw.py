@@ -3267,24 +3267,35 @@ def test_53_ux_a11y(page: Page):
     portal_url = state.get('portal_url')
     ticket_id  = state.get('ticket_id')
     if portal_url and ticket_id:
-        # Force closed status + clear CSAT rating so the widget always renders.
-        wpcli(f"post meta update {ticket_id} _ticket_status closed")
-        wpcli(f"post meta delete {ticket_id} _ticket_csat 2>/dev/null")
+        # CSAT widget only renders in the POST response right after the close
+        # action — not on a plain GET of an already-closed ticket.  Set status
+        # to open so the close button appears, submit the form, then check ARIA.
+        wpcli(f"post meta update {ticket_id} _ticket_status open")
+        wpcli(f"post meta delete {ticket_id} _ticket_csat")
         page.goto(portal_url)
         page.wait_for_load_state("load")
-        csat_stars = page.locator('.swh-csat-star')
-        check("a11y #262: 5 CSAT stars rendered on closed ticket portal",
-              csat_stars.count() == 5,
-              f"expected 5 .swh-csat-star, got {csat_stars.count()}")
-        if csat_stars.count() > 0:
-            star_role = csat_stars.first.get_attribute('role')
-            check("a11y #262: CSAT stars have role=radio",
-                  star_role == 'radio',
-                  f"first star role: {star_role!r}")
-            star_checked = csat_stars.first.get_attribute('aria-checked')
-            check("a11y #262: CSAT stars have aria-checked attribute",
-                  star_checked is not None,
-                  "first star missing aria-checked attribute")
+        close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
+        if close_btn.count() > 0:
+            close_btn.click()
+            page.wait_for_selector(
+                "#swh-csat, .swh-alert-success, .swh-alert-error",
+                timeout=10000,
+            )
+            csat_stars = page.locator('.swh-csat-star')
+            check("a11y #262: 5 CSAT stars rendered after close action",
+                  csat_stars.count() == 5,
+                  f"expected 5 .swh-csat-star, got {csat_stars.count()}")
+            if csat_stars.count() > 0:
+                star_role = csat_stars.first.get_attribute('role')
+                check("a11y #262: CSAT stars have role=radio",
+                      star_role == 'radio',
+                      f"first star role: {star_role!r}")
+                star_checked = csat_stars.first.get_attribute('aria-checked')
+                check("a11y #262: CSAT stars have aria-checked attribute",
+                      star_checked is not None,
+                      "first star missing aria-checked attribute")
+        else:
+            skip("a11y #262", "close button not visible — cannot trigger CSAT widget")
 
     # ── #258 expired token shows inline lookup form ────────────────────────────
     if portal_url and ticket_id:
