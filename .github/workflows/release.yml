@@ -33,9 +33,8 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
-          awk "/^## \[${VERSION}\]/,/^## \[/" CHANGELOG.md \
-            | head -n -1 \
-            | tail -n +2 > release_notes.md
+          awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" \
+            CHANGELOG.md > release_notes.md
           cat release_notes.md
 
       - name: Create GitHub Release
