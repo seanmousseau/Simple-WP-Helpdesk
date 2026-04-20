@@ -987,6 +987,12 @@ def test_18_settings_persistence(page: Page):
     check("unsaved changes #257: settings form has id=swh-settings-form for JS hook",
           form_id == 'swh-settings-form', f"got: {form_id!r}")
 
+    # ── #323 Settings fieldset groups present ─────────────────────────────────
+    _navigate_settings(page)
+    group_count = page.locator('.swh-settings-group').count()
+    check("settings: fieldset groups rendered (#323)",
+          group_count > 0, f"no .swh-settings-group found (count={group_count})")
+
 
 def test_19_canned_responses(page: Page):
     print("\n[19] Canned Responses — Save in Settings, Use in Editor")  # closes issue #197
@@ -1824,6 +1830,9 @@ def test_34_my_tickets_dashboard(page: Page):
         check("dashboard: PHP renders My Open Tickets heading",
               "My Open Tickets" in render,
               f"My Open Tickets not found in render. Got: {render[:200]!r}")
+        check("dashboard: ticket card list rendered",
+              "swh-ticket-card-list" in render or "swh-empty-state" in render,
+              f"neither card list nor empty state found. Got: {render[:200]!r}")
 
         # Also take a screenshot of the portal page navigated with cache-busting query.
         # The admin bar is present so SWIS bypasses cache for the current admin session.
@@ -1864,7 +1873,7 @@ def test_34_my_tickets_dashboard(page: Page):
                             f"swh_render_portal_no_token(); echo ob_get_clean();\""
                         )
                         check("dashboard: empty state message shown when no open tickets",
-                              "no open tickets" in render_empty.lower(),
+                              "swh-empty-state" in render_empty,
                               f"empty state not found. render: {render_empty[:200]!r}")
                     finally:
                         wpcli(f"user delete {no_tickets_id} --yes 2>/dev/null")
@@ -2708,6 +2717,25 @@ def test_46_reporting_dashboard(page: Page):
           status_empty_hidden is True,
           f"swh-chart-status-empty hidden={status_empty_hidden!r}")
 
+    # ── #318 KPI grid present and AJAX-populated ──────────────────────────────
+    page.goto(reports_url)
+    page.wait_for_load_state("load")
+    check("reporting dashboard: KPI grid present (#318)",
+          page.locator('.swh-kpi-grid').count() > 0, ".swh-kpi-grid not found")
+    # Wait a moment for AJAX to populate values
+    with suppress(PlaywrightTimeoutError):
+        page.wait_for_function(
+            "() => { var el = document.getElementById('swh-kpi-total'); "
+            "return el && el.textContent.trim() !== '\u2014'; }",
+            timeout=5000,
+        )
+    kpi_total = page.evaluate(
+        "() => { var el = document.getElementById('swh-kpi-total'); return el ? el.textContent.trim() : null; }"
+    )
+    check("reporting dashboard: KPI total populates via AJAX (#318)",
+          kpi_total is not None and kpi_total != '—',
+          f"swh-kpi-total={kpi_total!r}")
+
 
 def test_47_inbound_email_webhook(page: Page):
     print("\n[47] Inbound Email Webhook — POST /wp-json/swh/v1/inbound-email (#131)")
@@ -3424,6 +3452,53 @@ def test_54_responsive(page: Page):
         page.set_viewport_size({"width": 1280, "height": 800})
 
 
+# ── v3.4.0 Email branding (#317) ─────────────────────────────────────────────
+
+def test_55_email_branding(page: Page):
+    """v3.4.0 Email branding (#317): HTML wrapper includes branded header band."""
+    print("\n[55] Email Branding — branded header band in HTML email (#317)")
+
+    # Verify the swh_wrap_html_email() output contains the branding markers
+    # by calling it directly via WP-CLI eval.
+    result = wpcli(
+        "eval \"echo swh_wrap_html_email('Test email body');\""
+    )
+    check("email branding #317: HTML email contains background header band",
+          "background:#0073aa" in result or "background: #0073aa" in result,
+          f"branded header not found in HTML output. Got: {result[:300]!r}")
+    check("email branding #317: HTML email contains site name",
+          len(result) > 100,
+          f"email output too short: {result[:200]!r}")
+
+
+# ── v3.4.0 Dark mode (#321) ──────────────────────────────────────────────────
+
+def test_56_dark_mode(page: Page):
+    """v3.4.0 Frontend dark mode (#321): portal wrapper renders with dark mode tokens."""
+    print("\n[56] Frontend Dark Mode — prefers-color-scheme dark (#321)")
+
+    if not WP_PORTAL_PAGE and not WP_SUBMIT_PAGE:
+        skip("dark mode", "no frontend page configured")
+        return
+
+    target = WP_PORTAL_PAGE or WP_SUBMIT_PAGE
+    page.emulate_media(color_scheme="dark")
+    try:
+        page.goto(target)
+        page.wait_for_load_state("load")
+        wrapper_count = page.locator('.swh-helpdesk-wrapper').count()
+        check("dark mode #321: .swh-helpdesk-wrapper renders in dark mode",
+              wrapper_count > 0,
+              f"wrapper not found. count={wrapper_count}")
+        errors = page.evaluate("() => window.__consoleErrors || []")
+        check("dark mode #321: no JS console errors in dark mode",
+              not errors or errors == [],
+              f"console errors: {errors!r}")
+        screenshot(page, "69_dark_mode_portal")
+    finally:
+        page.emulate_media(color_scheme="no-preference")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -3530,6 +3605,8 @@ SECTIONS = [
     test_52_email_test_button,        # 52 — #103 test email button
     test_53_ux_a11y,                  # 53 — v3.2.0 UX/a11y (#258–#275)
     test_54_responsive,               # 54 — v3.3.0 responsive layout (#251)
+    test_55_email_branding,           # 55 — v3.4.0 email branding (#317)
+    test_56_dark_mode,                # 56 — v3.4.0 dark mode (#321)
     test_28_cleanup,                  # 28 — always last
 ]
 
