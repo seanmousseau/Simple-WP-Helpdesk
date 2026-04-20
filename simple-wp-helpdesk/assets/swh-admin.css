@@ -217,6 +217,9 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	.swh-conversation-wrap {
 		max-height: 40vh;
 	}
+	.swh-reply-note-wrap {
+		flex-direction: column;
+	}
 }
 
 /* Narrow admin: hide lower-priority ticket list columns */

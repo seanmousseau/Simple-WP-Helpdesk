@@ -459,9 +459,14 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			} );
 
 			xhr.addEventListener( 'load', function () {
-				fill.style.width = '100%';
-				// Navigate to the response URL (XHR follows redirects transparently).
-				window.location.href = xhr.responseURL || ticketForm.action;
+				if ( xhr.status >= 200 && xhr.status < 300 ) {
+					fill.style.width = '100%';
+					// Navigate to the response URL (XHR follows redirects transparently).
+					window.location.href = xhr.responseURL || ticketForm.action;
+				} else {
+					_xhrRestore();
+					swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload failed. Please try again.' );
+				}
 			} );
 
 			function _xhrRestore() {
@@ -474,12 +479,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 			xhr.addEventListener( 'error', function () {
 				_xhrRestore();
-				ticketForm.submit();
+				swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload failed. Please try again.' );
 			} );
 
 			xhr.addEventListener( 'timeout', function () {
 				_xhrRestore();
-				ticketForm.submit();
+				swhShowFileError( fileInput, ( swhConfig.i18n && swhConfig.i18n.uploadError ) || 'Upload timed out. Please try again.' );
 			} );
 
 			// FormData(form) omits submit buttons per spec; append manually so the

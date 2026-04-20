@@ -2692,7 +2692,13 @@ def test_46_reporting_dashboard(page: Page):
     check("reporting dashboard #254: trend empty-state element present in DOM",
           page.locator('#swh-chart-trend-empty').count() > 0,
           "#swh-chart-trend-empty not found")
-    page.wait_for_timeout(1500)  # let Chart.js render
+    try:
+        page.wait_for_function(
+            "() => { var el = document.getElementById('swh-chart-status-empty'); return el !== null && el.hidden === true; }",
+            timeout=5000,
+        )
+    except Exception:
+        pass  # element may not exist if Chart.js is slow; subsequent check records the result
     status_empty_hidden = page.evaluate(
         "() => { var el = document.getElementById('swh-chart-status-empty'); "
         "return el ? el.hidden : null; }"
@@ -3369,15 +3375,19 @@ def test_53_ux_a11y(page: Page):
     if state.get('portal_url'):
         page.goto(state['portal_url'])
         page.wait_for_load_state("load")
-        h4_in_cta = page.evaluate("""
-            () => {
-                var cta = document.querySelector('.swh-cta-primary');
-                return cta ? cta.querySelectorAll('h4').length : 0;
-            }
-        """)
-        check("a11y #170: close-ticket CTA uses h3, not h4 (no heading skip)",
-              h4_in_cta == 0,
-              f"found {h4_in_cta} h4 element(s) inside .swh-cta-primary")
+        cta_present = page.locator('.swh-cta-primary').count() > 0
+        check("a11y #170: .swh-cta-primary element present on portal page",
+              cta_present, ".swh-cta-primary not found")
+        if cta_present:
+            h4_in_cta = page.evaluate("""
+                () => {
+                    var cta = document.querySelector('.swh-cta-primary');
+                    return cta ? cta.querySelectorAll('h4').length : 0;
+                }
+            """)
+            check("a11y #170: close-ticket CTA uses h3, not h4 (no heading skip)",
+                  h4_in_cta == 0,
+                  f"found {h4_in_cta} h4 element(s) inside .swh-cta-primary")
 
     screenshot(page, "65c_ux_a11y_frontend")
 

@@ -83,7 +83,8 @@ function swh_ticket_frontend( $atts = array() ) {
 				'sizeExceeded'   => __( 'File "%1$s" exceeds the %2$dMB size limit.', 'simple-wp-helpdesk' ),
 				/* translators: shown as first option in the Request Type dropdown */
 				'selectTemplate' => __( '— Select a request type —', 'simple-wp-helpdesk' ),
-				'uploading'      => __( 'Uploading\u{2026}', 'simple-wp-helpdesk' ),
+				'uploading'      => __( 'Uploading…', 'simple-wp-helpdesk' ),
+				'uploadError'    => __( 'Upload failed. Please try again.', 'simple-wp-helpdesk' ),
 				'submitLabel'    => __( 'Submit Ticket', 'simple-wp-helpdesk' ),
 			),
 		)
