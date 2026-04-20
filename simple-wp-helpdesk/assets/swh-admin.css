@@ -341,3 +341,52 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 @media ( max-width: 480px ) {
 	.swh-kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Ticket editor side panel (#322) ─────────────────────────────────────── */
+.swh-ticket-panel {
+	display: flex;
+	flex-direction: column;
+}
+
+.swh-panel-group {
+	padding: var( --swh-space-sm ) 0;
+	border-bottom: 1px solid var( --swh-color-border-subtle );
+}
+
+.swh-panel-group:last-child {
+	border-bottom: none;
+}
+
+.swh-panel-group-label {
+	display: block;
+	font-size: var( --swh-font-sm );
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --swh-color-text-secondary );
+	font-weight: 600;
+	margin-bottom: var( --swh-space-xs );
+}
+
+.swh-panel-group p {
+	margin: var( --swh-space-xs ) 0 2px;
+}
+
+.swh-panel-meta {
+	font-size: var( --swh-font-sm );
+	color: var( --swh-color-text-secondary );
+}
+
+.swh-select {
+	width: 100%;
+	margin-bottom: var( --swh-space-xs );
+}
+
+.swh-status-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var( --swh-color-muted );
+	margin-left: 4px;
+	vertical-align: middle;
+}
