@@ -387,7 +387,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		setTimeout( function () {
 			if ( csatBox.style.display !== 'none' ) {
 				csatBox.style.display = 'none';
-				if ( successBox ) { successBox.style.display = ''; }
+				if ( thanksBox ) { thanksBox.style.display = ''; }
 			}
 		}, 60000 );
 	}

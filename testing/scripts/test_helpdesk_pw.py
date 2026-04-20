@@ -234,9 +234,13 @@ def mailhog_clear() -> None:
         return
     import requests as _req
     try:
-        _req.delete(f"{MAILHOG_URL}/api/v1/messages", timeout=5)
-    except Exception:
-        pass
+        resp = _req.delete(f"{MAILHOG_URL}/api/v1/messages", timeout=5)
+        check("mailhog_clear: inbox cleared",
+              resp.status_code in (200, 204),
+              f"MailHog DELETE returned {resp.status_code} — stale messages may cause false email assertions")
+    except Exception as exc:
+        check("mailhog_clear: inbox cleared", False,
+              f"MailHog DELETE failed: {exc} — stale messages may cause false email assertions")
 
 
 def expect_email(recipient: str, description: str, clear_after: bool = True):
@@ -3261,7 +3265,10 @@ def test_53_ux_a11y(page: Page):
 
     # ── #262 CSAT stars have role/aria attributes ─────────────────────────────
     portal_url = state.get('portal_url')
-    if portal_url:
+    ticket_id  = state.get('ticket_id')
+    if portal_url and ticket_id:
+        # Reset CSAT so the widget renders even if already submitted in test_33.
+        wpcli(f"post meta delete {ticket_id} _ticket_csat 2>/dev/null")
         page.goto(portal_url)
         page.wait_for_load_state("load")
         csat_stars = page.locator('.swh-csat-star')
@@ -3274,22 +3281,33 @@ def test_53_ux_a11y(page: Page):
             check("a11y #262: CSAT stars have aria-checked attribute",
                   star_checked is not None,
                   "first star missing aria-checked attribute")
+        else:
+            skip("a11y #262: CSAT stars not in DOM — cannot verify ARIA attributes")
 
     # ── #258 expired token shows inline lookup form ────────────────────────────
-    if portal_url:
-        # Use a fake/expired token to trigger the expired state.
-        bad_token_url = re.sub(r'token=[^&]+', 'token=expiredtokentest', portal_url)
-        page.goto(bad_token_url)
+    if portal_url and ticket_id:
+        # Force-expire the token via WP-CLI (set creation time 100 days ago).
+        # This ensures hash_equals passes but swh_is_token_expired() returns true.
+        orig_created = wpcli(
+            f"eval 'echo get_post_meta({ticket_id}, \"_ticket_token_created\", true);'"
+        ).strip()
+        expired_ts = int(time.time()) - (100 * 86400)
+        wpcli(f"post meta update {ticket_id} _ticket_token_created {expired_ts}")
+        page.goto(portal_url)
         page.wait_for_load_state("load")
         body = page.inner_text("body")
-        check("ux #258: portal error page has descriptive text",
-              any(w in body.lower() for w in ('expired', 'invalid', 'look up', 'lookup', 'ticket')),
-              f"portal error body: {body[:200]!r}")
-        # Lookup form should be rendered inline (not just a link).
+        check("ux #258: expired-token page has descriptive error text",
+              any(w in body.lower() for w in ('expired', 'look up', 'lookup', 'ticket')),
+              f"portal expired body: {body[:200]!r}")
         lookup_on_expired = page.locator('#swh-lookup-email, input[name="swh_lookup_email"]')
         check("ux #258: expired token page renders lookup form inline",
               lookup_on_expired.count() > 0,
               "no lookup email input found on expired-token page")
+        # Restore original creation time.
+        if orig_created:
+            wpcli(f"post meta update {ticket_id} _ticket_token_created {orig_created}")
+        else:
+            wpcli(f"post meta delete {ticket_id} _ticket_token_created")
 
     screenshot(page, "65c_ux_a11y_frontend")
 
