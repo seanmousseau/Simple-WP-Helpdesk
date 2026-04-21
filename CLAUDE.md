@@ -85,6 +85,7 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **Dark mode tokens** — frontend only (`swh-shared.css` `@media (prefers-color-scheme: dark)` block). Do NOT add dark mode to `swh-admin.css` — WP admin handles its own colour schemes. Use `[data-swh-theme="light"]` escape hatch on `.swh-helpdesk-wrapper` for sites that control the theme themselves.
 - **Email HTML wrapper** — all CSS must be inlined. `swh_wrap_html_email()` in `class-email.php`. No `<link>` or `<style>` tags — email clients strip them.
 - **`swh_email_logo_url` option** — stored in `swh_options` via `swh_get_defaults()`; falls back to `get_site_icon_url(48)` if empty. Displayed at 32×32px in the email header band.
+- **`swh_portal_theme` option** — `'auto'` (default, follows `prefers-color-scheme`) or `'light'` (forces light mode). Output as `data-swh-theme="light"` attribute on every `.swh-helpdesk-wrapper` div in `class-portal.php` and `class-shortcode.php`. The CSS rule `.swh-helpdesk-wrapper[data-swh-theme="light"]` in `swh-shared.css` overrides the dark-mode media query.
 - **Ticket editor panel groups** — `.swh-panel-group` + `.swh-panel-group-label` in `class-ticket-editor.php`. Do NOT change form field `name` attributes or the save handler will break. IDs `#swh-status`, `#swh-priority`, `#swh-assigned-to` must remain.
 
 ## Release Process

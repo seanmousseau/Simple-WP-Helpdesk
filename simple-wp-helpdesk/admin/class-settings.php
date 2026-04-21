@@ -267,6 +267,9 @@ function swh_handle_settings_save() {
 				$val = is_string( $_POST[ $opt ] ) ? wp_kses_post( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} elseif ( 'swh_email_logo_url' === $opt ) {
 				$val = is_string( $_POST[ $opt ] ) ? esc_url_raw( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			} elseif ( 'swh_portal_theme' === $opt ) {
+				$raw = is_string( $_POST[ $opt ] ) ? sanitize_key( wp_unslash( $_POST[ $opt ] ) ) : 'auto'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+				$val = in_array( $raw, array( 'auto', 'light' ), true ) ? $raw : 'auto';
 			} else {
 				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
@@ -468,6 +471,17 @@ function swh_render_settings_page() {
 						<input type="number" name="swh_token_expiration_days" value="<?php echo esc_attr( swh_get_string_option( 'swh_token_expiration_days', '90' ) ); ?>" style="width:80px;" min="0">
 						<?php esc_html_e( 'days (0 = never expires)', 'simple-wp-helpdesk' ); ?>
 						<p class="description"><?php esc_html_e( 'Ticket portal links expire after this many days. Clients can request fresh links via the lookup form.', 'simple-wp-helpdesk' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Frontend Portal Theme', 'simple-wp-helpdesk' ); ?></th>
+					<td>
+						<?php $portal_theme = swh_get_string_option( 'swh_portal_theme', 'auto' ); ?>
+						<select name="swh_portal_theme">
+							<option value="auto" <?php selected( $portal_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follows system dark/light mode)', 'simple-wp-helpdesk' ); ?></option>
+							<option value="light" <?php selected( $portal_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode', 'simple-wp-helpdesk' ); ?></option>
+						</select>
+						<p class="description"><?php esc_html_e( 'Controls whether the frontend helpdesk portal responds to the visitor\'s system dark/light mode preference. Set to "Force light mode" on sites that do not support dark mode.', 'simple-wp-helpdesk' ); ?></p>
 					</td>
 				</tr>
 				<tr>

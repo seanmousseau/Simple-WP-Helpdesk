@@ -12,6 +12,19 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.4.1] — 2026-04-20
+
+### Added
+
+- **Frontend Portal Theme setting (#327):** New option in Settings → General lets site owners choose between "Auto (follows system dark/light mode)" and "Force light mode". When set to light, outputs `data-swh-theme="light"` on `.swh-helpdesk-wrapper`, activating the v3.4.0 CSS escape hatch without requiring template edits.
+
+### Fixed
+
+- **`make e2e-docker` teardown (#325):** Trap now uses `$(CURDIR)/docker-compose.test.yml` (absolute path) so Docker containers are reliably torn down when `make` is invoked from the OneDrive alias working directory.
+- **KPI transient bypass (#326):** `swh_report_kpi_data()` now checks the `swh_report_avg_resolution_time` and `swh_report_first_response_time` transients before calling the sub-functions, eliminating redundant SQL queries on a KPI cache miss.
+
+---
+
 ## [3.4.0] — 2026-04-20
 
 ### Added

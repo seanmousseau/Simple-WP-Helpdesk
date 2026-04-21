@@ -138,8 +138,9 @@ function swh_render_submission_form( $atts = array() ) {
 			);
 		}
 	}
+	$theme_attr = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
 	?>
-	<div class="swh-helpdesk-wrapper">
+	<div class="swh-helpdesk-wrapper"<?php echo $theme_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- value is one of two hardcoded strings ?>>
 	<?php
 	$current_user = wp_get_current_user();
 	$form_name    = is_user_logged_in() ? ( is_string( $current_user->display_name ) ? $current_user->display_name : '' ) : '';

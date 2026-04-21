@@ -45,9 +45,9 @@ e2e: ## Playwright E2E tests (requires WP environment — set WP_MODE=docker or 
 	@cd testing && source .venv/bin/activate && pytest scripts/test_helpdesk_pw.py -v
 
 e2e-docker: ## Full E2E in Docker — spin up stack, run suite, tear down
-	@trap 'docker compose -f docker-compose.test.yml down -v' EXIT; \
+	@trap 'docker compose -f $(CURDIR)/docker-compose.test.yml down -v' EXIT; \
 	 echo "→ Starting Docker stack..."; \
-	 docker compose -f docker-compose.test.yml up -d db wordpress wpcli mailhog; \
+	 docker compose -f $(CURDIR)/docker-compose.test.yml up -d db wordpress wpcli mailhog; \
 	 echo "→ Waiting for WordPress (up to 90s)..."; \
 	 i=0; until curl -sf http://localhost:8080/wp-login.php >/dev/null 2>&1; do \
 	   sleep 3; i=$$((i+3)); if [ $$i -ge 90 ]; then echo "ERROR: WordPress did not start in 90s"; exit 1; fi; \

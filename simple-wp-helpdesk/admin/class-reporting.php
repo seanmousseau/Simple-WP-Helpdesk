@@ -14,7 +14,7 @@ add_action( 'wp_ajax_swh_report_data', 'swh_ajax_report_data' );
  * AJAX handler that returns reporting data as JSON.
  *
  * Accepts a `type` parameter: 'status_breakdown', 'avg_resolution_time',
- * 'weekly_trend', or 'first_response_time'. Results are cached in a 1-hour transient.
+ * 'weekly_trend', 'first_response_time', or 'kpi'. Results are cached in a 1-hour transient.
  *
  * @since 3.0.0
  * @return void
@@ -286,13 +286,28 @@ function swh_report_kpi_data() {
 		)
 	) )->found_posts;
 
-	$resolution     = swh_report_avg_resolution_time();
-	$first_response = swh_report_first_response_time();
+	$cached_resolution = get_transient( 'swh_report_avg_resolution_time' );
+	if ( is_array( $cached_resolution ) ) {
+		$resolution = $cached_resolution;
+	} else {
+		$resolution = swh_report_avg_resolution_time();
+		set_transient( 'swh_report_avg_resolution_time', $resolution, HOUR_IN_SECONDS );
+	}
 
+	$cached_first_response = get_transient( 'swh_report_first_response_time' );
+	if ( is_array( $cached_first_response ) ) {
+		$first_response = $cached_first_response;
+	} else {
+		$first_response = swh_report_first_response_time();
+		set_transient( 'swh_report_first_response_time', $first_response, HOUR_IN_SECONDS );
+	}
+
+	$avg_res_raw  = $resolution['avg_seconds'] ?? null;
+	$avg_fres_raw = $first_response['avg_seconds'] ?? null;
 	return array(
 		'total'              => $total,
 		'open'               => $open,
-		'avg_resolution'     => $resolution['avg_seconds'],
-		'avg_first_response' => $first_response['avg_seconds'],
+		'avg_resolution'     => is_int( $avg_res_raw ) ? $avg_res_raw : 0,
+		'avg_first_response' => is_int( $avg_fres_raw ) ? $avg_fres_raw : 0,
 	);
 }
