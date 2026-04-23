@@ -49,7 +49,7 @@ Tokens also rotate automatically on each lookup. If a client bookmarks a link, i
 1. Check **Settings → General → Max Upload Size** — the PHP `upload_max_filesize` and `post_max_size` ini values must be at least as large.
 2. Confirm the WordPress uploads directory is writable: `wp-content/uploads/swh-helpdesk/`.
 3. Check the browser console for JavaScript errors during upload.
-4. The default allowed types are: jpg, jpeg, png, gif, pdf, doc, docx, txt. Use the [`swh_allowed_file_types`](hooks#swh_allowed_file_types) filter to extend this list.
+4. The default allowed types are: jpg, jpeg, jpe, png, gif, pdf, doc, docx, txt. Use the [`swh_allowed_file_types`](hooks#swh_allowed_file_types) filter to extend this list.
 
 ---
 
@@ -60,6 +60,7 @@ Tokens also rotate automatically on each lookup. If a client bookmarks a link, i
    ```bash
    */5 * * * * curl -s "https://yoursite.com/wp-cron.php?doing_wp_cron" > /dev/null
    ```
+
 2. Verify **Auto-Close Days** in **Settings → General** is set to a value greater than `0`.
 3. Confirm the configured **Resolved Status** matches a status in your **Ticket Statuses** list exactly (case-sensitive).
 

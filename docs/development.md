@@ -85,8 +85,8 @@ The plugin uses only WordPress core data structures:
 | Tickets | `helpdesk_ticket` Custom Post Type | `_ticket_uid`, `_ticket_token`, `_ticket_status`, `_ticket_priority`, `_ticket_email`, `_ticket_attachments`, `_ticket_csat`, etc. |
 | Replies & Notes | WP Comments (`comment_type = 'helpdesk_reply'`) | `_is_internal_note`, `_is_user_reply`, `_swh_reply_orignames` |
 | Settings | `wp_options` | All keys prefixed with `swh_` |
-| Canned responses | `wp_options` | `swh_canned_responses` (JSON array) |
-| Ticket templates | `wp_options` | `swh_ticket_templates` (JSON array) |
+| Canned responses | `wp_options` | `swh_canned_responses` (PHP serialized array, stored via `update_option()`) |
+| Ticket templates | `wp_options` | `swh_ticket_templates` (PHP serialized array, stored via `update_option()`) |
 
 ### Function & Class Naming
 
@@ -229,9 +229,9 @@ The webhook endpoint is registered at `POST /wp-json/swh/v1/inbound-email`.
 
 | Field | Description |
 |-------|-------------|
-| `from` | Sender email address |
+| `sender` | Sender email address (`from` accepted as fallback) |
 | `subject` | Email subject (must contain `[TKT-XXXX]`) |
-| `body` | Message body (lines beginning with `>` are stripped as quoted reply) |
+| `body-plain` | Message body (`text` accepted as fallback; lines beginning with `>` are stripped as quoted reply) |
 
 The handler extracts the ticket ID from `[TKT-XXXX]` in the subject, verifies the sender matches `_ticket_email` via `hash_equals()`, strips quoted reply lines, and inserts a new reply comment.
 

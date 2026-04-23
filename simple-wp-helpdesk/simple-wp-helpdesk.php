@@ -40,7 +40,7 @@ if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';
-	add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'swh_plugin_action_links' );
+	require_once SWH_PLUGIN_DIR . 'admin/class-plugin-action-links.php';
 }
 
 // Frontend includes.
@@ -158,23 +158,6 @@ function swh_inject_plugin_icons_into_update_transient( $transient ) {
 		}
 	}
 	return $transient;
-}
-
-/**
- * Appends Settings and Documentation links under the plugin name on the Plugins page.
- *
- * @param string[] $links Existing action links.
- * @return string[]
- */
-function swh_plugin_action_links( array $links ): array {
-	$settings_url = admin_url( 'edit.php?post_type=helpdesk_ticket&page=swh-settings' );
-	$docs_url     = 'https://seanmousseau.github.io/Simple-WP-Helpdesk/';
-	array_unshift(
-		$links,
-		'<a href="' . esc_url( $settings_url ) . '">' . esc_html__( 'Settings', 'simple-wp-helpdesk' ) . '</a>',
-		'<a href="' . esc_url( $docs_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Docs', 'simple-wp-helpdesk' ) . '</a>'
-	);
-	return $links;
 }
 
 // ==============================================================================

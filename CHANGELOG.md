@@ -14,7 +14,7 @@ starting from the next release after 1.8.
 
 - GitHub Pages documentation site at `https://seanmousseau.github.io/Simple-WP-Helpdesk/` (Jekyll, just-the-docs theme) — covers all features through v3.5.0.
 - New docs pages: Shortcode Reference, Hooks Reference (all 9 filters + 2 actions with examples), Troubleshooting / FAQ.
-- Plugin Plugins-page action links: **Settings** and **Docs** shortcut links shown under the plugin name.
+- Plugins page action links: **Settings** and **Docs** shortcuts shown under the plugin name.
 
 ### Changed
 
