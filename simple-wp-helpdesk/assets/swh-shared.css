@@ -100,7 +100,7 @@
 .swh-badge-resolved    { background-color: var( --swh-color-success-bg ); color: var( --swh-color-success-text ); }
 
 /* SLA modifiers (#329) */
-.swh-badge-sla-warn   { background-color: var( --swh-color-warning ); color: var( --swh-color-on-solid ); }
+.swh-badge-sla-warn   { background-color: var( --swh-color-warning-bg ); color: var( --swh-color-warning-text ); }
 .swh-badge-sla-breach { background-color: var( --swh-color-danger );   color: var( --swh-color-on-solid ); }
 
 /* ── Empty state component — shared across admin and frontend (#319) ─────── */

@@ -3516,12 +3516,12 @@ def test_57_toast_notifications(page: Page):
 
     # Toast should appear with the --visible modifier class.
     toast = page.locator('.swh-toast.swh-toast--visible')
-    try:
+    toast_visible = False
+    with suppress(PlaywrightTimeoutError):
         toast.wait_for(state='visible', timeout=3000)
-    except Exception:
-        pass
+        toast_visible = toast.count() > 0 and toast.first.is_visible()
     check("toast #333: toast is visible after settings save",
-          toast.count() > 0,
+          toast_visible,
           "toast element with .swh-toast--visible not found")
 
     # URL should not contain swh_notice=saved after JS cleans it.
@@ -3530,8 +3530,11 @@ def test_57_toast_notifications(page: Page):
           f"URL still contains swh_notice=saved: {page.url!r}")
 
     # Toast auto-dismisses within 6 seconds (4s timer + transition).
-    page.locator('.swh-toast.swh-toast--visible').wait_for(state='hidden', timeout=6000)
-    check("toast #333: toast auto-dismissed within 6s", True)
+    toast_hidden = False
+    with suppress(PlaywrightTimeoutError):
+        toast.wait_for(state='hidden', timeout=6000)
+        toast_hidden = toast.count() == 0 or toast.first.is_hidden()
+    check("toast #333: toast auto-dismissed within 6s", toast_hidden)
 
     screenshot(page, "70_toast_after_settings_save")
 
@@ -3540,10 +3543,17 @@ def test_57_toast_notifications(page: Page):
     page.locator('#save-btn-container input[type="submit"]').click()
     page.wait_for_load_state('networkidle')
     toast2 = page.locator('.swh-toast.swh-toast--visible')
-    if toast2.count() > 0:
+    toast2_visible = False
+    with suppress(PlaywrightTimeoutError):
+        toast2.wait_for(state='visible', timeout=3000)
+        toast2_visible = toast2.count() > 0 and toast2.first.is_visible()
+    if toast2_visible:
         page.locator('.swh-toast__dismiss').click()
-        page.locator('.swh-toast.swh-toast--visible').wait_for(state='hidden', timeout=2000)
-        check("toast #333: toast dismissed by clicking × button", True)
+        toast2_hidden = False
+        with suppress(PlaywrightTimeoutError):
+            toast2.wait_for(state='hidden', timeout=2000)
+            toast2_hidden = toast2.count() == 0 or toast2.first.is_hidden()
+        check("toast #333: toast dismissed by clicking × button", toast2_hidden)
     else:
         skip("toast dismiss button", "second toast did not appear")
 

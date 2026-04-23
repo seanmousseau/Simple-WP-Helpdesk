@@ -389,7 +389,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 .swh-sla-badge-wrap { margin-top: var( --swh-space-xs ); }
 
 /* ── Ticket list row hover feedback (#337) ───────────────────────────────── */
-#the-list tr {
+#the-list tr td {
 	transition: background-color var( --swh-transition-fast ) var( --swh-ease-out );
 }
 
@@ -467,7 +467,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	pointer-events: auto;
 }
 
-.swh-toast--success { border-left: 3px solid var( --swh-color-success ); }
+.swh-toast--success { border-left: 3px solid var( --swh-color-success-accent ); }
 .swh-toast--error   { border-left: 3px solid var( --swh-color-danger ); }
 .swh-toast--info    { border-left: 3px solid var( --swh-color-primary ); }
 
