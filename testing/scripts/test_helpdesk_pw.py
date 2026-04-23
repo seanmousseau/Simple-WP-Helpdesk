@@ -3592,10 +3592,10 @@ def test_58_reports_loading_states(page: Page):
           busy_after == 'false',
           f"aria-busy={busy_after!r}")
 
-    # KPI total text should be a number (not the placeholder dash).
+    # KPI total text should be a plain integer (not the placeholder dash or N/A).
     total_text = page.locator('#swh-kpi-total').inner_text().strip()
     check("reports #332: KPI total displays numeric value, not placeholder",
-          total_text not in ('', '—', '&mdash;', '—'),
+          bool(re.fullmatch(r'\d+', total_text)),
           f"total_text={total_text!r}")
 
     screenshot(page, "71_reports_kpi_loaded")
