@@ -403,3 +403,35 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	outline-offset: 2px;
 	border-radius: var( --swh-radius-sm );
 }
+
+/* ── Skeleton loader (#332) ──────────────────────────────────────────────── */
+@keyframes swh-shimmer {
+	0%   { background-position: -400px 0; }
+	100% { background-position:  400px 0; }
+}
+
+.swh-skeleton {
+	background: linear-gradient(
+		90deg,
+		var( --swh-color-surface ) 25%,
+		var( --swh-color-bg-subtle ) 50%,
+		var( --swh-color-surface ) 75%
+	);
+	background-size: 800px 100%;
+	animation: swh-shimmer 1.4s ease-in-out infinite;
+	border-radius: var( --swh-radius-sm );
+	color: transparent;
+	pointer-events: none;
+	user-select: none;
+}
+
+.swh-kpi-skeleton {
+	height: 2rem;
+	width: 60%;
+	margin: var( --swh-space-sm ) auto;
+}
+
+.swh-chart-skeleton {
+	height: 200px;
+	width: 100%;
+}

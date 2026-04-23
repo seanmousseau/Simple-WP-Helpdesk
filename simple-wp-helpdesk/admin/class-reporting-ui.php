@@ -78,37 +78,43 @@ function swh_render_reports_page() {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Helpdesk Reports', 'simple-wp-helpdesk' ); ?></h1>
-		<div class="swh-kpi-grid" aria-label="<?php esc_attr_e( 'Key performance indicators', 'simple-wp-helpdesk' ); ?>">
+		<div class="swh-kpi-grid" id="swh-kpi-grid" aria-label="<?php esc_attr_e( 'Key performance indicators', 'simple-wp-helpdesk' ); ?>" aria-busy="true">
 			<div class="swh-kpi-card">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zM4 8V6h16v2H4z"/></svg>
-				<p class="swh-kpi-value" id="swh-kpi-total">&mdash;</p>
+				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-total-skeleton" aria-hidden="true"></div>
+				<p class="swh-kpi-value" id="swh-kpi-total" hidden>&mdash;</p>
 				<p class="swh-kpi-label"><?php esc_html_e( 'Total Tickets', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 			<div class="swh-kpi-card swh-kpi-card--warning">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
-				<p class="swh-kpi-value" id="swh-kpi-open">&mdash;</p>
+				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-open-skeleton" aria-hidden="true"></div>
+				<p class="swh-kpi-value" id="swh-kpi-open" hidden>&mdash;</p>
 				<p class="swh-kpi-label"><?php esc_html_e( 'Open Tickets', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 			<div class="swh-kpi-card swh-kpi-card--success">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm.75 14.5h-1.5V11h1.5v5.5zm0-7h-1.5V8h1.5v1.5z"/></svg>
-				<p class="swh-kpi-value" id="swh-kpi-resolution">&mdash;</p>
+				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-resolution-skeleton" aria-hidden="true"></div>
+				<p class="swh-kpi-value" id="swh-kpi-resolution" hidden>&mdash;</p>
 				<p class="swh-kpi-label"><?php esc_html_e( 'Avg. Resolution (30d)', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 			<div class="swh-kpi-card swh-kpi-card--success">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-				<p class="swh-kpi-value" id="swh-kpi-first-response">&mdash;</p>
+				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-first-response-skeleton" aria-hidden="true"></div>
+				<p class="swh-kpi-value" id="swh-kpi-first-response" hidden>&mdash;</p>
 				<p class="swh-kpi-label"><?php esc_html_e( 'Avg. First Response (30d)', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 		</div>
 		<div class="swh-report-grid">
-			<div class="swh-report-card">
+			<div class="swh-report-card" id="swh-report-card-status" aria-busy="true">
 				<h2><?php esc_html_e( 'Tickets by Status', 'simple-wp-helpdesk' ); ?></h2>
-				<canvas id="swh-chart-status" height="200"></canvas>
+				<div class="swh-skeleton swh-chart-skeleton" id="swh-chart-status-skeleton" aria-hidden="true"></div>
+				<canvas id="swh-chart-status" height="200" hidden></canvas>
 				<p id="swh-chart-status-empty" class="swh-chart-empty" hidden><?php esc_html_e( 'No ticket data yet.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
-			<div class="swh-report-card">
+			<div class="swh-report-card" id="swh-report-card-trend" aria-busy="true">
 				<h2><?php esc_html_e( 'Weekly Trend (8 Weeks)', 'simple-wp-helpdesk' ); ?></h2>
-				<canvas id="swh-chart-trend" height="200"></canvas>
+				<div class="swh-skeleton swh-chart-skeleton" id="swh-chart-trend-skeleton" aria-hidden="true"></div>
+				<canvas id="swh-chart-trend" height="200" hidden></canvas>
 				<p id="swh-chart-trend-empty" class="swh-chart-empty" hidden><?php esc_html_e( 'No ticket data yet.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
 			<div class="swh-report-card">

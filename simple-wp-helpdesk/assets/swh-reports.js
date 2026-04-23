@@ -76,8 +76,34 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		}
 	}
 
-	// KPI summary cards.
+	// KPI summary cards — show skeletons while loading (#332, #335).
+	var kpiIds = [ 'total', 'open', 'resolution', 'first-response' ];
+
+	function showKpiSkeleton() {
+		var grid = document.getElementById( 'swh-kpi-grid' );
+		if ( grid ) { grid.setAttribute( 'aria-busy', 'true' ); }
+		kpiIds.forEach( function ( id ) {
+			var skel = document.getElementById( 'swh-kpi-' + id + '-skeleton' );
+			var val  = document.getElementById( 'swh-kpi-' + id );
+			if ( skel ) { skel.removeAttribute( 'hidden' ); }
+			if ( val )  { val.setAttribute( 'hidden', '' ); }
+		} );
+	}
+
+	function hideKpiSkeleton() {
+		var grid = document.getElementById( 'swh-kpi-grid' );
+		if ( grid ) { grid.setAttribute( 'aria-busy', 'false' ); }
+		kpiIds.forEach( function ( id ) {
+			var skel = document.getElementById( 'swh-kpi-' + id + '-skeleton' );
+			var val  = document.getElementById( 'swh-kpi-' + id );
+			if ( skel ) { skel.setAttribute( 'hidden', '' ); }
+			if ( val )  { val.removeAttribute( 'hidden' ); }
+		} );
+	}
+
+	showKpiSkeleton();
 	fetchReport( 'kpi' ).then( function ( data ) {
+		hideKpiSkeleton();
 		if ( ! data || data.__error ) { return; }
 		var total = document.getElementById( 'swh-kpi-total' );
 		var open  = document.getElementById( 'swh-kpi-open' );
@@ -87,12 +113,21 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		if ( open )  { open.textContent  = data.open; }
 		if ( res )   { res.textContent   = formatDuration( data.avg_resolution ); }
 		if ( frt )   { frt.textContent   = formatDuration( data.avg_first_response ); }
+	} ).catch( function () {
+		hideKpiSkeleton();
 	} );
 
 	// Status breakdown — doughnut chart.
+	var statusCard = document.getElementById( 'swh-report-card-status' );
+	var statusSkel = document.getElementById( 'swh-chart-status-skeleton' );
+	if ( statusCard ) { statusCard.setAttribute( 'aria-busy', 'true' ); }
+
 	fetchReport( 'status_breakdown' ).then( function ( data ) {
+		if ( statusCard ) { statusCard.setAttribute( 'aria-busy', 'false' ); }
+		if ( statusSkel ) { statusSkel.setAttribute( 'hidden', '' ); }
 		var ctx      = document.getElementById( 'swh-chart-status' );
 		var emptyEl  = document.getElementById( 'swh-chart-status-empty' );
+		if ( ctx ) { ctx.removeAttribute( 'hidden' ); }
 		if ( data && data.__error ) { showError( ctx, emptyEl, data.message ); return; }
 		var isEmpty  = ! data || ! Object.keys( data ).length || Object.values( data ).every( function ( v ) { return v === 0; } );
 		if ( ! ctx || isEmpty ) { showEmpty( ctx, emptyEl ); return; }
@@ -106,12 +141,26 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			},
 			options: { plugins: { legend: { position: 'bottom' } } },
 		} );
+	} ).catch( function () {
+		if ( statusCard ) { statusCard.setAttribute( 'aria-busy', 'false' ); }
+		if ( statusSkel ) { statusSkel.setAttribute( 'hidden', '' ); }
+		var ctx     = document.getElementById( 'swh-chart-status' );
+		var emptyEl = document.getElementById( 'swh-chart-status-empty' );
+		if ( ctx ) { ctx.removeAttribute( 'hidden' ); }
+		showEmpty( ctx, emptyEl );
 	} );
 
 	// Weekly trend — bar chart.
+	var trendCard = document.getElementById( 'swh-report-card-trend' );
+	var trendSkel = document.getElementById( 'swh-chart-trend-skeleton' );
+	if ( trendCard ) { trendCard.setAttribute( 'aria-busy', 'true' ); }
+
 	fetchReport( 'weekly_trend' ).then( function ( data ) {
+		if ( trendCard ) { trendCard.setAttribute( 'aria-busy', 'false' ); }
+		if ( trendSkel ) { trendSkel.setAttribute( 'hidden', '' ); }
 		var ctx     = document.getElementById( 'swh-chart-trend' );
 		var emptyEl = document.getElementById( 'swh-chart-trend-empty' );
+		if ( ctx ) { ctx.removeAttribute( 'hidden' ); }
 		if ( data && data.__error ) { showError( ctx, emptyEl, data.message ); return; }
 		if ( ! ctx || ! data || ! data.length ) { showEmpty( ctx, emptyEl ); return; }
 		var labels  = data.map( function ( d ) { return d.week; } );
@@ -128,6 +177,13 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			},
 			options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: false } } },
 		} );
+	} ).catch( function () {
+		if ( trendCard ) { trendCard.setAttribute( 'aria-busy', 'false' ); }
+		if ( trendSkel ) { trendSkel.setAttribute( 'hidden', '' ); }
+		var ctx     = document.getElementById( 'swh-chart-trend' );
+		var emptyEl = document.getElementById( 'swh-chart-trend-empty' );
+		if ( ctx ) { ctx.removeAttribute( 'hidden' ); }
+		showEmpty( ctx, emptyEl );
 	} );
 
 	// Average resolution time.
