@@ -75,8 +75,8 @@ https://yoursite.com/support/?swh_ticket=123&token=AbCdEfGhIjKlMnOpQrSt
 The shortcode detects these parameters and renders the client portal instead of the submission form. The **Helpdesk Page** setting (**Tickets → Settings → Assignment & Routing**) controls which page these links point to.
 
 If neither parameter is present:
-- Logged-in WordPress users see the **My Tickets** dashboard (a card list of their open tickets).
-- Guests see the **Resend my ticket links** lookup form (unless `show_lookup="no"`).
+- Logged-in WordPress users see the **My Tickets** dashboard — a card list of all tickets whose `_ticket_email` meta matches the logged-in user's email address.
+- Guests see the lookup form rendered by `swh_render_lookup_form()` (unless `show_lookup="no"`).
 
 ---
 

@@ -16,7 +16,7 @@ Simple-WP-Helpdesk/
 ├── CLAUDE.md                            # AI assistant guidance
 ├── README.md
 ├── LICENSE
-├── Makefile                             # Local test gate (lint/phpcs/phpstan/phpunit/semgrep/e2e)
+├── Makefile                             # Local PHP gate (lint/phpcs/phpstan/phpunit/semgrep); E2E via make e2e-docker
 ├── composer.json
 ├── docker-compose.test.yml              # Docker test stack (WP + MySQL + MailHog)
 ├── docker/
@@ -58,7 +58,7 @@ Simple-WP-Helpdesk/
         └── simple-wp-helpdesk.pot
 ```
 
-The bootstrap file (`simple-wp-helpdesk.php`) is a thin loader (~160 lines). Admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
+The bootstrap file (`simple-wp-helpdesk.php`) is a thin loader — admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
 
 ---
 

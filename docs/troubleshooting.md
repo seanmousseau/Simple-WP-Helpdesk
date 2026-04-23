@@ -56,6 +56,7 @@ Tokens also rotate automatically on each lookup. If a client bookmarks a link, i
 ## Auto-close is not running
 
 1. WordPress cron requires traffic to trigger. On low-traffic sites, use a real cron job:
+
    ```bash
    */5 * * * * curl -s "https://yoursite.com/wp-cron.php?doing_wp_cron" > /dev/null
    ```
@@ -84,10 +85,13 @@ Tokens also rotate automatically on each lookup. If a client bookmarks a link, i
 
 1. Confirm the `Authorization: Bearer <token>` header matches the value stored in **Settings → Assignment & Routing → Inbound Secret**.
 2. Apache may strip the `Authorization` header. Add to `.htaccess`:
+
    ```apache
    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
    ```
+
    Or in `wp-config.php`:
+
    ```php
    $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
    ```

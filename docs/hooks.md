@@ -157,8 +157,8 @@ Fires immediately before the ticket post is inserted into the database. Use this
 
 ```php
 add_action( 'swh_pre_ticket_create', function( array $data ): void {
-    // Log or validate $data before the ticket is created
-    error_log( 'New ticket incoming from: ' . $data['email'] );
+    // Log subject rather than raw email to avoid PII in logs
+    error_log( 'New ticket incoming: ' . ( $data['title'] ?? '' ) );
 } );
 ```
 

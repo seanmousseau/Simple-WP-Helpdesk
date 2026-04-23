@@ -10,6 +10,20 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Pages documentation site at `https://seanmousseau.github.io/Simple-WP-Helpdesk/` (Jekyll, just-the-docs theme) — covers all features through v3.5.0.
+- New docs pages: Shortcode Reference, Hooks Reference (all 9 filters + 2 actions with examples), Troubleshooting / FAQ.
+- Plugin Plugins-page action links: **Settings** and **Docs** shortcut links shown under the plugin name.
+
+### Changed
+
+- `README.md` updated to v3.5.0 with expanded features list reflecting all v3.x additions.
+- `docs/configuration.md` corrected from 6 tabs to 8; Canned Responses and Templates tabs documented.
+- `docs/development.md` updated repo structure, removed stale bootstrap size note, added Inbound Email Webhook section.
+- `docs/usage.md` expanded technician section (categories, SLA, merge, reporting, canned responses).
+- `docs/security.md` additions: token empty-value rejection, inbound webhook Bearer auth, MIME filter hook.
+
 ---
 
 ## [3.5.0] — 2026-04-23

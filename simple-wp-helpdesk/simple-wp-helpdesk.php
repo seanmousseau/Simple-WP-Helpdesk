@@ -40,6 +40,7 @@ if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';
+	add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'swh_plugin_action_links' );
 }
 
 // Frontend includes.
@@ -159,8 +160,6 @@ function swh_inject_plugin_icons_into_update_transient( $transient ) {
 	return $transient;
 }
 
-// Add "Settings" and "Docs" links on the Plugins list screen.
-add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'swh_plugin_action_links' );
 /**
  * Appends Settings and Documentation links under the plugin name on the Plugins page.
  *
