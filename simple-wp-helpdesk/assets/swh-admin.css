@@ -1,15 +1,5 @@
 /* Design tokens are defined in swh-shared.css (loaded as a dependency). */
 
-/* #259: Pill-style status badges */
-.swh-status-badge {
-	display: inline-block;
-	padding: 3px 10px;
-	border-radius: var( --swh-radius-pill );
-	font-size: var( --swh-font-sm );
-	font-weight: 600;
-	white-space: nowrap;
-	letter-spacing: 0.02em;
-}
 
 .column-ticket_uid {
 	width: 100px;
@@ -389,4 +379,120 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	background: var( --swh-color-muted );
 	margin-left: 4px;
 	vertical-align: middle;
+}
+
+/* ── Text utility classes (#329) ────────────────────────────────────────── */
+.swh-text-muted     { color: var( --swh-color-muted ); }
+.swh-text-secondary { color: var( --swh-color-text-secondary ); }
+
+/* SLA badge in ticket editor panel */
+.swh-sla-badge-wrap { margin-top: var( --swh-space-xs ); }
+
+/* ── Ticket list row hover feedback (#337) ───────────────────────────────── */
+#the-list tr td {
+	transition: background-color var( --swh-transition-fast ) var( --swh-ease-out );
+}
+
+#the-list tr:hover td {
+	background-color: var( --swh-color-bg-highlight );
+}
+
+.row-actions a:focus-visible,
+.swh-badge:focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+	border-radius: var( --swh-radius-sm );
+}
+
+/* ── Skeleton loader (#332) ──────────────────────────────────────────────── */
+@keyframes swh-shimmer {
+	0%   { background-position: -400px 0; }
+	100% { background-position:  400px 0; }
+}
+
+.swh-skeleton {
+	background: linear-gradient(
+		90deg,
+		var( --swh-color-surface ) 25%,
+		var( --swh-color-bg-subtle ) 50%,
+		var( --swh-color-surface ) 75%
+	);
+	background-size: 800px 100%;
+	animation: swh-shimmer 1.4s ease-in-out infinite;
+	border-radius: var( --swh-radius-sm );
+	color: transparent;
+	pointer-events: none;
+	user-select: none;
+}
+
+.swh-kpi-skeleton {
+	height: 2rem;
+	width: 60%;
+	margin: var( --swh-space-sm ) auto;
+}
+
+.swh-chart-skeleton {
+	height: 200px;
+	width: 100%;
+}
+
+/* ── Toast notification (#333) ───────────────────────────────────────────── */
+.swh-toast {
+	position: fixed;
+	bottom: var( --swh-space-lg );
+	right: var( --swh-space-lg );
+	z-index: var( --swh-z-toast );
+	display: flex;
+	align-items: center;
+	gap: var( --swh-space-sm );
+	padding: var( --swh-space-sm ) var( --swh-space-md );
+	background: var( --swh-color-surface );
+	border: 1px solid var( --swh-color-border );
+	border-radius: var( --swh-radius-md );
+	box-shadow: var( --swh-shadow-md );
+	max-width: 360px;
+	font-size: 13px;
+	line-height: 1.4;
+	opacity: 0;
+	transform: translateY( 8px );
+	transition:
+		opacity var( --swh-transition-normal ) var( --swh-ease-out ),
+		transform var( --swh-transition-normal ) var( --swh-ease-out );
+	pointer-events: none;
+}
+
+.swh-toast.swh-toast--visible {
+	opacity: 1;
+	transform: translateY( 0 );
+	pointer-events: auto;
+}
+
+.swh-toast--success { border-left: 3px solid var( --swh-color-success-accent ); }
+.swh-toast--error   { border-left: 3px solid var( --swh-color-danger ); }
+.swh-toast--info    { border-left: 3px solid var( --swh-color-primary ); }
+
+.swh-toast__message {
+	flex: 1;
+	color: var( --swh-color-text );
+}
+
+.swh-toast__dismiss {
+	flex-shrink: 0;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var( --swh-color-muted );
+	font-size: 16px;
+	line-height: 1;
+	padding: 2px 4px;
+	border-radius: var( --swh-radius-sm );
+}
+
+.swh-toast__dismiss:hover {
+	color: var( --swh-color-text );
+}
+
+.swh-toast__dismiss:focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
 }

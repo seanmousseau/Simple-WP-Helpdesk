@@ -81,6 +81,10 @@ function swh_enqueue_admin_assets( $hook ) {
 				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
 				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
 				'testEmailNetworkError'  => __( 'Network error. Please try again.', 'simple-wp-helpdesk' ),
+				/* translators: Accessible label for the dismiss button on a toast notification. */
+				'dismissNotification'    => __( 'Dismiss notification', 'simple-wp-helpdesk' ),
+				/* translators: Brief success message shown in a toast after settings are saved. */
+				'settingsSaved'          => __( 'Settings saved successfully.', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
@@ -360,9 +364,8 @@ function swh_render_settings_page() {
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only GET params set by server redirect; used only for display.
 	if ( isset( $_GET['swh_notice'] ) ) {
 		$notice = sanitize_key( is_string( $_GET['swh_notice'] ) ? $_GET['swh_notice'] : '' );
-		if ( 'saved' === $notice ) {
-			echo '<div class="updated notice is-dismissible"><p><strong>' . esc_html__( 'Settings saved successfully.', 'simple-wp-helpdesk' ) . '</strong></p></div>';
-		} elseif ( 'reset' === $notice ) {
+		// 'saved' notice is handled by swhToast() in swh-admin.js (#334); no server-side notice needed.
+		if ( 'reset' === $notice ) {
 			echo '<div class="updated error notice is-dismissible"><p><strong>' . esc_html__( 'Plugin Factory Reset Complete. All tickets/files purged and settings reverted to default.', 'simple-wp-helpdesk' ) . '</strong></p></div>';
 		} elseif ( 'purged' === $notice ) {
 			echo '<div class="updated error notice is-dismissible"><p><strong>' . esc_html__( 'All tickets & files have been successfully purged.', 'simple-wp-helpdesk' ) . '</strong></p></div>';

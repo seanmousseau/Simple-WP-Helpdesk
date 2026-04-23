@@ -38,6 +38,7 @@
 	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
 	--swh-color-warning:        #d97706;  /* solid amber — KPI warning card, danger zone icons */
 	--swh-color-danger-surface: #fef2f2;  /* light red surface — settings danger zone background */
+	--swh-color-on-solid:       #fff;     /* text on solid-color backgrounds (badges, buttons) */
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;
@@ -56,7 +57,51 @@
 
 	--swh-transition-fast:   0.1s;
 	--swh-transition-normal: 0.2s;
+
+	/* Shadow scale (#331) */
+	--swh-shadow-sm:    0 1px 2px rgba( 0, 0, 0, 0.08 );
+	--swh-shadow-md:    0 2px 6px rgba( 0, 0, 0, 0.12 );
+	--swh-shadow-lg:    0 4px 12px rgba( 0, 0, 0, 0.16 );
+
+	/* Z-index scale (#331) */
+	--swh-z-base:       1;
+	--swh-z-dropdown:   100;
+	--swh-z-modal:      200;
+	--swh-z-toast:      300;
+
+	/* Easing functions (#331) */
+	--swh-ease-out:     cubic-bezier( 0, 0, 0.2, 1 );
+	--swh-ease-in-out:  cubic-bezier( 0.4, 0, 0.2, 1 );
 }
+
+/* ── Unified pill badge — shared across admin and frontend (#330) ─────────── */
+.swh-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: var( --swh-radius-pill );
+	font-size: var( --swh-font-sm );
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+	transition: filter var( --swh-transition-fast ) var( --swh-ease-out );
+}
+
+.swh-badge:where(a, button) { cursor: pointer; }
+.swh-badge:where(a, button):hover { filter: brightness( 0.93 ); }
+.swh-badge:where(a, button):focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+}
+
+/* Status modifiers — keyed on sanitize_title( $status ) (#329, #330) */
+.swh-badge-open        { background-color: var( --swh-color-info-bg );    color: var( --swh-color-info-text ); }
+.swh-badge-closed      { background-color: var( --swh-color-error-bg );   color: var( --swh-color-error-text ); }
+.swh-badge-in-progress { background-color: var( --swh-color-warning-bg ); color: var( --swh-color-warning-text ); }
+.swh-badge-resolved    { background-color: var( --swh-color-success-bg ); color: var( --swh-color-success-text ); }
+
+/* SLA modifiers (#329) */
+.swh-badge-sla-warn   { background-color: var( --swh-color-warning-bg ); color: var( --swh-color-warning-text ); }
+.swh-badge-sla-breach { background-color: var( --swh-color-danger );   color: var( --swh-color-on-solid ); }
 
 /* ── Empty state component — shared across admin and frontend (#319) ─────── */
 .swh-empty-state {
@@ -115,4 +160,15 @@
 	--swh-color-muted:          #767676;
 	--swh-color-primary:        #0073aa;
 	--swh-color-track:          #e0e0e0;
+}
+
+/* ── Reduced motion — disable transitions for users who prefer it ─────────── */
+@media ( prefers-reduced-motion: reduce ) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }

@@ -12,6 +12,28 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.5.0] — 2026-04-23
+
+### Added
+
+- **Unified badge system (#329, #330):** Single `.swh-badge` base class and `.swh-badge-{slug}` modifier classes defined in `swh-shared.css`. All admin and editor badge rendering now uses `sanitize_title($status)` → CSS modifier, eliminating hardcoded hex colours.
+- **Design token scales (#331):** Shadow (`--swh-shadow-sm/md/lg`), z-index (`--swh-z-base/dropdown/modal/toast`), and easing (`--swh-ease-out/in-out`) token scales added to `swh-shared.css`.
+- **Toast notification component (#333):** Reusable `swhToast(message, type, duration)` JS function and `.swh-toast` CSS component added to `swh-admin.js` / `swh-admin.css`. Auto-dismisses after 4 s; accessible dismiss button; three variants (success/error/info).
+- **Settings save toast (#334):** Settings save now shows a toast notification instead of the legacy WP admin notice. URL param cleaned via `history.replaceState()` to prevent re-trigger on refresh.
+- **Reports skeleton loaders (#332):** KPI cards and chart canvases display shimmer skeleton placeholders while AJAX fetches are in flight.
+- **`aria-busy` coverage (#335):** KPI grid and chart cards expose `aria-busy="true"` during loading and `aria-busy="false"` once data has populated.
+- **Focus return on error (#336):** `swh-frontend.js` now focuses the first `.swh-alert-error` element on DOMContentLoaded so screen-reader and keyboard users land on the error message immediately.
+- **Interactive hover feedback (#337):** Admin ticket list rows gain a background-colour hover transition; row action links and badges gain visible focus rings.
+- **`prefers-reduced-motion` safeguard (#337):** Global `@media (prefers-reduced-motion: reduce)` block in `swh-shared.css` suppresses all animations and transitions for users who have opted in to reduced motion.
+- **E2E tests for v3.5.0 UX (sections 57–58):** Section 57 covers toast appearance, auto-dismiss, and × button; section 58 covers Reports page skeleton loaders and `aria-busy` state.
+
+### Changed
+
+- **`swh-frontend.css`:** Duplicate `.swh-badge` block removed — styles now inherited from `swh-shared.css`.
+- **Dev:** Pinned `doctrine/instantiator` to `^1.5` in `composer.json` to maintain PHP 8.2 compatibility (2.1.0 requires PHP ≥ 8.4).
+
+---
+
 ## [3.4.1] — 2026-04-20
 
 ### Added
@@ -503,7 +525,10 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...HEAD
+[3.5.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.1...v3.5.0
+[3.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.0...v3.4.1
+[3.4.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.0.0...v3.1.0

@@ -26,3 +26,6 @@ testing/screenshots/
 
 # Remember plugin (session memory, generated at runtime)
 .remember/
+
+# Git worktrees
+.worktrees/

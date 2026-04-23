@@ -155,6 +155,67 @@ Individual tools:
 
 ---
 
+## Design Tokens
+
+CSS custom properties (design tokens) are defined in `swh-shared.css`, which is loaded as a dependency of both `swh-admin.css` and `swh-frontend.css`. All tokens use the `--swh-` prefix.
+
+### Token Scales (v3.5.0)
+
+**Shadow scale**
+
+| Token | Value |
+|-------|-------|
+| `--swh-shadow-sm` | `0 1px 2px rgba(0,0,0,0.08)` |
+| `--swh-shadow-md` | `0 2px 6px rgba(0,0,0,0.12)` |
+| `--swh-shadow-lg` | `0 4px 12px rgba(0,0,0,0.16)` |
+
+**Z-index scale**
+
+| Token | Value | Used by |
+|-------|-------|---------|
+| `--swh-z-base` | `1` | General stacking |
+| `--swh-z-dropdown` | `100` | Dropdowns, popovers |
+| `--swh-z-modal` | `200` | Modal dialogs |
+| `--swh-z-toast` | `300` | Toast notifications |
+
+**Easing**
+
+| Token | Value |
+|-------|-------|
+| `--swh-ease-out` | `cubic-bezier(0,0,0.2,1)` |
+| `--swh-ease-in-out` | `cubic-bezier(0.4,0,0.2,1)` |
+
+---
+
+## Badge System
+
+All status badges use a unified CSS component defined in `swh-shared.css`.
+
+**Base class:** `.swh-badge` — inline-block pill with padding, border-radius, and a hover transition.
+
+**Modifier classes:** `.swh-badge-{slug}` where `slug = sanitize_title($status)`.
+
+| Class | Used for |
+|-------|---------|
+| `.swh-badge-open` | Open tickets |
+| `.swh-badge-in-progress` | In Progress tickets |
+| `.swh-badge-resolved` | Resolved tickets |
+| `.swh-badge-closed` | Closed tickets |
+| `.swh-badge-sla-warn` | SLA warning state |
+| `.swh-badge-sla-breach` | SLA breach state |
+
+**PHP pattern** (in admin list / editor):
+
+```php
+$status_slug = sanitize_title( $status );
+echo '<span class="swh-badge swh-badge-' . esc_attr( $status_slug ) . '">'
+     . esc_html( $status ) . '</span>';
+```
+
+Adding a new status automatically gets a badge modifier if a `.swh-badge-{slug}` rule exists in `swh-shared.css`. For unknown slugs only the base `.swh-badge` shape and spacing apply — no background colour or text colour is set, so those inherit from the parent context.
+
+---
+
 ## Release Process
 
 1. **Bump the version** in `simple-wp-helpdesk.php`:

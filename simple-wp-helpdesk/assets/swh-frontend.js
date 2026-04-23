@@ -510,4 +510,11 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			xhr.send( formData );
 		} );
 	}
+
+	// Focus the first error alert on page load so screen reader users hear it immediately (#336).
+	var firstError = document.querySelector( '.swh-alert-error' );
+	if ( firstError ) {
+		firstError.setAttribute( 'tabindex', '-1' );
+		firstError.focus( { preventScroll: false } );
+	}
 } );

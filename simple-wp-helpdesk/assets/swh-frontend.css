@@ -121,25 +121,6 @@
 	background: var( --swh-color-bg );
 }
 
-/* Pill-style status badges (#259) */
-.swh-badge {
-	display: inline-block;
-	padding: 3px 10px;
-	border-radius: var( --swh-radius-pill );
-	font-size: var( --swh-font-sm );
-	font-weight: 600;
-	letter-spacing: 0.02em;
-}
-
-.swh-badge-closed {
-	background-color: var( --swh-color-error-bg );
-	color: var( --swh-color-error-text );
-}
-
-.swh-badge-open {
-	background-color: var( --swh-color-success-bg );
-	color: var( --swh-color-success-text );
-}
 
 .swh-chat-bubble {
 	padding: var( --swh-space-md );
