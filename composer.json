@@ -6,7 +6,8 @@
         "wp-coding-standards/wpcs": "^3.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
         "phpunit/phpunit": "^9.6",
-        "10up/wp_mock": "^1.0"
+        "10up/wp_mock": "^1.0",
+        "doctrine/instantiator": "^1.5"
     },
     "config": {
         "allow-plugins": {
