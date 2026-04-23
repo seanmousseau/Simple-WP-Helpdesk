@@ -384,3 +384,6 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 /* ── Text utility classes (#329) ────────────────────────────────────────── */
 .swh-text-muted     { color: var( --swh-color-muted ); }
 .swh-text-secondary { color: var( --swh-color-text-secondary ); }
+
+/* SLA badge in ticket editor panel */
+.swh-sla-badge-wrap { margin-top: var( --swh-space-xs ); }

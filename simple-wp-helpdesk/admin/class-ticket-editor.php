@@ -181,7 +181,7 @@ function swh_status_meta_box_html( $post ) {
 				$sla_class = 'breach' === $sla_status ? 'swh-badge-sla-breach' : 'swh-badge-sla-warn';
 				$sla_label = 'breach' === $sla_status ? __( 'SLA Breach', 'simple-wp-helpdesk' ) : __( 'SLA Warning', 'simple-wp-helpdesk' );
 				?>
-				<div class="swh-badge <?php echo esc_attr( $sla_class ); ?>" style="margin-top:8px;"><?php echo esc_html( $sla_label ); ?></div>
+				<div class="swh-sla-badge-wrap"><span class="swh-badge <?php echo esc_attr( $sla_class ); ?>"><?php echo esc_html( $sla_label ); ?></span></div>
 			<?php endif; ?>
 		</div>
 

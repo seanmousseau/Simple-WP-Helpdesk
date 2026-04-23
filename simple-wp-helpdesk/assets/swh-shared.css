@@ -38,6 +38,7 @@
 	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
 	--swh-color-warning:        #d97706;  /* solid amber — KPI warning card, danger zone icons */
 	--swh-color-danger-surface: #fef2f2;  /* light red surface — settings danger zone background */
+	--swh-color-on-solid:       #fff;     /* text on solid-color backgrounds (badges, buttons) */
 
 	--swh-radius-sm:    4px;
 	--swh-radius-md:    5px;
@@ -95,8 +96,8 @@
 .swh-badge-resolved    { background-color: var( --swh-color-success-bg ); color: var( --swh-color-success-text ); }
 
 /* SLA modifiers (#329) */
-.swh-badge-sla-warn   { background-color: var( --swh-color-warning ); color: #fff; }
-.swh-badge-sla-breach { background-color: var( --swh-color-danger );   color: #fff; }
+.swh-badge-sla-warn   { background-color: var( --swh-color-warning ); color: var( --swh-color-on-solid ); }
+.swh-badge-sla-breach { background-color: var( --swh-color-danger );   color: var( --swh-color-on-solid ); }
 
 /* ── Empty state component — shared across admin and frontend (#319) ─────── */
 .swh-empty-state {
