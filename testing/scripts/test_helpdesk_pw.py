@@ -3553,7 +3553,7 @@ def test_57_toast_notifications(page: Page):
         with suppress(PlaywrightTimeoutError):
             toast2.wait_for(state='hidden', timeout=2000)
             toast2_hidden = toast2.count() == 0 or toast2.first.is_hidden()
-        check("toast #333: toast dismissed by clicking × button", toast2_hidden)
+        check("toast #333: toast dismissed by clicking dismiss button", toast2_hidden)
     else:
         skip("toast dismiss button", "second toast did not appear")
 
@@ -3578,8 +3578,13 @@ def test_58_reports_loading_states(page: Page):
     check("reports #335: KPI grid exists", kpi_grid.count() > 0)
 
     # Wait for AJAX to complete and KPI value to be unhidden.
-    page.locator('#swh-kpi-total:not([hidden])').wait_for(timeout=10000)
-    check("reports #332: KPI total value becomes visible after AJAX", True)
+    kpi_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator('#swh-kpi-total:not([hidden])').wait_for(timeout=10000)
+        kpi_visible = page.locator('#swh-kpi-total:not([hidden])').count() > 0
+    check("reports #332: KPI total value becomes visible after AJAX",
+          kpi_visible,
+          "#swh-kpi-total remained hidden after AJAX")
 
     # After load, aria-busy should be 'false'.
     busy_after = kpi_grid.get_attribute('aria-busy')
