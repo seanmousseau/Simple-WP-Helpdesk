@@ -141,3 +141,21 @@ Check **Delete all plugin data on uninstall** to permanently remove all tickets,
 | **Purge All Tickets** | Permanently deletes every ticket and its attachments |
 | **GDPR Email Purge** | Deletes all tickets, replies, and files associated with a specific email address |
 | **Factory Reset** | Resets all settings to defaults; does not delete tickets |
+
+---
+
+## UX Feedback
+
+### Toast Notifications
+
+After saving settings, a toast notification slides in from the bottom-right corner confirming the save. It auto-dismisses after ~4 seconds and can be closed immediately with the **×** button.
+
+Toast notifications are built on `swhToast(message, type, duration)` in `swh-admin.js`. The function is available globally on any page that loads `swh-admin.js`.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `message` | string | — | Text to display |
+| `type` | `'success'` \| `'error'` \| `'info'` | `'success'` | Visual variant |
+| `duration` | number | `4000` | Auto-dismiss delay in ms |
+
+The `?swh_notice=saved` redirect query parameter triggers the toast on page load. The parameter is removed from the URL via `history.replaceState()` so a page refresh does not re-trigger the notification.
