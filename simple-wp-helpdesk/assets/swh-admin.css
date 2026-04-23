@@ -1,15 +1,5 @@
 /* Design tokens are defined in swh-shared.css (loaded as a dependency). */
 
-/* #259: Pill-style status badges */
-.swh-status-badge {
-	display: inline-block;
-	padding: 3px 10px;
-	border-radius: var( --swh-radius-pill );
-	font-size: var( --swh-font-sm );
-	font-weight: 600;
-	white-space: nowrap;
-	letter-spacing: 0.02em;
-}
 
 .column-ticket_uid {
 	width: 100px;
@@ -390,3 +380,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	margin-left: 4px;
 	vertical-align: middle;
 }
+
+/* ── Text utility classes (#329) ────────────────────────────────────────── */
+.swh-text-muted     { color: var( --swh-color-muted ); }
+.swh-text-secondary { color: var( --swh-color-text-secondary ); }

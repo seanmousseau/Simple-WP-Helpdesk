@@ -73,6 +73,31 @@
 	--swh-ease-in-out:  cubic-bezier( 0.4, 0, 0.2, 1 );
 }
 
+/* ── Unified pill badge — shared across admin and frontend (#330) ─────────── */
+.swh-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: var( --swh-radius-pill );
+	font-size: var( --swh-font-sm );
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+	transition: filter var( --swh-transition-fast ) var( --swh-ease-out );
+}
+
+.swh-badge:where(a, button) { cursor: pointer; }
+.swh-badge:where(a, button):hover { filter: brightness( 0.93 ); }
+
+/* Status modifiers — keyed on sanitize_title( $status ) (#329, #330) */
+.swh-badge-open        { background-color: var( --swh-color-info-bg );    color: var( --swh-color-info-text ); }
+.swh-badge-closed      { background-color: var( --swh-color-error-bg );   color: var( --swh-color-error-text ); }
+.swh-badge-in-progress { background-color: var( --swh-color-warning-bg ); color: var( --swh-color-warning-text ); }
+.swh-badge-resolved    { background-color: var( --swh-color-success-bg ); color: var( --swh-color-success-text ); }
+
+/* SLA modifiers (#329) */
+.swh-badge-sla-warn   { background-color: var( --swh-color-warning ); color: #fff; }
+.swh-badge-sla-breach { background-color: var( --swh-color-danger );   color: #fff; }
+
 /* ── Empty state component — shared across admin and frontend (#319) ─────── */
 .swh-empty-state {
 	text-align: center;

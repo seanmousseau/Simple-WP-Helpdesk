@@ -124,30 +124,15 @@ add_action( 'manage_helpdesk_ticket_posts_custom_column', 'swh_ticket_column_con
  * @return void
  */
 function swh_ticket_column_content( $column, $post_id ) {
-	$defs = swh_get_defaults();
 	switch ( $column ) {
 		case 'ticket_uid':
 			$uid = swh_get_string_meta( $post_id, '_ticket_uid' );
 			echo esc_html( $uid ? $uid : '—' );
 			break;
 		case 'ticket_status':
-			$status          = swh_get_string_meta( $post_id, '_ticket_status' );
-			$closed_status   = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
-			$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
-			if ( $status === $closed_status ) {
-				$bg    = '#f8d7da';
-				$color = '#721c24';
-			} elseif ( $status === $resolved_status ) {
-				$bg    = '#e6f7ff';
-				$color = '#005980';
-			} elseif ( stripos( $status, 'progress' ) !== false ) {
-				$bg    = '#fff3cd';
-				$color = '#856404';
-			} else {
-				$bg    = '#d4edda';
-				$color = '#155724';
-			}
-			echo '<span class="swh-status-badge" style="background:' . esc_attr( $bg ) . ';color:' . esc_attr( $color ) . ';">' . esc_html( $status ) . '</span>';
+			$status      = swh_get_string_meta( $post_id, '_ticket_status' );
+			$status_slug = sanitize_title( $status );
+			echo '<span class="swh-badge swh-badge-' . esc_attr( $status_slug ) . '">' . esc_html( $status ) . '</span>';
 			break;
 		case 'ticket_priority':
 			$priority = swh_get_string_meta( $post_id, '_ticket_priority' );
@@ -159,7 +144,7 @@ function swh_ticket_column_content( $column, $post_id ) {
 				$user = get_userdata( $assigned );
 				echo $user ? esc_html( is_string( $user->display_name ) ? $user->display_name : '' ) : esc_html__( 'Unknown', 'simple-wp-helpdesk' );
 			} else {
-				echo '<span style="color:#999;">' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . '</span>';
+				echo '<span class="swh-text-muted">' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . '</span>';
 			}
 			break;
 		case 'ticket_client':
@@ -169,7 +154,7 @@ function swh_ticket_column_content( $column, $post_id ) {
 				echo esc_html( $name );
 			}
 			if ( $email ) {
-				echo '<br><small style="color:#666;">' . esc_html( $email ) . '</small>';
+				echo '<br><small class="swh-text-secondary">' . esc_html( $email ) . '</small>';
 			}
 			if ( ! $name && ! $email ) {
 				echo '—';
