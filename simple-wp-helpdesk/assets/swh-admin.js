@@ -9,6 +9,62 @@
  * @package Simple_WP_Helpdesk
  */
 
+/* global swhAdmin */
+
+/**
+ * Displays a transient toast notification in the bottom-right corner.
+ *
+ * @param {string} message         - Text to display.
+ * @param {'success'|'error'|'info'} [type='success'] - Visual variant.
+ * @param {number} [duration=4000] - Auto-dismiss delay in milliseconds.
+ */
+function swhToast( message, type, duration ) {
+	type     = type     || 'success';
+	duration = duration || 4000;
+
+	var dismissLabel = ( typeof swhAdmin !== 'undefined' && swhAdmin.i18n && swhAdmin.i18n.dismissNotification )
+		? swhAdmin.i18n.dismissNotification
+		: 'Dismiss';
+
+	var toast = document.createElement( 'div' );
+	toast.className = 'swh-toast swh-toast--' + type;
+	toast.setAttribute( 'role', 'status' );
+	toast.setAttribute( 'aria-live', 'polite' );
+	toast.setAttribute( 'aria-atomic', 'true' );
+
+	var msg = document.createElement( 'span' );
+	msg.className   = 'swh-toast__message';
+	msg.textContent = message;
+
+	var btn = document.createElement( 'button' );
+	btn.className   = 'swh-toast__dismiss';
+	btn.type        = 'button';
+	btn.setAttribute( 'aria-label', dismissLabel );
+	btn.textContent = '×';
+
+	toast.appendChild( msg );
+	toast.appendChild( btn );
+	document.body.appendChild( toast );
+
+	var timer;
+
+	function dismiss() {
+		clearTimeout( timer );
+		toast.classList.remove( 'swh-toast--visible' );
+		toast.addEventListener( 'transitionend', function () { toast.remove(); }, { once: true } );
+	}
+
+	btn.addEventListener( 'click', dismiss );
+
+	requestAnimationFrame( function () {
+		requestAnimationFrame( function () {
+			toast.classList.add( 'swh-toast--visible' );
+		} );
+	} );
+
+	timer = setTimeout( dismiss, duration );
+}
+
 document.addEventListener( 'DOMContentLoaded', function () {
 	const tabs         = document.querySelectorAll( '[role="tab"]' );
 	const contents     = document.querySelectorAll( '.swh-tab-content' );

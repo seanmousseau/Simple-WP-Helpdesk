@@ -435,3 +435,64 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	height: 200px;
 	width: 100%;
 }
+
+/* ── Toast notification (#333) ───────────────────────────────────────────── */
+.swh-toast {
+	position: fixed;
+	bottom: var( --swh-space-lg );
+	right: var( --swh-space-lg );
+	z-index: var( --swh-z-toast );
+	display: flex;
+	align-items: center;
+	gap: var( --swh-space-sm );
+	padding: var( --swh-space-sm ) var( --swh-space-md );
+	background: var( --swh-color-surface );
+	border: 1px solid var( --swh-color-border );
+	border-radius: var( --swh-radius-md );
+	box-shadow: var( --swh-shadow-md );
+	max-width: 360px;
+	font-size: 13px;
+	line-height: 1.4;
+	opacity: 0;
+	transform: translateY( 8px );
+	transition:
+		opacity var( --swh-transition-normal ) var( --swh-ease-out ),
+		transform var( --swh-transition-normal ) var( --swh-ease-out );
+	pointer-events: none;
+}
+
+.swh-toast.swh-toast--visible {
+	opacity: 1;
+	transform: translateY( 0 );
+	pointer-events: auto;
+}
+
+.swh-toast--success { border-left: 3px solid var( --swh-color-success ); }
+.swh-toast--error   { border-left: 3px solid var( --swh-color-danger ); }
+.swh-toast--info    { border-left: 3px solid var( --swh-color-primary ); }
+
+.swh-toast__message {
+	flex: 1;
+	color: var( --swh-color-text );
+}
+
+.swh-toast__dismiss {
+	flex-shrink: 0;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var( --swh-color-text-muted );
+	font-size: 16px;
+	line-height: 1;
+	padding: 2px 4px;
+	border-radius: var( --swh-radius-sm );
+}
+
+.swh-toast__dismiss:hover {
+	color: var( --swh-color-text );
+}
+
+.swh-toast__dismiss:focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+}

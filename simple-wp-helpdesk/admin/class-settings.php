@@ -81,6 +81,8 @@ function swh_enqueue_admin_assets( $hook ) {
 				'testEmailSuccess'       => __( 'Test email sent successfully.', 'simple-wp-helpdesk' ),
 				'testEmailError'         => __( 'Failed to send test email.', 'simple-wp-helpdesk' ),
 				'testEmailNetworkError'  => __( 'Network error. Please try again.', 'simple-wp-helpdesk' ),
+				/* translators: Accessible label for the dismiss button on a toast notification. */
+				'dismissNotification'    => __( 'Dismiss notification', 'simple-wp-helpdesk' ),
 			),
 		)
 	);
