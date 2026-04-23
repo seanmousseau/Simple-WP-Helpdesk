@@ -3511,7 +3511,7 @@ def test_57_toast_notifications(page: Page):
     _navigate_settings(page)
 
     # Submit the form to trigger the redirect with swh_notice=saved.
-    page.locator('#save-btn-container button[type="submit"]').click()
+    page.locator('#save-btn-container input[type="submit"]').click()
     page.wait_for_load_state('networkidle')
 
     # Toast should appear with the --visible modifier class.
@@ -3533,7 +3533,7 @@ def test_57_toast_notifications(page: Page):
 
     # Dismiss button also works — trigger another save.
     _navigate_settings(page)
-    page.locator('#save-btn-container button[type="submit"]').click()
+    page.locator('#save-btn-container input[type="submit"]').click()
     page.wait_for_load_state('networkidle')
     toast2 = page.locator('.swh-toast.swh-toast--visible')
     if toast2.count() > 0:
