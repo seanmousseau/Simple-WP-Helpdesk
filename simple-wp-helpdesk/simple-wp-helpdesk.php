@@ -40,6 +40,7 @@ if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-plugin-action-links.php';
 }
 
 // Frontend includes.
@@ -118,7 +119,7 @@ function swh_plugin_description_html() {
 		/* translators: %s: wp_options WordPress table name wrapped in <code> tags */
 		array( __( 'CDN/proxy-aware rate limiting', 'simple-wp-helpdesk' ), sprintf( __( 'persistent via %s, survives cache flushes', 'simple-wp-helpdesk' ), '<code>wp_options</code>' ) ),
 		array( __( 'Token expiration', 'simple-wp-helpdesk' ), __( 'configurable TTL with auto-rotation for portal links', 'simple-wp-helpdesk' ) ),
-		array( __( 'Tabbed settings panel', 'simple-wp-helpdesk' ), __( '7 tabs: General, Assignment &amp; Routing, Email Templates, Messages, Anti-Spam, Canned Responses, Tools', 'simple-wp-helpdesk' ) ),
+		array( __( 'Tabbed settings panel', 'simple-wp-helpdesk' ), __( '8 tabs: General, Assignment &amp; Routing, Email Templates, Messages, Anti-Spam, Canned Responses, Templates, Tools', 'simple-wp-helpdesk' ) ),
 		array( __( 'GDPR tools', 'simple-wp-helpdesk' ), __( 'per-email data purge, retention policies, and thorough uninstall cleanup', 'simple-wp-helpdesk' ) ),
 		array( __( 'Internationalization', 'simple-wp-helpdesk' ), __( 'i18n ready with full text-domain support', 'simple-wp-helpdesk' ) ),
 		array( __( 'GitHub auto-updater', 'simple-wp-helpdesk' ), __( 'new releases delivered directly to the WordPress dashboard via plugin-update-checker', 'simple-wp-helpdesk' ) ),

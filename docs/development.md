@@ -1,3 +1,9 @@
+---
+title: Development Guide
+nav_order: 7
+has_children: true
+---
+
 # Development Guide
 
 ---
@@ -10,7 +16,20 @@ Simple-WP-Helpdesk/
 ├── CLAUDE.md                            # AI assistant guidance
 ├── README.md
 ├── LICENSE
-├── docs/                                # This documentation
+├── Makefile                             # Local PHP gate (lint/phpcs/phpstan/phpunit/semgrep); E2E via make e2e-docker
+├── composer.json
+├── docker-compose.test.yml              # Docker test stack (WP + MySQL + MailHog)
+├── docker/
+│   ├── setup-test-wp.sh                 # Configures the Docker WP instance for E2E tests
+│   └── mailhog-smtp.php                 # MU-plugin: routes wp_mail() through MailHog
+├── docs/                                # This documentation (GitHub Pages source)
+├── testing/
+│   ├── scripts/
+│   │   ├── test_helpdesk_pw.py          # Playwright E2E test suite (58 sections)
+│   │   └── conftest.py                  # pytest fixtures and helpers
+│   ├── pytest.ini
+│   ├── requirements.txt
+│   └── .env.example
 └── simple-wp-helpdesk/
     ├── simple-wp-helpdesk.php           # Bootstrap: constants, requires, lifecycle hooks
     ├── includes/
@@ -18,20 +37,28 @@ Simple-WP-Helpdesk/
     │   ├── class-installer.php          # Activation, deactivation, uninstall, upgrade, CPT
     │   ├── class-email.php              # Template parsing, email sending, HTML wrapping
     │   ├── class-ticket.php             # File proxy, uploads, deletion, comment filters
-    │   └── class-cron.php              # Auto-close, retention (tickets + attachments)
+    │   └── class-cron.php               # Auto-close, SLA check, retention (tickets + files)
     ├── admin/
-    │   ├── class-settings.php           # Settings page render + save handler
+    │   ├── class-settings.php           # Settings page render + save handler (8 tabs)
     │   ├── class-ticket-editor.php      # Meta boxes, save_post, conversation UI
-    │   └── class-ticket-list.php        # Columns, sorting, filters, admin styles
+    │   ├── class-ticket-list.php        # Columns, sorting, filters, bulk actions
+    │   ├── class-reporting.php          # Reporting AJAX endpoints (status, resolution, trend, KPI)
+    │   └── class-reporting-ui.php       # Reports submenu page render + Chart.js enqueue
     ├── frontend/
     │   ├── class-shortcode.php          # [submit_ticket] + [helpdesk_portal] shortcodes
     │   └── class-portal.php             # Client portal view
     ├── vendor/plugin-update-checker/    # GitHub auto-updater library
-    ├── assets/                          # CSS, JS
-    └── languages/                       # .pot/.po/.mo
+    ├── assets/
+    │   ├── swh-shared.css               # Design tokens + shared components
+    │   ├── swh-admin.css                # Admin-only styles
+    │   ├── swh-frontend.css             # Frontend styles
+    │   ├── swh-admin.js                 # Admin JS (toast, canned responses, etc.)
+    │   └── swh-frontend.js              # Frontend JS (form, portal interactions)
+    └── languages/
+        └── simple-wp-helpdesk.pot
 ```
 
-The bootstrap file (`simple-wp-helpdesk.php`) is a loader (~160 lines, including the GitHub auto-updater initialisation and plugin icon injection). Admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
+The bootstrap file (`simple-wp-helpdesk.php`) is a thin loader — admin files are only loaded inside `is_admin()`. Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE`.
 
 ---
 
@@ -40,9 +67,10 @@ The bootstrap file (`simple-wp-helpdesk.php`) is a loader (~160 lines, including
 ```bash
 git clone https://github.com/seanmousseau/Simple-WP-Helpdesk.git
 cd Simple-WP-Helpdesk
+composer install
 ```
 
-No build step is required. Drop the `simple-wp-helpdesk/` folder into your WordPress `wp-content/plugins/` directory and activate it from the WordPress dashboard.
+No build step is required for the plugin itself. Drop the `simple-wp-helpdesk/` folder into your WordPress `wp-content/plugins/` directory and activate it from the WordPress dashboard.
 
 ---
 
@@ -54,13 +82,15 @@ The plugin uses only WordPress core data structures:
 
 | Data | Storage | Key Meta |
 |------|---------|----------|
-| Tickets | `helpdesk_ticket` Custom Post Type | `_ticket_uid`, `_ticket_token`, `_ticket_status`, `_ticket_priority`, `_ticket_email`, `_ticket_attachments`, `_swh_attachment_orignames`, `_ticket_csat`, etc. |
-| Replies & Notes | WP Comments on the CPT | `_is_internal_note`, `_is_user_reply`, `_swh_reply_orignames` |
+| Tickets | `helpdesk_ticket` Custom Post Type | `_ticket_uid`, `_ticket_token`, `_ticket_status`, `_ticket_priority`, `_ticket_email`, `_ticket_attachments`, `_ticket_csat`, etc. |
+| Replies & Notes | WP Comments (`comment_type = 'helpdesk_reply'`) | `_is_internal_note`, `_is_user_reply`, `_swh_reply_orignames` |
 | Settings | `wp_options` | All keys prefixed with `swh_` |
+| Canned responses | `wp_options` | `swh_canned_responses` (PHP serialized array, stored via `update_option()`) |
+| Ticket templates | `wp_options` | `swh_ticket_templates` (PHP serialized array, stored via `update_option()`) |
 
-### Function Naming
+### Function & Class Naming
 
-All functions use the `swh_` prefix:
+All public functions use the `swh_` prefix; all classes use `SWH_`:
 
 ```php
 swh_activate()
@@ -71,11 +101,12 @@ swh_save_ticket_data()
 
 ### Single Source of Truth for Defaults
 
-**`swh_get_defaults()`** is the definitive list of every plugin option and its default value. It uses a `static $defaults` cache so it is only built once per request.
+**`swh_get_defaults()`** (`includes/helpers.php`) is the definitive list of every plugin option and its default value. It uses a `static $defaults` cache so it is built only once per request.
 
 When adding a new option:
-1. Add it to `swh_get_defaults()` with its default value.
-2. It will automatically be registered by the upgrade routine, included in factory reset, and cleaned up on uninstall.
+1. Add it to `swh_get_defaults()` with its default value — it is automatically registered by the upgrade routine, included in factory reset, and cleaned up on uninstall.
+2. Add the field to the appropriate settings tab in `admin/class-settings.php`.
+3. Add it to the correct save block in `swh_handle_settings_save()` (main form or Tools form — see below).
 
 ---
 
@@ -83,12 +114,12 @@ When adding a new option:
 
 ### New Option
 
-1. Add to `swh_get_defaults()` in `includes/helpers.php`:
-   ```php
-   'swh_my_new_option' => 'default_value',
-   ```
-2. Add the field to the appropriate settings tab in `admin/class-settings.php`.
-3. Add it to the correct save block in `swh_handle_settings_save()` — the main form handler (guarded by `swh_settings_nonce`) or the Tools form handler (guarded by `swh_tools_nonce`).
+```php
+// 1. includes/helpers.php — swh_get_defaults()
+'swh_my_new_option' => 'default_value',
+```
+
+Then add the field to `admin/class-settings.php` and the corresponding save block.
 
 ### New Email Template
 
@@ -100,19 +131,18 @@ Add both variants to `swh_get_defaults()`:
 
 ### New Cron Job
 
-1. Register in `swh_activate()`:
-   ```php
-   wp_schedule_event( time() + OFFSET_SECONDS, 'hourly', 'swh_my_event' );
-   ```
-2. Clear in `swh_deactivate()`:
-   ```php
-   wp_clear_scheduled_hook( 'swh_my_event' );
-   ```
-3. Hook the handler:
-   ```php
-   add_action( 'swh_my_event', 'swh_process_my_event' );
-   ```
-4. Use a different offset from existing jobs (currently: +0 min, +30 min, +60 min) to avoid simultaneous execution.
+```php
+// Register in swh_activate():
+wp_schedule_event( time() + OFFSET_SECONDS, 'hourly', 'swh_my_event' );
+
+// Clear in swh_deactivate():
+wp_clear_scheduled_hook( 'swh_my_event' );
+
+// Hook the handler:
+add_action( 'swh_my_event', 'swh_process_my_event' );
+```
+
+Use a different offset from existing jobs (currently +0 min, +30 min, +60 min) to avoid simultaneous execution.
 
 ---
 
@@ -129,39 +159,13 @@ Never move `swh_delete_on_uninstall` or retention settings to the main form hand
 
 ---
 
-## Testing
-
-The full test suite must pass before any PR is opened or release is cut.
-
-```bash
-make test-docker   # full PHP gate inside Docker (preferred — no host PHP needed)
-make test          # full PHP gate on host (requires PHP 8.1+, semgrep)
-make e2e           # Playwright E2E suite (set WP_MODE=docker or configure SSH vars)
-make e2e-docker    # self-contained E2E: up → setup → Playwright → teardown in one command
-make coverage      # PHPUnit + pcov → coverage.xml (Clover)
-```
-
-Individual tools:
-
-| Command | Purpose |
-|---------|---------|
-| `make lint` | PHP syntax check |
-| `make phpcs` | WordPress Coding Standards (zero errors) |
-| `make phpstan` | Static analysis level 9 |
-| `make phpunit` | Unit tests |
-| `make semgrep` | SAST security scan |
-
-**MailHog email assertions:** when `MAILHOG_URL` is set and `WP_MODE=docker`, `expect_email()` calls in the E2E suite assert delivery via the MailHog API automatically. In SSH mode they fall back to the manual `EMAIL_CHECKS` summary printed at the end of the run.
-
----
-
 ## Design Tokens
 
-CSS custom properties (design tokens) are defined in `swh-shared.css`, which is loaded as a dependency of both `swh-admin.css` and `swh-frontend.css`. All tokens use the `--swh-` prefix.
+CSS custom properties are defined in `swh-shared.css`, loaded as a dependency of both `swh-admin.css` and `swh-frontend.css`. All tokens use the `--swh-` prefix.
 
 ### Token Scales (v3.5.0)
 
-**Shadow scale**
+**Shadow**
 
 | Token | Value |
 |-------|-------|
@@ -169,7 +173,7 @@ CSS custom properties (design tokens) are defined in `swh-shared.css`, which is 
 | `--swh-shadow-md` | `0 2px 6px rgba(0,0,0,0.12)` |
 | `--swh-shadow-lg` | `0 4px 12px rgba(0,0,0,0.16)` |
 
-**Z-index scale**
+**Z-index**
 
 | Token | Value | Used by |
 |-------|-------|---------|
@@ -185,14 +189,15 @@ CSS custom properties (design tokens) are defined in `swh-shared.css`, which is 
 | `--swh-ease-out` | `cubic-bezier(0,0,0.2,1)` |
 | `--swh-ease-in-out` | `cubic-bezier(0.4,0,0.2,1)` |
 
+**Dark mode:** token overrides live in a `@media (prefers-color-scheme: dark)` block in `swh-shared.css`, scoped to `.swh-helpdesk-wrapper`. This applies to the **frontend only** — do not add dark mode tokens to `swh-admin.css` (WordPress admin handles its own colour schemes).
+
 ---
 
 ## Badge System
 
-All status badges use a unified CSS component defined in `swh-shared.css`.
+All status badges use a unified component defined in `swh-shared.css`.
 
 **Base class:** `.swh-badge` — inline-block pill with padding, border-radius, and a hover transition.
-
 **Modifier classes:** `.swh-badge-{slug}` where `slug = sanitize_title($status)`.
 
 | Class | Used for |
@@ -204,7 +209,7 @@ All status badges use a unified CSS component defined in `swh-shared.css`.
 | `.swh-badge-sla-warn` | SLA warning state |
 | `.swh-badge-sla-breach` | SLA breach state |
 
-**PHP pattern** (in admin list / editor):
+**PHP pattern:**
 
 ```php
 $status_slug = sanitize_title( $status );
@@ -212,7 +217,49 @@ echo '<span class="swh-badge swh-badge-' . esc_attr( $status_slug ) . '">'
      . esc_html( $status ) . '</span>';
 ```
 
-Adding a new status automatically gets a badge modifier if a `.swh-badge-{slug}` rule exists in `swh-shared.css`. For unknown slugs only the base `.swh-badge` shape and spacing apply — no background colour or text colour is set, so those inherit from the parent context.
+---
+
+## Inbound Email Webhook
+
+The webhook endpoint is registered at `POST /wp-json/swh/v1/inbound-email`.
+
+**Authentication:** `Authorization: Bearer <swh_inbound_secret>` header.
+
+**Payload fields:**
+
+| Field | Description |
+|-------|-------------|
+| `sender` | Sender email address (`from` accepted as fallback) |
+| `subject` | Email subject (must contain `[TKT-XXXX]`) |
+| `body-plain` | Message body (`text` accepted as fallback; lines beginning with `>` are stripped as quoted reply) |
+
+The handler extracts the ticket ID from `[TKT-XXXX]` in the subject, verifies the sender matches `_ticket_email` via `hash_equals()`, strips quoted reply lines, and inserts a new reply comment.
+
+**Docker note:** Apache strips `Authorization` headers before PHP. In Docker-based test environments, bypass HTTP entirely and call `swh_handle_inbound_email()` directly via `wp eval`.
+
+---
+
+## Testing
+
+The full test suite must pass before any PR is opened or release is cut.
+
+```bash
+make test-docker   # full PHP gate inside Docker — preferred (no host PHP needed)
+make e2e-docker    # self-contained E2E: up → setup → Playwright → teardown
+```
+
+Individual tools:
+
+| Command | Purpose |
+|---------|---------|
+| `make lint` | PHP syntax check |
+| `make phpcs` | WordPress Coding Standards (zero errors) |
+| `make phpstan` | Static analysis level 9 |
+| `make phpunit` | Unit tests |
+| `make semgrep` | SAST security scan |
+| `make coverage` | PHPUnit + pcov → `coverage.xml` (Clover) |
+
+**MailHog email assertions:** when `MAILHOG_URL` is set and `WP_MODE=docker`, `expect_email()` calls in the E2E suite assert email delivery via the MailHog API automatically.
 
 ---
 
@@ -236,4 +283,4 @@ Adding a new status automatically gets a badge modifier if a `.swh-badge-{slug}`
    git tag vX.Y.Z && git push origin vX.Y.Z
    ```
 
-   `release.yml` fires automatically on the tag push — it builds `simple-wp-helpdesk.zip` and creates the GitHub Release with the ZIP attached. No manual ZIP step required.
+   `release.yml` fires automatically on the tag push — it builds `simple-wp-helpdesk.zip` and creates the GitHub Release with the ZIP attached.

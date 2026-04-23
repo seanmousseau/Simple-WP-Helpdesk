@@ -1,3 +1,8 @@
+---
+title: Installation
+nav_order: 2
+---
+
 # Installation
 
 ## Requirements
@@ -11,7 +16,7 @@
 
 ## Installing the Plugin
 
-Simple WP Helpdesk is not listed on the WordPress.org plugin directory. It is installed manually via ZIP upload through the WordPress dashboard.
+Simple WP Helpdesk is not listed on the WordPress.org plugin directory. Install it manually via ZIP upload through the WordPress dashboard.
 
 1. Download `simple-wp-helpdesk.zip` from the [latest GitHub release](https://github.com/seanmousseau/Simple-WP-Helpdesk/releases/latest).
 2. In your WordPress dashboard, go to **Plugins → Add New**.
@@ -27,7 +32,7 @@ A **Tickets** menu item will now appear in the left-hand dashboard sidebar.
 
 ### Combined layout (simplest)
 
-Create a single WordPress page (e.g., "Support") and add:
+Create a single WordPress page (e.g. "Support") and add:
 
 ```text
 [submit_ticket]
@@ -41,10 +46,12 @@ Create two pages:
 
 | Page | Shortcode | Purpose |
 |------|-----------|---------|
-| e.g., "Submit a Ticket" | `[submit_ticket]` | Submission form and ticket lookup |
-| e.g., "My Tickets" | `[helpdesk_portal]` | Client portal only (no submission form) |
+| e.g. "Submit a Ticket" | `[submit_ticket]` | Submission form and ticket lookup |
+| e.g. "My Tickets" | `[helpdesk_portal]` | Client portal only (no submission form) |
 
 Set **Helpdesk Page** to the portal page (`[helpdesk_portal]`). All secure portal links in emails will point there.
+
+See the [Shortcode Reference](shortcodes) for all available attributes on both shortcodes.
 
 ---
 
