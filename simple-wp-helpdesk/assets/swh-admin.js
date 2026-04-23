@@ -101,6 +101,18 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		activateTab( restoreTab );
 	}
 
+	// Settings save toast — triggered by redirect query param (#334).
+	if ( urlParams.get( 'swh_notice' ) === 'saved' ) {
+		var savedMsg = ( typeof swhAdmin !== 'undefined' && swhAdmin.i18n && swhAdmin.i18n.settingsSaved )
+			? swhAdmin.i18n.settingsSaved
+			: 'Settings saved.';
+		swhToast( savedMsg, 'success' );
+		var cleanSearch = window.location.search
+			.replace( /([?&])swh_notice=saved(&|$)/, function ( _m, pre, suf ) { return suf ? pre : ''; } )
+			.replace( /^&/, '?' );
+		history.replaceState( null, '', window.location.pathname + cleanSearch + window.location.hash );
+	}
+
 	/**
 	 * Handles tab click events to switch the active settings panel.
 	 *
