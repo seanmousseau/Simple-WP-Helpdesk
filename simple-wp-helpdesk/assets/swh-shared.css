@@ -56,6 +56,21 @@
 
 	--swh-transition-fast:   0.1s;
 	--swh-transition-normal: 0.2s;
+
+	/* Shadow scale (#331) */
+	--swh-shadow-sm:    0 1px 2px rgba( 0, 0, 0, 0.08 );
+	--swh-shadow-md:    0 2px 6px rgba( 0, 0, 0, 0.12 );
+	--swh-shadow-lg:    0 4px 12px rgba( 0, 0, 0, 0.16 );
+
+	/* Z-index scale (#331) */
+	--swh-z-base:       1;
+	--swh-z-dropdown:   100;
+	--swh-z-modal:      200;
+	--swh-z-toast:      300;
+
+	/* Easing functions (#331) */
+	--swh-ease-out:     cubic-bezier( 0, 0, 0.2, 1 );
+	--swh-ease-in-out:  cubic-bezier( 0.4, 0, 0.2, 1 );
 }
 
 /* ── Empty state component — shared across admin and frontend (#319) ─────── */
