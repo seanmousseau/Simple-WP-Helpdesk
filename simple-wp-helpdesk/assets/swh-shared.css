@@ -88,6 +88,10 @@
 
 .swh-badge:where(a, button) { cursor: pointer; }
 .swh-badge:where(a, button):hover { filter: brightness( 0.93 ); }
+.swh-badge:where(a, button):focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+}
 
 /* Status modifiers — keyed on sanitize_title( $status ) (#329, #330) */
 .swh-badge-open        { background-color: var( --swh-color-info-bg );    color: var( --swh-color-info-text ); }

@@ -19,7 +19,8 @@
  * @param {number} [duration=4000] - Auto-dismiss delay in milliseconds.
  */
 function swhToast( message, type, duration ) {
-	type     = type     || 'success';
+	var allowed = [ 'success', 'error', 'info' ];
+	type     = ( allowed.indexOf( type ) !== -1 ) ? type : 'success';
 	duration = duration || 4000;
 
 	var dismissLabel = ( typeof swhAdmin !== 'undefined' && swhAdmin.i18n && swhAdmin.i18n.dismissNotification )

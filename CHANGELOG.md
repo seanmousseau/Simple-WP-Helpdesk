@@ -30,6 +30,7 @@ starting from the next release after 1.8.
 ### Changed
 
 - **`swh-frontend.css`:** Duplicate `.swh-badge` block removed — styles now inherited from `swh-shared.css`.
+- **Dev:** Pinned `doctrine/instantiator` to `^1.5` in `composer.json` to maintain PHP 8.2 compatibility (2.1.0 requires PHP ≥ 8.4).
 
 ---
 
@@ -524,7 +525,10 @@ starting from the next release after 1.8.
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...HEAD
+[3.5.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.1...v3.5.0
+[3.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.0...v3.4.1
+[3.4.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.0.0...v3.1.0

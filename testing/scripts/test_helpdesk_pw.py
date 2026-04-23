@@ -3516,6 +3516,10 @@ def test_57_toast_notifications(page: Page):
 
     # Toast should appear with the --visible modifier class.
     toast = page.locator('.swh-toast.swh-toast--visible')
+    try:
+        toast.wait_for(state='visible', timeout=3000)
+    except Exception:
+        pass
     check("toast #333: toast is visible after settings save",
           toast.count() > 0,
           "toast element with .swh-toast--visible not found")

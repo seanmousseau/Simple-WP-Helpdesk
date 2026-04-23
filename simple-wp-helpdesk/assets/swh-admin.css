@@ -481,7 +481,7 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	background: none;
 	border: none;
 	cursor: pointer;
-	color: var( --swh-color-text-muted );
+	color: var( --swh-color-muted );
 	font-size: 16px;
 	line-height: 1;
 	padding: 2px 4px;

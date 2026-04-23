@@ -205,13 +205,14 @@ All status badges use a unified CSS component defined in `swh-shared.css`.
 | `.swh-badge-sla-breach` | SLA breach state |
 
 **PHP pattern** (in admin list / editor):
+
 ```php
 $status_slug = sanitize_title( $status );
 echo '<span class="swh-badge swh-badge-' . esc_attr( $status_slug ) . '">'
      . esc_html( $status ) . '</span>';
 ```
 
-Adding a new status automatically gets a badge modifier if a `.swh-badge-{slug}` rule exists in `swh-shared.css`. For unknown slugs the base `.swh-badge` styles still apply (neutral appearance).
+Adding a new status automatically gets a badge modifier if a `.swh-badge-{slug}` rule exists in `swh-shared.css`. For unknown slugs only the base `.swh-badge` shape and spacing apply — no background colour or text colour is set, so those inherit from the parent context.
 
 ---
 
