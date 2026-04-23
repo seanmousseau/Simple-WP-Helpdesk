@@ -1,6 +1,11 @@
+---
+title: Configuration
+nav_order: 3
+---
+
 # Configuration
 
-Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are organized across six tabs.
+Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are organized across eight tabs.
 
 ---
 
@@ -8,9 +13,9 @@ Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are o
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| **Ticket Priorities** | Comma-separated list of priority levels | `Low, Medium, High` |
-| **Ticket Statuses** | Comma-separated list of workflow statuses | `Open, In Progress, Resolved, Closed` |
+| **Custom Priorities** | Comma-separated list of priority levels | `Low, Medium, High` |
 | **Default Priority** | Priority assigned to new tickets | `Medium` |
+| **Custom Statuses** | Comma-separated list of workflow statuses | `Open, In Progress, Resolved, Closed` |
 | **Default Status** | Status assigned to new tickets | `Open` |
 | **Resolved Status** | Triggers the auto-close countdown | `Resolved` |
 | **Closed Status** | Disables further client replies | `Closed` |
@@ -18,6 +23,10 @@ Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are o
 | **Auto-Close Days** | Days after "Resolved" before automatic closure (0 = disabled) | `3` |
 | **Max Upload Size** | Maximum file size per upload in MB | `5` |
 | **Max Files Per Upload** | Maximum number of files per submission (0 = unlimited) | `5` |
+| **SLA Warn Hours** | Hours before a ticket is flagged as an SLA warning | `0` (disabled) |
+| **SLA Breach Hours** | Hours before a ticket is flagged as an SLA breach | `0` (disabled) |
+| **Restrict Technicians** | When enabled, technicians only see tickets assigned to them | Off |
+| **Portal Theme** | `Auto` follows `prefers-color-scheme`; `Force light mode` pins the portal to light | `Auto` |
 
 ---
 
@@ -28,6 +37,8 @@ Navigate to **Tickets → Settings** in your WordPress dashboard. Settings are o
 | **Default Assignee** | Technician automatically assigned to every new ticket |
 | **Fallback Alert Email** | Receives new-ticket and client-reply notifications when no assignee is set |
 | **Helpdesk Page** | The page clients land on when clicking their portal link. Use the `[helpdesk_portal]` page if you have a dedicated portal, or the `[submit_ticket]` page for a combined layout. All portal links in emails point here. |
+
+**Auto-assignment rules** let you route tickets to specific technicians based on category. Add one or more rules mapping a **Category** to an **Assignee**. The first matching rule wins; if no rule matches, the default assignee is used.
 
 **Email routing priority** (when sending admin notifications):
 1. The ticket's assigned technician
@@ -88,6 +99,10 @@ Unreplaced placeholders are automatically removed from the final output.
 - Ticket assigned to technician
 - Ticket auto-closed (admin copy)
 
+**Email branding:** The header band displays your site logo (configured via **Logo URL** in Tab 3) and site name. If no logo URL is set, the site icon is used as a fallback (at 32×32 px). All CSS is inlined for email client compatibility.
+
+**Send Test Email:** Click **Send Test Email** to send a sample message to the currently logged-in admin. The result is shown inline without a page reload.
+
 ---
 
 ## Tab 4: Messages
@@ -117,9 +132,35 @@ Customize the front-end text shown to clients after form actions:
 
 For reCAPTCHA and Turnstile, paste your public **Site Key** and private **Secret Key** into the respective fields. The widget renders automatically on the frontend form.
 
+Protection applies to: the ticket submission form, the ticket lookup form, and the portal reply/close/reopen forms.
+
 ---
 
-## Tab 6: Tools
+## Tab 6: Canned Responses
+
+Pre-written reply templates that speed up ticket responses.
+
+- Click **+ Add Response** to create a new template.
+- Enter a **Title** (visible only in the selector) and a **Body** (inserted into the reply field).
+- Save via the main **Save Changes** button.
+
+To use a canned response in a ticket, open the ticket editor, click the **Canned Response** picker in the conversation section, and select a template. The body is inserted into the active reply field.
+
+---
+
+## Tab 7: Templates
+
+Pre-configured submission types that pre-fill the ticket description field when a client selects them on the frontend form.
+
+- Click **+ Add Template** to create a new request type.
+- Enter a **Label** (shown as the option name in the dropdown) and a **Description** (the pre-filled text).
+- Save via the main **Save Changes** button.
+
+When templates are configured, the submission form displays a **Request Type** dropdown. Selecting an option populates the description field with the corresponding template body, which the client can then edit before submitting.
+
+---
+
+## Tab 8: Tools
 
 ### Automated Data Retention
 
@@ -144,13 +185,11 @@ Check **Delete all plugin data on uninstall** to permanently remove all tickets,
 
 ---
 
-## UX Feedback
-
-### Toast Notifications
+## Toast Notifications
 
 After saving settings, a toast notification slides in from the bottom-right corner confirming the save. It auto-dismisses after ~4 seconds and can be closed immediately with the **×** button.
 
-Toast notifications are built on `swhToast(message, type, duration)` in `swh-admin.js`. The function is available globally on any page that loads `swh-admin.js`.
+The `swhToast(message, type, duration)` function is available globally on any page that loads `swh-admin.js`:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|

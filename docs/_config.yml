@@ -1,0 +1,33 @@
+title: Simple WP Helpdesk
+description: A lightweight, full-featured ticketing system built natively for WordPress. No third-party services — all data stays on your server.
+remote_theme: just-the-docs/just-the-docs
+url: https://seanmousseau.github.io/Simple-WP-Helpdesk
+baseurl: /Simple-WP-Helpdesk
+
+logo: https://media.seanmousseau.com/file/seanmousseau/assets/logos/swh/logo.webp
+
+color_scheme: light
+
+search_enabled: true
+search_tokenizer_separator: /[\s/]+/
+
+aux_links:
+  "GitHub":
+    - "https://github.com/seanmousseau/Simple-WP-Helpdesk"
+  "Latest Release":
+    - "https://github.com/seanmousseau/Simple-WP-Helpdesk/releases/latest"
+
+aux_links_new_tab: true
+
+footer_content: 'Copyright &copy; Sean Mousseau. Released under the <a href="https://www.gnu.org/licenses/gpl-2.0.html">GPLv2 license</a>.'
+
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub"
+gh_edit_repository: "https://github.com/seanmousseau/Simple-WP-Helpdesk"
+gh_edit_branch: "main"
+gh_edit_source: docs
+gh_edit_view_mode: "edit"
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
