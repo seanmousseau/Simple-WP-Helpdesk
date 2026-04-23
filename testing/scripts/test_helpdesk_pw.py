@@ -3555,7 +3555,9 @@ def test_57_toast_notifications(page: Page):
             toast2_hidden = toast2.count() == 0 or toast2.first.is_hidden()
         check("toast #333: toast dismissed by clicking dismiss button", toast2_hidden)
     else:
-        skip("toast dismiss button", "second toast did not appear")
+        check("toast #333: second toast appeared for dismiss test",
+              toast2_visible,
+              "second toast did not appear after settings save")
 
 
 # ── v3.5.0 Reports loading states (#332, #335) ────────────────────────────────
@@ -3573,9 +3575,13 @@ def test_58_reports_loading_states(page: Page):
     skel = page.locator('#swh-kpi-total-skeleton')
     check("reports #332: KPI skeleton element present in DOM", skel.count() > 0)
 
-    # KPI grid aria-busy should be true initially (set in PHP, may flip quickly).
+    # KPI grid aria-busy should be true initially (set in PHP before AJAX fires).
     kpi_grid = page.locator('#swh-kpi-grid')
     check("reports #335: KPI grid exists", kpi_grid.count() > 0)
+    busy_before = kpi_grid.get_attribute('aria-busy')
+    check("reports #335: KPI grid aria-busy=true before AJAX load",
+          busy_before == 'true',
+          f"initial aria-busy={busy_before!r}")
 
     # Wait for AJAX to complete and KPI value to be unhidden.
     kpi_visible = False
