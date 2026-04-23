@@ -7,6 +7,8 @@ client portal, status transitions, internal notes, access control,
 bulk actions, canned responses, file attachments, portal token security,
 XSS escaping, rate limiting, and email trigger verification.
 
+34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 = 58 sections
+
 Running with pytest (recommended):
     source testing/.venv/bin/activate
     pytest testing/scripts/test_helpdesk_pw.py -v              # full suite
@@ -3499,6 +3501,87 @@ def test_56_dark_mode(page: Page):
         page.emulate_media(color_scheme="no-preference")
 
 
+# ── v3.5.0 Toast notifications (#333, #334) ──────────────────────────────────
+
+def test_57_toast_notifications(page: Page):
+    """v3.5.0 Settings save triggers a toast (#333/#334); it auto-dismisses."""
+    print("\n[57] Toast Notifications — settings save (#333/#334)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    _navigate_settings(page)
+
+    # Submit the form to trigger the redirect with swh_notice=saved.
+    page.locator('#save-btn-container button[type="submit"]').click()
+    page.wait_for_load_state('networkidle')
+
+    # Toast should appear with the --visible modifier class.
+    toast = page.locator('.swh-toast.swh-toast--visible')
+    check("toast #333: toast is visible after settings save",
+          toast.count() > 0,
+          "toast element with .swh-toast--visible not found")
+
+    # URL should not contain swh_notice=saved after JS cleans it.
+    check("toast #334: URL param swh_notice=saved stripped by JS",
+          'swh_notice=saved' not in page.url,
+          f"URL still contains swh_notice=saved: {page.url!r}")
+
+    # Toast auto-dismisses within 6 seconds (4s timer + transition).
+    page.locator('.swh-toast.swh-toast--visible').wait_for(state='hidden', timeout=6000)
+    check("toast #333: toast auto-dismissed within 6s", True)
+
+    screenshot(page, "70_toast_after_settings_save")
+
+    # Dismiss button also works — trigger another save.
+    _navigate_settings(page)
+    page.locator('#save-btn-container button[type="submit"]').click()
+    page.wait_for_load_state('networkidle')
+    toast2 = page.locator('.swh-toast.swh-toast--visible')
+    if toast2.count() > 0:
+        page.locator('.swh-toast__dismiss').click()
+        page.locator('.swh-toast.swh-toast--visible').wait_for(state='hidden', timeout=2000)
+        check("toast #333: toast dismissed by clicking × button", True)
+    else:
+        skip("toast dismiss button", "second toast did not appear")
+
+
+# ── v3.5.0 Reports loading states (#332, #335) ────────────────────────────────
+
+def test_58_reports_loading_states(page: Page):
+    """v3.5.0 Reports page KPI skeletons + aria-busy; values populate after AJAX (#332/#335)."""
+    print("\n[58] Reports Loading States — skeletons + aria-busy (#332/#335)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    reports_url = f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-reports"
+    page.goto(reports_url)
+    page.wait_for_load_state('domcontentloaded')
+
+    # KPI skeleton element should exist in the DOM.
+    skel = page.locator('#swh-kpi-total-skeleton')
+    check("reports #332: KPI skeleton element present in DOM", skel.count() > 0)
+
+    # KPI grid aria-busy should be true initially (set in PHP, may flip quickly).
+    kpi_grid = page.locator('#swh-kpi-grid')
+    check("reports #335: KPI grid exists", kpi_grid.count() > 0)
+
+    # Wait for AJAX to complete and KPI value to be unhidden.
+    page.locator('#swh-kpi-total:not([hidden])').wait_for(timeout=10000)
+    check("reports #332: KPI total value becomes visible after AJAX", True)
+
+    # After load, aria-busy should be 'false'.
+    busy_after = kpi_grid.get_attribute('aria-busy')
+    check("reports #335: KPI grid aria-busy=false after data loads",
+          busy_after == 'false',
+          f"aria-busy={busy_after!r}")
+
+    # KPI total text should be a number (not the placeholder dash).
+    total_text = page.locator('#swh-kpi-total').inner_text().strip()
+    check("reports #332: KPI total displays numeric value, not placeholder",
+          total_text not in ('', '—', '&mdash;', '—'),
+          f"total_text={total_text!r}")
+
+    screenshot(page, "71_reports_kpi_loaded")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -3607,6 +3690,8 @@ SECTIONS = [
     test_54_responsive,               # 54 — v3.3.0 responsive layout (#251)
     test_55_email_branding,           # 55 — v3.4.0 email branding (#317)
     test_56_dark_mode,                # 56 — v3.4.0 dark mode (#321)
+    test_57_toast_notifications,      # 57 — v3.5.0 toast (#333/#334)
+    test_58_reports_loading_states,   # 58 — v3.5.0 reports skeletons (#332/#335)
     test_28_cleanup,                  # 28 — always last
 ]
 
