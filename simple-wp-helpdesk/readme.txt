@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.4.1
+Stable tag: 3.5.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,18 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.5.0 =
+* Added: Unified badge system — `.swh-badge` base + `.swh-badge-{slug}` modifiers in `swh-shared.css`; all hardcoded hex colours removed (#329, #330)
+* Added: Design token scales — shadow (`--swh-shadow-*`), z-index (`--swh-z-*`), and easing (`--swh-ease-*`) tokens (#331)
+* Added: Reusable `swhToast()` notification component — auto-dismiss toast with success/error/info variants (#333)
+* Added: Settings save shows toast instead of legacy WP admin notice; URL param cleaned on display (#334)
+* Added: Reports page KPI skeleton loaders and `aria-busy` coverage (#332, #335)
+* Added: Focus return to first `.swh-alert-error` on page load for screen-reader users (#336)
+* Added: Ticket list row hover transition and focus rings on row actions and badges (#337)
+* Added: `prefers-reduced-motion` global safeguard in `swh-shared.css` (#337)
+* Added: E2E test sections 57 (toast) and 58 (reports loading states)
+* Changed: Duplicate `.swh-badge` block removed from `swh-frontend.css`
 
 = 3.4.1 =
 * Added: Frontend Portal Theme setting — "Force light mode" option pins portal to light mode on sites without dark mode support (#327)
