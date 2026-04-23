@@ -387,3 +387,19 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 
 /* SLA badge in ticket editor panel */
 .swh-sla-badge-wrap { margin-top: var( --swh-space-xs ); }
+
+/* ── Ticket list row hover feedback (#337) ───────────────────────────────── */
+#the-list tr {
+	transition: background-color var( --swh-transition-fast ) var( --swh-ease-out );
+}
+
+#the-list tr:hover td {
+	background-color: var( --swh-color-bg-highlight );
+}
+
+.row-actions a:focus-visible,
+.swh-badge:focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+	border-radius: var( --swh-radius-sm );
+}
