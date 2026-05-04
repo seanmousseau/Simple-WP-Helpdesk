@@ -16,6 +16,7 @@ starting from the next release after 1.8.
 - New docs pages: Shortcode Reference, Hooks Reference (all 9 filters + 2 actions with examples), Troubleshooting / FAQ.
 - Plugins page action links: **Settings** and **Docs** shortcuts shown under the plugin name.
 - Internal planning docs under `docs/internal/`: living v3.x and v4.x release roadmaps, parked-features registry (Zapier app parked), and new-features discussion log. Establishes a v3.7.0 "v4 Foundations" milestone covering non-breaking primitives that de-risk v4.0/v4.1 (lifecycle action hooks moved earlier, `swh_get_option()` helper, deprecation helper, JS architecture spike, PSR-4 autoload, component inventory, performance baseline).
+- `docs/internal/lessons-learned.md` — consolidated post-mortems and gotchas from CLAUDE.md, memory, and session learnings (CI cache eviction, WP admin pointer interception, Authorization-header stripping in Docker, etc.).
 
 ### Changed
 
