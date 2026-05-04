@@ -22,12 +22,14 @@ Milestone: [#18](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/18
 Theme: Inbox-style triage, command palette, portal v2, modernization. Breaking changes allowed.
 
 ### Foundation
+
 - [ ] [#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356) — Settings schema migration (`swh_options` → topic sub-options) — **enables v4.1 API key storage**
 - [ ] [#357](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/357) — Bump PHP minimum to 8.0
 - [ ] [#358](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/358) — Bump WordPress minimum to 6.0
 - [ ] [#360](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/360) — Deprecate pre-3.0 filter hooks
 
 ### Admin UX rewrite
+
 - [ ] [#349](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/349) — Inbox-style Tickets admin page
 - [ ] [#350](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/350) — Quick-reply drawer from inbox preview
 - [ ] [#351](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/351) — Command palette (Ctrl/Cmd+K)
@@ -35,11 +37,13 @@ Theme: Inbox-style triage, command palette, portal v2, modernization. Breaking c
 - [ ] [#353](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/353) — Sticky bulk-action bar on selection
 
 ### Frontend + reporting
+
 - [ ] [#354](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/354) — Portal v2 — conversation-first layout
 - [ ] [#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355) — Indigo design refresh (opt-in) + typography upgrade — **see parked_features.md, decision pending**
 - [ ] [#359](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/359) — Reports redesign — drill-down + period-over-period
 
 ### Migration cost
+
 - v3.5 → v4.0 upgrade routine handles `swh_options` split-out.
 - Hosts on PHP 7.4 / WP 5.3–5.9 stay on the v3.6 LTS branch.
 
@@ -67,8 +71,8 @@ Theme: Public REST API v1, scoped API keys, OpenAPI spec, per-key rate limiting.
 ## v4.2.0 — Outbound Webhooks & Signing
 
 Milestone: [#20](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/20) — 0/8 closed
-Theme: HMAC-SHA256 signed outbound webhooks consuming v4.1 event hooks.
-**Depends on:** v4.1 lifecycle action hooks ([#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361)).
+Theme: HMAC-SHA256 signed outbound webhooks consuming the v3.7 lifecycle action hooks via v4.1's REST surface.
+**Depends on:** v3.7 lifecycle action hooks ([#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361)) + v4.1 REST API ([#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/362)).
 
 - [ ] [#371](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/371) — Subscription UI (per-event checkboxes, secret, target URL)
 - [ ] [#372](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/372) — HMAC-SHA256 payload signing (`X-SWH-Signature`, timestamp, delivery ID)

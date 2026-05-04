@@ -22,10 +22,12 @@ Status: **Active**
 Theme: Finish what v3.4 started on dark mode, plus the WCAG AA gaps surfaced during the v3.5 audit. Pure UX/a11y polish — no architectural changes.
 
 ### Dark mode
+
 - [ ] [#339](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/339) — Admin dark mode (respect WP `admin_color` schemes — midnight/modern)
 - [ ] [#340](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/340) — Email HTML `color-scheme: light dark` metadata + media query
 
 ### Accessibility (WCAG 2.2 AA)
+
 - [ ] [#341](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/341) — Skip-to-content link on Reports + Settings
 - [ ] [#342](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/342) — CSAT widget focus management after submit
 - [ ] [#343](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/343) — Heading hierarchy audit across portal + admin
@@ -44,15 +46,18 @@ Status: **Planned (after v3.6 ships)**
 Theme: Non-breaking groundwork that de-risks v4.0 / v4.1. **Why this exists:** v3.6 is pure cosmetic polish. v4.0 ships breaking changes (PHP/WP bumps, settings schema split, new admin paradigm) on top of a codebase that doesn't yet have the primitives those features assume. v3.7 lands the primitives so v4.0 issues build on a stable foundation, and gives anyone integrating with the plugin a runway to adopt new APIs before v4.0 lands.
 
 ### Hooks (the load-bearing one)
+
 - [ ] [#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361) — Lifecycle action hooks (reply, status, assign, close, reopen, SLA, CSAT) — **moved from v4.1**
 
 ### Architecture decisions
+
 - [ ] [#390](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/390) — JS architecture spike — pick build/state pattern before v4.0 admin UI work starts
 - [ ] [#391](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/391) — Introduce `swh_get_option()` helper as read-through wrapper (de-risks v4.0 schema split)
 - [ ] [#393](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/393) — Deprecation helper — wrap `apply_filters_deprecated()` and `do_action_deprecated()`
 - [ ] [#394](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/394) — PSR-4 autoload for plugin classes
 
 ### Documentation + measurement
+
 - [ ] [#392](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/392) — Component inventory — document existing primitives before v4.0 sprawl
 - [ ] [#395](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/395) — Performance baseline — capture timings before v4.0 inbox redesign
 
@@ -69,6 +74,7 @@ Theme: Non-breaking groundwork that de-risks v4.0 / v4.1. **Why this exists:** v
 | Perf baseline | v4.0 inbox claims "500+ without lag" | Need numbers to regress against |
 
 ### Notes
+
 - All v3.7 work is non-breaking — same PHP/WP minimums.
 - v3.7 unblocks (or de-risks) every milestone in the v4.x lane. See `release_v4.x.x_roadmap.md`.
 

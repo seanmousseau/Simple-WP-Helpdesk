@@ -12,17 +12,20 @@ Last updated: 2026-05-04
 **Parked:** 2026-05-04.
 
 ### Why parked
+
 - Maintainer (Sean) doesn't use Zapier and has no internal pull for it.
 - Separate repo + Zapier platform compliance is a meaningful maintenance surface (auth flows, schema drift, listing reviews).
 - The v4.1 REST API + v4.2 signed webhooks cover the same automation use cases for users on Zapier, Make, n8n, IFTTT, or anything custom.
 - A community-built Zapier wrapper can sit on top of the public API later without us owning it.
 
 ### What would bring it back
+
 - Real, repeated user requests (not "would be nice" — actual people asking).
 - A community contributor willing to own the Zapier-side code.
 - Direct revenue tie (e.g. paid tier where Zapier listing is a meaningful acquisition channel).
 
 ### Successor / alternative
+
 v4.1 REST API ([#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/362)–[#370](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/370)) + v4.2 webhooks ([#371](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/371)–[#378](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/378)).
 
 ---
@@ -32,18 +35,21 @@ v4.1 REST API ([#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/
 These are still on the roadmap but worth a deliberate keep/park decision before they land. Not parked yet — listed here so the question is in front of us.
 
 ### Indigo design refresh ([#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355))
+
 - v4.0 already ships a major UX shift (inbox-style admin, command palette, portal v2). Stacking a brand refresh on top risks change fatigue.
 - **Option A:** keep, ship as opt-in (current plan).
 - **Option B:** park until v4.1+ once the inbox layout has settled.
 - **Option C:** park indefinitely — let users keep current visual identity.
 
 ### Microsoft Teams integration ([#380](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/380))
+
 - Adaptive Cards format is heavier than Slack/Discord webhooks.
 - Smaller user overlap (WP + Teams shop) than Slack.
 - **Option A:** keep — completionist (cover the big three).
 - **Option B:** park — ship Slack + Discord first, add Teams if requested.
 
 ### Discord webhook ([#381](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/381))
+
 - Same question as Teams from a different angle. Discord users are a niche segment for a WordPress helpdesk.
 - **Option A:** keep — easy lift on top of the v4.2 webhook layer.
 - **Option B:** park — community can build it via the public webhook API.

@@ -15,6 +15,7 @@ starting from the next release after 1.8.
 - GitHub Pages documentation site at `https://seanmousseau.github.io/Simple-WP-Helpdesk/` (Jekyll, just-the-docs theme) — covers all features through v3.5.0.
 - New docs pages: Shortcode Reference, Hooks Reference (all 9 filters + 2 actions with examples), Troubleshooting / FAQ.
 - Plugins page action links: **Settings** and **Docs** shortcuts shown under the plugin name.
+- Internal planning docs under `docs/internal/`: living v3.x and v4.x release roadmaps, parked-features registry (Zapier app parked), and new-features discussion log. Establishes a v3.7.0 "v4 Foundations" milestone covering non-breaking primitives that de-risk v4.0/v4.1 (lifecycle action hooks moved earlier, `swh_get_option()` helper, deprecation helper, JS architecture spike, PSR-4 autoload, component inventory, performance baseline).
 
 ### Changed
 
