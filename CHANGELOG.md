@@ -24,6 +24,7 @@ starting from the next release after 1.8.
 - `docs/development.md` updated repo structure, removed stale bootstrap size note, added Inbound Email Webhook section.
 - `docs/usage.md` expanded technician section (categories, SLA, merge, reporting, canned responses).
 - `docs/security.md` additions: token empty-value rejection, inbound webhook Bearer auth, MIME filter hook.
+- **Dev:** Bumped `playwright` from 1.58.0 to 1.59.0 in `testing/requirements.txt` (#389).
 
 ### Fixed
 
