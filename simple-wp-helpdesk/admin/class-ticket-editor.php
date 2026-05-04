@@ -526,7 +526,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		$assignee_user    = get_userdata( $assigned_to );
 		$assign_raw_name  = swh_get_string_meta( $post_id, '_ticket_name' );
 		$assign_ticket_id = swh_get_string_meta( $post_id, '_ticket_uid' );
-		if ( $assignee_user->user_email ) {
+		if ( $assignee_user && $assignee_user->user_email ) {
 			$assign_data = array(
 				'name'           => $assign_raw_name ? $assign_raw_name : 'Client',
 				'email'          => swh_get_string_meta( $post_id, '_ticket_email' ),

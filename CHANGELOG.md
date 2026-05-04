@@ -24,6 +24,10 @@ starting from the next release after 1.8.
 - `docs/usage.md` expanded technician section (categories, SLA, merge, reporting, canned responses).
 - `docs/security.md` additions: token empty-value rejection, inbound webhook Bearer auth, MIME filter hook.
 
+### Fixed
+
+- **PHPStan null-guard on assignee email send (`admin/class-ticket-editor.php`):** `get_userdata()` returns `WP_User|false`, but the assignment-notification block read `$assignee_user->user_email` without a null-guard. Surfaced as a CI failure on PHP 8.1+ after the GitHub Actions composer cache evicted (cache miss → fresh install pulled an updated WP stubs version). Pre-existing code from v3.4; never reached in practice because callers always pass a valid user ID.
+
 ---
 
 ## [3.5.0] — 2026-04-23
