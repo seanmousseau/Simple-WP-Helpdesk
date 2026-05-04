@@ -10,7 +10,9 @@ Last updated: 2026-05-04
 
 > Workflow-first admin → eventing → webhooks → native integrations.
 
-Each release builds on the last. The order is load-bearing: **v4.1 needs the v4.0 settings migration, v4.2 needs the v4.1 event surface, v4.3 needs v4.2 signed webhooks.** Don't reorder.
+Each release builds on the last. The order is load-bearing: **v4.1 needs the v3.7 hooks + v4.0 settings migration, v4.2 needs the v4.1 REST surface, v4.3 needs v4.2 signed webhooks.** Don't reorder.
+
+> ⚠️ **Foundation in v3.7.** Several primitives that v4.x depends on land in v3.7.0 ("v4 Foundations") rather than v4.0 — lifecycle action hooks, `swh_get_option()` helper, deprecation helper, JS architecture, PSR-4 autoload, component inventory, perf baseline. See `release_v3.x.x_roadmap.md` for the full list. v4.x assumes those primitives are in place.
 
 ---
 
@@ -45,11 +47,11 @@ Theme: Inbox-style triage, command palette, portal v2, modernization. Breaking c
 
 ## v4.1.0 — Event Surface & REST API
 
-Milestone: [#19](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/19) — 0/10 closed
-Theme: Foundation for integrations. Action hooks, public REST API v1, scoped API keys, OpenAPI spec, per-key rate limiting.
-**Depends on:** v4.0 settings schema migration ([#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356)).
+Milestone: [#19](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/19) — 0/9 closed (was 10; lifecycle hooks moved to v3.7)
+Theme: Public REST API v1, scoped API keys, OpenAPI spec, per-key rate limiting. Sits on top of v3.7 lifecycle hooks ([#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361)) and v4.0 settings split ([#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356)).
+**Depends on:** v3.7 lifecycle action hooks ([#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361)) + v4.0 settings schema migration ([#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356)).
 
-- [ ] [#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361) — Lifecycle action hooks (reply, status, assign, close, reopen, SLA, CSAT)
+- ~~[#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361) — Lifecycle action hooks~~ → **moved to v3.7** (de-risks v4.1 by giving hooks a release cycle to settle)
 - [ ] [#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/362) — REST API v1: tickets CRUD (`swh/v1/tickets`)
 - [ ] [#363](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/363) — REST API v1: replies (`swh/v1/tickets/{id}/replies`)
 - [ ] [#364](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/364) — REST API v1: read-only endpoints (technicians, categories, settings)
