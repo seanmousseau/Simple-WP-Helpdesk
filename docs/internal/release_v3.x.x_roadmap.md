@@ -92,6 +92,15 @@ Cheap v3.x candidates already identified in `new_features_discussion.md`: **CSAT
 
 ---
 
+## Related internal docs
+
+- `release_v4.x.x_roadmap.md` — major-lane roadmap; v4.x depends on v3.7 foundations
+- `parked_features.md` — features intentionally deprioritized (Zapier, etc.)
+- `new_features_discussion.md` — ideas not yet on any roadmap
+- `lessons-learned.md` — gotchas, post-mortems, things that bit us
+
+---
+
 ## How this doc stays current
 
 - Update the milestone tables when a release ships (mark ✅ SHIPPED + date + PR).
