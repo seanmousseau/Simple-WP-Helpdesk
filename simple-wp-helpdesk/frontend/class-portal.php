@@ -45,6 +45,9 @@ function swh_render_client_portal() {
 		echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( swh_get_string_option( 'swh_msg_err_expired', is_string( $defs['swh_msg_err_expired'] ) ? $defs['swh_msg_err_expired'] : '' ) ) . '</div>';
 		swh_render_lookup_form();
+		// (#346) After token-expiry render, move focus to the lookup form so keyboard users
+		// don't have to Tab past everything to reach the recovery input.
+		echo '<script>document.addEventListener("DOMContentLoaded",function(){var i=document.getElementById("swh-lookup-email");if(i){i.focus({preventScroll:false});}});</script>';
 		echo '</div>';
 		return;
 	}
