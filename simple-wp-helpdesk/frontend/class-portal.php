@@ -111,7 +111,7 @@ function swh_render_client_portal() {
 		echo '</div>';
 		echo '<p style="margin:8px 0 0 0;"><a href="#" id="swh-csat-skip">' . esc_html__( 'Skip', 'simple-wp-helpdesk' ) . '</a></p>';
 		echo '</div>';
-		echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status">' . esc_html__( 'Thanks for your feedback!', 'simple-wp-helpdesk' ) . '</div>';
+		echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status" tabindex="-1">' . esc_html__( 'Thanks for your feedback!', 'simple-wp-helpdesk' ) . '</div>';
 		echo '<div id="swh-close-success" class="swh-alert swh-alert-success" style="display:none;" role="status">' . $close_msg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $close_msg already esc_html()'d above.
 		$data['status'] = $closed_status;
 	} elseif ( $is_post_action && isset( $_POST['swh_user_reopen_submit'], $_POST['swh_reopen_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_reopen_nonce'] ) ? $_POST['swh_reopen_nonce'] : '' ) ), 'swh_user_reopen' ) ) {
