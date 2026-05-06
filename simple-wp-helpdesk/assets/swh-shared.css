@@ -33,7 +33,7 @@
 	--swh-color-track:          #e0e0e0;  /* progress track / inactive indicator */
 	--swh-color-note-bg:        #f0c040;  /* internal note button background */
 	--swh-color-note-border:    #d4a017;  /* internal note button border */
-	--swh-color-note-text:      #3d3000;  /* internal note button text */
+	--swh-color-note-text:      #1f1700;  /* internal note button text — AAA contrast on #f0c040 (#348) */
 	--swh-color-note-bg-hover:  #d4a017;  /* internal note button hover background */
 	--swh-color-note-bd-hover:  #b38800;  /* internal note button hover border */
 	--swh-color-warning:        #d97706;  /* solid amber — KPI warning card, danger zone icons */
@@ -171,4 +171,80 @@
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
 	}
+}
+
+/* ── :focus-visible — show focus rings only for keyboard navigation (#345) ── */
+/* Apply to all SWH interactive elements; do NOT override .wp-core-ui — WP admin
+ * owns its native button focus styling and stomping it breaks contrast.
+ *
+ * Progressive enhancement: every browser gets a visible :focus ring (matches
+ * WCAG 2.4.7). Browsers that support :focus-visible additionally suppress the
+ * ring on mouse focus via :focus:not(:focus-visible). Older Safari < 15.4 and
+ * legacy Android Chromium webviews fall back to a always-on focus ring rather
+ * than no ring at all. */
+.swh-helpdesk-wrapper :is(button, a, select, textarea, input, [role="tab"], [role="radio"], .swh-badge):focus {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+	border-radius: var( --swh-radius-sm );
+}
+.swh-helpdesk-wrapper :is(button, a, select, textarea, input, [role="tab"], [role="radio"], .swh-badge):focus:not(:focus-visible) {
+	outline: none;
+}
+body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .swh-badge, .swh-empty-state a, .swh-toast button):focus {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+	border-radius: var( --swh-radius-sm );
+}
+body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .swh-badge, .swh-empty-state a, .swh-toast button):focus:not(:focus-visible) {
+	outline: none;
+}
+
+/* ── Skip-to-content link — visible only when keyboard-focused (#341) ──── */
+/* Uses clip-path inset(50%) instead of left:-9999px so the link doesn't extend
+ * the document scroll width in RTL contexts (mirrors WP-core .screen-reader-text). */
+.swh-skip-link {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset( 50% );
+	white-space: nowrap;
+	padding: 8px 16px;
+	z-index: var( --swh-z-toast );
+	background: var( --swh-color-primary );
+	color: var( --swh-color-on-solid );
+	text-decoration: none;
+	font-weight: 600;
+	border-radius: var( --swh-radius-sm );
+	box-shadow: var( --swh-shadow-md );
+}
+.swh-skip-link:focus,
+.swh-skip-link:focus-visible {
+	top: 8px;
+	left: 8px;
+	width: auto;
+	height: auto;
+	clip-path: none;
+	overflow: visible;
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+}
+
+/* ── Admin dark mode — mirrors portal dark tokens, scoped to body class (#339) ── */
+/* Triggered by swh_admin_color_is_dark() (midnight/modern/ectoplasm). */
+body.swh-helpdesk-admin.swh-admin-theme-dark {
+	--swh-color-bg:             #0f172a;
+	--swh-color-bg-subtle:      #1e293b;
+	--swh-color-surface:        #1e293b;
+	--swh-color-bg-highlight:   #1e3a5f;
+	--swh-color-border:         #334155;
+	--swh-color-border-input:   #475569;
+	--swh-color-border-subtle:  #475569;
+	--swh-color-text:           #f1f5f9;
+	--swh-color-text-secondary: #94a3b8;
+	--swh-color-muted:          #64748b;
+	--swh-color-primary:        #818cf8;
+	--swh-color-track:          #334155;
 }

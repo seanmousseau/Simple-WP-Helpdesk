@@ -358,7 +358,11 @@ document.addEventListener( 'DOMContentLoaded', function () {
 					const json = JSON.parse( xhr.responseText );
 					if ( json.success ) {
 						csatBox.style.display = 'none';
-						if ( thanksBox ) { thanksBox.style.display = ''; }
+						if ( thanksBox ) {
+							thanksBox.style.display = '';
+							// (#342) Move focus to the success message so AT users learn their submit worked.
+							thanksBox.focus( { preventScroll: false } );
+						}
 					}
 				} catch ( err ) {
 					// Malformed response — leave widget visible so the client can retry.
@@ -386,6 +390,14 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				if ( successBox ) { successBox.style.display = ''; }
 			} );
 		}
+
+		// (#342) Esc dismisses the CSAT widget — same behaviour as the 60-second auto-dismiss.
+		csatBox.addEventListener( 'keydown', function ( e ) {
+			if ( e.key === 'Escape' && csatBox.style.display !== 'none' ) {
+				csatBox.style.display = 'none';
+				if ( successBox ) { successBox.style.display = ''; }
+			}
+		} );
 
 		// #275: Auto-dismiss after 60 s if the client ignores the widget.
 		setTimeout( function () {

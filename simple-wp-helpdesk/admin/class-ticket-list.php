@@ -27,6 +27,13 @@ function swh_admin_list_styles() {
 	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
 		return;
 	}
+	add_filter(
+		'admin_body_class',
+		function ( $classes ) {
+			$theme = swh_admin_color_is_dark() ? 'dark' : 'light';
+			return $classes . ' swh-helpdesk-admin swh-admin-theme-' . $theme;
+		}
+	);
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
 	if ( is_rtl() ) {
@@ -67,7 +74,7 @@ function swh_admin_list_styles() {
 				if (!noItems) return;
 				noItems.innerHTML = ' . wp_json_encode(
 			'<div class="swh-empty-state">' . $icon .
-			'<p class="swh-empty-state-title">' . $title . '</p>' .
+			'<h2 class="swh-empty-state-title">' . $title . '</h2>' .
 			'<p class="swh-empty-state-desc">' . $desc . '</p>' .
 			'</div>'
 		) . ';

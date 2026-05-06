@@ -45,6 +45,9 @@ function swh_render_client_portal() {
 		echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 		echo '<div class="swh-alert swh-alert-error" role="alert">' . esc_html( swh_get_string_option( 'swh_msg_err_expired', is_string( $defs['swh_msg_err_expired'] ) ? $defs['swh_msg_err_expired'] : '' ) ) . '</div>';
 		swh_render_lookup_form();
+		// (#346) After token-expiry render, move focus to the lookup form so keyboard users
+		// don't have to Tab past everything to reach the recovery input.
+		echo '<script>document.addEventListener("DOMContentLoaded",function(){var i=document.getElementById("swh-lookup-email");if(i){i.focus({preventScroll:false});}});</script>';
 		echo '</div>';
 		return;
 	}
@@ -108,7 +111,7 @@ function swh_render_client_portal() {
 		echo '</div>';
 		echo '<p style="margin:8px 0 0 0;"><a href="#" id="swh-csat-skip">' . esc_html__( 'Skip', 'simple-wp-helpdesk' ) . '</a></p>';
 		echo '</div>';
-		echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status">' . esc_html__( 'Thanks for your feedback!', 'simple-wp-helpdesk' ) . '</div>';
+		echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status" tabindex="-1">' . esc_html__( 'Thanks for your feedback!', 'simple-wp-helpdesk' ) . '</div>';
 		echo '<div id="swh-close-success" class="swh-alert swh-alert-success" style="display:none;" role="status">' . $close_msg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $close_msg already esc_html()'d above.
 		$data['status'] = $closed_status;
 	} elseif ( $is_post_action && isset( $_POST['swh_user_reopen_submit'], $_POST['swh_reopen_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_reopen_nonce'] ) ? $_POST['swh_reopen_nonce'] : '' ) ), 'swh_user_reopen' ) ) {
@@ -442,7 +445,7 @@ function swh_render_portal_no_token() {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		$tickets = is_array( $tickets ) ? $tickets : array();
 
-		echo '<h3 class="swh-my-tickets-heading">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h3>';
+		echo '<h2 class="swh-my-tickets-heading">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h2>';
 
 		if ( empty( $tickets ) ) {
 			echo '<div class="swh-empty-state">' .

@@ -496,3 +496,65 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	outline: 2px solid var( --swh-color-focus );
 	outline-offset: 2px;
 }
+
+/* ── Admin dark mode component overrides (#339) ──────────────────────────── */
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-panel,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-conversation,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-meta-box,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-kpi-card,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state {
+	background-color: var( --swh-color-bg-subtle );
+	color: var( --swh-color-text );
+	border-color: var( --swh-color-border );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-canned-item,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-rule-row {
+	background-color: var( --swh-color-bg );
+	border-color: var( --swh-color-border );
+	color: var( --swh-color-text );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-tab-button {
+	color: var( --swh-color-text );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state-title {
+	color: var( --swh-color-text );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state-desc {
+	color: var( --swh-color-text-secondary );
+}
+
+/* ── #347: ≥44×44 touch targets (WCAG 2.5.5 AA) ─────────────────────────── */
+
+/*
+ * Merge-ticket toggle — keep WP .button visual size (~28px tall) but extend
+ * the touch hit-zone via a transparent ::before to ≥44px square. The button's
+ * own position:relative plus negative inset on the pseudo lets stylus / finger
+ * taps register over a comfortable area without disrupting layout.
+ */
+#swh-merge-toggle,
+.swh-merge-toggle {
+	position: relative;
+}
+#swh-merge-toggle::before,
+.swh-merge-toggle::before {
+	content: "";
+	position: absolute;
+	inset: -10px;
+}
+
+/*
+ * Status filter chips — render as inline-flex pills with intrinsic ≥44px
+ * height. Targets the chip itself and any anchor inside (covers both
+ * <a class="swh-status-filter"> and <span class="swh-status-filter"><a>…</a>).
+ * WP-default subsubsub list views are intentionally NOT styled here.
+ */
+.swh-status-filter,
+.swh-status-filter a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: 0 12px;
+}
+.swh-status-filter + .swh-status-filter {
+	margin-left: 8px;
+}

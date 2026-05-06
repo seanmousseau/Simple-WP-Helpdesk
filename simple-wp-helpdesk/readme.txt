@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.5.0
+Stable tag: 3.6.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,19 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.6.0 =
+* Added: Admin dark mode follows WP `admin_color` (midnight/modern/ectoplasm); new `swh_admin_color_is_dark()` helper (#339)
+* Added: Email HTML opt-in to client dark mode via `color-scheme: light dark` meta + `prefers-color-scheme` media query (#340)
+* Added: Skip-to-content link on Settings and Reports pages (#341)
+* Added: CSAT widget focus management — focus moves to success message on submit, Esc dismisses (#342)
+* Added: Heading hierarchy audit and shared `swh_render_empty_state()` helper (#343)
+* Added: `aria-live` announcements for SLA badge and KPI card updates (#344)
+* Added: `:focus-visible` for keyboard-only focus rings (#345)
+* Added: Portal token-expiry moves focus to the lookup form (#346)
+* Added: ≥44×44 touch targets on CSAT stars, merge toggle, and filter chips (WCAG 2.5.5 AA) (#347)
+* Added: E2E sections 59–64 covering all v3.6.0 dark-mode and a11y additions
+* Fixed: Internal-note text contrast bumped to AAA on amber background (#348)
 
 = 3.5.0 =
 * Added: Unified badge system — `.swh-badge` base + `.swh-badge-{slug}` modifiers in `swh-shared.css`; all hardcoded hex colours removed (#329, #330)

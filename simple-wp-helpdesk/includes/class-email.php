@@ -174,19 +174,34 @@ function swh_wrap_html_email( $body, $attachments = array() ) {
 		esc_html( $site_name )
 	);
 
-	return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
-		. '<body style="margin:0;padding:0;background:#f5f5f5;">'
-		. '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0;">'
+	$dark_styles = '@media (prefers-color-scheme: dark) {'
+		. ' body { background:#0f172a !important; color:#f1f5f9 !important; }'
+		. ' table.swh-email-shell { background:#0f172a !important; }'
+		. ' table.swh-email-card { border-color:#334155 !important; background:#1e293b !important; }'
+		. ' td.swh-email-header { background:#1d4ed8 !important; }'
+		. ' td.swh-email-body { background:#1e293b !important; color:#f1f5f9 !important; }'
+		. ' td.swh-email-footer { background:#0f172a !important; color:#94a3b8 !important; border-top-color:#334155 !important; }'
+		. ' td.swh-email-body a, td.swh-email-footer a { color:#93c5fd !important; }'
+		. '}';
+
+	return '<!DOCTYPE html><html><head>'
+		. '<meta charset="UTF-8">'
+		. '<meta name="color-scheme" content="light dark">'
+		. '<meta name="supported-color-schemes" content="light dark">'
+		. '<style>' . $dark_styles . '</style>'
+		. '</head>'
+		. '<body style="margin:0;padding:0;background:#f5f5f5;color-scheme:light dark;">'
+		. '<table class="swh-email-shell" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0;color-scheme:light dark;">'
 		. '<tr><td align="center">'
-		. '<table width="600" cellpadding="0" cellspacing="0" style="border:1px solid #ddd;border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;">'
-		. '<tr><td style="background:#0073aa;padding:20px 30px;">'
+		. '<table class="swh-email-card" width="600" cellpadding="0" cellspacing="0" style="border:1px solid #ddd;border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;background:#ffffff;">'
+		. '<tr><td class="swh-email-header" style="background:#0073aa;padding:20px 30px;">'
 		. $header_logo
 		. '<span style="color:#ffffff;font-size:18px;font-weight:600;vertical-align:middle;">' . esc_html( $site_name ) . '</span>'
 		. '</td></tr>'
-		. '<tr><td style="background:#ffffff;padding:30px;font-size:15px;line-height:1.6;color:#333333;">'
+		. '<tr><td class="swh-email-body" style="background:#ffffff;padding:30px;font-size:15px;line-height:1.6;color:#333333;">'
 		. $html_body . $attachment_html
 		. '</td></tr>'
-		. '<tr><td style="background:#f5f5f5;padding:16px 30px;font-size:12px;color:#767676;border-top:1px solid #ddd;">'
+		. '<tr><td class="swh-email-footer" style="background:#f5f5f5;padding:16px 30px;font-size:12px;color:#767676;border-top:1px solid #ddd;">'
 		. $footer_note
 		. '</td></tr>'
 		. '</table>'

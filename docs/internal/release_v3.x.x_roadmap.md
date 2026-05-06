@@ -2,7 +2,7 @@
 
 Polish, accessibility, and v4 foundation lane. No breaking changes — all of v3.x stays on PHP 7.4 / WP 5.3 minimums. Breaking work is reserved for v4.0.
 
-Last updated: 2026-05-04
+Last updated: 2026-05-06
 
 ---
 
@@ -15,27 +15,27 @@ Design tokens, badges, skeleton loaders, toast notifications, accessibility prim
 
 ---
 
-## v3.6.0 — Dark Mode Expansion & A11y Round 2
+## v3.6.0 — Dark Mode Expansion & A11y Round 2 ✅ SHIPPED 2026-05-06
 
-Milestone: [#17](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/17) — 0/10 closed
-Status: **Active**
+Milestone: [#17](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/17) — 10/10 closed
+Status: **Shipped 2026-05-06**
 Theme: Finish what v3.4 started on dark mode, plus the WCAG AA gaps surfaced during the v3.5 audit. Pure UX/a11y polish — no architectural changes.
 
 ### Dark mode
 
-- [ ] [#339](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/339) — Admin dark mode (respect WP `admin_color` schemes — midnight/modern)
-- [ ] [#340](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/340) — Email HTML `color-scheme: light dark` metadata + media query
+- [x] [#339](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/339) — Admin dark mode (respect WP `admin_color` schemes — midnight/modern)
+- [x] [#340](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/340) — Email HTML `color-scheme: light dark` metadata + media query
 
 ### Accessibility (WCAG 2.2 AA)
 
-- [ ] [#341](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/341) — Skip-to-content link on Reports + Settings
-- [ ] [#342](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/342) — CSAT widget focus management after submit
-- [ ] [#343](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/343) — Heading hierarchy audit across portal + admin
-- [ ] [#344](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/344) — `aria-live` on SLA badge + KPI card updates
-- [ ] [#345](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/345) — `:focus-visible` for mouse vs keyboard focus rings
-- [ ] [#346](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/346) — Portal token-expiry focus moves to lookup form
-- [ ] [#347](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/347) — Touch-target audit (≥44×44 WCAG AA)
-- [ ] [#348](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/348) — Contrast audit of internal-note tokens
+- [x] [#341](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/341) — Skip-to-content link on Reports + Settings
+- [x] [#342](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/342) — CSAT widget focus management after submit
+- [x] [#343](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/343) — Heading hierarchy audit across portal + admin
+- [x] [#344](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/344) — `aria-live` on SLA badge + KPI card updates
+- [x] [#345](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/345) — `:focus-visible` for mouse vs keyboard focus rings
+- [x] [#346](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/346) — Portal token-expiry focus moves to lookup form
+- [x] [#347](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/347) — Touch-target audit (≥44×44 WCAG AA)
+- [x] [#348](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/348) — Contrast audit of internal-note tokens
 
 ---
 

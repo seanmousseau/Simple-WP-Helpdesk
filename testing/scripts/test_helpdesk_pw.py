@@ -7,7 +7,7 @@ client portal, status transitions, internal notes, access control,
 bulk actions, canned responses, file attachments, portal token security,
 XSS escaping, rate limiting, and email trigger verification.
 
-34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 = 58 sections
+34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 + 6 v3.6.0 = 64 sections
 
 Running with pytest (recommended):
     source testing/.venv/bin/activate
@@ -3607,6 +3607,274 @@ def test_58_reports_loading_states(page: Page):
     screenshot(page, "71_reports_kpi_loaded")
 
 
+# ── v3.6.0 Dark mode + accessibility (#339–#345) ─────────────────────────────
+
+def test_59_admin_dark_mode(page: Page):
+    """v3.6.0 (#339) Admin pages mirror WP admin_color: midnight → swh-admin-theme-dark."""
+    print("\n[59] Admin Dark Mode — admin_color → theme tokens (#339)")
+
+    settings_url = f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-settings"
+
+    # Set the admin user's colour scheme to midnight via WP-CLI, then re-login
+    # so the cookie/session picks up the changed user meta.
+    wpcli(f"user meta update {ADMIN_USER} admin_color midnight")
+    with as_user(page, ADMIN_USER, ADMIN_PASS):
+        page.goto(settings_url)
+        page.wait_for_load_state("load")
+        page.wait_for_selector("body.swh-helpdesk-admin")
+        body_class = page.evaluate("document.body.className") or ""
+        check("admin dark mode #339: body has swh-admin-theme-dark when admin_color=midnight",
+              "swh-admin-theme-dark" in body_class,
+              f"body class: {body_class!r}")
+        screenshot(page, "72_admin_dark_midnight")
+
+    # Reset to fresh (light) and verify the light class lands on body
+    wpcli(f"user meta update {ADMIN_USER} admin_color fresh")
+    with as_user(page, ADMIN_USER, ADMIN_PASS):
+        page.goto(settings_url)
+        page.wait_for_load_state("load")
+        page.wait_for_selector("body.swh-helpdesk-admin")
+        body_class = page.evaluate("document.body.className") or ""
+        check("admin dark mode #339: body has swh-admin-theme-light when admin_color=fresh",
+              "swh-admin-theme-light" in body_class,
+              f"body class: {body_class!r}")
+        screenshot(page, "72b_admin_light_fresh")
+
+
+def test_60_email_color_scheme(page: Page):
+    """v3.6.0 (#340) Outbound HTML email contains color-scheme metadata + dark media query."""
+    print("\n[60] Email Color-Scheme — dark mode email opt-in (#340)")
+
+    if WP_MODE != "docker" or not MAILHOG_URL:
+        skip("email color-scheme #340", "requires WP_MODE=docker + MAILHOG_URL")
+        return
+
+    # Trigger a fresh ticket so MailHog receives a new outbound email.
+    mailhog_clear()
+    _clear_rate_limits()
+    page.goto(WP_SUBMIT_PAGE)
+    page.wait_for_load_state("load")
+    title = f"PW DarkMode email {int(time.time())}"
+    page.fill('[name="ticket_name"]', CLIENT1_NAME)
+    page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
+    page.fill('[name="ticket_title"]', title)
+    page.fill('[name="ticket_desc"]', "Color-scheme email assertion test")
+    page.click('[name="swh_submit_ticket"]')
+    page.wait_for_selector(".swh-alert-success, .swh-alert-error")
+
+    # Pull the latest message and inspect HTML body.
+    # MailHog stores message bodies with their Content-Transfer-Encoding intact
+    # (quoted-printable for our HTML emails), so `=` chars in attributes become
+    # `=3D` and long lines get soft-wrapped. Decode QP before asserting.
+    import requests as _req
+    import quopri as _qp
+    html = ""
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        try:
+            resp = _req.get(f"{MAILHOG_URL}/api/v2/messages",
+                            params={"limit": 5}, timeout=5)
+            items = resp.json().get("items", []) if resp.status_code == 200 else []
+            for item in items:
+                body = (item.get("Content", {}) or {}).get("Body", "") or ""
+                parts = (item.get("MIME", {}) or {}).get("Parts", []) or []
+                candidates = [body] + [(p.get("Body", "") or "") for p in parts]
+                for cand in candidates:
+                    decoded = _qp.decodestring(cand.encode("utf-8", "replace")).decode("utf-8", "replace")
+                    if "<html" in decoded.lower() or "color-scheme" in decoded.lower():
+                        html = decoded
+                        break
+                if html:
+                    break
+            if html:
+                break
+        except Exception:
+            pass
+        time.sleep(1)
+
+    check("email color-scheme #340: color-scheme meta present",
+          '<meta name="color-scheme" content="light dark">' in html,
+          f"meta not found in email body (len={len(html)})")
+    check("email color-scheme #340: supported-color-schemes meta present",
+          '<meta name="supported-color-schemes"' in html,
+          "supported-color-schemes meta not found in email body")
+    check("email color-scheme #340: prefers-color-scheme dark media query present",
+          "@media (prefers-color-scheme: dark)" in html,
+          "dark media query not found in email body")
+
+
+def test_61_skip_to_content(page: Page):
+    """v3.6.0 (#341) Skip link appears on Settings + Reports when keyboard-focused."""
+    print("\n[61] Skip To Content — keyboard-revealed skip link (#341)")
+
+    targets = [
+        ("edit.php?post_type=helpdesk_ticket&page=swh-settings", "settings"),
+        ("edit.php?post_type=helpdesk_ticket&page=swh-reports",  "reports"),
+    ]
+    with as_user(page, ADMIN_USER, ADMIN_PASS):
+        for path, label in targets:
+            page.goto(f"{WP_ADMIN_URL}/{path}")
+            page.wait_for_load_state("load")
+            skip_count = page.locator(".swh-skip-link").count()
+            check(f"skip link #341: .swh-skip-link present on {label}",
+                  skip_count > 0,
+                  f".swh-skip-link not found on {label}")
+            if skip_count == 0:
+                continue
+            # The contract: when the skip link is activated, focus must move to
+            # #swh-main-content. Tab-walk through WP admin chrome is brittle
+            # (admin bar, menus, third-party plugin pointers all consume tab
+            # stops) — focus the link directly and Enter to verify the handler.
+            link = page.locator(".swh-skip-link").first
+            link.focus()
+            focused_class = page.evaluate("document.activeElement.className || ''") or ""
+            check(f"skip link #341: .swh-skip-link is focusable ({label})",
+                  "swh-skip-link" in focused_class,
+                  f"focus did not land on the link (class={focused_class!r})")
+            page.keyboard.press("Enter")
+            # Allow the click handler to run.
+            page.wait_for_timeout(150)
+            focused_id = page.evaluate("document.activeElement.id") or ""
+            check(f"skip link #341: Enter focuses #swh-main-content ({label})",
+                  focused_id == "swh-main-content",
+                  f"activeElement.id={focused_id!r}")
+
+
+def test_62_focus_visible_rings(page: Page):
+    """v3.6.0 (#345) Mouse click suppresses focus ring; keyboard Tab shows it."""
+    print("\n[62] Focus-Visible Rings — :focus-visible behaviour (#345)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    _navigate_settings(page)
+    btn = page.locator(".swh-tab-button").first
+    if btn.count() == 0:
+        skip("focus-visible #345", ".swh-tab-button not found on settings page")
+        wp_logout(page)
+        return
+
+    # Mouse click — outline should be 'none' or empty (no visible ring)
+    btn.click()
+    mouse_outline = btn.evaluate("el => getComputedStyle(el).outlineStyle") or ""
+    check("focus-visible #345: mouse click has no visible focus outline",
+          mouse_outline in ("none", ""),
+          f"outlineStyle after click: {mouse_outline!r}")
+
+    # Keyboard navigation — outline should be visible (solid + non-zero width)
+    # Move focus deterministically onto a tab button via JS, then dispatch a
+    # keyboard event so :focus-visible applies (programmatic .focus() alone may
+    # not flip the heuristic in all engines).
+    page.evaluate("document.body.focus()")
+    # Walk the tab order until we land on a .swh-tab-button (guard against
+    # admin chrome elements that may grab focus first).
+    landed = False
+    for _ in range(20):
+        page.keyboard.press("Tab")
+        on_tab = page.evaluate(
+            "document.activeElement && document.activeElement.classList && "
+            "document.activeElement.classList.contains('swh-tab-button')"
+        )
+        if on_tab:
+            landed = True
+            break
+    check("focus-visible #345: keyboard Tab can land on .swh-tab-button",
+          landed,
+          "could not Tab into a .swh-tab-button within 20 presses")
+    if landed:
+        kb_outline = page.evaluate(
+            "getComputedStyle(document.activeElement).outlineStyle"
+        ) or ""
+        kb_width = page.evaluate(
+            "getComputedStyle(document.activeElement).outlineWidth"
+        ) or "0px"
+        check("focus-visible #345: keyboard focus shows visible outline",
+              kb_outline == "solid" and kb_width != "0px",
+              f"outlineStyle={kb_outline!r} outlineWidth={kb_width!r}")
+    wp_logout(page)
+
+
+def test_63_csat_focus_management(page: Page):
+    """v3.6.0 (#342) After CSAT submit, focus moves to #swh-csat-thanks."""
+    print("\n[63] CSAT Focus Management — focus moves to thanks message (#342)")
+
+    ticket_id = state.get("ticket_id")
+    if not ticket_id:
+        skip("CSAT focus #342", "no ticket_id in state — section depends on prior submission")
+        return
+
+    # Force the ticket back to Resolved so the portal renders the close button.
+    resolved_status = wpcli("option get swh_resolved_status").strip() or "Resolved"
+    _clear_rate_limits()
+    wpcli(
+        f"eval \"update_post_meta({ticket_id}, '_ticket_status', "
+        f"'{_php_str(resolved_status)}');\""
+    )
+    fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({ticket_id});"')
+    if not fresh_url or "swh_ticket=" not in fresh_url:
+        skip("CSAT focus #342", "could not generate portal URL")
+        return
+
+    wp_logout(page)
+    page.goto(fresh_url)
+    page.wait_for_selector(".swh-card, .swh-alert")
+    close_btn = page.locator('[name="swh_user_close_ticket_submit"]')
+    if close_btn.count() == 0:
+        skip("CSAT focus #342", "close button not present in portal")
+        return
+    close_btn.click()
+    page.wait_for_selector("#swh-csat, .swh-alert-success, .swh-alert-error",
+                           timeout=10000)
+    if not page.locator('#swh-csat').is_visible():
+        skip("CSAT focus #342", "CSAT widget did not render after close")
+        return
+
+    # Submit a 5-star rating; widget JS should move focus to #swh-csat-thanks.
+    page.locator('.swh-csat-star[data-rating="5"]').click()
+    page.wait_for_selector("#swh-csat-thanks", timeout=5000)
+    # Allow focus handler to run
+    page.wait_for_timeout(200)
+    focused_id = page.evaluate("document.activeElement.id") or ""
+    check("CSAT focus #342: focus on #swh-csat-thanks after submit",
+          focused_id == "swh-csat-thanks",
+          f"activeElement.id={focused_id!r}")
+    screenshot(page, "73_csat_focus_thanks")
+
+
+def test_64_aria_live_announcements(page: Page):
+    """v3.6.0 (#344) KPI cards + SLA badge wrapper carry aria-live='polite'."""
+    print("\n[64] ARIA Live Announcements — KPI + SLA live regions (#344)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Reports page — KPI cards
+    reports_url = f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-reports"
+    page.goto(reports_url)
+    page.wait_for_load_state("load")
+    page.wait_for_selector("[data-metric]", timeout=5000)
+    live_count = page.evaluate(
+        "document.querySelectorAll('[data-metric][aria-live=\"polite\"]').length"
+    )
+    check("aria-live #344: at least 4 KPI cards have aria-live=polite",
+          isinstance(live_count, int) and live_count >= 4,
+          f"live_count={live_count!r}")
+
+    # Ticket editor — SLA badge wrapper
+    ticket_id = state.get("ticket_id")
+    if ticket_id:
+        page.goto(f"{WP_ADMIN_URL}/post.php?post={ticket_id}&action=edit")
+        page.wait_for_load_state("load")
+        wrap = page.locator(".swh-sla-badge-wrap")
+        if wrap.count() == 0:
+            skip("aria-live #344: SLA badge wrap", ".swh-sla-badge-wrap not present on ticket editor")
+        else:
+            sla_attr = wrap.first.get_attribute("aria-live")
+            check("aria-live #344: .swh-sla-badge-wrap has aria-live=polite",
+                  sla_attr == "polite",
+                  f"aria-live={sla_attr!r}")
+    else:
+        skip("aria-live #344: SLA badge wrap", "no ticket_id in state")
+    wp_logout(page)
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -3717,6 +3985,12 @@ SECTIONS = [
     test_56_dark_mode,                # 56 — v3.4.0 dark mode (#321)
     test_57_toast_notifications,      # 57 — v3.5.0 toast (#333/#334)
     test_58_reports_loading_states,   # 58 — v3.5.0 reports skeletons (#332/#335)
+    test_59_admin_dark_mode,          # 59 — v3.6.0 admin dark mode (#339)
+    test_60_email_color_scheme,       # 60 — v3.6.0 email color-scheme (#340)
+    test_61_skip_to_content,          # 61 — v3.6.0 skip link (#341)
+    test_62_focus_visible_rings,      # 62 — v3.6.0 :focus-visible rings (#345)
+    test_63_csat_focus_management,    # 63 — v3.6.0 CSAT focus mgmt (#342)
+    test_64_aria_live_announcements,  # 64 — v3.6.0 aria-live regions (#344)
     test_28_cleanup,                  # 28 — always last
 ]
 

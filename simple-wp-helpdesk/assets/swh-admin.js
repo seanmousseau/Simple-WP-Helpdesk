@@ -425,3 +425,63 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	updateDot( statusSelect.value );
 	statusSelect.addEventListener( 'change', function () { updateDot( this.value ); } );
 }() );
+
+/**
+ * Debounced live-region announcer (#344).
+ *
+ * Updates a visually-hidden announcer span inside an aria-live container so
+ * screen readers receive the change without the helper destroying the
+ * container's existing visible markup. Throttles to one announcement per
+ * 200 ms per element and skips no-op deltas — short enough that the
+ * announcement still fires before focus moves elsewhere, long enough to
+ * coalesce paint flushes from a single fetch resolution.
+ *
+ * @since 3.6.0
+ * @param {Element} el    The aria-live container (must already have aria-live).
+ * @param {string}  value The new text to announce.
+ */
+window.swhAnnounce = window.swhAnnounce || ( function () {
+	var lastValue = new WeakMap();
+	var timers    = new WeakMap();
+	function getAnnouncer( el ) {
+		var ann = el.querySelector( ':scope > .swh-sr-announce' );
+		if ( ! ann ) {
+			ann = document.createElement( 'span' );
+			ann.className           = 'swh-sr-announce screen-reader-text';
+			ann.setAttribute( 'aria-hidden', 'false' );
+			el.appendChild( ann );
+		}
+		return ann;
+	}
+	return function ( el, value ) {
+		if ( ! el ) { return; }
+		var str = String( value );
+		if ( lastValue.get( el ) === str ) { return; }
+		lastValue.set( el, str );
+		clearTimeout( timers.get( el ) );
+		timers.set( el, setTimeout( function () {
+			getAnnouncer( el ).textContent = str;
+		}, 200 ) );
+	};
+}() );
+
+/**
+ * Skip-link delegated handler (#341).
+ *
+ * <a href="#fragment"> Enter activation does not reliably move keyboard
+ * focus to the target across browsers; explicitly call .focus() on the
+ * referenced #swh-main-content element when our skip link is activated.
+ *
+ * @since 3.6.0
+ */
+document.addEventListener( 'click', function ( e ) {
+	var target = e.target;
+	if ( ! target || ! target.classList || ! target.classList.contains( 'swh-skip-link' ) ) {
+		return;
+	}
+	var dest = document.getElementById( 'swh-main-content' );
+	if ( dest ) {
+		e.preventDefault();
+		dest.focus( { preventScroll: false } );
+	}
+} );

@@ -33,6 +33,35 @@ starting from the next release after 1.8.
 
 ---
 
+## [3.6.0] — 2026-05-06
+
+Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — no architectural changes, no new meta keys, no schema bumps. Same PHP 7.4 / WP 5.3 minimums.
+
+### Added
+
+- **Admin dark mode (#339):** SWH admin pages now follow the user's WordPress `admin_color` scheme. New `swh_admin_color_is_dark()` helper in `includes/helpers.php` returns `true` for the `midnight`, `modern`, and `ectoplasm` schemes; admin pages add `swh-admin-theme-dark` to `<body>` so token overrides under `body.swh-helpdesk-admin.swh-admin-theme-dark` activate. Admin component overrides for `.swh-panel`, `.swh-conversation`, `.swh-meta-box`, `.swh-kpi-card`, `.swh-empty-state`, `.swh-canned-item`, and `.swh-rule-row` live in `swh-admin.css`.
+- **Email HTML dark mode (#340):** `swh_wrap_html_email()` now emits `<meta name="color-scheme" content="light dark">` plus a `@media (prefers-color-scheme: dark)` block. Apple Mail and iOS Mail honour it; webmail clients ignore it gracefully.
+- **Skip-to-content link on Reports + Settings (#341):** Keyboard users can now bypass the WP admin chrome and land directly on the page main region.
+- **CSAT focus management (#342):** Submitting a satisfaction rating moves focus to the success message. Pressing **Esc** dismisses the widget and returns focus to the trigger.
+- **Heading hierarchy audit + shared empty-state helper (#343):** New `swh_render_empty_state( $title, $desc, $icon_svg_path, $heading_level = 'h2' )` helper in `includes/helpers.php` standardises every "nothing here" surface. Heading levels audited across portal and admin so each page has a single `h1` and no skipped levels.
+- **`aria-live` announcements (#344):** SLA badge transitions and KPI card updates now announce to screen readers via `aria-live="polite"`.
+- **`:focus-visible` focus rings (#345):** Mouse clicks no longer leave a focus ring; keyboard navigation still gets the high-contrast `--swh-color-focus` outline.
+- **Portal token-expiry focus (#346):** When a portal token has expired, focus moves to the lookup form so screen-reader users know where to recover.
+- **Touch targets ≥44×44 (#347):** CSAT stars, the merge-ticket toggle, and admin status filter chips now meet WCAG 2.5.5 AA. Achieved via transparent `::before` hit-zones on the merge toggle (preserves WP `.button` visual size) and `min-height: 44px` flex pills on filter chips.
+- **Internal-note contrast bump (#348):** AAA contrast on amber background.
+- **E2E sections 59–64:** `admin_dark_mode`, `email_color_scheme`, `skip_to_content`, `focus_visible_rings`, `csat_focus_management`, `aria_live_announcements`.
+
+### Changed
+
+- **`swh-admin.css`:** New `body.swh-helpdesk-admin.swh-admin-theme-dark` overrides block (15 selectors). All literal hex values on SWH-prefixed selectors were already routed through the `--swh-color-*` token system in v3.5.0; v3.6.0 adds dark-mode coverage on top of that token graph.
+- **`swh-shared.css`:** New `body.swh-helpdesk-admin.swh-admin-theme-dark` token overrides block, parallel to the existing `prefers-color-scheme: dark` block.
+
+### Fixed
+
+- Internal-note text contrast on amber background bumped from AA (4.5:1) to AAA (7:1).
+
+---
+
 ## [3.5.0] — 2026-04-23
 
 ### Added
