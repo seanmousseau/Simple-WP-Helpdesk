@@ -393,7 +393,6 @@ function swh_render_settings_page() {
 	?>
 	<div class="wrap">
 		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to settings content', 'simple-wp-helpdesk' ); ?></a>
-		<script>document.addEventListener("click",function(e){var t=e.target;if(t&&t.classList&&t.classList.contains("swh-skip-link")){var d=document.getElementById("swh-main-content");if(d){e.preventDefault();d.focus({preventScroll:false});}}});</script>
 		<h1>
 			<img src="<?php echo esc_url( SWH_ICON_1X ); ?>" alt="" style="width:32px;height:32px;vertical-align:middle;margin-right:6px;border-radius:4px;">
 			<?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?>

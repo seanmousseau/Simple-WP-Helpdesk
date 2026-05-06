@@ -432,7 +432,9 @@ document.addEventListener( 'DOMContentLoaded', function () {
  * Updates a visually-hidden announcer span inside an aria-live container so
  * screen readers receive the change without the helper destroying the
  * container's existing visible markup. Throttles to one announcement per
- * 1000 ms per element and skips no-op deltas.
+ * 200 ms per element and skips no-op deltas — short enough that the
+ * announcement still fires before focus moves elsewhere, long enough to
+ * coalesce paint flushes from a single fetch resolution.
  *
  * @since 3.6.0
  * @param {Element} el    The aria-live container (must already have aria-live).
@@ -459,6 +461,27 @@ window.swhAnnounce = window.swhAnnounce || ( function () {
 		clearTimeout( timers.get( el ) );
 		timers.set( el, setTimeout( function () {
 			getAnnouncer( el ).textContent = str;
-		}, 1000 ) );
+		}, 200 ) );
 	};
 }() );
+
+/**
+ * Skip-link delegated handler (#341).
+ *
+ * <a href="#fragment"> Enter activation does not reliably move keyboard
+ * focus to the target across browsers; explicitly call .focus() on the
+ * referenced #swh-main-content element when our skip link is activated.
+ *
+ * @since 3.6.0
+ */
+document.addEventListener( 'click', function ( e ) {
+	var target = e.target;
+	if ( ! target || ! target.classList || ! target.classList.contains( 'swh-skip-link' ) ) {
+		return;
+	}
+	var dest = document.getElementById( 'swh-main-content' );
+	if ( dest ) {
+		e.preventDefault();
+		dest.focus( { preventScroll: false } );
+	}
+} );

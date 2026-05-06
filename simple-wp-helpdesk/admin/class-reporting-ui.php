@@ -48,6 +48,8 @@ function swh_enqueue_reporting_assets( $hook ) {
 	);
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
+	// Shared admin JS: provides window.swhAnnounce() and the .swh-skip-link click handler (#341, #344).
+	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
 	wp_enqueue_script(
 		'swh-chartjs',
 		'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',
@@ -85,7 +87,6 @@ function swh_render_reports_page() {
 	?>
 	<div class="wrap">
 		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to report content', 'simple-wp-helpdesk' ); ?></a>
-		<script>document.addEventListener("click",function(e){var t=e.target;if(t&&t.classList&&t.classList.contains("swh-skip-link")){var d=document.getElementById("swh-main-content");if(d){e.preventDefault();d.focus({preventScroll:false});}}});</script>
 		<h1><?php esc_html_e( 'Helpdesk Reports', 'simple-wp-helpdesk' ); ?></h1>
 		<div id="swh-main-content" tabindex="-1">
 		<div class="swh-kpi-grid" id="swh-kpi-grid" aria-label="<?php esc_attr_e( 'Key performance indicators', 'simple-wp-helpdesk' ); ?>" aria-busy="true">
