@@ -174,7 +174,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 **Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
-### 56 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0)
+### 64 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 + 6 v3.6.0)
 
 | # | Name | Marks |
 |---|------|-------|
@@ -231,6 +231,14 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 | 54 | responsive | |
 | 55 | email_branding | |
 | 56 | dark_mode | |
+| 57 | toast_notifications | |
+| 58 | reports_loading_states | |
+| 59 | admin_dark_mode | |
+| 60 | email_color_scheme | |
+| 61 | skip_to_content | |
+| 62 | focus_visible_rings | |
+| 63 | csat_focus_management | |
+| 64 | aria_live_announcements | |
 | 28 | cleanup | |
 
 ### Architecture
