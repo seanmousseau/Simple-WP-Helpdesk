@@ -39,6 +39,13 @@ function swh_enqueue_reporting_assets( $hook ) {
 	if ( 'helpdesk_ticket_page_swh-reports' !== $hook ) {
 		return;
 	}
+	add_filter(
+		'admin_body_class',
+		function ( $classes ) {
+			$theme = swh_admin_color_is_dark() ? 'dark' : 'light';
+			return $classes . ' swh-helpdesk-admin swh-admin-theme-' . $theme;
+		}
+	);
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
 	wp_enqueue_script(

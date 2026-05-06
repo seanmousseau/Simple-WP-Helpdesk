@@ -648,3 +648,25 @@ function swh_is_rate_limited( $action, $ttl = 30 ) {
 	update_option( $key, time() + $ttl, false );
 	return false;
 }
+
+if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
+	/**
+	 * Returns true when the current user's WP admin colour scheme is one of the
+	 * dark variants we mirror for SWH admin pages (midnight, modern, ectoplasm).
+	 *
+	 * @since 3.6.0
+	 * @return bool
+	 */
+	function swh_admin_color_is_dark() {
+		$dark_schemes = array( 'midnight', 'modern', 'ectoplasm' );
+		$user_id      = get_current_user_id();
+		if ( ! $user_id ) {
+			return false;
+		}
+		$scheme = get_user_option( 'admin_color', $user_id );
+		if ( ! is_string( $scheme ) || '' === $scheme ) {
+			$scheme = 'fresh';
+		}
+		return in_array( $scheme, $dark_schemes, true );
+	}
+}

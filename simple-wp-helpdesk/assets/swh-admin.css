@@ -496,3 +496,29 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	outline: 2px solid var( --swh-color-focus );
 	outline-offset: 2px;
 }
+
+/* ── Admin dark mode component overrides (#339) ──────────────────────────── */
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-panel,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-conversation,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-meta-box,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-kpi-card,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state {
+	background-color: var( --swh-color-bg-subtle );
+	color: var( --swh-color-text );
+	border-color: var( --swh-color-border );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-canned-item,
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-rule-row {
+	background-color: var( --swh-color-bg );
+	border-color: var( --swh-color-border );
+	color: var( --swh-color-text );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-tab-button {
+	color: var( --swh-color-text );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state-title {
+	color: var( --swh-color-text );
+}
+body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state-desc {
+	color: var( --swh-color-text-secondary );
+}
