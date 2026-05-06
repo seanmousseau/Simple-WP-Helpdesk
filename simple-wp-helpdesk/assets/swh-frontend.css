@@ -310,11 +310,13 @@
 /* ── CSAT star widget (#262 keyboard, #269 mobile size, #275 auto-dismiss) ── */
 .swh-csat-stars {
 	display: flex;
-	gap: 4px;
+	/* #347: ≥8px gap between adjacent targets per WCAG 2.5.8 spacing exception. */
+	gap: 12px;
 }
 
 /* #269: responsive star size — clamp between 22px mobile and 28px desktop */
 .swh-csat-star {
+	position: relative;
 	background: none;
 	border: none;
 	cursor: pointer;
@@ -324,6 +326,17 @@
 	line-height: 1;
 	transition: color var( --swh-transition-fast );
 	border-radius: 2px;
+	/* #347: ≥44×44 WCAG AA — min-width/height covers desktop sizes; ::before
+	   below extends the hit zone on mobile where the glyph is ~22px. */
+	min-width: 32px;
+	min-height: 32px;
+}
+
+/* #347: invisible hit-zone extends touch area to ≥44×44 without visual change. */
+.swh-csat-star::before {
+	content: "";
+	position: absolute;
+	inset: -8px;
 }
 
 .swh-csat-star:hover,
