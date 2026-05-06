@@ -384,6 +384,7 @@ function swh_render_settings_page() {
 	$techs = get_users( array( 'role__in' => array( 'administrator', 'technician' ) ) );
 	?>
 	<div class="wrap">
+		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to settings content', 'simple-wp-helpdesk' ); ?></a>
 		<h2>
 			<img src="<?php echo esc_url( SWH_ICON_1X ); ?>" alt="" style="width:32px;height:32px;vertical-align:middle;margin-right:6px;border-radius:4px;">
 			<?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?>
@@ -398,6 +399,7 @@ function swh_render_settings_page() {
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><span class="dashicons dashicons-layout" aria-hidden="true"></span> <?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><span class="dashicons dashicons-admin-tools" aria-hidden="true"></span> <?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
 		</div>
+		<div id="swh-main-content" tabindex="-1">
 		<form id="swh-settings-form" method="POST" action="">
 			<?php wp_nonce_field( 'swh_save_settings_action', 'swh_settings_nonce' ); ?>
 			<input type="hidden" name="swh_active_tab" id="swh_active_tab" value="tab-general">
@@ -1011,6 +1013,7 @@ function swh_render_settings_page() {
 				</form>
 			</div>
 		</div>
+		</div><!-- #swh-main-content -->
 	</div>
 
 	<?php

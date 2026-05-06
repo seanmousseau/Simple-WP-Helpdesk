@@ -77,7 +77,9 @@ function swh_render_reports_page() {
 	}
 	?>
 	<div class="wrap">
+		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to report content', 'simple-wp-helpdesk' ); ?></a>
 		<h1><?php esc_html_e( 'Helpdesk Reports', 'simple-wp-helpdesk' ); ?></h1>
+		<div id="swh-main-content" tabindex="-1">
 		<div class="swh-kpi-grid" id="swh-kpi-grid" aria-label="<?php esc_attr_e( 'Key performance indicators', 'simple-wp-helpdesk' ); ?>" aria-busy="true">
 			<div class="swh-kpi-card">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zM4 8V6h16v2H4z"/></svg>
@@ -126,6 +128,7 @@ function swh_render_reports_page() {
 				<p id="swh-avg-first-response" class="swh-stat-value">&mdash;</p>
 			</div>
 		</div>
+		</div><!-- #swh-main-content -->
 	</div>
 	<?php
 }

@@ -192,3 +192,24 @@ body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .s
 	outline-offset: 2px;
 	border-radius: var( --swh-radius-sm );
 }
+
+/* ── Skip-to-content link — visible only when keyboard-focused (#341) ──── */
+.swh-skip-link {
+	position: absolute;
+	left: -9999px;
+	top: 8px;
+	z-index: var( --swh-z-toast );
+	padding: 8px 16px;
+	background: var( --swh-color-primary );
+	color: var( --swh-color-on-solid );
+	text-decoration: none;
+	font-weight: 600;
+	border-radius: var( --swh-radius-sm );
+	box-shadow: var( --swh-shadow-md );
+}
+.swh-skip-link:focus,
+.swh-skip-link:focus-visible {
+	left: 8px;
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+}
