@@ -74,7 +74,7 @@ function swh_admin_list_styles() {
 				if (!noItems) return;
 				noItems.innerHTML = ' . wp_json_encode(
 			'<div class="swh-empty-state">' . $icon .
-			'<p class="swh-empty-state-title">' . $title . '</p>' .
+			'<h2 class="swh-empty-state-title">' . $title . '</h2>' .
 			'<p class="swh-empty-state-desc">' . $desc . '</p>' .
 			'</div>'
 		) . ';

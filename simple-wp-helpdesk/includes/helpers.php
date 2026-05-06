@@ -649,6 +649,41 @@ function swh_is_rate_limited( $action, $ttl = 30 ) {
 	return false;
 }
 
+if ( ! function_exists( 'swh_render_empty_state' ) ) {
+	/**
+	 * Renders the shared empty-state component with a configurable heading level.
+	 *
+	 * Use to keep heading hierarchy correct: pass 'h2' when the empty state
+	 * stands in for a section that would otherwise have an h2; pass a deeper
+	 * level when it sits inside a section that already has its own h2.
+	 *
+	 * @since 3.6.0
+	 * @param string $title         Translated title text (will be escaped).
+	 * @param string $desc          Translated description text (will be escaped).
+	 * @param string $icon_svg_path SVG <path> markup contents (no <svg> wrapper).
+	 * @param string $heading_level One of 'h1','h2','h3','h4','h5','h6'. Default 'h2'.
+	 * @return void
+	 */
+	function swh_render_empty_state( $title, $desc, $icon_svg_path, $heading_level = 'h2' ) {
+		$allowed = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
+		$tag     = in_array( $heading_level, $allowed, true ) ? $heading_level : 'h2';
+		echo '<div class="swh-empty-state">';
+		echo '<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' . wp_kses(
+			$icon_svg_path,
+			array(
+				'path' => array(
+					'd'         => array(),
+					'fill-rule' => array(),
+					'clip-rule' => array(),
+				),
+			)
+		) . '</svg>';
+		echo '<' . esc_attr( $tag ) . ' class="swh-empty-state-title">' . esc_html( $title ) . '</' . esc_attr( $tag ) . '>';
+		echo '<p class="swh-empty-state-desc">' . esc_html( $desc ) . '</p>';
+		echo '</div>';
+	}
+}
+
 if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 	/**
 	 * Returns true when the current user's WP admin colour scheme is one of the

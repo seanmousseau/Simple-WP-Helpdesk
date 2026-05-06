@@ -393,10 +393,10 @@ function swh_render_settings_page() {
 	?>
 	<div class="wrap">
 		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to settings content', 'simple-wp-helpdesk' ); ?></a>
-		<h2>
+		<h1>
 			<img src="<?php echo esc_url( SWH_ICON_1X ); ?>" alt="" style="width:32px;height:32px;vertical-align:middle;margin-right:6px;border-radius:4px;">
 			<?php esc_html_e( 'Helpdesk Settings', 'simple-wp-helpdesk' ); ?>
-		</h2>
+		</h1>
 		<div class="nav-tab-wrapper" id="swh-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings Sections', 'simple-wp-helpdesk' ); ?>">
 			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><span class="dashicons dashicons-admin-generic" aria-hidden="true"></span> <?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span> <?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
@@ -505,7 +505,7 @@ function swh_render_settings_page() {
 					</td>
 				</tr>
 				</table>
-				<h3><?php esc_html_e( 'SLA Breach Alerts', 'simple-wp-helpdesk' ); ?></h3>
+				<h2><?php esc_html_e( 'SLA Breach Alerts', 'simple-wp-helpdesk' ); ?></h2>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Warning Threshold', 'simple-wp-helpdesk' ); ?></th>
@@ -531,7 +531,7 @@ function swh_render_settings_page() {
 						</td>
 					</tr>
 				</table>
-				<h3><?php esc_html_e( 'Auto-Assignment Rules', 'simple-wp-helpdesk' ); ?></h3>
+				<h2><?php esc_html_e( 'Auto-Assignment Rules', 'simple-wp-helpdesk' ); ?></h2>
 				<p class="description"><?php esc_html_e( 'When a new ticket is submitted with a matching category, it is automatically assigned to the specified technician. Rules are evaluated in order; the first match wins.', 'simple-wp-helpdesk' ); ?></p>
 				<?php
 				$assignment_rules = get_option( 'swh_assignment_rules', array() );
@@ -717,7 +717,7 @@ function swh_render_settings_page() {
 				<hr>
 				<p><strong><?php esc_html_e( 'Placeholders:', 'simple-wp-helpdesk' ); ?></strong> <code>{name}</code>, <code>{email}</code>, <code>{ticket_id}</code>, <code>{title}</code>, <code>{status}</code>, <code>{priority}</code>, <code>{message}</code>, <code>{ticket_url}</code>, <code>{admin_url}</code>, <code>{autoclose_days}</code>, <code>{ticket_links}</code> (<?php esc_html_e( 'lookup only', 'simple-wp-helpdesk' ); ?>)</p>
 				<p><strong><?php esc_html_e( 'Conditional blocks:', 'simple-wp-helpdesk' ); ?></strong> <code>{if key}...{endif key}</code> — <?php esc_html_e( 'content is only included when the placeholder has a value.', 'simple-wp-helpdesk' ); ?></p><hr>
-				<h3><?php esc_html_e( 'Emails Sent to Client', 'simple-wp-helpdesk' ); ?></h3>
+				<h2><?php esc_html_e( 'Emails Sent to Client', 'simple-wp-helpdesk' ); ?></h2>
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'New Ticket (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_new_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'New Ticket (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_new_body', $defs, 'textarea' ); ?></td></tr>
@@ -738,7 +738,7 @@ function swh_render_settings_page() {
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Lookup (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_lookup_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Lookup (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_lookup_body', $defs, 'textarea' ); ?></td></tr>
 				</table><hr>
-				<h3><?php esc_html_e( 'Emails Sent to Technician/Admin', 'simple-wp-helpdesk' ); ?></h3>
+				<h2><?php esc_html_e( 'Emails Sent to Technician/Admin', 'simple-wp-helpdesk' ); ?></h2>
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'New Ticket (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_new_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'New Ticket (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_new_body', $defs, 'textarea' ); ?></td></tr>
@@ -753,7 +753,7 @@ function swh_render_settings_page() {
 					<tr style="background:#fff3cd;"><th scope="row"><?php esc_html_e( 'SLA Breach Alert (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_sla_breach_sub', $defs ); ?></td></tr>
 					<tr style="background:#fff3cd;"><th scope="row"><?php esc_html_e( 'SLA Breach Alert (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_sla_breach_body', $defs, 'textarea' ); ?></td></tr>
 				</table>
-				<h3><?php esc_html_e( 'Emails Sent to Client (System)', 'simple-wp-helpdesk' ); ?></h3>
+				<h2><?php esc_html_e( 'Emails Sent to Client (System)', 'simple-wp-helpdesk' ); ?></h2>
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_body', $defs, 'textarea' ); ?></td></tr>
@@ -966,7 +966,7 @@ function swh_render_settings_page() {
 		</form>
 
 		<div id="tab-tools" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-tools" tabindex="0" style="display:none;">
-			<h3><?php esc_html_e( 'Automated Data Retention', 'simple-wp-helpdesk' ); ?></h3>
+			<h2><?php esc_html_e( 'Automated Data Retention', 'simple-wp-helpdesk' ); ?></h2>
 			<form method="POST" action="">
 				<?php wp_nonce_field( 'swh_save_tools_action', 'swh_tools_nonce' ); ?>
 				<table class="form-table">
@@ -999,7 +999,7 @@ function swh_render_settings_page() {
 			</form>
 			<hr>
 			<div class="swh-danger-zone">
-				<h3><?php esc_html_e( 'Danger Zone (Manual Cleanup)', 'simple-wp-helpdesk' ); ?></h3>
+				<h2><?php esc_html_e( 'Danger Zone (Manual Cleanup)', 'simple-wp-helpdesk' ); ?></h2>
 				<p><?php esc_html_e( 'These manual actions are permanent and cannot be undone.', 'simple-wp-helpdesk' ); ?></p>
 				<form method="POST" action="">
 					<?php wp_nonce_field( 'swh_danger_action', 'swh_danger_nonce' ); ?>

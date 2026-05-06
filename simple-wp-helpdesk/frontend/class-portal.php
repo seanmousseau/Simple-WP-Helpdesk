@@ -445,7 +445,7 @@ function swh_render_portal_no_token() {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		$tickets = is_array( $tickets ) ? $tickets : array();
 
-		echo '<h3 class="swh-my-tickets-heading">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h3>';
+		echo '<h2 class="swh-my-tickets-heading">' . esc_html__( 'My Open Tickets', 'simple-wp-helpdesk' ) . '</h2>';
 
 		if ( empty( $tickets ) ) {
 			echo '<div class="swh-empty-state">' .
