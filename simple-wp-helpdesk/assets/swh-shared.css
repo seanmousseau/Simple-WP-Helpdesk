@@ -172,3 +172,23 @@
 		transition-duration: 0.01ms !important;
 	}
 }
+
+/* ── :focus-visible — show focus rings only for keyboard navigation (#345) ── */
+/* Apply to all SWH interactive elements; do NOT override .wp-core-ui — WP admin
+ * owns its native button focus styling and stomping it breaks contrast. */
+.swh-helpdesk-wrapper :is(button, a, select, textarea, input, [role="tab"], [role="radio"], .swh-badge):focus {
+	outline: none;
+}
+.swh-helpdesk-wrapper :is(button, a, select, textarea, input, [role="tab"], [role="radio"], .swh-badge):focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+	border-radius: var( --swh-radius-sm );
+}
+body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .swh-badge, .swh-empty-state a, .swh-toast button):focus {
+	outline: none;
+}
+body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .swh-badge, .swh-empty-state a, .swh-toast button):focus-visible {
+	outline: 2px solid var( --swh-color-focus );
+	outline-offset: 2px;
+	border-radius: var( --swh-radius-sm );
+}
