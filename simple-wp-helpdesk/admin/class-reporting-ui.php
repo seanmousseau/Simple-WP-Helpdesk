@@ -85,6 +85,7 @@ function swh_render_reports_page() {
 	?>
 	<div class="wrap">
 		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to report content', 'simple-wp-helpdesk' ); ?></a>
+		<script>document.addEventListener("click",function(e){var t=e.target;if(t&&t.classList&&t.classList.contains("swh-skip-link")){var d=document.getElementById("swh-main-content");if(d){e.preventDefault();d.focus({preventScroll:false});}}});</script>
 		<h1><?php esc_html_e( 'Helpdesk Reports', 'simple-wp-helpdesk' ); ?></h1>
 		<div id="swh-main-content" tabindex="-1">
 		<div class="swh-kpi-grid" id="swh-kpi-grid" aria-label="<?php esc_attr_e( 'Key performance indicators', 'simple-wp-helpdesk' ); ?>" aria-busy="true">

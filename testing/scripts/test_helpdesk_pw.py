@@ -3663,7 +3663,11 @@ def test_60_email_color_scheme(page: Page):
     page.wait_for_selector(".swh-alert-success, .swh-alert-error")
 
     # Pull the latest message and inspect HTML body.
+    # MailHog stores message bodies with their Content-Transfer-Encoding intact
+    # (quoted-printable for our HTML emails), so `=` chars in attributes become
+    # `=3D` and long lines get soft-wrapped. Decode QP before asserting.
     import requests as _req
+    import quopri as _qp
     html = ""
     deadline = time.time() + 10
     while time.time() < deadline:
@@ -3671,15 +3675,14 @@ def test_60_email_color_scheme(page: Page):
             resp = _req.get(f"{MAILHOG_URL}/api/v2/messages",
                             params={"limit": 5}, timeout=5)
             items = resp.json().get("items", []) if resp.status_code == 200 else []
-            # Find any item whose Body contains an HTML doctype/tag
             for item in items:
                 body = (item.get("Content", {}) or {}).get("Body", "") or ""
-                # MailHog's MIME-encoded body needs decoding; fall back to MIME parts.
                 parts = (item.get("MIME", {}) or {}).get("Parts", []) or []
                 candidates = [body] + [(p.get("Body", "") or "") for p in parts]
                 for cand in candidates:
-                    if "<html" in cand.lower() or "color-scheme" in cand.lower():
-                        html = cand
+                    decoded = _qp.decodestring(cand.encode("utf-8", "replace")).decode("utf-8", "replace")
+                    if "<html" in decoded.lower() or "color-scheme" in decoded.lower():
+                        html = decoded
                         break
                 if html:
                     break
@@ -3718,13 +3721,22 @@ def test_61_skip_to_content(page: Page):
                   f".swh-skip-link not found on {label}")
             if skip_count == 0:
                 continue
-            # First Tab from body should land on the skip link
+            # WordPress admin renders its own .screen-reader-shortcut skip link
+            # as the first focusable element on every admin page. Walk past it
+            # (and any other focusables) until we land on our .swh-skip-link.
             page.evaluate("document.body.focus()")
-            page.keyboard.press("Tab")
-            focused_class = page.evaluate("document.activeElement.className || ''") or ""
-            check(f"skip link #341: first Tab lands on skip link ({label})",
-                  "swh-skip-link" in focused_class,
-                  f"focused element class: {focused_class!r}")
+            found_swh_skip = False
+            for _ in range(15):
+                page.keyboard.press("Tab")
+                focused_class = page.evaluate("document.activeElement.className || ''") or ""
+                if "swh-skip-link" in focused_class:
+                    found_swh_skip = True
+                    break
+            check(f"skip link #341: keyboard reaches .swh-skip-link ({label})",
+                  found_swh_skip,
+                  "tabbed 15 times without focusing the SWH skip link")
+            if not found_swh_skip:
+                continue
             # Activating the link moves focus to #swh-main-content
             page.keyboard.press("Enter")
             # Allow JS focus handler to run
