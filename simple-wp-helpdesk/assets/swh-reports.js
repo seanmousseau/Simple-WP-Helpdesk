@@ -109,10 +109,25 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		var open  = document.getElementById( 'swh-kpi-open' );
 		var res   = document.getElementById( 'swh-kpi-resolution' );
 		var frt   = document.getElementById( 'swh-kpi-first-response' );
-		if ( total ) { total.textContent = data.total; }
-		if ( open )  { open.textContent  = data.open; }
-		if ( res )   { res.textContent   = formatDuration( data.avg_resolution ); }
-		if ( frt )   { frt.textContent   = formatDuration( data.avg_first_response ); }
+		var announce = function ( metricKey, displayValue ) {
+			if ( ! window.swhAnnounce ) { return; }
+			var liveWrap = document.querySelector( '[data-metric="' + metricKey + '"]' );
+			if ( liveWrap ) {
+				window.swhAnnounce( liveWrap, String( displayValue ) );
+			}
+		};
+		if ( total ) { total.textContent = data.total; announce( 'total', data.total ); }
+		if ( open )  { open.textContent  = data.open; announce( 'open', data.open ); }
+		if ( res )   {
+			var resVal = formatDuration( data.avg_resolution );
+			res.textContent = resVal;
+			announce( 'resolution', resVal );
+		}
+		if ( frt )   {
+			var frtVal = formatDuration( data.avg_first_response );
+			frt.textContent = frtVal;
+			announce( 'first-response', frtVal );
+		}
 	} ).catch( function () {
 		hideKpiSkeleton();
 	} );
