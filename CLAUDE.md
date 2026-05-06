@@ -4,7 +4,7 @@
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 3.3.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 3.6.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 
 ## Repository Structure
 
@@ -82,11 +82,15 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 - **SLA cron** — `swh_sla_check_event` runs hourly. Lock transient: `swh_lock_sla`. Open statuses filtered via `swh_sla_open_statuses` filter hook.
 - **Reporting transients** — `swh_report_{type}` cached for `HOUR_IN_SECONDS`. Types: `status_breakdown`, `avg_resolution_time`, `weekly_trend`, `first_response_time`, `kpi`.
 - **`.swh-empty-state`** — shared component in `swh-shared.css`; apply to all "nothing here" states. Three required elements: `.swh-empty-state-icon` (SVG), `.swh-empty-state-title`, `.swh-empty-state-desc`. CTA link is optional.
-- **Dark mode tokens** — frontend only (`swh-shared.css` `@media (prefers-color-scheme: dark)` block). Do NOT add dark mode to `swh-admin.css` — WP admin handles its own colour schemes. Use `[data-swh-theme="light"]` escape hatch on `.swh-helpdesk-wrapper` for sites that control the theme themselves.
+- **Dark mode tokens (frontend)** — `swh-shared.css` `@media (prefers-color-scheme: dark)` block. Use `[data-swh-theme="light"]` escape hatch on `.swh-helpdesk-wrapper` for sites that force light mode.
+- **Dark mode tokens (admin, v3.6.0+)** — opt-in per-user via WP `admin_color`. `swh_admin_color_is_dark()` (in `includes/helpers.php`) returns true for `midnight`, `modern`, and `ectoplasm`; admin pages add `swh-admin-theme-dark` to `<body>` so token overrides under `body.swh-helpdesk-admin.swh-admin-theme-dark` in `swh-shared.css` activate. Admin component overrides live in `swh-admin.css` under the same selector.
 - **Email HTML wrapper** — all CSS must be inlined. `swh_wrap_html_email()` in `class-email.php`. No `<link>` or `<style>` tags — email clients strip them.
 - **`swh_email_logo_url` option** — stored in `swh_options` via `swh_get_defaults()`; falls back to `get_site_icon_url(48)` if empty. Displayed at 32×32px in the email header band.
 - **`swh_portal_theme` option** — `'auto'` (default, follows `prefers-color-scheme`) or `'light'` (forces light mode). Output as `data-swh-theme="light"` attribute on every `.swh-helpdesk-wrapper` div in `class-portal.php` and `class-shortcode.php`. The CSS rule `.swh-helpdesk-wrapper[data-swh-theme="light"]` in `swh-shared.css` overrides the dark-mode media query.
 - **Ticket editor panel groups** — `.swh-panel-group` + `.swh-panel-group-label` in `class-ticket-editor.php`. Do NOT change form field `name` attributes or the save handler will break. IDs `#swh-status`, `#swh-priority`, `#swh-assigned-to` must remain.
+- **v3.6.0 conventions** — admin dark-mode selector is exactly `body.swh-helpdesk-admin.swh-admin-theme-dark` (both classes); frontend dark-mode is unchanged (`prefers-color-scheme` + `[data-swh-theme="light"]` escape hatch). Email HTML opt-in to client dark mode via `<meta name="color-scheme" content="light dark">` plus a `@media (prefers-color-scheme: dark)` block in `swh_wrap_html_email()` (still inlined; no `<style>` survives in webmail clients but Apple Mail / iOS Mail honour it).
+- **`swh_render_empty_state()` helper (v3.6.0)** — shared PHP helper in `includes/helpers.php`. Signature: `swh_render_empty_state( $title, $desc, $icon_svg_path, $heading_level = 'h2' )`. Echoes a `.swh-empty-state` block; pass the heading level appropriate to the surrounding hierarchy (admin lists usually `h2`, sub-panels `h3`).
+- **`swh_admin_color_is_dark()` helper (v3.6.0)** — returns `true` when the current user's `admin_color` is one of `midnight`, `modern`, `ectoplasm`. Used by `class-settings.php`, `class-reporting-ui.php`, `class-ticket-list.php` to decide whether to enqueue the dark `<body>` class.
 
 ## Release Process
 
@@ -112,7 +116,7 @@ The full test suite must pass before any release. Use `make` targets (requires `
 ### Local gate (required before opening any PR)
 ```bash
 make test-docker  # full gate inside Docker — required (no host PHP fallback)
-make e2e          # Playwright E2E — 56 sections (set WP_MODE=docker or configure SSH vars)
+make e2e          # Playwright E2E — 64 sections (set WP_MODE=docker or configure SSH vars)
 make e2e-docker   # fully self-contained E2E: up + setup + test + teardown in one command
 make test-all     # make test + make e2e
 ```
@@ -171,7 +175,7 @@ WP_MODE=docker pytest testing/scripts/test_helpdesk_pw.py -v
 
 **Location:** `testing/scripts/test_helpdesk_pw.py`
 **Config:** `testing/pytest.ini`, `testing/scripts/conftest.py`
-**Requirements:** `testing/requirements.txt` (playwright 1.58, pytest 9, pytest-playwright 0.7.2)
+**Requirements:** `testing/requirements.txt` (playwright 1.59, pytest 9, pytest-playwright 0.7.2)
 **Screenshots:** `testing/screenshots/`
 
 ### 64 test sections (34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 + 6 v3.6.0)
@@ -294,7 +298,7 @@ Every PR that introduces user-facing changes **must** include a new or updated P
 | Internal refactor, no UX change | None required — existing sections must still pass |
 | Security fix | Extend or add a `security`-marked section |
 
-New sections continue from the next available number (currently 53). Add the section to the table above.
+New sections continue from the next available number (currently 65). Add the section to the table above.
 
 ## Dev Tools
 

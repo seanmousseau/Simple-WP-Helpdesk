@@ -198,3 +198,69 @@ The `swhToast(message, type, duration)` function is available globally on any pa
 | `duration` | number | `4000` | Auto-dismiss delay in ms |
 
 The `?swh_notice=saved` redirect query parameter triggers the toast on page load. The parameter is removed from the URL via `history.replaceState()` so a page refresh does not re-trigger the notification.
+
+---
+
+## Dark Mode (v3.6.0)
+
+Simple WP Helpdesk renders cleanly in dark mode in three places:
+
+### Frontend (client-facing)
+
+The submission form, client portal, My Tickets dashboard, and lookup form follow `prefers-color-scheme: dark`. No setting required — the browser/OS preference is honoured automatically.
+
+If your site forces light mode (no theme-level dark support, brand reasons, etc.), set **Settings → General → Frontend Portal Theme** to **Force light mode**. This emits `data-swh-theme="light"` on every `.swh-helpdesk-wrapper` and overrides the dark media query.
+
+### Admin (staff-facing)
+
+Admin pages now follow each user's WordPress **Profile → Color Scheme** preference. Three of the built-in WP schemes are treated as dark and trigger SWH dark mode:
+
+- **Midnight**
+- **Modern**
+- **Ectoplasm**
+
+All other schemes (Default, Light, Blue, Coffee, Sunrise) render SWH admin in light mode, matching the surrounding chrome. There is no plugin-level setting — switching color schemes in the user profile is the single source of truth.
+
+Implementation: `swh_admin_color_is_dark()` (in `includes/helpers.php`) inspects `get_user_option( 'admin_color' )` and adds `swh-admin-theme-dark` to `<body>` on Settings, Reports, and the ticket list. CSS overrides live under `body.swh-helpdesk-admin.swh-admin-theme-dark` in `swh-shared.css` (token overrides) and `swh-admin.css` (component overrides).
+
+### Email
+
+Emails opt in to client dark mode via `<meta name="color-scheme" content="light dark">` and a `@media (prefers-color-scheme: dark)` block emitted by `swh_wrap_html_email()`. Apple Mail (macOS / iOS) honour the directive and recolour backgrounds, text, and accent borders. Webmail clients that strip `<style>` tags fall back to the inlined light theme — readable in both modes.
+
+---
+
+## Accessibility (v3.6.0)
+
+v3.6.0 closes the WCAG 2.2 AA gaps surfaced during the v3.5.0 audit.
+
+### Keyboard navigation
+
+- **Skip-to-content link** on Settings and Reports pages — the first focusable element on each page is "Skip to main content", which jumps over the WP admin chrome.
+- **`:focus-visible` focus rings** — the high-contrast `--swh-color-focus` outline is now only shown for keyboard navigation, not mouse clicks. Mouse users get clean buttons; keyboard users keep clear focus state.
+
+### Focus management
+
+- **CSAT widget** — submitting a satisfaction rating moves focus to the "Thanks for your feedback" success message so screen-reader users hear confirmation. Pressing **Esc** dismisses the widget and returns focus to its trigger.
+- **Portal token expiry** — when a portal link has expired, focus moves to the lookup form so users know where to recover their access without re-tabbing past the error notice.
+
+### Live regions
+
+- **SLA badge** transitions (none → warn → breach) and **KPI card** value updates announce via `aria-live="polite"`.
+
+### Touch targets (WCAG 2.5.5 AA)
+
+The following controls now meet the 44×44 CSS-pixel minimum:
+
+- **CSAT rating stars**
+- **Merge ticket toggle** — uses a transparent `::before` hit-zone overlay so the visible button stays at WP's 28 px height while the touch zone extends to 44 px.
+- **Status filter chips** on the admin ticket list — render as inline-flex pills with `min-height: 44px`.
+
+WP-default subsubsub list views are intentionally unchanged.
+
+### Headings
+
+A heading-hierarchy audit eliminated skipped levels and duplicate `h1`s across portal and admin views. The shared `swh_render_empty_state( $title, $desc, $icon_svg_path, $heading_level = 'h2' )` helper in `includes/helpers.php` lets every "nothing here" surface emit the right heading level for its surrounding context.
+
+### Contrast
+
+Internal-note text on the amber background was bumped from AA (4.5:1) to AAA (7:1) per #348.
