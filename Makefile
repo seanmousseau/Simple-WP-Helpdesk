@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help lint phpcs phpstan phpunit semgrep test test-docker e2e e2e-docker coverage test-all js-build
+.PHONY: help lint phpcs phpstan phpunit semgrep test test-docker e2e e2e-docker coverage test-all js-build bench
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -74,3 +74,6 @@ coverage: ## Generate PHPUnit coverage report (requires pcov or xdebug; outputs 
 	@echo "✓ Coverage report written to coverage.xml"
 
 test-all: test e2e ## Full gate + E2E
+
+bench: ## Run perf baseline against the Docker stack (override count with COUNT=500)
+	@bash testing/scripts/bench.sh $${COUNT:-100}

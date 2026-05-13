@@ -109,12 +109,13 @@ Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these i
 4. Update `simple-wp-helpdesk/readme.txt` stable tag and changelog.
 5. Update `docs/` files for any changed behaviour or new features.
 6. **Run full test suite** (all four must pass — see Test Suite below).
-7. **Ask the user before creating a PR** — never open one autonomously.
-8. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
-9. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
-10. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-11. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
-12. **After pushing, do not monitor CI run status.** Wait for the user to report results before taking further action.
+7. **v4.0+ only:** Run `make bench` against the Docker stack and compare results against `docs/internal/performance-baseline.md`. Document any regressions or improvements in the PR description; significant regressions (>20% on any scenario) require explicit justification.
+8. **Ask the user before creating a PR** — never open one autonomously.
+9. PR from `release/vX.Y.Z` to `main`. Close addressed GitHub issues.
+10. **Run CodeRabbit review** on the PR (`/review`). Address all actionable findings before merge.
+11. Merge to `main`, then push the version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+12. `release.yml` workflow triggers automatically — builds `simple-wp-helpdesk.zip` and creates the GitHub Release with CHANGELOG notes attached.
+13. **After pushing, do not monitor CI run status.** Wait for the user to report results before taking further action.
 
 > ZIP is built by `release.yml` on every `v*.*.*` tag push — no manual zip command needed.
 
