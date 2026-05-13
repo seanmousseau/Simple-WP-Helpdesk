@@ -28,6 +28,7 @@ define( 'SWH_MENU_ICON', SWH_PLUGIN_URL . 'assets/favicon-32.png' );
 
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-email.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-ticket.php';
