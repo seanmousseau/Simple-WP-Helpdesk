@@ -40,6 +40,7 @@ Last refreshed: v3.7.0 (2026-05-13)
 - Optional CTA `<a>` after the description
 
 **Example markup:**
+
 ```html
 <div class="swh-empty-state">
   <svg class="swh-empty-state-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -52,6 +53,7 @@ Last refreshed: v3.7.0 (2026-05-13)
 ```
 
 **PHP helper signature:**
+
 ```php
 swh_render_empty_state( string $title, string $desc, string $icon_svg_path, string $heading_level = 'h2' ): void
 ```
@@ -82,6 +84,7 @@ swh_render_empty_state( string $title, string $desc, string $icon_svg_path, stri
   insertion alone — toasts are visual, not announced by default.
 
 **Required structure:**
+
 ```html
 <div class="swh-toast swh-toast--success swh-toast--visible" role="status">
   <span class="swh-toast__message">Settings saved.</span>
@@ -90,6 +93,7 @@ swh_render_empty_state( string $title, string $desc, string $icon_svg_path, stri
 ```
 
 **JS API (v3.7.0+):**
+
 ```js
 window.swhToast( 'Settings saved.', 'success' ); // 'success' | 'error' | 'info'
 ```
@@ -131,6 +135,7 @@ token table.
   conveys status to screen-reader users.
 
 **Example markup:**
+
 ```html
 <span class="swh-badge swh-badge-in-progress">In Progress</span>
 <a class="swh-badge swh-badge-open" href="...">Open (12)</a>
@@ -161,6 +166,7 @@ should be paired with explicit text ("Internal note") rather than
 relying on colour alone.
 
 **Required structure:**
+
 ```html
 <div class="swh-bubble swh-bubble-tech">
   <span class="swh-bubble-meta">
@@ -193,6 +199,7 @@ relying on colour alone.
   the `save_post` handler matches on them.
 
 **Required structure:**
+
 ```html
 <div class="swh-panel-group">
   <span class="swh-panel-group-label">Status</span>
@@ -226,6 +233,7 @@ relying on colour alone.
   region while the real content is loading.
 
 **Required structure:**
+
 ```html
 <div class="swh-kpi-card" aria-busy="true">
   <div class="swh-skeleton swh-kpi-skeleton"></div>
@@ -259,6 +267,7 @@ relying on colour alone.
   swap them out for a smaller contrast ratio.
 
 **Required structure:**
+
 ```html
 <div class="swh-helpdesk-wrapper" data-swh-theme="light">
   <!-- portal / shortcode markup -->
@@ -285,6 +294,7 @@ relying on colour alone.
 - Target element should have `tabindex="-1"` so JS-driven focus succeeds.
 
 **Required structure:**
+
 ```html
 <a class="swh-skip-link" href="#swh-main">Skip to content</a>
 ...
@@ -305,6 +315,7 @@ relying on colour alone.
 - Submit buttons inside should carry a confirm step (JS `confirm()` or a typed-confirmation pattern).
 
 **Required structure:**
+
 ```html
 <section class="swh-danger-zone">
   <h3>Delete all data on uninstall</h3>
@@ -333,6 +344,7 @@ relying on colour alone.
 - For "unread" rows, supplement the colour cue with `aria-label="Unread"` or a visible "New" pill — colour-only is not accessible.
 
 **Required structure:**
+
 ```html
 <ul class="swh-ticket-card-list">
   <li class="swh-ticket-card swh-ticket-card--unread">

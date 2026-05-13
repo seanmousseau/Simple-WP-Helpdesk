@@ -21,6 +21,7 @@ The version argument to the helpers is the SWH minor version, e.g. `'3.7'`. The 
 ## Examples
 
 ### Deprecating a filter
+
 ```php
 $result = swh_apply_deprecated_filter(
     'swh_legacy_filter_name',
@@ -32,6 +33,7 @@ $result = swh_apply_deprecated_filter(
 ```
 
 ### Deprecating an action
+
 ```php
 swh_do_deprecated_action(
     'swh_legacy_action_name',

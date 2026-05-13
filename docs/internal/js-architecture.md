@@ -12,7 +12,7 @@ JS modules are authored in `simple-wp-helpdesk/assets/src/` and built via [`@wor
 
 ## Source / build layout
 
-```
+```text
 simple-wp-helpdesk/assets/
 ├── src/                      # ES modules (authored)
 │   └── toast/index.js        # v3.7.0 PoC consumer

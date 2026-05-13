@@ -22,7 +22,7 @@ final class MailerTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_mailer_class_is_autoloadable() {
+	public function testMailerClassIsAutoloadable() {
 		$this->assertTrue( class_exists( Mailer::class ), 'SWH\\Email\\Mailer must be autoloadable via composer PSR-4.' );
 	}
 
@@ -31,7 +31,7 @@ final class MailerTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_send_method_signature_matches_swh_send_email() {
+	public function testSendMethodSignatureMatchesSwhSendEmail() {
 		$reflection = new ReflectionMethod( Mailer::class, 'send' );
 		$params     = $reflection->getParameters();
 
@@ -52,7 +52,7 @@ final class MailerTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_mailer_class_is_final() {
+	public function testMailerClassIsFinal() {
 		$reflection = new ReflectionClass( Mailer::class );
 		$this->assertTrue( $reflection->isFinal(), 'SWH\\Email\\Mailer should be final.' );
 	}

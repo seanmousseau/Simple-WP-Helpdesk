@@ -585,8 +585,8 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		);
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
+			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
 		}
-		swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
 	}
 
 	$just_replied = false;
@@ -613,8 +613,8 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		);
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '0' );
+			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
 		}
-		swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
 
 		$tech_orignames = null;
 		$tech_skipped   = 0;

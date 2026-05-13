@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for v3.7.0 ticket lifecycle action hooks.
+ * Unit tests for v3.7.0 ticket lifecycle action hooks (issue #361).
  *
- * Covers the seven new actions added in issue #361:
- *   - swh_ticket_replied
- *   - swh_ticket_status_changed
- *   - swh_ticket_closed
- *   - swh_ticket_reopened
- *   - swh_ticket_assigned
- *   - swh_sla_breached  (cron-fired; tested via the dispatcher helper)
- *   - swh_csat_submitted (AJAX-fired; tested via the dispatcher helper)
+ * Covers the lifecycle actions dispatched through helpers in
+ * includes/helpers.php so they can be exercised without spinning up the
+ * surrounding admin/portal/cron environments:
+ *   - swh_ticket_status_changed / swh_ticket_closed / swh_ticket_reopened
+ *     (via swh_set_ticket_status())
+ *   - swh_ticket_replied (via swh_fire_ticket_replied())
+ *   - swh_ticket_assigned (via swh_apply_assignment_rules())
  *
- * The status-change and replied hooks are dispatched through helpers
- * (`swh_set_ticket_status`, `swh_fire_ticket_replied`) in includes/helpers.php
- * so the unit tests can exercise the dispatch logic without spinning up the
- * surrounding admin/portal/cron environments.
+ * Not covered here (deferred to E2E):
+ *   - swh_sla_breached    — fires inside a cron loop; covered by the
+ *     Playwright SLA section.
+ *   - swh_csat_submitted  — fires from a direct do_action() inside the
+ *     CSAT AJAX handler; covered by the Playwright CSAT section.
  *
  * @package Simple_WP_Helpdesk
  */
