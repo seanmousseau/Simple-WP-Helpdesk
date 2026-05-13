@@ -25,3 +25,29 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+  # npm: only the @wordpress/scripts toolchain (build-only, not shipped to users).
+  # Transitive vulnerability advisories that are stuck behind unreleased upstream
+  # fixes are ignored — they will only be resolved when the upstream maintainer
+  # publishes a new @wordpress/scripts release with bumped deps.
+  # See docs/internal/lessons-learned.md "Dependabot: @wordpress/scripts transitive advisories".
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    allow:
+      - dependency-name: "@wordpress/scripts"
+    ignore:
+      # Transitive of webpack inside @wordpress/scripts. RCE via RegExp.flags
+      # (high) and CPU DoS via crafted array-likes (medium). Patched in 7.0.3
+      # and 7.0.5 respectively; @wordpress/scripts 32.1.0 still pins an older
+      # serialize-javascript transitively.
+      - dependency-name: "serialize-javascript"
+      # Transitive ReDoS via globstar segments. Patched in 3.1.3; pinned older
+      # by @wordpress/scripts' webpack stack.
+      - dependency-name: "minimatch"
+      # Source-theft when running `npm run start` and visiting a malicious
+      # site mid-session. Patched in 5.2.1. @wordpress/scripts 32.1.0 still
+      # pins 5.2.0. Build path (`npm run build`) is unaffected.
+      - dependency-name: "webpack-dev-server"

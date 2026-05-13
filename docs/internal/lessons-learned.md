@@ -4,7 +4,7 @@ Things that bit us, what we learned, and how to avoid recurrence. Group by categ
 
 This complements `CLAUDE.md`'s "Common Pitfalls" section: that one is a quick checklist of code-level gotchas, this one is the longer-form *story* of what we ran into and what we changed because of it.
 
-Last updated: 2026-05-04
+Last updated: 2026-05-13
 
 ---
 
@@ -39,6 +39,38 @@ Last updated: 2026-05-04
 
 **What bit us (v3.4):** Push attempts failed silently when Docker Desktop was paused.
 **Lesson:** Pre-push hook (`make test-docker`) is the gate. There is no fallback. `git push --no-verify` exists but should never be used to bypass a real failure.
+
+### Dependabot: `@wordpress/scripts` transitive advisories (2026-05-13)
+
+**What surfaced (post v3.7.0 merge):** GitHub flagged 5 Dependabot security advisories on `main` immediately after the v3.7.0 PR landed — all in `package-lock.json`, all transitive deps of the `@wordpress/scripts` toolchain Phase 5 added:
+
+| Severity | Package | Vulnerable | Patched |
+|---|---|---|---|
+| high | `serialize-javascript` | ≤ 7.0.2 (RCE via `RegExp.flags`) | 7.0.3 |
+| medium | `serialize-javascript` | < 7.0.5 (CPU DoS via array-likes) | 7.0.5 |
+| high | `minimatch` | < 3.1.3 (ReDoS via globstar) | 3.1.3 |
+| medium | `webpack-dev-server` (×2) | ≤ 5.2.0 (source theft via malicious site) | 5.2.1 |
+
+**Assessment:**
+
+- `npm audit --omit=dev` → **0 vulnerabilities.** None ship to end users. Built `simple-wp-helpdesk/assets/dist/toast.js` is plain ES5 with zero bundled JS deps.
+- We were already on the **latest** `@wordpress/scripts` (32.1.0). `npm view @wordpress/scripts version` confirmed no newer release exists.
+- `npm audit fix` (non-forcing) found **no safe path** — the only autofix was `--force` downgrade to `@wordpress/scripts@19.2.4`, a breaking-major regression that would have lost asset.php emission and the ES-module pipeline.
+- `webpack-dev-server` only matters during `npm run start` (live-reload dev server). The build path (`npm run build`) is unaffected.
+
+**Conclusion:** stuck behind upstream. We can only update when `@wordpress/scripts` ships a patch. Forcing the issue is worse than the advisories.
+
+**What we did:**
+1. Added an `npm` ecosystem entry to `.github/dependabot.yml` with `allow: @wordpress/scripts` so future upstream releases auto-PR, and `ignore:` rules for the 3 stuck transitive packages (`serialize-javascript`, `minimatch`, `webpack-dev-server`) so the alert noise stops.
+2. Documented the assessment here so the next person who notices the alerts doesn't have to re-investigate.
+
+**Lesson:** Build-time-only transitive advisories with no upstream fix are best handled by:
+- Confirming `--omit=dev` is clean (production unaffected)
+- Confirming the top-level dep is at its latest version
+- Adding allow+ignore rules so the alert list stays meaningful for genuine production issues
+- Not force-downgrading the top-level dep just to clear a build-time alert
+
+**When to revisit:** `npm view @wordpress/scripts time --json | tail -5` periodically. When a 32.2.x or 33.x lands, bump and re-audit.
 
 ---
 
