@@ -8,28 +8,37 @@ Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB table
 
 ## Repository Structure
 
+The repo root holds project tooling; the actual WordPress plugin lives inside `simple-wp-helpdesk/`.
+
 ```
-simple-wp-helpdesk/
-├── simple-wp-helpdesk.php              # Bootstrap: constants, requires, lifecycle hooks
-├── includes/
-│   ├── helpers.php                     # Defaults, statuses, anti-spam, rate limiting
-│   ├── class-installer.php             # Activation, deactivation, uninstall, upgrade, CPT
-│   ├── class-email.php                 # Template parsing, email sending, HTML wrapping
-│   ├── class-ticket.php                # File proxy, uploads, deletion, comment filters
-│   └── class-cron.php                  # Auto-close, retention (tickets + attachments)
-├── admin/
-│   ├── class-settings.php              # Settings page render + save handler
-│   ├── class-ticket-editor.php         # Meta boxes, save_post, conversation UI
-│   ├── class-ticket-list.php           # Columns, sorting, filters, admin styles
-│   ├── class-reporting.php             # Reporting AJAX endpoints (status, resolution, trend, first-response)
-│   └── class-reporting-ui.php          # Reports submenu page render + Chart.js enqueue
-├── frontend/
-│   ├── class-shortcode.php             # [submit_ticket] + [helpdesk_portal] shortcodes
-│   └── class-portal.php                # Client portal view
-├── vendor/plugin-update-checker/       # GitHub auto-updater library
-├── assets/ (CSS, JS)
-├── languages/ (.pot/.po/.mo)
-└── testing/                            # Test scripts and screenshots
+Simple-WP-Helpdesk/                     # repo root
+├── simple-wp-helpdesk/                 # the WP plugin directory (this is what gets zipped)
+│   ├── simple-wp-helpdesk.php          # Bootstrap: constants, requires, lifecycle hooks
+│   ├── readme.txt                      # WP.org readme (stable tag + changelog)
+│   ├── includes/
+│   │   ├── helpers.php                 # Defaults, statuses, anti-spam, rate limiting
+│   │   ├── class-installer.php         # Activation, deactivation, uninstall, upgrade, CPT
+│   │   ├── class-email.php             # Template parsing, email sending, HTML wrapping
+│   │   ├── class-ticket.php            # File proxy, uploads, deletion, comment filters
+│   │   └── class-cron.php              # Auto-close, retention (tickets + attachments)
+│   ├── admin/
+│   │   ├── class-settings.php          # Settings page render + save handler
+│   │   ├── class-ticket-editor.php     # Meta boxes, save_post, conversation UI
+│   │   ├── class-ticket-list.php       # Columns, sorting, filters, admin styles
+│   │   ├── class-reporting.php         # Reporting AJAX endpoints (status, resolution, trend, first-response)
+│   │   └── class-reporting-ui.php      # Reports submenu page render + Chart.js enqueue
+│   ├── frontend/
+│   │   ├── class-shortcode.php         # [submit_ticket] + [helpdesk_portal] shortcodes
+│   │   └── class-portal.php            # Client portal view
+│   ├── vendor/plugin-update-checker/   # GitHub auto-updater library (shipped with plugin)
+│   ├── assets/                         # CSS, JS
+│   └── languages/                      # .pot/.po/.mo
+├── docs/                               # internal + developer docs (not shipped)
+├── tests/                              # PHPUnit unit tests
+├── testing/                            # Playwright E2E + scripts
+├── docker/                             # docker-compose test stack
+├── composer.json / phpstan.neon        # dev tooling at repo root
+└── CHANGELOG.md                        # changelog (mirrored into readme.txt)
 ```
 
 Constants: `SWH_PLUGIN_DIR`, `SWH_PLUGIN_URL`, `SWH_PLUGIN_FILE` — use these instead of `__FILE__` in module files.

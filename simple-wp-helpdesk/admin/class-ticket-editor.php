@@ -342,7 +342,7 @@ function swh_conversation_meta_box_html( $post ) {
 			<h4 style="margin-top:0;"><label for="swh-tech-reply-text"><?php esc_html_e( 'Add a Public Reply', 'simple-wp-helpdesk' ); ?></label></h4>
 			<p style="font-size:12px;"><?php esc_html_e( 'This will be emailed to the client.', 'simple-wp-helpdesk' ); ?></p>
 			<?php
-			$swh_canned = get_option( 'swh_canned_responses', array() );
+			$swh_canned = swh_get_option( 'tools', 'canned_responses', array() );
 			if ( is_array( $swh_canned ) && ! empty( $swh_canned ) ) :
 				?>
 			<p style="margin-bottom:6px;">

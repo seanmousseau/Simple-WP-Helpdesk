@@ -507,7 +507,7 @@ function swh_render_portal_no_token() {
  */
 function swh_render_lookup_form() {
 	$defs        = swh_get_defaults();
-	$spam_method = get_option( 'swh_spam_method', 'none' );
+	$spam_method = swh_get_option( 'tools', 'spam_method', 'none' );
 
 	if ( isset( $_POST['swh_ticket_lookup'], $_POST['swh_lookup_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_lookup_nonce'] ) ? $_POST['swh_lookup_nonce'] : '' ) ), 'swh_ticket_lookup' ) ) {
 		if ( swh_is_rate_limited( 'lookup', 60 ) ) {
@@ -517,7 +517,7 @@ function swh_render_lookup_form() {
 		} else {
 			$lookup_email = isset( $_POST['swh_lookup_email'] ) && is_string( $_POST['swh_lookup_email'] ) ? sanitize_email( wp_unslash( $_POST['swh_lookup_email'] ) ) : '';
 			if ( $lookup_email ) {
-				$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+				$closed_status = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 				// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				$lookup_tickets = get_posts(
 					array(

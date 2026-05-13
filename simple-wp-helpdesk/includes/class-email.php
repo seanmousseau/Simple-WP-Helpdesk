@@ -94,7 +94,7 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	$subject     = swh_parse_template( swh_get_string_option( $subject_key, $subject_dfl ), $data );
 	$body        = swh_parse_template( swh_get_string_option( $body_key, $body_dfl ), $data );
 	$headers     = array();
-	$format      = get_option( 'swh_email_format', 'html' );
+	$format      = swh_get_option( 'email', 'email_format', 'html' );
 	if ( 'html' === $format ) {
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
 	}
@@ -340,8 +340,8 @@ function swh_handle_inbound_email( $request ) {
 
 	// Reopen ticket if resolved/closed.
 	$defs            = swh_get_defaults();
-	$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+	$closed_status   = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
+	$resolved_status = swh_get_option( 'general', 'resolved_status', $defs['swh_resolved_status'] );
 	$statuses        = swh_get_statuses();
 	$open_status     = ! empty( $statuses ) ? $statuses[0] : 'Open';
 	$current_status  = swh_get_string_meta( $ticket_id, '_ticket_status' );

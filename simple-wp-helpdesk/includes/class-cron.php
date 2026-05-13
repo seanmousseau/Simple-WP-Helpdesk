@@ -58,8 +58,8 @@ function swh_process_autoclose() {
 		return;
 	}
 	set_transient( $lock_key, 1, 5 * MINUTE_IN_SECONDS );
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
-	$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+	$resolved_status = swh_get_option( 'general', 'resolved_status', $defs['swh_resolved_status'] );
+	$closed_status   = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 	$threshold       = time() - ( $days * DAY_IN_SECONDS );
 
     // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query

@@ -121,6 +121,27 @@ function swh_get_defaults() {
 }
 
 /**
+ * Read a SWH setting.
+ *
+ * The $group argument is advisory in v3.7 — it captures the logical settings
+ * group at each call site so v4.0 (#356) can change the helper body without
+ * touching any caller. In v3.7 the body reads directly from top-level options.
+ *
+ * @since 3.7.0
+ * @param string $group   Logical group: 'general', 'email', 'portal',
+ *                        'notifications', 'tools', 'routing', 'integrations'.
+ *                        Ignored in v3.7; consumed by v4.0 schema split.
+ * @param string $key     Option key WITHOUT the 'swh_' prefix
+ *                        (e.g. 'assignment_rules' for the option 'swh_assignment_rules').
+ * @param mixed  $default Returned when the option is absent.
+ * @return mixed
+ */
+function swh_get_option( $group, $key, $default = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Signature locked for v4.0 #356; $default name preserved to match WP core `get_option()`.
+	unset( $group ); // Advisory in v3.7; consumed by v4.0 #356 schema split.
+	return get_option( 'swh_' . $key, $default );
+}
+
+/**
  * Returns all plugin option keys managed by defaults (excludes swh_db_version).
  *
  * @return string[] List of option key names.
@@ -243,7 +264,7 @@ function swh_get_client_ip() {
  * @return bool True if the submission is spam, false if it is legitimate.
  */
 function swh_check_antispam( $check_captcha = true ) {
-	$method = get_option( 'swh_spam_method', 'honeypot' );
+	$method = swh_get_option( 'tools', 'spam_method', 'honeypot' );
 	if ( 'honeypot' === $method && ! empty( $_POST['swh_website_url_hp'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		return true;
 	}
@@ -428,7 +449,7 @@ function swh_get_cc_emails( int $ticket_id ): array {
  * @return void
  */
 function swh_apply_assignment_rules( int $ticket_id ): void {
-	$rules_raw = get_option( 'swh_assignment_rules', array() );
+	$rules_raw = swh_get_option( 'routing', 'assignment_rules', array() );
 	$rules     = is_array( $rules_raw ) ? $rules_raw : array();
 	$assigned  = 0;
 
@@ -450,7 +471,7 @@ function swh_apply_assignment_rules( int $ticket_id ): void {
 	}
 
 	if ( ! $assigned ) {
-		$default  = get_option( 'swh_default_assignee' );
+		$default  = swh_get_option( 'routing', 'default_assignee' );
 		$assigned = is_scalar( $default ) ? (int) $default : 0;
 	}
 

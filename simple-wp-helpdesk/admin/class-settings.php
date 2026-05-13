@@ -445,7 +445,7 @@ function swh_render_settings_page() {
 					<tr><th scope="row"><?php esc_html_e( 'Default Assignee', 'simple-wp-helpdesk' ); ?></th>
 						<td><select name="swh_default_assignee"><option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
 						<?php foreach ( $techs as $t ) : ?>
-							<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( get_option( 'swh_default_assignee' ), $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
+							<option value="<?php echo esc_attr( $t->ID ); ?>" <?php selected( swh_get_option( 'routing', 'default_assignee' ), $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
 						<?php endforeach; ?></select></td>
 					</tr>
 					<tr><th scope="row"><?php esc_html_e( 'Fallback Alert Email', 'simple-wp-helpdesk' ); ?></th><td><input type="email" name="swh_fallback_email" value="<?php echo esc_attr( swh_get_string_option( 'swh_fallback_email' ) ); ?>" class="regular-text"></td></tr>
@@ -500,7 +500,7 @@ function swh_render_settings_page() {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Restrict Technicians', 'simple-wp-helpdesk' ); ?></th>
 					<td>
-						<label><input type="checkbox" name="swh_restrict_to_assigned" value="yes" <?php checked( get_option( 'swh_restrict_to_assigned', 'no' ), 'yes' ); ?>>
+						<label><input type="checkbox" name="swh_restrict_to_assigned" value="yes" <?php checked( swh_get_option( 'routing', 'restrict_to_assigned', 'no' ), 'yes' ); ?>>
 						<?php esc_html_e( 'Technicians can only view tickets assigned to them', 'simple-wp-helpdesk' ); ?></label>
 					</td>
 				</tr>
@@ -534,7 +534,7 @@ function swh_render_settings_page() {
 				<h2><?php esc_html_e( 'Auto-Assignment Rules', 'simple-wp-helpdesk' ); ?></h2>
 				<p class="description"><?php esc_html_e( 'When a new ticket is submitted with a matching category, it is automatically assigned to the specified technician. Rules are evaluated in order; the first match wins.', 'simple-wp-helpdesk' ); ?></p>
 				<?php
-				$assignment_rules = get_option( 'swh_assignment_rules', array() );
+				$assignment_rules = swh_get_option( 'routing', 'assignment_rules', array() );
 				$assignment_rules = is_array( $assignment_rules ) ? $assignment_rules : array();
 				$categories       = get_terms(
 					array(
@@ -684,7 +684,7 @@ function swh_render_settings_page() {
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Email Format', 'simple-wp-helpdesk' ); ?></th>
 						<td>
-							<?php $email_format = get_option( 'swh_email_format', 'html' ); ?>
+							<?php $email_format = swh_get_option( 'email', 'email_format', 'html' ); ?>
 							<select name="swh_email_format">
 								<option value="html" <?php selected( $email_format, 'html' ); ?>><?php esc_html_e( 'HTML (Recommended)', 'simple-wp-helpdesk' ); ?></option>
 								<option value="plain" <?php selected( $email_format, 'plain' ); ?>><?php esc_html_e( 'Plain Text', 'simple-wp-helpdesk' ); ?></option>
@@ -776,8 +776,8 @@ function swh_render_settings_page() {
 
 			<div id="tab-spam" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-spam" tabindex="0" style="display:none;">
 				<?php
-				$spam_method    = get_option( 'swh_spam_method', 'none' );
-				$recaptcha_type = get_option( 'swh_recaptcha_type', 'v2' );
+				$spam_method    = swh_get_option( 'tools', 'spam_method', 'none' );
+				$recaptcha_type = swh_get_option( 'tools', 'recaptcha_type', 'v2' );
 				$is_enterprise  = ( 'enterprise' === $recaptcha_type );
 				?>
 				<table class="form-table">
@@ -858,7 +858,7 @@ function swh_render_settings_page() {
 				<p class="description"><?php esc_html_e( 'Pre-written reply templates. Select one in the ticket editor to insert it into the reply field.', 'simple-wp-helpdesk' ); ?></p>
 				<div id="swh-canned-list">
 				<?php
-				$canned_responses = get_option( 'swh_canned_responses', array() );
+				$canned_responses = swh_get_option( 'tools', 'canned_responses', array() );
 				if ( ! is_array( $canned_responses ) ) {
 					$canned_responses = array();
 				}
@@ -891,7 +891,7 @@ function swh_render_settings_page() {
 				<p class="description"><?php esc_html_e( 'Pre-configured submission types that pre-fill the ticket description on the frontend form. Clients select a "Request Type" to load the matching template.', 'simple-wp-helpdesk' ); ?></p>
 				<div id="swh-tmpl-list">
 				<?php
-				$ticket_templates = get_option( 'swh_ticket_templates', array() );
+				$ticket_templates = swh_get_option( 'tools', 'ticket_templates', array() );
 				if ( ! is_array( $ticket_templates ) ) {
 					$ticket_templates = array();
 				}
@@ -988,7 +988,7 @@ function swh_render_settings_page() {
 						<th scope="row"><?php esc_html_e( 'Uninstallation Behavior', 'simple-wp-helpdesk' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="swh_delete_on_uninstall" value="yes" <?php checked( get_option( 'swh_delete_on_uninstall' ), 'yes' ); ?>>
+								<input type="checkbox" name="swh_delete_on_uninstall" value="yes" <?php checked( swh_get_option( 'tools', 'delete_on_uninstall' ), 'yes' ); ?>>
 								<?php esc_html_e( 'Delete all Plugin Data when uninstalled', 'simple-wp-helpdesk' ); ?>
 							</label>
 							<p class="description"><?php esc_html_e( 'If checked, completely deleting this plugin from the WP Plugins screen will wipe all tickets, files, and settings. Leave unchecked to safely preserve data.', 'simple-wp-helpdesk' ); ?></p>

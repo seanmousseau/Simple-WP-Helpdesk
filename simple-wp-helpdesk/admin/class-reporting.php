@@ -96,8 +96,8 @@ function swh_report_status_breakdown() {
 function swh_report_avg_resolution_time() {
 	global $wpdb;
 	$defs            = swh_get_defaults();
-	$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+	$closed_status   = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
+	$resolved_status = swh_get_option( 'general', 'resolved_status', $defs['swh_resolved_status'] );
 	$since           = gmdate( 'Y-m-d H:i:s', time() - ( 30 * DAY_IN_SECONDS ) );
 
 	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -147,7 +147,7 @@ function swh_report_avg_resolution_time() {
  */
 function swh_report_weekly_trend() {
 	$defs          = swh_get_defaults();
-	$closed_status = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+	$closed_status = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 	$result        = array();
 	for ( $i = 7; $i >= 0; $i-- ) {
 		$week_start = gmdate( 'Y-m-d', strtotime( '-' . $i . ' weeks Monday this week' ) );
