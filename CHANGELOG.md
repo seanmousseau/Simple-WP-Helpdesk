@@ -8,6 +8,15 @@ starting from the next release after 1.8.
 
 ---
 
+## [Unreleased]
+
+### Internal
+
+- Established `docs/internal/` as the single-source-of-truth doc set for developers and AI agents: README index, design-document (with 17 numbered load-bearing invariants), coding-guide, testing-guide, security-model, api-contract, data-dictionary, config-reference, design-guide. Every doc carries an Update protocol so the set stays current as part of normal PR flow.
+- Trimmed `CLAUDE.md` from 398 to 133 lines — now a routing index + hot-invariants list + dev environment reference. Sprawling sections (Common Pitfalls, full test taxonomy, security conventions, release process) replaced with pointers to the corresponding internal doc.
+
+---
+
 ## [3.7.0] — 2026-05-13
 
 Theme: **v4 Foundations.** Non-breaking groundwork that de-risks v4.0 / v4.1. No PHP/WP minimum bumps, no schema changes, no UX changes — primitives that v4.x features will build on, plus a runway for integrators to adopt new APIs before v4.0 lands. Closes milestone [#22](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/22) (7/7).
@@ -591,7 +600,9 @@ Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — 
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.7.0...HEAD
+[3.7.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.6.0...v3.7.0
+[3.6.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.1...v3.5.0
 [3.4.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.3.0...v3.4.0
