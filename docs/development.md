@@ -110,6 +110,23 @@ When adding a new option:
 
 ---
 
+## PSR-4 namespace convention (v3.7.0+)
+
+New plugin classes use the `SWH\` namespace, mapped to `simple-wp-helpdesk/src/`. Example: `SWH\Email\Mailer` → `simple-wp-helpdesk/src/Email/Mailer.php`.
+
+This is additive — existing `class-foo.php` files loaded via `require_once` continue to work unchanged. v3.7 migrates one class as proof of concept (`SWH\Email\Mailer`); subsequent classes migrate organically across v4.x.
+
+The runtime autoloader is shipped inside the plugin at `simple-wp-helpdesk/vendor/autoload.php`, generated from `simple-wp-helpdesk/composer.json`. The repo-root `composer.json` declares the same PSR-4 mapping so PHPUnit and PHPStan resolve the namespace from the dev vendor too.
+
+After adding or moving a namespaced class, regenerate both autoloaders:
+
+```bash
+cd simple-wp-helpdesk && composer dump-autoload --no-dev
+cd .. && composer dump-autoload
+```
+
+Commit the regenerated `simple-wp-helpdesk/vendor/composer/autoload_*.php` files.
+
 ## Adding Features
 
 ### New Option

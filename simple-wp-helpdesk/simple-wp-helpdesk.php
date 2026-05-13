@@ -26,6 +26,11 @@ define( 'SWH_ICON_1X', SWH_PLUGIN_URL . 'assets/icon-128x128.png' );
 define( 'SWH_ICON_2X', SWH_PLUGIN_URL . 'assets/icon-256x256.png' );
 define( 'SWH_MENU_ICON', SWH_PLUGIN_URL . 'assets/favicon-32.png' );
 
+// PSR-4 autoload (v3.7.0+). Additive — existing require_once calls below still load.
+if ( file_exists( SWH_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
+	require_once SWH_PLUGIN_DIR . 'vendor/autoload.php';
+}
+
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
 require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
