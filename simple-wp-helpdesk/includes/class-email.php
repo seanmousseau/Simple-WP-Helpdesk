@@ -337,6 +337,7 @@ function swh_handle_inbound_email( $request ) {
 	update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
 	update_post_meta( $ticket_id, '_swh_unread', '1' );
 	delete_transient( 'swh_unread_count' );
+	swh_fire_ticket_replied( (int) $ticket_id, $comment_id, 0 );
 
 	// Reopen ticket if resolved/closed.
 	$defs            = swh_get_defaults();
@@ -346,7 +347,7 @@ function swh_handle_inbound_email( $request ) {
 	$open_status     = ! empty( $statuses ) ? $statuses[0] : 'Open';
 	$current_status  = swh_get_string_meta( $ticket_id, '_ticket_status' );
 	if ( $current_status === $closed_status || $current_status === $resolved_status ) {
-		update_post_meta( $ticket_id, '_ticket_status', $open_status );
+		swh_set_ticket_status( (int) $ticket_id, (string) $open_status );
 	}
 
 	// Notify admin.

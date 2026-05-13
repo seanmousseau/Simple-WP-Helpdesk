@@ -438,7 +438,7 @@ function swh_handle_bulk_status( $redirect_to, $action, $post_ids ) {
 			continue;
 		}
 		$old_status = get_post_meta( (int) $post_id, '_ticket_status', true );
-		update_post_meta( (int) $post_id, '_ticket_status', $status );
+		swh_set_ticket_status( (int) $post_id, (string) $status );
 		if ( $resolved_status === $status && $old_status !== $status ) {
 			update_post_meta( (int) $post_id, '_resolved_timestamp', time() );
 		} elseif ( $resolved_status === $old_status && $resolved_status !== $status ) {

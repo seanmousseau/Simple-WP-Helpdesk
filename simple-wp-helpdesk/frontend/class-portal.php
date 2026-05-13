@@ -81,7 +81,7 @@ function swh_render_client_portal() {
 	}
 
 	if ( $is_post_action && isset( $_POST['swh_user_close_ticket_submit'], $_POST['swh_close_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_close_nonce'] ) ? $_POST['swh_close_nonce'] : '' ) ), 'swh_user_close' ) ) {
-		update_post_meta( $ticket_id, '_ticket_status', $closed_status );
+		swh_set_ticket_status( $ticket_id, $closed_status );
 		delete_post_meta( $ticket_id, '_resolved_timestamp' );
 		$comment_id = wp_insert_comment(
 			array(
@@ -96,6 +96,7 @@ function swh_render_client_portal() {
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '1' );
 		}
+		swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 		$admin_email = swh_get_admin_email( $ticket_id );
 		swh_send_email( $admin_email, 'swh_em_admin_closed_sub', 'swh_em_admin_closed_body', $data );
 		swh_send_email( $data['email'], 'swh_em_user_closed_sub', 'swh_em_user_closed_body', $data );
@@ -126,7 +127,7 @@ function swh_render_client_portal() {
 			// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
 			$attach_urls = swh_handle_multiple_uploads( $reopen_files, $reopen_orignames, $reopen_skipped );
 			$has_files   = ! empty( $attach_urls ); // Derive from actual upload result, not raw file names.
-			update_post_meta( $ticket_id, '_ticket_status', $reopened_status );
+			swh_set_ticket_status( $ticket_id, $reopened_status );
 			delete_post_meta( $ticket_id, '_resolved_timestamp' );
 			if ( $reply_text ) {
 				$comment_content = __( 'TICKET RE-OPENED:', 'simple-wp-helpdesk' ) . " \n" . $reply_text;
@@ -145,6 +146,7 @@ function swh_render_client_portal() {
 					'comment_type'         => 'helpdesk_reply',
 				)
 			);
+			swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 			if ( $comment_id ) {
 				update_comment_meta( $comment_id, '_is_user_reply', '1' );
 				if ( ! empty( $attach_urls ) ) {
@@ -192,7 +194,7 @@ function swh_render_client_portal() {
 			if ( $reply_text || $has_files ) {
 				if ( $resolved_status === $data['status'] ) {
 					$data['status'] = $reopened_status;
-					update_post_meta( $ticket_id, '_ticket_status', $reopened_status );
+					swh_set_ticket_status( $ticket_id, $reopened_status );
 					delete_post_meta( $ticket_id, '_resolved_timestamp' );
 				}
 				$comment_content = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
@@ -206,6 +208,7 @@ function swh_render_client_portal() {
 						'comment_type'         => 'helpdesk_reply',
 					)
 				);
+				swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 				if ( $comment_id ) {
 					update_comment_meta( $comment_id, '_is_user_reply', '1' );
 					if ( ! empty( $attach_urls ) ) {

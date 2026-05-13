@@ -440,9 +440,12 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		}
 	}
 
-	update_post_meta( $post_id, '_ticket_status', $new_status );
+	swh_set_ticket_status( $post_id, $new_status );
 	update_post_meta( $post_id, '_ticket_priority', $new_priority );
 	update_post_meta( $post_id, '_ticket_assigned_to', $assigned_to ? $assigned_to : '' );
+	if ( $assigned_to !== $old_assigned_to ) {
+		do_action( 'swh_ticket_assigned', $post_id, (int) $old_assigned_to, (int) $assigned_to );
+	}
 
 	// When ticket is reassigned, clear the post lock and suppress lock reads for
 	// 3 minutes. A simple delete_post_meta is not enough because the previous
@@ -583,6 +586,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
 		}
+		swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
 	}
 
 	$just_replied = false;
@@ -610,6 +614,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '0' );
 		}
+		swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
 
 		$tech_orignames = null;
 		$tech_skipped   = 0;
