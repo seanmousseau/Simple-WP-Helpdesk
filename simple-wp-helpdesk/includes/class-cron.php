@@ -58,8 +58,8 @@ function swh_process_autoclose() {
 		return;
 	}
 	set_transient( $lock_key, 1, 5 * MINUTE_IN_SECONDS );
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
-	$closed_status   = get_option( 'swh_closed_status', $defs['swh_closed_status'] );
+	$resolved_status = swh_get_option( 'general', 'resolved_status', $defs['swh_resolved_status'] );
+	$closed_status   = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 	$threshold       = time() - ( $days * DAY_IN_SECONDS );
 
     // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -86,7 +86,7 @@ function swh_process_autoclose() {
 		update_meta_cache( 'post', wp_list_pluck( $tickets, 'ID' ) );
 	}
 	foreach ( $tickets as $ticket ) {
-		update_post_meta( $ticket->ID, '_ticket_status', $closed_status );
+		swh_set_ticket_status( (int) $ticket->ID, is_scalar( $closed_status ) ? (string) $closed_status : 'Closed' );
 		$comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID'  => $ticket->ID,
@@ -100,6 +100,7 @@ function swh_process_autoclose() {
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
 		}
+		swh_fire_ticket_replied( (int) $ticket->ID, $comment_id, 0 );
 
 		$ticket_email = swh_get_string_meta( $ticket->ID, '_ticket_email' );
 		$ticket_name  = swh_get_string_meta( $ticket->ID, '_ticket_name' );
@@ -195,6 +196,7 @@ function swh_process_retention_attachments() {
 			if ( $comment_id ) {
 				update_comment_meta( $comment_id, '_is_internal_note', '1' );
 			}
+			swh_fire_ticket_replied( (int) $ticket->ID, $comment_id, 0 );
 		}
 		// Handle legacy single-URL attachment format.
 		$legacy_url = swh_get_string_meta( $ticket->ID, '_ticket_attachment_url' );
@@ -390,6 +392,15 @@ function swh_process_sla_check() {
 				update_post_meta( $ticket->ID, '_ticket_sla_status', 'breach' );
 				$newly_breached[] = $ticket;
 				++$breach_count;
+				$minutes_over = (int) floor( ( $breach_time - $post_date_ts ) / MINUTE_IN_SECONDS );
+				/**
+				 * Fires the first time a ticket transitions to SLA breach state.
+				 *
+				 * @since 3.7.0
+				 * @param int $ticket_id    Ticket post ID.
+				 * @param int $minutes_over How many minutes the ticket has been overdue.
+				 */
+				do_action( 'swh_sla_breached', (int) $ticket->ID, $minutes_over );
 			}
 		} elseif ( $warn_time > 0 && $post_date_ts <= $warn_time && 'warn' !== $current_level ) {
 			update_post_meta( $ticket->ID, '_ticket_sla_status', 'warn' );

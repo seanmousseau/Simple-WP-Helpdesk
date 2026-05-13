@@ -1,9 +1,18 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help lint phpcs phpstan phpunit semgrep test test-docker e2e e2e-docker coverage test-all
+.PHONY: help lint phpcs phpstan phpunit semgrep test test-docker e2e e2e-docker coverage test-all js-build bench
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+js-build: ## Build JS assets via @wordpress/scripts (writes assets/dist/)
+	@echo "→ Building JS assets..."
+	@if [ ! -d node_modules ]; then \
+	  echo "  installing npm deps (one-time)..."; \
+	  npm ci --silent || npm install --silent; \
+	fi
+	@npm run build
+	@echo "✓ JS build complete"
 
 lint: ## PHP syntax check on all plugin files
 	@echo "→ PHP lint..."
@@ -44,7 +53,7 @@ e2e: ## Playwright E2E tests (requires WP environment — set WP_MODE=docker or 
 	@echo "→ Playwright E2E..."
 	@cd testing && source .venv/bin/activate && pytest scripts/test_helpdesk_pw.py -v
 
-e2e-docker: ## Full E2E in Docker — spin up stack, run suite, tear down
+e2e-docker: js-build ## Full E2E in Docker — spin up stack, run suite, tear down
 	@trap 'docker compose -f $(CURDIR)/docker-compose.test.yml down -v' EXIT; \
 	 echo "→ Starting Docker stack..."; \
 	 docker compose -f $(CURDIR)/docker-compose.test.yml up -d db wordpress wpcli mailhog; \
@@ -65,3 +74,6 @@ coverage: ## Generate PHPUnit coverage report (requires pcov or xdebug; outputs 
 	@echo "✓ Coverage report written to coverage.xml"
 
 test-all: test e2e ## Full gate + E2E
+
+bench: ## Run perf baseline against the Docker stack (override count with COUNT=500)
+	@bash testing/scripts/bench.sh $${COUNT:-100}

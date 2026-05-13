@@ -419,6 +419,14 @@ function swh_submit_csat_ajax() {
 	}
 
 	update_post_meta( $ticket_id, '_ticket_csat', $rating );
+	/**
+	 * Fires after a client submits a CSAT satisfaction rating for a closed ticket.
+	 *
+	 * @since 3.7.0
+	 * @param int $ticket_id Ticket post ID.
+	 * @param int $rating    Submitted rating (1–5).
+	 */
+	do_action( 'swh_csat_submitted', (int) $ticket_id, (int) $rating );
 	wp_send_json_success();
 }
 

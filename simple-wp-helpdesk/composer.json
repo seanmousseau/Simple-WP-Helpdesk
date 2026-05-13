@@ -1,0 +1,11 @@
+{
+    "name": "seanmousseau/simple-wp-helpdesk-plugin",
+    "description": "Runtime composer file for the WP plugin; defines PSR-4 autoload only.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "SWH\\": "src/"
+        }
+    }
+}

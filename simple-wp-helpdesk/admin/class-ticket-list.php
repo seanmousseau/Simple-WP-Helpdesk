@@ -295,7 +295,7 @@ add_action( 'load-post.php', 'swh_restrict_ticket_edit' );
  * @return void
  */
 function swh_restrict_ticket_edit() {
-	if ( 'yes' !== get_option( 'swh_restrict_to_assigned', 'no' ) ) {
+	if ( 'yes' !== swh_get_option( 'routing', 'restrict_to_assigned', 'no' ) ) {
 		return;
 	}
 	$user = wp_get_current_user();
@@ -431,14 +431,14 @@ function swh_handle_bulk_status( $redirect_to, $action, $post_ids ) {
 		return $redirect_to;
 	}
 	$defs            = swh_get_defaults();
-	$resolved_status = get_option( 'swh_resolved_status', $defs['swh_resolved_status'] );
+	$resolved_status = swh_get_option( 'general', 'resolved_status', $defs['swh_resolved_status'] );
 	$count           = 0;
 	foreach ( $post_ids as $post_id ) {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			continue;
 		}
 		$old_status = get_post_meta( (int) $post_id, '_ticket_status', true );
-		update_post_meta( (int) $post_id, '_ticket_status', $status );
+		swh_set_ticket_status( (int) $post_id, (string) $status );
 		if ( $resolved_status === $status && $old_status !== $status ) {
 			update_post_meta( (int) $post_id, '_resolved_timestamp', time() );
 		} elseif ( $resolved_status === $old_status && $resolved_status !== $status ) {

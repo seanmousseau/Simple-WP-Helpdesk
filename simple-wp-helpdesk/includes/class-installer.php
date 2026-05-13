@@ -88,7 +88,8 @@ function swh_run_upgrade_routine() {
 	// One-time migration: set comment_type on ALL comments attached to ticket posts.
 	// Uses a fresh flag name (v2) so previous broken migration flags don't block it.
 	// No WHERE on comment_type — catches NULL, empty, 'comment', or any other value.
-	if ( ! get_option( 'swh_comment_type_v2' ) ) {
+	// Group 'tools' — installer/migration operational flag, catch-all for admin ops.
+	if ( ! swh_get_option( 'tools', 'comment_type_v2' ) ) {
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare(
@@ -160,7 +161,8 @@ add_action( 'admin_init', 'swh_ensure_technician_caps' );
  * @return void
  */
 function swh_ensure_technician_caps() {
-	if ( get_option( 'swh_tech_caps_v2' ) ) {
+	// Group 'tools' — installer/migration operational flag, catch-all for admin ops.
+	if ( swh_get_option( 'tools', 'tech_caps_v2' ) ) {
 		return;
 	}
 	$tech = get_role( 'technician' );
@@ -181,7 +183,7 @@ function swh_ensure_technician_caps() {
  * @return void
  */
 function swh_uninstall() {
-	if ( 'yes' !== get_option( 'swh_delete_on_uninstall' ) ) {
+	if ( 'yes' !== swh_get_option( 'tools', 'delete_on_uninstall' ) ) {
 		return;
 	}
 	// Delete all tickets and their files.

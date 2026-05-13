@@ -12,59 +12,13 @@
 /* global swhAdmin */
 
 /**
- * Displays a transient toast notification in the bottom-right corner.
- *
- * @param {string} message         - Text to display.
- * @param {'success'|'error'|'info'} [type='success'] - Visual variant.
- * @param {number} [duration=4000] - Auto-dismiss delay in milliseconds.
+ * Toast notification renderer (`swhToast()`) was extracted to the
+ * `@wordpress/scripts` build in v3.7.0 (#390). It now lives at
+ * `assets/src/toast/index.js` and is built to
+ * `assets/dist/toast/index.js`, then enqueued as the `swh-toast` handle
+ * before this script. It exposes `window.swhToast` with the same
+ * signature, so the call site below works unchanged.
  */
-function swhToast( message, type, duration ) {
-	var allowed = [ 'success', 'error', 'info' ];
-	type     = ( allowed.indexOf( type ) !== -1 ) ? type : 'success';
-	duration = duration || 4000;
-
-	var dismissLabel = ( typeof swhAdmin !== 'undefined' && swhAdmin.i18n && swhAdmin.i18n.dismissNotification )
-		? swhAdmin.i18n.dismissNotification
-		: 'Dismiss';
-
-	var toast = document.createElement( 'div' );
-	toast.className = 'swh-toast swh-toast--' + type;
-	toast.setAttribute( 'role', 'status' );
-	toast.setAttribute( 'aria-live', 'polite' );
-	toast.setAttribute( 'aria-atomic', 'true' );
-
-	var msg = document.createElement( 'span' );
-	msg.className   = 'swh-toast__message';
-	msg.textContent = message;
-
-	var btn = document.createElement( 'button' );
-	btn.className   = 'swh-toast__dismiss';
-	btn.type        = 'button';
-	btn.setAttribute( 'aria-label', dismissLabel );
-	btn.textContent = '×';
-
-	toast.appendChild( msg );
-	toast.appendChild( btn );
-	document.body.appendChild( toast );
-
-	var timer;
-
-	function dismiss() {
-		clearTimeout( timer );
-		toast.classList.remove( 'swh-toast--visible' );
-		toast.addEventListener( 'transitionend', function () { toast.remove(); }, { once: true } );
-	}
-
-	btn.addEventListener( 'click', dismiss );
-
-	requestAnimationFrame( function () {
-		requestAnimationFrame( function () {
-			toast.classList.add( 'swh-toast--visible' );
-		} );
-	} );
-
-	timer = setTimeout( dismiss, duration );
-}
 
 document.addEventListener( 'DOMContentLoaded', function () {
 	const tabs         = document.querySelectorAll( '[role="tab"]' );
@@ -107,7 +61,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		var savedMsg = ( typeof swhAdmin !== 'undefined' && swhAdmin.i18n && swhAdmin.i18n.settingsSaved )
 			? swhAdmin.i18n.settingsSaved
 			: 'Settings saved.';
-		swhToast( savedMsg, 'success' );
+		window.swhToast( savedMsg, 'success' );
 		var cleanSearch = window.location.search
 			.replace( /([?&])swh_notice=saved(&|$)/, function ( _m, pre, suf ) { return suf ? pre : ''; } )
 			.replace( /^&/, '?' );

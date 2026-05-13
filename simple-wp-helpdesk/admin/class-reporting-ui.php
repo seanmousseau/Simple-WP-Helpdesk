@@ -49,7 +49,8 @@ function swh_enqueue_reporting_assets( $hook ) {
 	wp_enqueue_style( 'swh-shared', SWH_PLUGIN_URL . 'assets/swh-shared.css', array(), SWH_VERSION );
 	wp_enqueue_style( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.css', array( 'swh-shared' ), SWH_VERSION );
 	// Shared admin JS: provides window.swhAnnounce() and the .swh-skip-link click handler (#341, #344).
-	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
+	swh_enqueue_toast_script();
+	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array( 'swh-toast' ), SWH_VERSION, true );
 	wp_enqueue_script(
 		'swh-chartjs',
 		'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',

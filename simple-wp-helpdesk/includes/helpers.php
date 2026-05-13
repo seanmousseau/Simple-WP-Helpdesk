@@ -121,6 +121,136 @@ function swh_get_defaults() {
 }
 
 /**
+ * Read a SWH setting.
+ *
+ * The $group argument is advisory in v3.7 — it captures the logical settings
+ * group at each call site so v4.0 (#356) can change the helper body without
+ * touching any caller. In v3.7 the body reads directly from top-level options.
+ *
+ * @since 3.7.0
+ * @param string $group   Logical group: 'general', 'email', 'portal',
+ *                        'notifications', 'tools', 'routing', 'integrations'.
+ *                        Ignored in v3.7; consumed by v4.0 schema split.
+ * @param string $key     Option key WITHOUT the 'swh_' prefix
+ *                        (e.g. 'assignment_rules' for the option 'swh_assignment_rules').
+ * @param mixed  $default Returned when the option is absent.
+ * @return mixed
+ */
+function swh_get_option( $group, $key, $default = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Signature locked for v4.0 #356; $default name preserved to match WP core `get_option()`.
+	unset( $group ); // Advisory in v3.7; consumed by v4.0 #356 schema split.
+	return get_option( 'swh_' . $key, $default );
+}
+
+/**
+ * Updates a ticket's status meta and fires the appropriate lifecycle actions.
+ *
+ * Wraps `update_post_meta( $ticket_id, '_ticket_status', $new_status )` and
+ * dispatches the v3.7.0 status-transition actions:
+ *
+ * - `swh_ticket_status_changed` — fires on any transition.
+ * - `swh_ticket_closed`         — fires on a non-closed → closed transition.
+ * - `swh_ticket_reopened`       — fires on a closed → non-closed transition.
+ *
+ * Does nothing when `$new_status` matches the existing value. Initial-create
+ * sites (no prior `_ticket_status` meta) should call `update_post_meta()`
+ * directly so the `swh_ticket_created` action remains the single source of
+ * truth for ticket creation.
+ *
+ * @since 3.7.0
+ * @param int    $ticket_id  Ticket post ID.
+ * @param string $new_status New status label.
+ * @return void
+ */
+function swh_set_ticket_status( int $ticket_id, string $new_status ): void {
+	$old_status = swh_get_string_meta( $ticket_id, '_ticket_status' );
+	if ( $old_status === $new_status ) {
+		return;
+	}
+	update_post_meta( $ticket_id, '_ticket_status', $new_status );
+
+	// Skip the change action when no prior status existed (initial create).
+	if ( '' === $old_status ) {
+		return;
+	}
+
+	/**
+	 * Fires when a ticket's status changes.
+	 *
+	 * @since 3.7.0
+	 * @param int    $ticket_id  Ticket post ID.
+	 * @param string $old_status Previous status label.
+	 * @param string $new_status New status label.
+	 */
+	do_action( 'swh_ticket_status_changed', $ticket_id, $old_status, $new_status );
+
+	$defs            = swh_get_defaults();
+	$closed_default  = is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : 'Closed';
+	$closed_status   = swh_get_option( 'general', 'closed_status', $closed_default );
+	$closed_statuses = is_array( $closed_status ) ? $closed_status : array( is_scalar( $closed_status ) ? (string) $closed_status : 'Closed' );
+
+	$was_closed = in_array( $old_status, $closed_statuses, true );
+	$is_closed  = in_array( $new_status, $closed_statuses, true );
+
+	if ( ! $was_closed && $is_closed ) {
+		/**
+		 * Fires when a ticket transitions from a non-closed status to a closed status.
+		 *
+		 * @since 3.7.0
+		 * @param int    $ticket_id       Ticket post ID.
+		 * @param string $previous_status Status the ticket transitioned from.
+		 */
+		do_action( 'swh_ticket_closed', $ticket_id, $old_status );
+	} elseif ( $was_closed && ! $is_closed ) {
+		/**
+		 * Fires when a ticket transitions from a closed status to a non-closed status.
+		 *
+		 * @since 3.7.0
+		 * @param int    $ticket_id       Ticket post ID.
+		 * @param string $previous_status Status the ticket transitioned from.
+		 */
+		do_action( 'swh_ticket_reopened', $ticket_id, $old_status );
+	}
+}
+
+/**
+ * Fires `swh_ticket_replied` after a helpdesk reply comment is inserted.
+ *
+ * Centralises the staff-detection logic: an author is treated as a staff
+ * reply when the comment user has the `edit_post` capability on the ticket.
+ * System-generated comments (cron auto-close, retention notes, merge
+ * breadcrumbs, portal client replies) report `false`.
+ *
+ * @since 3.7.0
+ * @param int            $ticket_id  Ticket post ID.
+ * @param int|false|null $comment_id Comment ID returned by `wp_insert_comment()`.
+ *                                   A falsy value (0, false, or null) short-circuits the action.
+ * @param int            $author_id  User ID of the comment author. Use 0 for
+ *                                   system-generated comments or guests.
+ * @return void
+ */
+function swh_fire_ticket_replied( int $ticket_id, $comment_id, int $author_id = 0 ): void {
+	if ( ! $comment_id ) {
+		return;
+	}
+	$is_staff_reply = false;
+	if ( $author_id > 0 ) {
+		$is_staff_reply = (bool) user_can( $author_id, 'edit_post', $ticket_id );
+	}
+	/**
+	 * Fires after a reply comment is inserted on a ticket.
+	 *
+	 * @since 3.7.0
+	 * @param int  $ticket_id      Ticket post ID.
+	 * @param int  $comment_id     The inserted comment ID.
+	 * @param bool $is_staff_reply True when the comment author has the
+	 *                             `edit_post` capability on the ticket
+	 *                             (admins, technicians); false for client
+	 *                             replies and system-generated comments.
+	 */
+	do_action( 'swh_ticket_replied', $ticket_id, (int) $comment_id, $is_staff_reply );
+}
+
+/**
  * Returns all plugin option keys managed by defaults (excludes swh_db_version).
  *
  * @return string[] List of option key names.
@@ -243,7 +373,7 @@ function swh_get_client_ip() {
  * @return bool True if the submission is spam, false if it is legitimate.
  */
 function swh_check_antispam( $check_captcha = true ) {
-	$method = get_option( 'swh_spam_method', 'honeypot' );
+	$method = swh_get_option( 'tools', 'spam_method', 'honeypot' );
 	if ( 'honeypot' === $method && ! empty( $_POST['swh_website_url_hp'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		return true;
 	}
@@ -428,7 +558,7 @@ function swh_get_cc_emails( int $ticket_id ): array {
  * @return void
  */
 function swh_apply_assignment_rules( int $ticket_id ): void {
-	$rules_raw = get_option( 'swh_assignment_rules', array() );
+	$rules_raw = swh_get_option( 'routing', 'assignment_rules', array() );
 	$rules     = is_array( $rules_raw ) ? $rules_raw : array();
 	$assigned  = 0;
 
@@ -450,12 +580,24 @@ function swh_apply_assignment_rules( int $ticket_id ): void {
 	}
 
 	if ( ! $assigned ) {
-		$default  = get_option( 'swh_default_assignee' );
+		$default  = swh_get_option( 'routing', 'default_assignee' );
 		$assigned = is_scalar( $default ) ? (int) $default : 0;
 	}
 
 	if ( $assigned > 0 ) {
+		$old_assigned = swh_get_int_meta( $ticket_id, '_ticket_assigned_to' );
 		update_post_meta( $ticket_id, '_ticket_assigned_to', $assigned );
+		if ( $old_assigned !== $assigned ) {
+			/**
+			 * Fires when a ticket's assignee changes.
+			 *
+			 * @since 3.7.0
+			 * @param int $ticket_id   Ticket post ID.
+			 * @param int $old_user_id Previous assignee user ID (0 if unassigned).
+			 * @param int $new_user_id New assignee user ID (0 if unassigned).
+			 */
+			do_action( 'swh_ticket_assigned', $ticket_id, $old_assigned, $assigned );
+		}
 	}
 }
 
@@ -518,9 +660,9 @@ function swh_merge_tickets( int $source_id, int $target_id ): bool {
 	}
 
 	// Add system notes.
-	$source_uid = swh_get_string_meta( $source_id, '_ticket_uid' );
-	$target_uid = swh_get_string_meta( $target_id, '_ticket_uid' );
-	wp_insert_comment(
+	$source_uid        = swh_get_string_meta( $source_id, '_ticket_uid' );
+	$target_uid        = swh_get_string_meta( $target_id, '_ticket_uid' );
+	$target_comment_id = wp_insert_comment(
 		array(
 			'comment_post_ID'  => $target_id,
 			'comment_type'     => 'helpdesk_reply',
@@ -529,7 +671,8 @@ function swh_merge_tickets( int $source_id, int $target_id ): bool {
 			'comment_meta'     => array( '_is_internal_note' => '1' ),
 		)
 	);
-	wp_insert_comment(
+	swh_fire_ticket_replied( $target_id, $target_comment_id, 0 );
+	$source_comment_id = wp_insert_comment(
 		array(
 			'comment_post_ID'  => $source_id,
 			'comment_type'     => 'helpdesk_reply',
@@ -538,11 +681,12 @@ function swh_merge_tickets( int $source_id, int $target_id ): bool {
 			'comment_meta'     => array( '_is_internal_note' => '1' ),
 		)
 	);
+	swh_fire_ticket_replied( $source_id, $source_comment_id, 0 );
 
 	// Close the source ticket.
 	$defs          = swh_get_defaults();
 	$closed_status = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : 'Closed' );
-	update_post_meta( $source_id, '_ticket_status', $closed_status );
+	swh_set_ticket_status( $source_id, $closed_status );
 
 	// Notify source ticket client.
 	$client_email = swh_get_string_meta( $source_id, '_ticket_email' );
@@ -703,5 +847,46 @@ if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 			$scheme = 'fresh';
 		}
 		return in_array( $scheme, $dark_schemes, true );
+	}
+}
+
+if ( ! function_exists( 'swh_enqueue_toast_script' ) ) {
+	/**
+	 * Enqueue the built `swh-toast` script (built via @wordpress/scripts to
+	 * `assets/dist/toast.js`) which exposes `window.swhToast()`.
+	 *
+	 * Reads the generated `toast.asset.php` for dependencies + hashed version
+	 * so cache-busting and dep-management are automatic.
+	 *
+	 * @since 3.7.0
+	 * @return void
+	 */
+	function swh_enqueue_toast_script() {
+		// Build the asset manifest path through a variable so static analysers
+		// (PHPStan) do not attempt to resolve the generated file at lint time.
+		$asset_rel  = 'assets/dist/toast.asset.php';
+		$asset_file = SWH_PLUGIN_DIR . $asset_rel;
+		$deps       = array();
+		$version    = SWH_VERSION;
+		if ( file_exists( $asset_file ) ) {
+			// @phpstan-ignore-next-line include.fileNotFound
+			$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+			if ( is_array( $asset ) ) {
+				if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+					// Keep only string dependency handles to satisfy wp_enqueue_script's signature.
+					$deps = array_values( array_filter( $asset['dependencies'], 'is_string' ) );
+				}
+				if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
+					$version = $asset['version'];
+				}
+			}
+		}
+		wp_enqueue_script(
+			'swh-toast',
+			SWH_PLUGIN_URL . 'assets/dist/toast.js',
+			$deps,
+			$version,
+			true
+		);
 	}
 }

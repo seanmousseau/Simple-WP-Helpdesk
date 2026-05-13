@@ -9,6 +9,11 @@
     <exclude-pattern>simple-wp-helpdesk/vendor/*</exclude-pattern>
     <exclude-pattern>simple-wp-helpdesk/assets/*</exclude-pattern>
 
+    <!-- PSR-4 namespaced classes (v3.7.0+) use StudlyCase filenames per PSR-4. -->
+    <rule ref="WordPress.Files.FileName">
+        <exclude-pattern>simple-wp-helpdesk/src/*</exclude-pattern>
+    </rule>
+
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
     <arg value="sp"/>

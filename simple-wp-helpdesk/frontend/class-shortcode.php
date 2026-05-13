@@ -55,7 +55,7 @@ function swh_ticket_frontend( $atts = array() ) {
 	 */
 	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
 	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
-	$tmpl_raw     = get_option( 'swh_ticket_templates', array() );
+	$tmpl_raw     = swh_get_option( 'tools', 'ticket_templates', array() );
 	$tmpl_raw     = is_array( $tmpl_raw ) ? $tmpl_raw : array();
 	$tmpl_js      = array();
 	foreach ( $tmpl_raw as $tmpl ) {
@@ -127,7 +127,7 @@ function swh_render_submission_form( $atts = array() ) {
 	$show_lookup    = ( ! isset( $atts['show_lookup'] ) || 'no' !== strtolower( $atts['show_lookup'] ) );
 	$show_category  = ( isset( $atts['show_category'] ) && 'yes' === strtolower( $atts['show_category'] ) );
 	$spam_method    = swh_get_string_option( 'swh_spam_method', 'none' );
-	$tmpl_raw       = get_option( 'swh_ticket_templates', array() );
+	$tmpl_raw       = swh_get_option( 'tools', 'ticket_templates', array() );
 	$tmpl_raw       = is_array( $tmpl_raw ) ? $tmpl_raw : array();
 	$tmpl_js        = array();
 	foreach ( $tmpl_raw as $t ) {
