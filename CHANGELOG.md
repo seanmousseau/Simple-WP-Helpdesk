@@ -44,7 +44,7 @@ Theme: **v4 Foundations.** Non-breaking groundwork that de-risks v4.0 / v4.1. No
 
 ### Known follow-ups (deferred to a later release)
 
-- `@wordpress/scripts` toolchain reports 6 transitive build-time advisories (no runtime impact). Tracked for cleanup.
+- `@wordpress/scripts` toolchain reports 5 transitive build-time advisories (no runtime impact). Stuck behind upstream — `@wordpress/scripts` 32.1.0 is latest and still pins older `serialize-javascript`, `minimatch`, and `webpack-dev-server`. Will resolve when the upstream maintainer publishes a release with bumped transitives. Full assessment in `docs/internal/lessons-learned.md` → *Dependabot: `@wordpress/scripts` transitive advisories (2026-05-13)*. Dependabot config updated to watch `@wordpress/scripts` and ignore the stuck transitives.
 - `make bench` baseline currently captured at COUNT=100; 500/1000 runs deferred until v4.0 inbox work needs them.
 
 ---
