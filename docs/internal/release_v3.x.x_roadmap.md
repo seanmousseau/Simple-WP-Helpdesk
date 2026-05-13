@@ -39,27 +39,27 @@ Theme: Finish what v3.4 started on dark mode, plus the WCAG AA gaps surfaced dur
 
 ---
 
-## v3.7.0 — v4 Foundations
+## v3.7.0 — v4 Foundations ✅ READY FOR RELEASE 2026-05-13
 
-Milestone: [#22](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/22) — 0/7 closed
-Status: **Planned (after v3.6 ships)**
+Milestone: [#22](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/22) — closes when PR merges
+Status: **Ready for PR** — all 7 issues implemented on `release/v3.7.0` branch
 Theme: Non-breaking groundwork that de-risks v4.0 / v4.1. **Why this exists:** v3.6 is pure cosmetic polish. v4.0 ships breaking changes (PHP/WP bumps, settings schema split, new admin paradigm) on top of a codebase that doesn't yet have the primitives those features assume. v3.7 lands the primitives so v4.0 issues build on a stable foundation, and gives anyone integrating with the plugin a runway to adopt new APIs before v4.0 lands.
 
 ### Hooks (the load-bearing one)
 
-- [ ] [#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361) — Lifecycle action hooks (reply, status, assign, close, reopen, SLA, CSAT) — **moved from v4.1**
+- [x] [#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361) — Lifecycle action hooks (reply, status, assign, close, reopen, SLA, CSAT) — **moved from v4.1**
 
 ### Architecture decisions
 
-- [ ] [#390](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/390) — JS architecture spike — pick build/state pattern before v4.0 admin UI work starts
-- [ ] [#391](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/391) — Introduce `swh_get_option()` helper as read-through wrapper (de-risks v4.0 schema split)
-- [ ] [#393](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/393) — Deprecation helper — wrap `apply_filters_deprecated()` and `do_action_deprecated()`
-- [ ] [#394](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/394) — PSR-4 autoload for plugin classes
+- [x] [#390](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/390) — JS architecture spike — pick build/state pattern before v4.0 admin UI work starts
+- [x] [#391](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/391) — Introduce `swh_get_option()` helper as read-through wrapper (de-risks v4.0 schema split)
+- [x] [#393](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/393) — Deprecation helper — wrap `apply_filters_deprecated()` and `do_action_deprecated()`
+- [x] [#394](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/394) — PSR-4 autoload for plugin classes
 
 ### Documentation + measurement
 
-- [ ] [#392](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/392) — Component inventory — document existing primitives before v4.0 sprawl
-- [ ] [#395](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/395) — Performance baseline — capture timings before v4.0 inbox redesign
+- [x] [#392](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/392) — Component inventory — document existing primitives before v4.0 sprawl
+- [x] [#395](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/395) — Performance baseline — capture timings before v4.0 inbox redesign
 
 ### Why these specifically
 

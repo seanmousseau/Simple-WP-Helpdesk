@@ -8,18 +8,29 @@ starting from the next release after 1.8.
 
 ---
 
-## [Unreleased]
+## [3.7.0] — 2026-05-13
+
+Theme: **v4 Foundations.** Non-breaking groundwork that de-risks v4.0 / v4.1. No PHP/WP minimum bumps, no schema changes, no UX changes — primitives that v4.x features will build on, plus a runway for integrators to adopt new APIs before v4.0 lands. Closes milestone [#22](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/22) (7/7).
 
 ### Added
 
-- GitHub Pages documentation site at `https://seanmousseau.github.io/Simple-WP-Helpdesk/` (Jekyll, just-the-docs theme) — covers all features through v3.5.0.
+- **Lifecycle action hooks (#361):** 7 new integrator-facing actions fired by ticket state transitions — `swh_ticket_replied`, `swh_ticket_status_changed`, `swh_ticket_closed`, `swh_ticket_reopened`, `swh_ticket_assigned`, `swh_sla_breached`, `swh_csat_submitted`. Documented in `docs/developer/hooks.md`. Moved earlier from v4.1 so they get a release to settle before REST/webhook consumers ship on top.
+- **`swh_get_option( $group, $key, $default )` helper (#391):** Read-through wrapper that takes the v4.0 settings-schema-split signature now while still backed by the monolithic `swh_options` array. v4.0 only changes the implementation — callers stay stable.
+- **Deprecation helpers (#393):** `swh_apply_deprecated_filter()` and `swh_do_deprecated_action()` wrap WP's `apply_filters_deprecated()` / `do_action_deprecated()` with an `SWH x.y` version-tag format. Mechanises the v4.0 hook deprecations ([#360](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/360)).
+- **PSR-4 autoload for plugin classes (#394):** Additive — existing `require_once` calls still work. Composer `autoload` block plus `SWH\Email\Mailer` PoC class under `simple-wp-helpdesk/src/`. Cleaner bootstrap for the ~10 new classes v4.0/v4.1 will add.
+- **`@wordpress/scripts` build system (#390):** JS source under `simple-wp-helpdesk/assets/src/`; toast notifications ported to ES modules and built to `assets/dist/toast.js`. Picks the build/state pattern before v4.0 inbox/command-palette/saved-views work starts. Existing `swh-admin.js` / `swh-frontend.js` untouched.
+- **Component inventory + v4.0 gap manifest (#392):** `docs/internal/component-inventory.md` documents every existing CSS/JS primitive (badges, panels, tokens, swhToast, empty-state, etc.) and lists the gaps v4.0 UI work needs to close. Prevents ad-hoc primitives and indigo-refresh fights.
+- **Performance baseline (#395):** `docs/internal/performance-baseline.md` captures wall-clock numbers at COUNT=100; `make bench` target added for repeatable measurement. Gives v4.0 inbox a regression target ("500+ tickets without lag").
+- **Plan + discovery docs:** `docs/internal/plan_v3.7.0.md`, `docs/internal/v3.7.0-discovery.md`, `docs/internal/v3.7.0-issue-snapshots/`, `docs/developer/hooks.md`, `docs/developer/deprecations.md`, `docs/internal/js-architecture.md`.
+- GitHub Pages documentation site at `https://seanmousseau.github.io/Simple-WP-Helpdesk/` (Jekyll, just-the-docs theme).
 - New docs pages: Shortcode Reference, Hooks Reference (all 9 filters + 2 actions with examples), Troubleshooting / FAQ.
 - Plugins page action links: **Settings** and **Docs** shortcuts shown under the plugin name.
-- Internal planning docs under `docs/internal/`: living v3.x and v4.x release roadmaps, parked-features registry (Zapier app parked), and new-features discussion log. Establishes a v3.7.0 "v4 Foundations" milestone covering non-breaking primitives that de-risk v4.0/v4.1 (lifecycle action hooks moved earlier, `swh_get_option()` helper, deprecation helper, JS architecture spike, PSR-4 autoload, component inventory, performance baseline).
 - `docs/internal/lessons-learned.md` — consolidated post-mortems and gotchas from CLAUDE.md, memory, and session learnings (CI cache eviction, WP admin pointer interception, Authorization-header stripping in Docker, etc.).
 
 ### Changed
 
+- `swh_set_ticket_status()` helper centralises ticket status transitions and fires the new lifecycle actions consistently across the editor, portal, and cron paths.
+- `CLAUDE.md` repo-structure section clarified — plugin lives in `simple-wp-helpdesk/` subdir.
 - `README.md` updated to v3.5.0 with expanded features list reflecting all v3.x additions.
 - `docs/configuration.md` corrected from 6 tabs to 8; Canned Responses and Templates tabs documented.
 - `docs/development.md` updated repo structure, removed stale bootstrap size note, added Inbound Email Webhook section.
@@ -30,6 +41,11 @@ starting from the next release after 1.8.
 ### Fixed
 
 - **PHPStan null-guard on assignee email send (`admin/class-ticket-editor.php`):** `get_userdata()` returns `WP_User|false`, but the assignment-notification block read `$assignee_user->user_email` without a null-guard. Surfaced as a CI failure on PHP 8.1+ after the GitHub Actions composer cache evicted (cache miss → fresh install pulled an updated WP stubs version). Pre-existing code from v3.4; never reached in practice because callers always pass a valid user ID.
+
+### Known follow-ups (deferred to a later release)
+
+- `@wordpress/scripts` toolchain reports 6 transitive build-time advisories (no runtime impact). Tracked for cleanup.
+- `make bench` baseline currently captured at COUNT=100; 500/1000 runs deferred until v4.0 inbox work needs them.
 
 ---
 

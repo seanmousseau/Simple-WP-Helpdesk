@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 5.3
 Tested up to: 6.7
-Stable tag: 3.6.0
+Stable tag: 3.7.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,14 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 3.7.0 =
+* Added: 7 lifecycle action hooks for integrators — `swh_ticket_replied`, `swh_ticket_status_changed`, `swh_ticket_closed`, `swh_ticket_reopened`, `swh_ticket_assigned`, `swh_sla_breached`, `swh_csat_submitted` (#361). See `docs/developer/hooks.md`.
+* Added: `swh_get_option( $group, $key, $default )` helper — read-through wrapper preparing for the v4.0 settings schema split (#391).
+* Added: `swh_apply_deprecated_filter()` and `swh_do_deprecated_action()` helpers for hook deprecations going forward (#393).
+* Added: PSR-4 autoload for plugin classes (additive — existing `require_once` calls still work) (#394).
+* Added: `@wordpress/scripts` build system; toast notifications now ship as a built ES module from `assets/dist/toast.js` (#390).
+* Internal: component inventory and v4.0 gap manifest (#392); performance baseline scripts + numbers at COUNT=100 (#395); plan and discovery docs under `docs/internal/`.
 
 = 3.6.0 =
 * Added: Admin dark mode follows WP `admin_color` (midnight/modern/ectoplasm); new `swh_admin_color_is_dark()` helper (#339)
