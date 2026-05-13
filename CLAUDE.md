@@ -26,7 +26,7 @@ Before working on anything non-trivial, route via `docs/internal/README.md`. Com
 | UI/UX patterns, dark mode wiring | `docs/internal/design-guide.md` + `docs/internal/component-inventory.md` |
 | JS build, `@wordpress/scripts`, bundle budget | `docs/internal/js-architecture.md` |
 | Perf numbers + `make bench` | `docs/internal/performance-baseline.md` |
-| Release roadmaps | `docs/internal/release_v3.x.x_roadmap.md`, `release_v4.x.x_roadmap.md` |
+| Release roadmaps | `docs/internal/release_v3.x.x_roadmap.md`, `docs/internal/release_v4.x.x_roadmap.md` |
 | Operator / end-user docs | `docs/index.md` and the rest of `docs/*.md` (NOT `docs/internal/`) |
 
 ## Hot invariants (must hold in working memory)

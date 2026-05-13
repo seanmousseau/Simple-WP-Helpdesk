@@ -4,7 +4,7 @@
 
 ## Trust boundaries
 
-```
+```text
                        ┌──────────────────────┐
   Anonymous internet ──┤ Submit form (POST)   │── nonce + antispam + rate limit ──> swh_pre_ticket_create
                        │ [submit_ticket]      │
