@@ -21,6 +21,8 @@ Each release builds on the last. The order is load-bearing: **v4.1 needs the v3.
 Milestone: [#18](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/18) — 0/12 closed
 Theme: Inbox-style triage, command palette, portal v2, modernization. Breaking changes allowed.
 
+See [`docs/internal/component-inventory.md`](component-inventory.md) for the existing component manifest and v4.0 gaps.
+
 ### Foundation
 
 - [ ] [#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356) — Settings schema migration (`swh_options` → topic sub-options) — **enables v4.1 API key storage**
