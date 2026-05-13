@@ -1,6 +1,8 @@
 # Configuration Reference
 
-**Audience:** operators and contributors.
+**Audience:** internal contributors and AI agents.
+
+> Operators: see `docs/configuration.md` and the rest of `docs/*.md` for end-user / site-admin guidance. This page is the developer-facing reference that mirrors `swh_get_defaults()` in code.
 
 ## Source of truth
 

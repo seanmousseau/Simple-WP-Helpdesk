@@ -136,7 +136,7 @@ The plugin promises "zero-privilege install, clean uninstall, WP-native portabil
 
 ### `swh_send_email()` is the only mail dispatcher
 
-Templates ship as 14 option pairs (`*_sub` / `*_body`), parsed with placeholder + `{if}/{endif}` substitution, then wrapped in an HTML shell with inlined CSS, then dispatched. Calling `wp_mail()` directly skips all three layers. The `swh_email_headers` filter (`class-email.php:109`) is the supported integration point.
+Templates ship as 16 option pairs (`*_sub` / `*_body`), parsed with placeholder + `{if}/{endif}` substitution, then wrapped in an HTML shell with inlined CSS, then dispatched. Calling `wp_mail()` directly skips all three layers. The `swh_email_headers` filter (`class-email.php:109`) is the supported integration point.
 
 ### PSR-4 additive coexistence with `require_once`
 
