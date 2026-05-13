@@ -29,3 +29,8 @@ testing/screenshots/
 
 # Git worktrees
 .worktrees/
+
+# Node.js (v3.7.0+ build tooling via @wordpress/scripts)
+node_modules/
+npm-debug.log*
+yarn-error.log*

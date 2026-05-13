@@ -71,7 +71,8 @@ function swh_enqueue_admin_assets( $hook ) {
 	if ( is_rtl() ) {
 		wp_enqueue_style( 'swh-rtl', SWH_PLUGIN_URL . 'assets/swh-rtl.css', array( 'swh-admin' ), SWH_VERSION );
 	}
-	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array(), SWH_VERSION, true );
+	swh_enqueue_toast_script();
+	wp_enqueue_script( 'swh-admin', SWH_PLUGIN_URL . 'assets/swh-admin.js', array( 'swh-toast' ), SWH_VERSION, true );
 	wp_localize_script(
 		'swh-admin',
 		'swhAdmin',

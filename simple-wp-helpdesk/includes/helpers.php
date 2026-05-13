@@ -849,3 +849,44 @@ if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 		return in_array( $scheme, $dark_schemes, true );
 	}
 }
+
+if ( ! function_exists( 'swh_enqueue_toast_script' ) ) {
+	/**
+	 * Enqueue the built `swh-toast` script (built via @wordpress/scripts to
+	 * `assets/dist/toast.js`) which exposes `window.swhToast()`.
+	 *
+	 * Reads the generated `toast.asset.php` for dependencies + hashed version
+	 * so cache-busting and dep-management are automatic.
+	 *
+	 * @since 3.7.0
+	 * @return void
+	 */
+	function swh_enqueue_toast_script() {
+		// Build the asset manifest path through a variable so static analysers
+		// (PHPStan) do not attempt to resolve the generated file at lint time.
+		$asset_rel  = 'assets/dist/toast.asset.php';
+		$asset_file = SWH_PLUGIN_DIR . $asset_rel;
+		$deps       = array();
+		$version    = SWH_VERSION;
+		if ( file_exists( $asset_file ) ) {
+			// @phpstan-ignore-next-line include.fileNotFound
+			$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+			if ( is_array( $asset ) ) {
+				if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+					// Keep only string dependency handles to satisfy wp_enqueue_script's signature.
+					$deps = array_values( array_filter( $asset['dependencies'], 'is_string' ) );
+				}
+				if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
+					$version = $asset['version'];
+				}
+			}
+		}
+		wp_enqueue_script(
+			'swh-toast',
+			SWH_PLUGIN_URL . 'assets/dist/toast.js',
+			$deps,
+			$version,
+			true
+		);
+	}
+}
