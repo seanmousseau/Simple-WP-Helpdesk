@@ -21,7 +21,7 @@ The repository contains two distinct layers:
 
 ## Repository layout
 
-```
+```text
 simple-wp-helpdesk/                     # repo root (dev tooling)
 ├── simple-wp-helpdesk/                 # plugin root (shipped artifact)
 │   ├── simple-wp-helpdesk.php          # Bootstrap: constants, requires, lifecycle, AJAX/REST registration

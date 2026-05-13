@@ -44,7 +44,7 @@ Each rule below is enforced by automation, code review, or both. See `security-m
 
 | Rule | One-liner |
 |---|---|
-| Nonces | Every form/AJAX/REST handler verifies a WP nonce via `wp_verify_nonce()` or `check_ajax_referer()`. |
+| Nonces | Every form, AJAX, and **cookie-authenticated** REST handler verifies a WP nonce via `wp_verify_nonce()` or `check_ajax_referer()`. Token-authenticated REST endpoints (e.g. the inbound-email Bearer endpoint, `class-email.php`) verify the token with `hash_equals()` instead — they have no cookie context for a nonce. |
 | Capability checks | `manage_options` for plugin-admin actions; `edit_post` for ticket-specific actions; REST and AJAX always check after the nonce. |
 | Token compare | Always `hash_equals( $expected, $provided )`. Never `==` or `===` on token strings. |
 | Client IP | Always `swh_get_client_ip()`. Never `$_SERVER['REMOTE_ADDR']` directly. |

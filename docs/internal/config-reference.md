@@ -87,7 +87,7 @@ These belong to the **Tools** form (separate nonce — see `design-document.md` 
 
 ### Email Templates
 
-14 subject/body pairs. Templates support `{placeholder}` substitution and `{if key}…{endif key}` conditional blocks (see `swh_parse_template` filter).
+16 subject/body pairs. Templates support `{placeholder}` substitution and `{if key}…{endif key}` conditional blocks (see `swh_parse_template` filter).
 
 | Option key | Default | Purpose |
 |---|---|---|
