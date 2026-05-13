@@ -11,7 +11,7 @@ When SWH deprecates a hook (action or filter), we follow this policy.
 
 ## Version-tag format
 
-The version argument to the helpers is the SWH minor version, e.g. `'3.7'`. The helpers prepend `SWH ` when emitting notices: `SWH 3.7`.
+The version argument to the helpers is the SWH minor version, e.g. `'3.7'`. The helpers prepend `SWH` when emitting notices: `SWH 3.7`.
 
 ## When to deprecate vs hard-remove
 
