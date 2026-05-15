@@ -9,6 +9,6 @@
     "format": "wp-scripts format simple-wp-helpdesk/assets/src"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^32.1.0"
+    "@wordpress/scripts": "^32.2.0"
   }
 }
