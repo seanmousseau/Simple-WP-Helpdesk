@@ -205,49 +205,50 @@ function swh_filter_known_script_deps( array $deps ): array {
 }
 
 /**
- * Polyfill `window.ReactJSXRuntime` on WP < 6.6.
+ * Polyfill `window.ReactJSXRuntime` on WP < 6.6 by registering a fake
+ * `react-jsx-runtime` script handle that depends on `wp-element` and
+ * attaches the polyfill as an inline script.
  *
  * @wordpress/scripts compiles JSX to react-jsx-runtime imports that webpack
- * externalizes to `window.ReactJSXRuntime`. WP 6.6 registers that global via
- * a built-in `react-jsx-runtime` script handle; WP 6.0–6.5 do not. Without
- * the polyfill, every JSX bundle throws on first import and React never mounts.
- *
- * This shim recreates the runtime API using `wp.element.createElement`, which
- * has been available since WP 5.0. Emits the polyfill before any plugin
- * scripts run.
+ * externalizes to `window.ReactJSXRuntime`. WP 6.6 ships a native handle;
+ * earlier WP versions do not. Registering our own under the same handle
+ * makes wp_enqueue_script work consistently across WP versions: the
+ * dependency resolves, the inline polyfill runs after wp-element loads,
+ * and the bundle finds window.ReactJSXRuntime when it executes.
  *
  * @since 4.0.0
  */
-function swh_jsx_runtime_polyfill(): void {
-	if ( function_exists( 'wp_script_is' ) && wp_script_is( 'react-jsx-runtime', 'registered' ) ) {
+function swh_jsx_runtime_polyfill_register(): void {
+	if ( ! function_exists( 'wp_register_script' ) ) {
+		return;
+	}
+	if ( wp_script_is( 'react-jsx-runtime', 'registered' ) ) {
 		return; // WP 6.6+ — native runtime present.
 	}
-	?>
-	<script id="swh-jsx-runtime-polyfill">
-	( function () {
-		if ( window.ReactJSXRuntime || ! ( window.wp && window.wp.element ) ) return;
-		var createElement = window.wp.element.createElement;
-		var Fragment = window.wp.element.Fragment;
-		function jsx( type, props, key ) {
-			var rest = {};
-			for ( var k in props ) if ( k !== 'children' ) rest[ k ] = props[ k ];
-			if ( typeof key !== 'undefined' ) rest.key = key;
-			var children = props.children;
-			if ( children === undefined || children === null ) {
-				return createElement( type, rest );
-			}
-			if ( Array.isArray( children ) ) {
-				return createElement.apply( null, [ type, rest ].concat( children ) );
-			}
-			return createElement( type, rest, children );
-		}
-		window.ReactJSXRuntime = { jsx: jsx, jsxs: jsx, jsxDEV: jsx, Fragment: Fragment };
-	} )();
-	</script>
-	<?php
+	// Empty src — WP treats this as a virtual handle that just holds inline
+	// scripts and propagates the wp-element dep.
+	wp_register_script( 'react-jsx-runtime', '', array( 'wp-element' ), SWH_VERSION, true );
+	$polyfill = <<<'JS'
+( function () {
+    if ( window.ReactJSXRuntime || ! ( window.wp && window.wp.element ) ) return;
+    var createElement = window.wp.element.createElement;
+    var Fragment = window.wp.element.Fragment;
+    function jsx( type, props, key ) {
+        var rest = {};
+        for ( var k in props ) if ( k !== 'children' ) rest[ k ] = props[ k ];
+        if ( typeof key !== 'undefined' ) rest.key = key;
+        var children = props.children;
+        if ( children === undefined || children === null ) return createElement( type, rest );
+        if ( Array.isArray( children ) ) return createElement.apply( null, [ type, rest ].concat( children ) );
+        return createElement( type, rest, children );
+    }
+    window.ReactJSXRuntime = { jsx: jsx, jsxs: jsx, jsxDEV: jsx, Fragment: Fragment };
+} )();
+JS;
+	wp_add_inline_script( 'react-jsx-runtime', $polyfill );
 }
-add_action( 'admin_print_scripts', 'swh_jsx_runtime_polyfill', 1 );
-add_action( 'wp_print_scripts', 'swh_jsx_runtime_polyfill', 1 );
+add_action( 'init', 'swh_jsx_runtime_polyfill_register', 1 );
+add_action( 'admin_init', 'swh_jsx_runtime_polyfill_register', 1 );
 
 /**
  * Updates a ticket's status meta and fires the appropriate lifecycle actions.
