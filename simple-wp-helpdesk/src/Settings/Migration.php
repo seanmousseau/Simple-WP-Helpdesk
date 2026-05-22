@@ -46,11 +46,12 @@ final class Migration {
 	 * swh_get_option() call-site groups across admin/, includes/, and frontend/.
 	 *
 	 * SLA-specific options (swh_sla_warn_hours, swh_sla_breach_hours,
-	 * swh_sla_notify_email) and installer migration flags (swh_comment_type_v2,
-	 * swh_tech_caps_v2) are accessed exclusively via swh_get_int_option() /
-	 * swh_get_string_option() (flat-key typed wrappers) — those helpers are NOT
-	 * being changed in this PR, so those keys are also migrated here so the grouped
-	 * bag is the complete source of truth after migration.
+	 * swh_sla_notify_email) are migrated to the `tools` group below.
+	 *
+	 * Installer version flags (swh_comment_type_v2, swh_tech_caps_v2) are
+	 * intentionally NOT migrated — they're internal idempotency markers set
+	 * by class-installer.php at activation/upgrade time, never user-facing
+	 * settings. They remain as flat top-level options.
 	 *
 	 * @var array<string, array{0:string,1:string}>
 	 */
