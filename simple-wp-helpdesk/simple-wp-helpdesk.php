@@ -4,7 +4,7 @@
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
  * Version: 3.7.0
  * Requires at least: 5.3
- * Requires PHP: 7.4
+ * Requires PHP: 8.0
  * Text Domain: simple-wp-helpdesk
  * Author: Sean Mousseau
  * Author URI: https://github.com/seanmousseau/Simple-WP-Helpdesk
