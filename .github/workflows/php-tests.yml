@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php: ['7.4', '8.1', '8.2', '8.3']
+        php: ['8.1', '8.2', '8.3']
       fail-fast: false
 
     steps:
@@ -45,8 +45,6 @@ jobs:
         run: make phpcs
 
       - name: PHPStan
-        # PHPStan 2.x requires PHP 8.1+; 7.4 runs lint and PHPCS only
-        if: matrix.php != '7.4'
         run: make phpstan
 
       - name: PHPUnit

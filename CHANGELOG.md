@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Breaking
+
+- Raised PHP minimum to 8.0 (was 7.4). Hosts on PHP 7.4 must stay on the v3.6 LTS branch. (#357)
+
 ### Internal
 
 - Bump `requests` 2.33.1 → 2.34.2 in `testing/requirements.txt` (Dependabot, PR #404).
