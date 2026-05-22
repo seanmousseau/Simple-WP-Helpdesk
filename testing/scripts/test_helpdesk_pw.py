@@ -4332,12 +4332,19 @@ def test_71_violet_theme_toggle(page):
     print("\n[71] Violet theme toggle (#355)")
     wp_login(page, ADMIN_USER, ADMIN_PASS)
 
-    # Go to Settings → General.
+    # Go to Settings → General. Click the General tab explicitly so the
+    # Appearance section (which contains the violet checkbox) is in a visible
+    # tab panel — by default the page may activate a different tab.
     _navigate_settings(page)
     page.wait_for_load_state("networkidle")
+    general_tab = page.locator('[role="tab"]', has_text="General").first
+    if general_tab.count() > 0:
+        general_tab.click()
+        page.wait_for_timeout(300)
 
-    # Toggle ON.
+    # Toggle ON. Use scroll_into_view_if_needed in case the checkbox is below the fold.
     checkbox = page.locator("input[name=swh_use_violet_theme]")
+    checkbox.scroll_into_view_if_needed()
     if not checkbox.is_checked():
         checkbox.check()
     page.locator("input[type=submit][name=submit]").click()
@@ -4355,7 +4362,12 @@ def test_71_violet_theme_toggle(page):
     # Toggle OFF.
     _navigate_settings(page)
     page.wait_for_load_state("networkidle")
+    general_tab = page.locator('[role="tab"]', has_text="General").first
+    if general_tab.count() > 0:
+        general_tab.click()
+        page.wait_for_timeout(300)
     checkbox = page.locator("input[name=swh_use_violet_theme]")
+    checkbox.scroll_into_view_if_needed()
     if checkbox.is_checked():
         checkbox.uncheck()
     page.locator("input[type=submit][name=submit]").click()

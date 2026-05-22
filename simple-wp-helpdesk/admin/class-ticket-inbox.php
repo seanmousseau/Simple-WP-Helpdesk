@@ -34,11 +34,31 @@ function swh_inbox_inject_root(): void {
 	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
 		return;
 	}
-	// Allow ?legacy=1 to fall back to the WP_List_Table view (operators with
-	// custom plugins that hook into the legacy list table can still use it).
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only opt-out flag, not a state change.
-	if ( isset( $_GET['legacy'] ) && '1' === $_GET['legacy'] ) {
-		return;
+	// Skip injection (let the WP_List_Table render normally) for any of:
+	// - explicit ?legacy=1 opt-out
+	// - any active WP_List_Table search/filter query — preserves operator
+	// workflows that use the WP admin search box, status/priority/category
+	// dropdowns, date filters, or trash/bulk-delete URLs. The inbox doesn't
+	// render those UIs, so this implicitly routes those workflows to legacy.
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only opt-out flags, no state change.
+	$legacy_signals = array(
+		'legacy',
+		's',
+		'post_status',
+		'author',
+		'm',
+		'orderby',
+		'swh_status_filter',
+		'swh_priority_filter',
+		'helpdesk_category',
+		'action',
+		'action2',
+	);
+	foreach ( $legacy_signals as $key ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only opt-out flag, no state change.
+		if ( isset( $_GET[ $key ] ) && '' !== $_GET[ $key ] ) {
+			return;
+		}
 	}
 
 	echo '<div class="wrap" id="swh-inbox-mount-wrap" style="margin:0;padding:0;"><div id="swh-inbox-root"></div>';
