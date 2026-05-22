@@ -1,6 +1,8 @@
+import './style.scss';
 import { render } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { registerInboxStore } from './store/inbox';
+import { Inbox } from './components/Inbox';
 
 apiFetch.use(
 	apiFetch.createNonceMiddleware( window.swhInbox?.restNonce || '' )
@@ -13,15 +15,11 @@ apiFetch.use(
 
 registerInboxStore();
 
-const Inbox = () => (
-	<div className="swh-inbox-loading">
-		<p>Loading inbox… (store registered, components in next task)</p>
-	</div>
-);
-
 const mountInbox = () => {
 	const root = document.getElementById( 'swh-inbox-root' );
-	if ( ! root ) return;
+	if ( ! root ) {
+		return;
+	}
 	render( <Inbox />, root );
 };
 

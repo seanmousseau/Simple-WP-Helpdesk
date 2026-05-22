@@ -77,7 +77,9 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 			const next = isSelected
 				? state.selectedIds.filter( ( i ) => i !== action.id )
 				: [ ...state.selectedIds, action.id ];
-			if ( next.length > 200 ) return state; // hard cap — drop the toggle
+			if ( next.length > 200 ) {
+				return state; // Hard cap — drop the toggle.
+			}
 			return { ...state, selectedIds: next };
 		}
 		case 'CLEAR_SELECTED':
