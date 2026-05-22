@@ -3875,6 +3875,70 @@ def test_64_aria_live_announcements(page: Page):
     wp_logout(page)
 
 
+# ── v4.0.0 Phase A — Inbox shell ─────────────────────────────────────────────
+
+def test_65_inbox_renders_and_switches_views(page: Page):
+    """v4.0.0 #349 — inbox shell renders, left-rail switches views, list re-fetches."""
+    print("\n[65] Inbox shell — render + view switching (#349)")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    page.wait_for_load_state("load")
+
+    # React mount div must be present.
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+    check("inbox #349: #swh-inbox-root present",
+          page.locator("#swh-inbox-root").count() > 0)
+
+    # Top bar title visible.
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-inbox-title").wait_for(timeout=5000)
+    title_count = page.locator(".swh-inbox-title").count()
+    check("inbox #349: .swh-inbox-title rendered", title_count > 0)
+    if title_count > 0:
+        title_text = page.locator(".swh-inbox-title").first.inner_text()
+        check("inbox #349: title text is 'Tickets'",
+              title_text.strip() == "Tickets",
+              f"title={title_text!r}")
+
+    # Default active view is Unassigned.
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-inbox-view-link.is-active").wait_for(timeout=5000)
+    active_count = page.locator(".swh-inbox-view-link.is-active").count()
+    check("inbox #349: one view is active on load", active_count >= 1)
+    if active_count > 0:
+        active_label = page.locator(".swh-inbox-view-link.is-active").first.inner_text()
+        check("inbox #349: default active view is Unassigned",
+              active_label.strip() == "Unassigned",
+              f"active={active_label!r}")
+
+    # Click "My Open" — active view updates.
+    my_open = page.locator(".swh-inbox-view-link", has_text="My Open")
+    if my_open.count() > 0:
+        my_open.first.click()
+        page.wait_for_timeout(500)
+        new_active = page.locator(".swh-inbox-view-link.is-active")
+        if new_active.count() > 0:
+            new_label = new_active.first.inner_text()
+            check("inbox #349: 'My Open' becomes active after click",
+                  new_label.strip() == "My Open",
+                  f"new_active={new_label!r}")
+        else:
+            skip("inbox #349: active view after click", "no .is-active after click")
+    else:
+        skip("inbox #349: My Open view link", "'.swh-inbox-view-link' with text 'My Open' not found")
+
+    # List, empty state, or loading indicator present (depends on fixture data).
+    list_present = page.locator(
+        ".swh-inbox-list,.swh-inbox-empty,.swh-inbox-loading"
+    ).count()
+    check("inbox #349: list/empty/loading present", list_present >= 1,
+          f"count={list_present}")
+
+    wp_logout(page)
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -3991,6 +4055,7 @@ SECTIONS = [
     test_62_focus_visible_rings,      # 62 — v3.6.0 :focus-visible rings (#345)
     test_63_csat_focus_management,    # 63 — v3.6.0 CSAT focus mgmt (#342)
     test_64_aria_live_announcements,  # 64 — v3.6.0 aria-live regions (#344)
+    test_65_inbox_renders_and_switches_views,  # 65 — v4.0.0 inbox shell (#349)
     test_28_cleanup,                  # 28 — always last
 ]
 

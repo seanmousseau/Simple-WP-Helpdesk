@@ -43,7 +43,8 @@ require_once SWH_PLUGIN_DIR . 'includes/class-cron.php';
 if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
-	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
+	// phpcs:ignore Squiz.Commenting.InlineComment.InvalidEndChar -- intentional rollback stub.
+	// require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 #349 — replaced by class-ticket-inbox.php; keep for Phase B rollback.
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';
 	require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
