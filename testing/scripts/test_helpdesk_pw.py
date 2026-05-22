@@ -347,8 +347,15 @@ def _php_str(val: str) -> str:
 
 
 def _navigate_admin_list(page: Page):
-    """Navigate to the admin ticket list and wait for the table to render."""
-    page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket")
+    """Navigate to the legacy WP_List_Table admin ticket list and wait for the table to render.
+
+    v4.0.0 #349 introduced the React inbox as the default at this URL. Legacy
+    tests that target the WP_List_Table chrome (columns, filter dropdowns,
+    bulk-action selector, row classes, SLA breach markers, unread badge)
+    must opt into the legacy view via ?legacy=1. New inbox tests use direct
+    page.goto + #swh-inbox-root selectors instead.
+    """
+    page.goto(f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&legacy=1")
     page.wait_for_load_state("load")
     page.wait_for_selector("#the-list, .no-items")
     page.evaluate("document.querySelectorAll('.wp-pointer').forEach(el => el.remove())")
@@ -2524,7 +2531,7 @@ def test_44_sla_breach_detection(page: Page):
         # Search for the ticket by its unique timestamp suffix — avoids pagination
         # issues in the full suite where 40+ tickets push this old-dated ticket to page 2.
         page.goto(
-            f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&s={sla_ts}"
+            f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&legacy=1&s={sla_ts}"
         )
         page.wait_for_load_state("load")
         row_classes = page.evaluate(f"""
@@ -4326,7 +4333,7 @@ def test_71_violet_theme_toggle(page):
     wp_login(page, ADMIN_USER, ADMIN_PASS)
 
     # Go to Settings → General.
-    page.goto(WP_ADMIN_URL + "admin.php?page=swh-settings&tab=tab-general")
+    _navigate_settings(page)
     page.wait_for_load_state("networkidle")
 
     # Toggle ON.
@@ -4346,7 +4353,7 @@ def test_71_violet_theme_toggle(page):
           "swh-theme-violet" in body_class)
 
     # Toggle OFF.
-    page.goto(WP_ADMIN_URL + "admin.php?page=swh-settings&tab=tab-general")
+    _navigate_settings(page)
     page.wait_for_load_state("networkidle")
     checkbox = page.locator("input[name=swh_use_violet_theme]")
     if checkbox.is_checked():

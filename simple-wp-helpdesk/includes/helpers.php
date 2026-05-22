@@ -163,7 +163,19 @@ function swh_set_option( string $group, string $key, $value ): bool {
 		$bag = array();
 	}
 	$bag[ $key ] = $value;
-	return (bool) update_option( 'swh_settings_' . $group, $bag );
+	$result      = (bool) update_option( 'swh_settings_' . $group, $bag );
+
+	// Back-compat: mirror the write to the legacy flat key for any key that
+	// has an entry in the migration MAP. Keeps `get_option('swh_xxx')` and
+	// `swh_get_string_option('swh_xxx')` etc. returning current values, even
+	// though grouped storage is the source of truth.
+	$flat_key = 'swh_' . $key;
+	if ( class_exists( '\\SWH\\Settings\\Migration' )
+		&& null !== \SWH\Settings\Migration::group_for( $flat_key ) ) {
+		update_option( $flat_key, $value );
+	}
+
+	return $result;
 }
 
 /**
