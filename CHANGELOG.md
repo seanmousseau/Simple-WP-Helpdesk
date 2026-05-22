@@ -18,6 +18,8 @@ starting from the next release after 1.8.
 
 ### Added
 
+- v4.0 quick-reply drawer with workhorse meta (status/priority/assignee/tags), thread, composer with internal-note + mark-resolved toggles, draft persistence (localStorage, 7d), cmd-Enter send. Replaces row → legacy edit nav from Phase A. Closes #350.
+- Optimistic concurrency: every ticket mutation bumps `_swh_version` post meta. REST PATCH + reply endpoints check the client-supplied expected version; mismatch returns 409 with current state. ConflictBanner surfaces in the drawer with draft preserved.
 - v4.0 admin Tickets inbox shell — dense list + saved-view left rail + filter chips (#349). Replaces the WP_List_Table page. Drawer + palette wire up in subsequent phases.
 - `_swh_last_activity_at` post meta written on every status change and reply insert (used by inbox sort). (#349)
 - REST endpoint `GET /swh/v1/tickets` with 4 default views (unassigned, my\_open, high\_priority, resolved\_this\_week), pagination, and `found_posts` total. (#349)
