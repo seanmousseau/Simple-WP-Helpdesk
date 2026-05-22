@@ -18,6 +18,9 @@ starting from the next release after 1.8.
 
 ### Added
 
+- ⌘K command palette (Cmd+K / Ctrl+K) — fuzzy search over tickets, saved views, settings pages; bulk commands group when rows are selected. Uses @wordpress/components Modal. Closes #351.
+- Sticky bulk-action bar — appears above the ticket list when ≥1 row is selected. Status + Priority + Close. 200-ticket cap. Per-ticket optimistic concurrency via POST /swh/v1/bulk-action; conflicts surface in an alert with the skipped ticket ids. Closes #353.
+- New REST endpoints: `POST /swh/v1/bulk-action`, `GET /swh/v1/palette/suggest`.
 - v4.0 quick-reply drawer with workhorse meta (status/priority/assignee/tags), thread, composer with internal-note + mark-resolved toggles, draft persistence (localStorage, 7d), cmd-Enter send. Replaces row → legacy edit nav from Phase A. Closes #350.
 - Optimistic concurrency: every ticket mutation bumps `_swh_version` post meta. REST PATCH + reply endpoints check the client-supplied expected version; mismatch returns 409 with current state. ConflictBanner surfaces in the drawer with draft preserved.
 - v4.0 admin Tickets inbox shell — dense list + saved-view left rail + filter chips (#349). Replaces the WP_List_Table page. Drawer + palette wire up in subsequent phases.

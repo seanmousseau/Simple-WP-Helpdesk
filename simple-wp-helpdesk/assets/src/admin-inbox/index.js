@@ -1,9 +1,11 @@
 import './style.scss';
 import './drawer.scss';
+import './palette.scss';
 import { render } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { registerInboxStore } from './store/inbox';
 import { registerDrawerStore } from './store/drawer';
+import { registerPaletteStore } from './store/palette';
 import { Inbox } from './components/Inbox';
 
 apiFetch.use(
@@ -17,6 +19,7 @@ apiFetch.use(
 
 registerInboxStore();
 registerDrawerStore();
+registerPaletteStore();
 
 const mountInbox = () => {
 	const root = document.getElementById( 'swh-inbox-root' );

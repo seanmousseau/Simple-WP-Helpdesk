@@ -2,6 +2,7 @@ import { useEffect } from '@wordpress/element';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { TicketRow } from './TicketRow';
+import { BulkBar } from './BulkBar';
 import { EmptyState } from './EmptyState';
 
 export const TicketList = () => {
@@ -30,14 +31,22 @@ export const TicketList = () => {
 		return <div className="swh-inbox-error">{ error }</div>;
 	}
 	if ( ! tickets.length ) {
-		return <EmptyState />;
+		return (
+			<>
+				<BulkBar />
+				<EmptyState />
+			</>
+		);
 	}
 
 	return (
-		<div className="swh-inbox-list" role="grid">
-			{ tickets.map( ( t ) => (
-				<TicketRow key={ t.id } ticket={ t } />
-			) ) }
-		</div>
+		<>
+			<BulkBar />
+			<div className="swh-inbox-list" role="grid">
+				{ tickets.map( ( t ) => (
+					<TicketRow key={ t.id } ticket={ t } />
+				) ) }
+			</div>
+		</>
 	);
 };

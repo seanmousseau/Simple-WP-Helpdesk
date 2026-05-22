@@ -49,6 +49,7 @@ export const TicketRow = ( { ticket } ) => {
 	return (
 		<div
 			className={ `swh-inbox-row${ selected ? ' is-selected' : '' }` }
+			data-ticket-id={ ticket.id }
 			onClick={ openEditor }
 			onKeyDown={ handleRowKeyDown }
 			role="row"

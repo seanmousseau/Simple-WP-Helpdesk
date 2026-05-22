@@ -108,6 +108,7 @@ final class InboxControllerTest extends TestCase {
 					),
 				)
 			);
+			// swh_get_* stubs (intercepted when helpers.php not yet loaded).
 			WP_Mock::userFunction(
 				'swh_get_string_meta',
 				array(
@@ -141,6 +142,49 @@ final class InboxControllerTest extends TestCase {
 				array(
 					'args'   => array( $id, '_swh_last_activity_at' ),
 					'return' => time() - 3600,
+				)
+			);
+			// get_post_meta stubs (cover when helpers.php IS loaded + Phase C version).
+			WP_Mock::userFunction(
+				'get_post_meta',
+				array(
+					'args'   => array( $id, '_ticket_status', true ),
+					'return' => 'open',
+				)
+			);
+			WP_Mock::userFunction(
+				'get_post_meta',
+				array(
+					'args'   => array( $id, '_ticket_priority', true ),
+					'return' => 'normal',
+				)
+			);
+			WP_Mock::userFunction(
+				'get_post_meta',
+				array(
+					'args'   => array( $id, '_ticket_assigned', true ),
+					'return' => '0',
+				)
+			);
+			WP_Mock::userFunction(
+				'get_post_meta',
+				array(
+					'args'   => array( $id, '_ticket_email', true ),
+					'return' => 'user@example.com',
+				)
+			);
+			WP_Mock::userFunction(
+				'get_post_meta',
+				array(
+					'args'   => array( $id, '_swh_last_activity_at', true ),
+					'return' => (string) ( time() - 3600 ),
+				)
+			);
+			WP_Mock::userFunction(
+				'get_post_meta',
+				array(
+					'args'   => array( $id, '_swh_version', true ),
+					'return' => '1',
 				)
 			);
 		}
@@ -178,6 +222,8 @@ final class InboxControllerTest extends TestCase {
 				),
 			)
 		);
+		// swh_get_string_meta / swh_get_int_meta stubs — intercepted when helpers.php
+		// is NOT yet loaded into the process.
 		WP_Mock::userFunction(
 			'swh_get_string_meta',
 			array(
@@ -211,6 +257,51 @@ final class InboxControllerTest extends TestCase {
 			array(
 				'args'   => array( $id, '_swh_last_activity_at' ),
 				'return' => time() - $age_seconds,
+			)
+		);
+		// get_post_meta stubs — cover the case where helpers.php IS already loaded
+		// (making swh_get_string_meta/swh_get_int_meta non-interceptable) AND the
+		// direct TicketVersion::current() call added in Phase C.
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( $id, '_ticket_status', true ),
+				'return' => $status,
+			)
+		);
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( $id, '_ticket_priority', true ),
+				'return' => 'normal',
+			)
+		);
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( $id, '_ticket_assigned', true ),
+				'return' => '0',
+			)
+		);
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( $id, '_ticket_email', true ),
+				'return' => $email,
+			)
+		);
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( $id, '_swh_last_activity_at', true ),
+				'return' => (string) ( time() - $age_seconds ),
+			)
+		);
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( $id, '_swh_version', true ),
+				'return' => '1',
 			)
 		);
 	}

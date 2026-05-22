@@ -17,6 +17,7 @@ use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
 
+use SWH\Concurrency\TicketVersion;
 use function add_action;
 use function current_user_can;
 use function get_current_user_id;
@@ -252,6 +253,7 @@ class InboxController extends WP_REST_Controller {
 			'assignee'      => swh_get_int_meta( $id, '_ticket_assigned' ),
 			'email'         => swh_get_string_meta( $id, '_ticket_email' ),
 			'last_activity' => swh_get_int_meta( $id, '_swh_last_activity_at' ),
+			'version'       => TicketVersion::current( $id ),
 		);
 	}
 }
