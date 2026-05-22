@@ -45,6 +45,12 @@ The group argument is one of: `general`, `email`, `portal`, `notifications`, `to
 | `swh_max_upload_size` | `5` | int (MB) | General | Per-file upload size limit. |
 | `swh_max_upload_count` | `5` | int | General | Per-submission upload count limit. |
 
+### Appearance
+
+| Key | Type | Default | UI location | Notes |
+|---|---|---|---|---|
+| `use_violet_theme` | bool | `false` | Settings → General → Appearance | Site-wide opt-in for the v4.0 Violet theme. Requires hard-refresh after toggle to load Geist Sans fonts. Affects admin + client portal; emails unaffected. |
+
 ### Assignment & Routing
 
 | Option key | Default | Type | Admin UI tab | Purpose |
