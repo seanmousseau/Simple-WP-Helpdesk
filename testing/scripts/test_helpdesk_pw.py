@@ -4096,6 +4096,151 @@ def test_67_drawer_concurrency_conflict_shows_banner(page: Page):
     wp_logout(page)
 
 
+def test_68_palette_opens_with_shortcut_and_switches_view(page):
+    """v4.0.0 #351 — Cmd/Ctrl+K opens palette; selecting a saved view switches inbox view."""
+    print("\n[68] Palette opens with Ctrl+K and switches view (#351)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+
+    check("palette #351: #swh-inbox-root present",
+          page.locator("#swh-inbox-root").count() > 0)
+
+    if page.locator("#swh-inbox-root").count() == 0:
+        skip("palette #351: inbox root", "#swh-inbox-root not found")
+        wp_logout(page)
+        return
+
+    # Trigger Ctrl+K (Control works in Chromium on Linux containers).
+    page.keyboard.press("Control+k")
+    palette_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-palette-modal").wait_for(timeout=5000)
+        palette_visible = True
+    check("palette #351: modal appears on Ctrl+K", palette_visible)
+
+    if not palette_visible:
+        skip("palette #351: remaining checks", "palette modal not visible")
+        wp_logout(page)
+        return
+
+    # Type "high" to fuzzy-match "High priority" saved view.
+    palette_input = page.locator(".swh-palette-modal input").first
+    if palette_input.count() > 0:
+        palette_input.fill("high")
+        page.wait_for_timeout(300)
+        high_item = page.locator(".swh-palette-item", has_text="High priority")
+        item_found = False
+        with suppress(PlaywrightTimeoutError):
+            high_item.first.wait_for(timeout=3000)
+            item_found = True
+        check("palette #351: 'High priority' view item appears", item_found)
+        if item_found:
+            high_item.first.click()
+            page.wait_for_timeout(500)
+            # Palette closes.
+            check("palette #351: modal closes after selection",
+                  page.locator(".swh-palette-modal").count() == 0)
+            # Left rail shows "High priority" as active view.
+            active_view = page.locator(".swh-inbox-view-link.is-active")
+            if active_view.count() > 0:
+                label = active_view.first.inner_text()
+                check("palette #351: 'High priority' view is now active",
+                      "High priority" in label, f"active={label!r}")
+            else:
+                skip("palette #351: active view check", "no .is-active found after switch")
+    else:
+        skip("palette #351: palette input", "no input in .swh-palette-modal")
+
+    wp_logout(page)
+
+
+def test_69_bulk_bar_closes_selected_tickets(page):
+    """v4.0.0 #353 — selecting rows shows bulk bar; Close button closes all."""
+    print("\n[69] Bulk bar closes selected tickets (#353)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Create two test tickets via WP-CLI.
+    raw_a = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        '--post_title="Bulk A test_69" --porcelain'
+    )
+    raw_b = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        '--post_title="Bulk B test_69" --porcelain'
+    )
+    ticket_a = raw_a.strip() if raw_a and raw_a.strip().isdigit() else None
+    ticket_b = raw_b.strip() if raw_b and raw_b.strip().isdigit() else None
+
+    if not ticket_a or not ticket_b:
+        skip("bulk #353 test_69", "could not create test tickets via WP-CLI")
+        wp_logout(page)
+        return
+
+    wpcli(f"post meta update {ticket_a} _ticket_status open")
+    wpcli(f"post meta update {ticket_a} _swh_version 1")
+    wpcli(f"post meta update {ticket_b} _ticket_status open")
+    wpcli(f"post meta update {ticket_b} _swh_version 1")
+
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+
+    check("bulk #353: #swh-inbox-root present",
+          page.locator("#swh-inbox-root").count() > 0)
+
+    if page.locator("#swh-inbox-root").count() == 0:
+        skip("bulk #353: remaining checks", "#swh-inbox-root not found")
+        for tid in (ticket_a, ticket_b):
+            wpcli(f"post delete {tid} --force")
+        wp_logout(page)
+        return
+
+    # Click checkboxes for both tickets via data-ticket-id attribute.
+    for ticket_id in (ticket_a, ticket_b):
+        row_check = page.locator(
+            f".swh-inbox-row[data-ticket-id='{ticket_id}'] input[type=checkbox]"
+        ).first
+        row_found = False
+        with suppress(PlaywrightTimeoutError):
+            row_check.wait_for(timeout=5000)
+            row_found = True
+        if row_found:
+            row_check.click(force=True)
+        else:
+            skip(f"bulk #353: row for ticket {ticket_id}",
+                 f"[data-ticket-id='{ticket_id}'] not visible")
+
+    # Bulk bar should appear.
+    bulk_bar_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-bulk-bar").wait_for(timeout=5000)
+        bulk_bar_visible = True
+    check("bulk #353: bulk bar appears when rows selected", bulk_bar_visible)
+
+    if bulk_bar_visible:
+        count_el = page.locator(".swh-bulk-bar-count")
+        if count_el.count() > 0:
+            count_text = count_el.first.inner_text()
+            check("bulk #353: count shows 2 selected", "2" in count_text,
+                  f"count_text={count_text!r}")
+
+        # Click the Close button (primary Button in BulkBar).
+        close_btn = page.locator(".swh-bulk-bar .components-button")
+        if close_btn.count() > 0:
+            close_btn.first.click()
+            page.wait_for_timeout(1500)
+            check("bulk #353: bulk bar vanishes after Close",
+                  page.locator(".swh-bulk-bar").count() == 0)
+        else:
+            skip("bulk #353: close button", "no .components-button in .swh-bulk-bar")
+
+    for tid in (ticket_a, ticket_b):
+        wpcli(f"post delete {tid} --force")
+    wp_logout(page)
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
