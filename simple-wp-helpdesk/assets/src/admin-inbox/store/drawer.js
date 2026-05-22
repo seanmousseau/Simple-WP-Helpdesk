@@ -20,87 +20,116 @@ const actions = {
 	close: () => ( { type: 'CLOSE' } ),
 	setDraft: ( body ) => ( { type: 'SET_DRAFT', body } ),
 	setDraftInternal: ( v ) => ( { type: 'SET_DRAFT_INTERNAL', value: !! v } ),
-	setDraftMarkResolved: ( v ) => ( { type: 'SET_DRAFT_MARK_RESOLVED', value: !! v } ),
+	setDraftMarkResolved: ( v ) => ( {
+		type: 'SET_DRAFT_MARK_RESOLVED',
+		value: !! v,
+	} ),
 	dismissConflict: () => ( { type: 'DISMISS_CONFLICT' } ),
 
-	fetchTicket: () => async ( { select, dispatch } ) => {
-		const id = select.getTicketId();
-		if ( ! id ) return;
-		dispatch( { type: 'FETCH_START' } );
-		try {
-			const data = await apiFetch( { path: `/swh/v1/tickets/${ id }` } );
-			dispatch( { type: 'FETCH_SUCCESS', ticket: data } );
-			const draft = loadDraft( id );
-			if ( draft ) dispatch( { type: 'SET_DRAFT', body: draft } );
-		} catch ( err ) {
-			dispatch( {
-				type: 'FETCH_ERROR',
-				error: err.message || 'Failed to load ticket',
-			} );
-		}
-	},
-
-	patchMeta: ( patch ) => async ( { select, dispatch } ) => {
-		const ticket = select.getTicket();
-		if ( ! ticket ) return;
-		dispatch( { type: 'SAVE_START' } );
-		try {
-			const data = await apiFetch( {
-				path: `/swh/v1/tickets/${ ticket.id }`,
-				method: 'PATCH',
-				data: { expected_version: ticket.version, patch },
-			} );
-			dispatch( { type: 'SAVE_SUCCESS', ticket: data } );
-		} catch ( err ) {
-			if ( err.code === 'version_conflict' || err.data?.status === 409 ) {
-				dispatch( {
-					type: 'CONFLICT',
-					current: err.data?.current || err.current,
-				} );
-			} else {
-				dispatch( { type: 'FETCH_ERROR', error: err.message } );
+	fetchTicket:
+		() =>
+		async ( { select, dispatch } ) => {
+			const id = select.getTicketId();
+			if ( ! id ) {
+				return;
 			}
-		}
-	},
-
-	sendReply: () => async ( { select, dispatch } ) => {
-		const ticket   = select.getTicket();
-		const body     = select.getDraftBody();
-		const internal = select.getDraftInternal();
-		const resolved = select.getDraftMarkResolved();
-		if ( ! ticket || ! body ) return;
-		dispatch( { type: 'SAVE_START' } );
-		try {
-			const data = await apiFetch( {
-				path: `/swh/v1/tickets/${ ticket.id }/reply`,
-				method: 'POST',
-				data: {
-					expected_version: ticket.version,
-					body,
-					internal,
-					mark_resolved: resolved,
-				},
-			} );
-			dispatch( { type: 'SAVE_SUCCESS', ticket: data } );
-			dispatch( { type: 'CLEAR_DRAFT' } );
-			clearDraft( ticket.id );
-		} catch ( err ) {
-			if ( err.code === 'version_conflict' || err.data?.status === 409 ) {
-				dispatch( {
-					type: 'CONFLICT',
-					current: err.data?.current || err.current,
+			dispatch( { type: 'FETCH_START' } );
+			try {
+				const data = await apiFetch( {
+					path: `/swh/v1/tickets/${ id }`,
 				} );
-			} else {
-				dispatch( { type: 'FETCH_ERROR', error: err.message } );
+				dispatch( { type: 'FETCH_SUCCESS', ticket: data } );
+				const draft = loadDraft( id );
+				if ( draft ) {
+					dispatch( { type: 'SET_DRAFT', body: draft } );
+				}
+			} catch ( err ) {
+				dispatch( {
+					type: 'FETCH_ERROR',
+					error: err.message || 'Failed to load ticket',
+				} );
 			}
-		}
-	},
+		},
+
+	patchMeta:
+		( patch ) =>
+		async ( { select, dispatch } ) => {
+			const ticket = select.getTicket();
+			if ( ! ticket ) {
+				return;
+			}
+			dispatch( { type: 'SAVE_START' } );
+			try {
+				const data = await apiFetch( {
+					path: `/swh/v1/tickets/${ ticket.id }`,
+					method: 'PATCH',
+					data: { expected_version: ticket.version, patch },
+				} );
+				dispatch( { type: 'SAVE_SUCCESS', ticket: data } );
+			} catch ( err ) {
+				if (
+					err.code === 'version_conflict' ||
+					err.data?.status === 409
+				) {
+					dispatch( {
+						type: 'CONFLICT',
+						current: err.data?.current || err.current,
+					} );
+				} else {
+					dispatch( { type: 'FETCH_ERROR', error: err.message } );
+				}
+			}
+		},
+
+	sendReply:
+		() =>
+		async ( { select, dispatch } ) => {
+			const ticket = select.getTicket();
+			const body = select.getDraftBody();
+			if ( ! ticket || ! body ) {
+				return;
+			}
+			const internal = select.getDraftInternal();
+			const resolved = select.getDraftMarkResolved();
+			dispatch( { type: 'SAVE_START' } );
+			try {
+				const data = await apiFetch( {
+					path: `/swh/v1/tickets/${ ticket.id }/reply`,
+					method: 'POST',
+					data: {
+						expected_version: ticket.version,
+						body,
+						internal,
+						mark_resolved: resolved,
+					},
+				} );
+				dispatch( { type: 'SAVE_SUCCESS', ticket: data } );
+				dispatch( { type: 'CLEAR_DRAFT' } );
+				clearDraft( ticket.id );
+			} catch ( err ) {
+				if (
+					err.code === 'version_conflict' ||
+					err.data?.status === 409
+				) {
+					dispatch( {
+						type: 'CONFLICT',
+						current: err.data?.current || err.current,
+					} );
+				} else {
+					dispatch( { type: 'FETCH_ERROR', error: err.message } );
+				}
+			}
+		},
 };
 
 const reducer = ( state = DEFAULT_STATE, action ) => {
 	switch ( action.type ) {
 		case 'OPEN':
-			return { ...DEFAULT_STATE, ticketId: action.ticketId, loading: true };
+			return {
+				...DEFAULT_STATE,
+				ticketId: action.ticketId,
+				loading: true,
+			};
 		case 'CLOSE':
 			return DEFAULT_STATE;
 		case 'FETCH_START':
@@ -123,7 +152,9 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 		case 'DISMISS_CONFLICT':
 			return { ...state, conflict: null };
 		case 'SET_DRAFT': {
-			if ( state.ticketId ) saveDraft( state.ticketId, action.body );
+			if ( state.ticketId ) {
+				saveDraft( state.ticketId, action.body );
+			}
 			return { ...state, draftBody: action.body };
 		}
 		case 'CLEAR_DRAFT':
@@ -158,5 +189,7 @@ const selectors = {
 export const SWH_DRAWER_STORE = 'swh/drawer';
 
 export const registerDrawerStore = () => {
-	register( createReduxStore( SWH_DRAWER_STORE, { reducer, actions, selectors } ) );
+	register(
+		createReduxStore( SWH_DRAWER_STORE, { reducer, actions, selectors } )
+	);
 };

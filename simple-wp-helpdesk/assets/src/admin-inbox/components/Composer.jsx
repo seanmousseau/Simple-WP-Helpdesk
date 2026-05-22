@@ -1,16 +1,20 @@
 // components/Composer.jsx
 import { useDispatch, useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
-import { Button, CheckboxControl, TextareaControl } from '@wordpress/components';
+import {
+	Button,
+	CheckboxControl,
+	TextareaControl,
+} from '@wordpress/components';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
 export const Composer = () => {
 	const { body, internal, markResolved, saving } = useSelect(
 		( s ) => ( {
-			body:         s( SWH_DRAWER_STORE ).getDraftBody(),
-			internal:     s( SWH_DRAWER_STORE ).getDraftInternal(),
+			body: s( SWH_DRAWER_STORE ).getDraftBody(),
+			internal: s( SWH_DRAWER_STORE ).getDraftInternal(),
 			markResolved: s( SWH_DRAWER_STORE ).getDraftMarkResolved(),
-			saving:       s( SWH_DRAWER_STORE ).getSaving(),
+			saving: s( SWH_DRAWER_STORE ).getSaving(),
 		} ),
 		[]
 	);
@@ -20,7 +24,9 @@ export const Composer = () => {
 	const onKey = ( e ) => {
 		if ( e.key === 'Enter' && ( e.metaKey || e.ctrlKey ) ) {
 			e.preventDefault();
-			if ( body && ! saving ) sendReply();
+			if ( body && ! saving ) {
+				sendReply();
+			}
 		}
 	};
 
@@ -44,7 +50,10 @@ export const Composer = () => {
 					__nextHasNoMarginBottom
 				/>
 				<CheckboxControl
-					label={ __( 'Mark resolved on send', 'simple-wp-helpdesk' ) }
+					label={ __(
+						'Mark resolved on send',
+						'simple-wp-helpdesk'
+					) }
 					checked={ markResolved }
 					onChange={ setDraftMarkResolved }
 					__nextHasNoMarginBottom

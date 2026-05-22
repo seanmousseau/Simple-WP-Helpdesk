@@ -5,15 +5,15 @@ import { SelectControl } from '@wordpress/components';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
 const STATUS_OPTIONS = [
-	{ value: 'open',        label: 'Open' },
+	{ value: 'open', label: 'Open' },
 	{ value: 'in_progress', label: 'In Progress' },
-	{ value: 'resolved',    label: 'Resolved' },
-	{ value: 'closed',      label: 'Closed' },
+	{ value: 'resolved', label: 'Resolved' },
+	{ value: 'closed', label: 'Closed' },
 ];
 const PRIORITY_OPTIONS = [
-	{ value: 'low',    label: 'Low' },
+	{ value: 'low', label: 'Low' },
 	{ value: 'normal', label: 'Normal' },
-	{ value: 'high',   label: 'High' },
+	{ value: 'high', label: 'High' },
 	{ value: 'urgent', label: 'Urgent' },
 ];
 

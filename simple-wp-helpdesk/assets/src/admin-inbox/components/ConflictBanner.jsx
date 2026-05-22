@@ -10,7 +10,9 @@ export const ConflictBanner = () => {
 		[]
 	);
 	const { dismissConflict } = useDispatch( SWH_DRAWER_STORE );
-	if ( ! conflict ) return null;
+	if ( ! conflict ) {
+		return null;
+	}
 	return (
 		<Notice
 			status="warning"

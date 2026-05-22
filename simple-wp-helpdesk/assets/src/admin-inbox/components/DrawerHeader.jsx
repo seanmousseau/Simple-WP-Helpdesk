@@ -4,7 +4,9 @@ import { __ } from '@wordpress/i18n';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
 const fmtDate = ( gmt ) => {
-	if ( ! gmt ) return '';
+	if ( ! gmt ) {
+		return '';
+	}
 	return new Date( gmt + 'Z' ).toLocaleString();
 };
 
@@ -25,7 +27,10 @@ export const DrawerHeader = ( { ticket } ) => {
 				<a
 					href={ `post.php?post=${ ticket.id }&action=edit` }
 					className="swh-drawer-open-full"
-					title={ __( 'Open full ticket page', 'simple-wp-helpdesk' ) }
+					title={ __(
+						'Open full ticket page',
+						'simple-wp-helpdesk'
+					) }
 				>
 					⤢
 				</a>

@@ -2,15 +2,33 @@
 import { __ } from '@wordpress/i18n';
 
 const fmtAgo = ( gmt ) => {
-	if ( ! gmt ) return '';
+	if ( ! gmt ) {
+		return '';
+	}
 	const diff = Math.max(
 		0,
 		Math.floor( ( Date.now() - new Date( gmt + 'Z' ).getTime() ) / 1000 )
 	);
-	if ( diff < 60 ) return `${ diff }s ago`;
-	if ( diff < 3600 ) return `${ Math.floor( diff / 60 ) }m ago`;
-	if ( diff < 86400 ) return `${ Math.floor( diff / 3600 ) }h ago`;
+	if ( diff < 60 ) {
+		return `${ diff }s ago`;
+	}
+	if ( diff < 3600 ) {
+		return `${ Math.floor( diff / 60 ) }m ago`;
+	}
+	if ( diff < 86400 ) {
+		return `${ Math.floor( diff / 3600 ) }h ago`;
+	}
 	return `${ Math.floor( diff / 86400 ) }d ago`;
+};
+
+const messageVariant = ( m ) => {
+	if ( m.is_internal ) {
+		return 'internal';
+	}
+	if ( m.is_staff ) {
+		return 'staff';
+	}
+	return 'customer';
 };
 
 // Strip HTML tags client-side defense-in-depth (server already cleaned via
@@ -46,12 +64,17 @@ export const Thread = ( { ticket } ) => {
 			{ all.map( ( m ) => (
 				<div
 					key={ m.id }
-					className={ `swh-message swh-message-${ m.is_internal ? 'internal' : m.is_staff ? 'staff' : 'customer' }` }
+					className={ `swh-message swh-message-${ messageVariant(
+						m
+					) }` }
 				>
 					<div className="swh-message-meta">
 						{ m.is_internal && (
 							<span
-								aria-label={ __( 'Internal note', 'simple-wp-helpdesk' ) }
+								aria-label={ __(
+									'Internal note',
+									'simple-wp-helpdesk'
+								) }
 							>
 								🔒
 							</span>

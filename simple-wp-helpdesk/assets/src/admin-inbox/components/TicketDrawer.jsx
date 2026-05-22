@@ -12,11 +12,11 @@ import { ConflictBanner } from './ConflictBanner';
 export const TicketDrawer = () => {
 	const { isOpen, ticket, loading, error, conflict, draftBody } = useSelect(
 		( s ) => ( {
-			isOpen:    s( SWH_DRAWER_STORE ).isOpen(),
-			ticket:    s( SWH_DRAWER_STORE ).getTicket(),
-			loading:   s( SWH_DRAWER_STORE ).getLoading(),
-			error:     s( SWH_DRAWER_STORE ).getError(),
-			conflict:  s( SWH_DRAWER_STORE ).getConflict(),
+			isOpen: s( SWH_DRAWER_STORE ).isOpen(),
+			ticket: s( SWH_DRAWER_STORE ).getTicket(),
+			loading: s( SWH_DRAWER_STORE ).getLoading(),
+			error: s( SWH_DRAWER_STORE ).getError(),
+			conflict: s( SWH_DRAWER_STORE ).getConflict(),
 			draftBody: s( SWH_DRAWER_STORE ).getDraftBody(),
 		} ),
 		[]
@@ -24,19 +24,22 @@ export const TicketDrawer = () => {
 	const { fetchTicket, close } = useDispatch( SWH_DRAWER_STORE );
 
 	useEffect( () => {
-		if ( isOpen && ! ticket && ! loading ) fetchTicket();
+		if ( isOpen && ! ticket && ! loading ) {
+			fetchTicket();
+		}
 	}, [ isOpen ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect( () => {
 		const onKey = ( e ) => {
 			if ( e.key === 'Escape' && isOpen ) {
-				if (
-					draftBody &&
-					! window.confirm(
+				if ( draftBody ) {
+					// eslint-disable-next-line no-alert
+					const confirmed = window.confirm(
 						__( 'Discard draft?', 'simple-wp-helpdesk' )
-					)
-				) {
-					return;
+					);
+					if ( ! confirmed ) {
+						return;
+					}
 				}
 				close();
 			}
@@ -45,13 +48,18 @@ export const TicketDrawer = () => {
 		return () => window.removeEventListener( 'keydown', onKey );
 	}, [ isOpen, draftBody ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
-	if ( ! isOpen ) return null;
+	if ( ! isOpen ) {
+		return null;
+	}
 
 	return (
+		// eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
 		<div
 			className="swh-drawer-backdrop"
 			onClick={ ( e ) => {
-				if ( e.target === e.currentTarget ) close();
+				if ( e.target === e.currentTarget ) {
+					close();
+				}
 			} }
 		>
 			<aside className="swh-drawer" role="dialog" aria-modal="true">
@@ -60,9 +68,7 @@ export const TicketDrawer = () => {
 						{ __( 'Loading ticket…', 'simple-wp-helpdesk' ) }
 					</div>
 				) }
-				{ error && (
-					<div className="swh-drawer-error">{ error }</div>
-				) }
+				{ error && <div className="swh-drawer-error">{ error }</div> }
 				{ ticket && (
 					<>
 						<DrawerHeader ticket={ ticket } />

@@ -8,15 +8,19 @@ const userKey = ( ticketId ) =>
 export const loadDraft = ( ticketId ) => {
 	try {
 		const raw = localStorage.getItem( userKey( ticketId ) );
-		if ( ! raw ) return null;
+		if ( ! raw ) {
+			return null;
+		}
 		const parsed = JSON.parse( raw );
-		if ( ! parsed || ! parsed.savedAt ) return null;
+		if ( ! parsed || ! parsed.savedAt ) {
+			return null;
+		}
 		if ( ( Date.now() - parsed.savedAt ) / 86400000 > TTL_DAYS ) {
 			localStorage.removeItem( userKey( ticketId ) );
 			return null;
 		}
 		return parsed.body || null;
-	} catch ( e ) {
+	} catch {
 		return null;
 	}
 };
@@ -31,11 +35,11 @@ export const saveDraft = ( ticketId, body ) => {
 			userKey( ticketId ),
 			JSON.stringify( { body, savedAt: Date.now() } )
 		);
-	} catch ( e ) {}
+	} catch {}
 };
 
 export const clearDraft = ( ticketId ) => {
 	try {
 		localStorage.removeItem( userKey( ticketId ) );
-	} catch ( e ) {}
+	} catch {}
 };
