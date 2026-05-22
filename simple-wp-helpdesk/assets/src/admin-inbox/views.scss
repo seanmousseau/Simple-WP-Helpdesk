@@ -1,0 +1,53 @@
+.swh-view-popover {
+	padding: 12px;
+	min-width: 240px;
+}
+
+.swh-view-popover-hint {
+	font-size: 11px;
+	color: #50575e;
+	margin: 4px 0 8px;
+}
+
+.swh-view-popover-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.swh-view-row-menu {
+	position: relative;
+	margin-left: auto;
+}
+
+.swh-view-row-menu-trigger {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	color: #50575e;
+	padding: 0 4px;
+	font-size: 14px;
+
+	&:hover {
+		color: #1d2327;
+	}
+}
+
+.swh-view-menu-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	padding: 6px 12px;
+	font-size: 12px;
+
+	&:hover {
+		background: #f0f0f1;
+	}
+
+	&.swh-view-menu-item-danger {
+		color: #b32d2e;
+	}
+}
