@@ -4241,6 +4241,85 @@ def test_69_bulk_bar_closes_selected_tickets(page):
     wp_logout(page)
 
 
+def test_70_create_personal_view_and_switch(page):
+    """v4.0.0 #352 — create personal view via + Add, switch to it, delete it."""
+    print("\n[70] Saved views CRUD — create personal view, switch, delete (#352)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+
+    if page.locator("#swh-inbox-root").count() == 0:
+        skip("views #352 test_70", "#swh-inbox-root not found")
+        wp_logout(page)
+        return
+
+    # Click "+ Add view" to open popover.
+    add_btn = page.locator(".swh-inbox-view-add")
+    check("views #352 test_70: + Add view button visible", add_btn.count() > 0)
+    if add_btn.count() == 0:
+        skip("views #352 test_70: remaining checks", "+ Add view button not found")
+        wp_logout(page)
+        return
+
+    add_btn.click()
+    popover_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-view-popover input").wait_for(timeout=5000)
+        popover_visible = True
+    check("views #352 test_70: popover opens", popover_visible)
+    if not popover_visible:
+        skip("views #352 test_70: remaining checks", "popover not visible")
+        wp_logout(page)
+        return
+
+    page.locator(".swh-view-popover input").fill("Playwright test view")
+    page.locator(".swh-view-popover-actions button").filter(has_text="Save").click()
+    page.wait_for_timeout(800)
+
+    # Personal section appears with new view.
+    my_views_heading = page.locator(".swh-inbox-leftrail-heading").filter(has_text="My views")
+    check("views #352 test_70: My views heading appears", my_views_heading.count() > 0)
+
+    new_link = page.locator(".swh-inbox-view-link").filter(has_text="Playwright test view")
+    check("views #352 test_70: new view link visible", new_link.count() > 0)
+    if new_link.count() == 0:
+        skip("views #352 test_70: switch + delete", "new view link not found")
+        wp_logout(page)
+        return
+
+    # Switch to it.
+    new_link.click()
+    page.wait_for_timeout(300)
+    active_text = page.locator(".swh-inbox-view-link.is-active").inner_text() if page.locator(".swh-inbox-view-link.is-active").count() > 0 else ""
+    check("views #352 test_70: view becomes active", active_text == "Playwright test view")
+
+    # Open ⋯ menu and delete (register dialog handler BEFORE clicking action).
+    page.on("dialog", lambda dialog: dialog.accept())
+    menu_trigger = page.locator(".swh-inbox-leftrail-item").filter(
+        has_text="Playwright test view"
+    ).locator(".swh-view-row-menu-trigger")
+    check("views #352 test_70: ⋯ trigger present", menu_trigger.count() > 0)
+    if menu_trigger.count() == 0:
+        skip("views #352 test_70: delete", "⋯ trigger not found")
+        wp_logout(page)
+        return
+
+    menu_trigger.click()
+    danger_btn_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-view-menu-item-danger").wait_for(timeout=3000)
+        danger_btn_visible = True
+    check("views #352 test_70: Delete menu item appears", danger_btn_visible)
+    if danger_btn_visible:
+        page.locator(".swh-view-menu-item-danger").click()
+        page.wait_for_timeout(800)
+        remaining = page.locator(".swh-inbox-view-link").filter(has_text="Playwright test view").count()
+        check("views #352 test_70: view removed after delete", remaining == 0)
+
+    wp_logout(page)
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -4358,6 +4437,11 @@ SECTIONS = [
     test_63_csat_focus_management,    # 63 — v3.6.0 CSAT focus mgmt (#342)
     test_64_aria_live_announcements,  # 64 — v3.6.0 aria-live regions (#344)
     test_65_inbox_renders_and_switches_views,  # 65 — v4.0.0 inbox shell (#349)
+    test_66_drawer_opens_and_edits_status,     # 66 — v4.0.0 drawer (#350)
+    test_67_drawer_concurrency_conflict_shows_banner,  # 67 — v4.0.0 concurrency (#350)
+    test_68_palette_opens_with_shortcut_and_switches_view,  # 68 — v4.0.0 palette (#351)
+    test_69_bulk_bar_closes_selected_tickets,  # 69 — v4.0.0 bulk bar (#353)
+    test_70_create_personal_view_and_switch,   # 70 — v4.0.0 saved views (#352)
     test_28_cleanup,                  # 28 — always last
 ]
 

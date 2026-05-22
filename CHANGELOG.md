@@ -18,6 +18,8 @@ starting from the next release after 1.8.
 
 ### Added
 
+- Saved views CRUD — personal views (per user) + global views (admin-managed) with management UI in the inbox left rail and at Settings → Helpdesk → Views. Defaults (Unassigned, My Open, High priority, Resolved this week) ship pre-baked; technicians add their own. Closes #352.
+- New REST endpoints: `GET /swh/v1/views`, `POST /swh/v1/views`, `PATCH /swh/v1/views/{id}`, `DELETE /swh/v1/views/{id}`.
 - ⌘K command palette (Cmd+K / Ctrl+K) — fuzzy search over tickets, saved views, settings pages; bulk commands group when rows are selected. Uses @wordpress/components Modal. Closes #351.
 - Sticky bulk-action bar — appears above the ticket list when ≥1 row is selected. Status + Priority + Close. 200-ticket cap. Per-ticket optimistic concurrency via POST /swh/v1/bulk-action; conflicts surface in an alert with the skipped ticket ids. Closes #353.
 - New REST endpoints: `POST /swh/v1/bulk-action`, `GET /swh/v1/palette/suggest`.
