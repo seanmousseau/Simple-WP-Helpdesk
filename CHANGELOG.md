@@ -12,6 +12,7 @@ starting from the next release after 1.8.
 
 ### Internal
 
+- Add v3.7.0 ship audit doc (`docs/internal/v3.7.0-ship-audit.md`) — definitive record that all 7 v3.7.0 phases landed via PR #400, plus housekeeping closure of the 7 milestone issues and milestone #22 that PR #400 left open (PR #406).
 - Bump `requests` 2.33.1 → 2.34.2 in `testing/requirements.txt` (Dependabot, PR #404).
 - Bump `@wordpress/scripts` 32.1.0 → 32.2.0 (Dependabot, PR #405); rebuilt `simple-wp-helpdesk/assets/dist/`.
 - Established `docs/internal/` as the single-source-of-truth doc set for developers and AI agents: README index, design-document (with 17 numbered load-bearing invariants), coding-guide, testing-guide, security-model, api-contract, data-dictionary, config-reference, design-guide. Every doc carries an Update protocol so the set stays current as part of normal PR flow.
