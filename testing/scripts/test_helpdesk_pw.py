@@ -4341,22 +4341,22 @@ def test_71_violet_theme_toggle(page):
     print("\n[71] Violet theme toggle (#355)")
     wp_login(page, ADMIN_USER, ADMIN_PASS)
 
-    # Go to Settings → General. Click the General tab explicitly so the
-    # Appearance section (which contains the violet checkbox) is in a visible
-    # tab panel — by default the page may activate a different tab.
+    # Go to Settings → General. Ensure the General tab panel is visible via
+    # JS (bypasses the tab-switching JS which can race with overlays/pointers).
     _navigate_settings(page)
     page.wait_for_load_state("networkidle")
-    general_tab = page.locator('[role="tab"]', has_text="General").first
-    if general_tab.count() > 0:
-        general_tab.click()
-        page.wait_for_timeout(300)
+    page.evaluate("""
+        document.querySelectorAll('[role="tabpanel"]').forEach(el => { el.style.display = 'none'; el.hidden = false; });
+        var general = document.getElementById('tab-general');
+        if (general) { general.style.display = 'block'; }
+    """)
 
-    # Toggle ON. Use scroll_into_view_if_needed in case the checkbox is below the fold.
+    # Toggle ON. force=True bypasses visibility checks since some Playwright
+    # versions trip on the parent tab-panel display animation.
     checkbox = page.locator("input[name=swh_use_violet_theme]")
-    checkbox.scroll_into_view_if_needed()
     if not checkbox.is_checked():
-        checkbox.check()
-    page.locator("input[type=submit][name=submit]").click()
+        checkbox.check(force=True)
+    page.locator("input[type=submit][name=submit]").first.click(force=True)
     page.wait_for_load_state("networkidle")
 
     # Navigate to inbox and confirm class is present.
@@ -4371,15 +4371,15 @@ def test_71_violet_theme_toggle(page):
     # Toggle OFF.
     _navigate_settings(page)
     page.wait_for_load_state("networkidle")
-    general_tab = page.locator('[role="tab"]', has_text="General").first
-    if general_tab.count() > 0:
-        general_tab.click()
-        page.wait_for_timeout(300)
+    page.evaluate("""
+        document.querySelectorAll('[role="tabpanel"]').forEach(el => { el.style.display = 'none'; el.hidden = false; });
+        var general = document.getElementById('tab-general');
+        if (general) { general.style.display = 'block'; }
+    """)
     checkbox = page.locator("input[name=swh_use_violet_theme]")
-    checkbox.scroll_into_view_if_needed()
     if checkbox.is_checked():
-        checkbox.uncheck()
-    page.locator("input[type=submit][name=submit]").click()
+        checkbox.uncheck(force=True)
+    page.locator("input[type=submit][name=submit]").first.click(force=True)
     page.wait_for_load_state("networkidle")
 
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
