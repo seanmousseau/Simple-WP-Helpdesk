@@ -83,8 +83,22 @@ Categories:
 
 Additionally:
 
-- `swh_db_version` — installed plugin version; updated by `swh_run_upgrade_routine()` at `class-installer.php:147`. **Not** in `swh_get_defaults()` and **excluded** from bulk operations (`swh_get_all_option_keys()` filters it out).
+- `swh_db_version` — installed plugin version; updated by `swh_run_upgrade_routine()` at `class-installer.php:147` AND by `\SWH\Settings\Migration::run()` (v4.0.0+, sets to `'4.0.0'` after grouped-options migration). **Not** in `swh_get_defaults()` and **excluded** from bulk operations (`swh_get_all_option_keys()` filters it out).
 - `swh_comment_type_v2`, `swh_tech_caps_v2` — one-time migration flags. Cleaned on uninstall.
+
+### Grouped settings (v4.0.0+) — `swh_settings_<group>`
+
+Storage shape introduced by #356. Each group is a single top-level option holding an array of setting key → value pairs. Reads via `swh_get_option( $group, $key, $default )`; writes via `swh_set_option( $group, $key, $value )`. Both helpers live in `simple-wp-helpdesk/includes/helpers.php`. A one-shot upgrade routine in `simple-wp-helpdesk/src/Settings/Migration.php` runs on `plugins_loaded` priority 5, seeds the bags from legacy flat options, and bumps `swh_db_version` to `'4.0.0'`. Idempotent. Legacy flat `swh_<key>` options REMAIN in storage after migration (forward-only policy — they become dead reads but allow rollback to v3.7).
+
+| Option | Type | Contents |
+|---|---|---|
+| `swh_settings_general` | array | Statuses, priorities, autoclose, upload limits, user-facing messages. |
+| `swh_settings_email` | array | Email format, logo URL, 14+ template subject/body pairs (user + admin). |
+| `swh_settings_portal` | array | `portal_theme` (auto/light). Other portal settings are scaffolded but unused as of 4.0.0. |
+| `swh_settings_notifications` | array | NOT seeded by the 4.0.0 migration — no call sites or defaults today. Future work. |
+| `swh_settings_tools` | array | Spam method, reCAPTCHA/Turnstile keys, retention windows, delete-on-uninstall, canned responses, ticket templates, SLA thresholds. |
+| `swh_settings_routing` | array | Default assignee, fallback email, ticket page id, token TTL, restrict-to-assigned, assignment rules. |
+| `swh_settings_integrations` | array | `inbound_secret`. Outbound webhook config in v4.2+. |
 
 ## Transients
 

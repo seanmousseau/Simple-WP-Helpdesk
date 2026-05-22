@@ -47,9 +47,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'Closed' );
+		// v4.0: swh_get_option('general','closed_status') reads swh_settings_general.
 		WP_Mock::userFunction( 'get_option' )
-			->with( 'swh_closed_status', 'Closed' )
-			->andReturn( 'Closed' );
+			->with( 'swh_settings_general', [] )
+			->andReturn( [ 'closed_status' => 'Closed' ] );
 
 		WP_Mock::expectAction( 'swh_ticket_status_changed', 42, 'Open', 'Closed' );
 		WP_Mock::expectAction( 'swh_ticket_closed', 42, 'Open' );
@@ -67,9 +68,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'Open' );
+		// v4.0: swh_get_option('general','closed_status') reads swh_settings_general.
 		WP_Mock::userFunction( 'get_option' )
-			->with( 'swh_closed_status', 'Closed' )
-			->andReturn( 'Closed' );
+			->with( 'swh_settings_general', [] )
+			->andReturn( [ 'closed_status' => 'Closed' ] );
 
 		WP_Mock::expectAction( 'swh_ticket_status_changed', 42, 'Closed', 'Open' );
 		WP_Mock::expectAction( 'swh_ticket_reopened', 42, 'Closed' );
@@ -87,9 +89,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'In Progress' );
+		// v4.0: swh_get_option('general','closed_status') reads swh_settings_general.
 		WP_Mock::userFunction( 'get_option' )
-			->with( 'swh_closed_status', 'Closed' )
-			->andReturn( 'Closed' );
+			->with( 'swh_settings_general', [] )
+			->andReturn( [ 'closed_status' => 'Closed' ] );
 
 		WP_Mock::expectAction( 'swh_ticket_status_changed', 42, 'Open', 'In Progress' );
 
@@ -182,9 +185,10 @@ class LifecycleActionsTest extends TestCase {
 
 	/** Assignment rules dispatching to a new user fires swh_ticket_assigned. */
 	public function test_assignment_rules_fire_assigned_on_change(): void {
+		// v4.0: swh_get_option('routing','assignment_rules') reads swh_settings_routing.
 		WP_Mock::userFunction( 'get_option' )
-			->with( 'swh_assignment_rules', array() )
-			->andReturn( array( array( 'category_term_id' => 5, 'assignee_user_id' => 11 ) ) );
+			->with( 'swh_settings_routing', [] )
+			->andReturn( [ 'assignment_rules' => [ [ 'category_term_id' => 5, 'assignee_user_id' => 11 ] ] ] );
 		WP_Mock::userFunction( 'wp_get_post_terms' )
 			->with( 42, 'helpdesk_category', array( 'fields' => 'ids' ) )
 			->andReturn( array( 5 ) );
@@ -204,9 +208,10 @@ class LifecycleActionsTest extends TestCase {
 
 	/** Assignment rules picking the same assignee does NOT fire (no-op). */
 	public function test_assignment_rules_no_op_does_not_fire(): void {
+		// v4.0: swh_get_option('routing','assignment_rules') reads swh_settings_routing.
 		WP_Mock::userFunction( 'get_option' )
-			->with( 'swh_assignment_rules', array() )
-			->andReturn( array( array( 'category_term_id' => 5, 'assignee_user_id' => 11 ) ) );
+			->with( 'swh_settings_routing', [] )
+			->andReturn( [ 'assignment_rules' => [ [ 'category_term_id' => 5, 'assignee_user_id' => 11 ] ] ] );
 		WP_Mock::userFunction( 'wp_get_post_terms' )
 			->with( 42, 'helpdesk_category', array( 'fields' => 'ids' ) )
 			->andReturn( array( 5 ) );

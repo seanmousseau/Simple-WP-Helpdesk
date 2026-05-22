@@ -121,24 +121,48 @@ function swh_get_defaults() {
 }
 
 /**
- * Read a SWH setting.
+ * Read a SWH setting from grouped storage.
  *
- * The $group argument is advisory in v3.7 — it captures the logical settings
- * group at each call site so v4.0 (#356) can change the helper body without
- * touching any caller. In v3.7 the body reads directly from top-level options.
+ * Reads `swh_settings_<group>` (an array option introduced in v4.0.0 #356)
+ * and returns the value for $key, or $default if the group or key is absent.
  *
  * @since 3.7.0
- * @param string $group   Logical group: 'general', 'email', 'portal',
- *                        'notifications', 'tools', 'routing', 'integrations'.
- *                        Ignored in v3.7; consumed by v4.0 schema split.
- * @param string $key     Option key WITHOUT the 'swh_' prefix
- *                        (e.g. 'assignment_rules' for the option 'swh_assignment_rules').
- * @param mixed  $default Returned when the option is absent.
+ * @since 4.0.0 Body rewritten to read from `swh_settings_<group>` arrays.
+ *              Signature is unchanged — callers are unaffected.
+ * @param string $group   One of: 'general', 'email', 'portal', 'notifications',
+ *                        'tools', 'routing', 'integrations'.
+ * @param string $key     Setting key within the group, WITHOUT the 'swh_' prefix
+ *                        (e.g. 'assignment_rules' → stored as key in swh_settings_routing).
+ * @param mixed  $default Returned when the group or key is absent.
  * @return mixed
  */
-function swh_get_option( $group, $key, $default = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Signature locked for v4.0 #356; $default name preserved to match WP core `get_option()`.
-	unset( $group ); // Advisory in v3.7; consumed by v4.0 #356 schema split.
-	return get_option( 'swh_' . $key, $default );
+function swh_get_option( string $group, string $key, $default = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Signature locked for v4.0 #356; $default name preserved to match WP core `get_option()`.
+	$bag = get_option( 'swh_settings_' . $group, array() );
+	return is_array( $bag ) && array_key_exists( $key, $bag )
+		? $bag[ $key ]
+		: $default;
+}
+
+/**
+ * Write a SWH setting to grouped storage.
+ *
+ * Reads the `swh_settings_<group>` array, updates $key, and writes it back.
+ * Do NOT add caching here — WordPress's options API already caches per-request.
+ *
+ * @since 4.0.0
+ * @param string $group One of: 'general', 'email', 'portal', 'notifications',
+ *                      'tools', 'routing', 'integrations'.
+ * @param string $key   Setting key within the group.
+ * @param mixed  $value New value.
+ * @return bool True on success, false on failure (mirrors update_option()).
+ */
+function swh_set_option( string $group, string $key, $value ): bool {
+	$bag = get_option( 'swh_settings_' . $group, array() );
+	if ( ! is_array( $bag ) ) {
+		$bag = array();
+	}
+	$bag[ $key ] = $value;
+	return (bool) update_option( 'swh_settings_' . $group, $bag );
 }
 
 /**
