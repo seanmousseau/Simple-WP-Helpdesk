@@ -88,6 +88,8 @@ Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 | Method | Path | Auth | Body | Response |
 |---|---|---|---|---|
 | `POST` | `/wp-json/swh/v1/inbound-email` | `Authorization: Bearer <swh_inbound_secret>` header. `permission_callback` is `__return_true` (auth enforced inside the handler). | Parsed-email JSON; the handler reads `from`, `subject`, `body`. Subject must contain `[TKT-XXXX]`. Sender email is compared to `_ticket_email` of the matched ticket via `hash_equals`. | `200` on accepted reply; `4xx` on auth / parse / match failure. |
+| `POST /swh/v1/bulk-action` | `edit_posts` | Apply status/assign/priority/tag/close across selected tickets. Body: `{ action, params, ticket_ids[], version_map{} }`. Returns `{ succeeded[], conflicts: [{ id, version_now }] }`. Cap: 200 tickets. Introduced 4.0.0 #353. |
+| `GET /swh/v1/palette/suggest` | `edit_posts` | Ticket suggestions for ⌘K palette. Param `q` (string). Empty `q` → recent by last_activity. Returns `{ tickets: [{ id, title, status }] }`. Up to 8 results. Introduced 4.0.0 #351. |
 
 Registered at `simple-wp-helpdesk/simple-wp-helpdesk.php:213`. Handler at `simple-wp-helpdesk/includes/class-email.php:222`.
 
