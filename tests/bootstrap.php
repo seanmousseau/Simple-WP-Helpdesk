@@ -63,6 +63,7 @@ if ( ! class_exists( 'WP_REST_Server' ) ) {
 		const READABLE  = 'GET';
 		const EDITABLE  = 'POST, PUT, PATCH';
 		const CREATABLE = 'POST';
+		const DELETABLE = 'DELETE';
 	}
 }
 
