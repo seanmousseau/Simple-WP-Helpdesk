@@ -4,14 +4,18 @@
 // the local result groups (saved views, settings pages).
 export const fuzzyMatch = ( query, candidates, getKey = ( c ) => c ) => {
 	const q = ( query || '' ).toLowerCase().trim();
-	if ( ! q ) return candidates;
+	if ( ! q ) {
+		return candidates;
+	}
 	return candidates
 		.map( ( c ) => {
 			const k = getKey( c ).toLowerCase();
 			let i = 0;
 			for ( const ch of q ) {
 				const found = k.indexOf( ch, i );
-				if ( found < 0 ) return null;
+				if ( found < 0 ) {
+					return null;
+				}
 				i = found + 1;
 			}
 			return c;

@@ -55,9 +55,19 @@ class BulkController extends WP_REST_Controller {
 						'required' => true,
 						'enum'     => array( 'status', 'assign', 'priority', 'tag', 'close' ),
 					),
-					'params'      => array( 'type' => 'object', 'required' => true ),
-					'ticket_ids'  => array( 'type' => 'array', 'required' => true, 'items' => array( 'type' => 'integer' ) ),
-					'version_map' => array( 'type' => 'object', 'required' => true ),
+					'params'      => array(
+						'type'     => 'object',
+						'required' => true,
+					),
+					'ticket_ids'  => array(
+						'type'     => 'array',
+						'required' => true,
+						'items'    => array( 'type' => 'integer' ),
+					),
+					'version_map' => array(
+						'type'     => 'object',
+						'required' => true,
+					),
 				),
 			)
 		);
@@ -81,14 +91,19 @@ class BulkController extends WP_REST_Controller {
 	 * @return WP_REST_Response
 	 */
 	public function bulk_action( $request ): WP_REST_Response {
-		$action      = (string) $request->get_param( 'action' );
+		$raw_action  = $request->get_param( 'action' );
+		$action      = is_scalar( $raw_action ) ? (string) $raw_action : '';
 		$params      = (array) $request->get_param( 'params' );
-		$ticket_ids  = array_map( 'intval', (array) $request->get_param( 'ticket_ids' ) );
+		$raw_ids     = (array) $request->get_param( 'ticket_ids' );
+		$ticket_ids  = array_map( static fn( $v ) => is_scalar( $v ) ? (int) $v : 0, $raw_ids );
 		$version_map = (array) $request->get_param( 'version_map' );
 
 		if ( count( $ticket_ids ) > self::MAX_TICKETS ) {
 			return new WP_REST_Response(
-				array( 'error' => 'too_many_tickets', 'max' => self::MAX_TICKETS ),
+				array(
+					'error' => 'too_many_tickets',
+					'max'   => self::MAX_TICKETS,
+				),
 				400
 			);
 		}
@@ -97,10 +112,14 @@ class BulkController extends WP_REST_Controller {
 		$conflicts = array();
 
 		foreach ( $ticket_ids as $id ) {
-			$expected = isset( $version_map[ $id ] ) ? (int) $version_map[ $id ] : 0;
-			$current  = TicketVersion::current( $id );
+			$raw_expected = isset( $version_map[ $id ] ) ? $version_map[ $id ] : 0;
+			$expected     = is_scalar( $raw_expected ) ? (int) $raw_expected : 0;
+			$current      = TicketVersion::current( $id );
 			if ( $current !== $expected ) {
-				$conflicts[] = array( 'id' => $id, 'version_now' => $current );
+				$conflicts[] = array(
+					'id'          => $id,
+					'version_now' => $current,
+				);
 				continue;
 			}
 			$this->apply( $action, $id, $params );
@@ -108,7 +127,10 @@ class BulkController extends WP_REST_Controller {
 		}
 
 		return new WP_REST_Response(
-			array( 'succeeded' => $succeeded, 'conflicts' => $conflicts ),
+			array(
+				'succeeded' => $succeeded,
+				'conflicts' => $conflicts,
+			),
 			200
 		);
 	}
@@ -124,14 +146,15 @@ class BulkController extends WP_REST_Controller {
 		switch ( $action ) {
 			case 'status':
 				if ( isset( $params['status'] ) && is_string( $params['status'] ) ) {
-					swh_set_ticket_status( $id, $params['status'] );  // bumps version internally
+					swh_set_ticket_status( $id, $params['status'] );  // Bumps version internally.
 				}
 				return;
 			case 'close':
 				swh_set_ticket_status( $id, 'closed' );
 				return;
 			case 'assign':
-				$assignee = isset( $params['assignee'] ) ? (int) $params['assignee'] : 0;
+				$raw_assignee = isset( $params['assignee'] ) ? $params['assignee'] : 0;
+				$assignee     = is_scalar( $raw_assignee ) ? (int) $raw_assignee : 0;
 				update_post_meta( $id, '_ticket_assigned', $assignee > 0 ? $assignee : '' );
 				TicketVersion::bump( $id );
 				return;
@@ -142,8 +165,9 @@ class BulkController extends WP_REST_Controller {
 				}
 				return;
 			case 'tag':
-				$tags   = isset( $params['tags'] ) ? array_map( 'sanitize_text_field', (array) $params['tags'] ) : array();
-				$append = ! empty( $params['append'] );
+				$raw_tags = isset( $params['tags'] ) && is_array( $params['tags'] ) ? $params['tags'] : array();
+				$tags     = array_map( static fn( $v ) => sanitize_text_field( is_scalar( $v ) ? (string) $v : '' ), $raw_tags );
+				$append   = ! empty( $params['append'] );
 				wp_set_post_terms( $id, $tags, 'helpdesk_category', $append );
 				TicketVersion::bump( $id );
 				return;

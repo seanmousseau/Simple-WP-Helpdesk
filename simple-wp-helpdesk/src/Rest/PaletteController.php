@@ -47,7 +47,11 @@ class PaletteController extends WP_REST_Controller {
 				'callback'            => array( $this, 'suggest' ),
 				'permission_callback' => array( $this, 'permissions_check' ),
 				'args'                => array(
-					'q' => array( 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_text_field' ),
+					'q' => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
 				),
 			)
 		);
@@ -71,7 +75,8 @@ class PaletteController extends WP_REST_Controller {
 	 * @return WP_REST_Response
 	 */
 	public function suggest( $request ): WP_REST_Response {
-		$q = trim( (string) $request->get_param( 'q' ) );
+		$raw_q = $request->get_param( 'q' );
+		$q     = trim( is_scalar( $raw_q ) ? (string) $raw_q : '' );
 
 		$args = array(
 			'post_type'      => 'helpdesk_ticket',
@@ -88,10 +93,13 @@ class PaletteController extends WP_REST_Controller {
 
 		$tickets = array();
 		foreach ( $posts as $p ) {
+			$post_id   = is_scalar( $p->ID ) ? (int) $p->ID : 0;
 			$tickets[] = array(
-				'id'     => (int) $p->ID,
-				'title'  => $p->post_title,
-				'status' => (string) get_post_meta( (int) $p->ID, '_ticket_status', true ),
+				'id'     => $post_id,
+				'title'  => is_scalar( $p->post_title ) ? (string) $p->post_title : '',
+				'status' => is_scalar( get_post_meta( $post_id, '_ticket_status', true ) )
+					? (string) get_post_meta( $post_id, '_ticket_status', true )
+					: '',
 			);
 		}
 
