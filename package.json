@@ -3,8 +3,8 @@
   "private": true,
   "description": "Build tooling for Simple WP Helpdesk JS assets (v3.7.0+).",
   "scripts": {
-    "build": "wp-scripts build --webpack-src-dir=simple-wp-helpdesk/assets/src --output-path=simple-wp-helpdesk/assets/dist toast=toast/index.js admin-inbox=admin-inbox/index.js",
-    "start": "wp-scripts start --webpack-src-dir=simple-wp-helpdesk/assets/src --output-path=simple-wp-helpdesk/assets/dist toast=toast/index.js admin-inbox=admin-inbox/index.js",
+    "build": "wp-scripts build --webpack-src-dir=simple-wp-helpdesk/assets/src --output-path=simple-wp-helpdesk/assets/dist toast=toast/index.js admin-inbox=admin-inbox/index.js views-settings=views-settings/index.js",
+    "start": "wp-scripts start --webpack-src-dir=simple-wp-helpdesk/assets/src --output-path=simple-wp-helpdesk/assets/dist toast=toast/index.js admin-inbox=admin-inbox/index.js views-settings=views-settings/index.js",
     "lint:js": "wp-scripts lint-js simple-wp-helpdesk/assets/src",
     "format": "wp-scripts format simple-wp-helpdesk/assets/src"
   },

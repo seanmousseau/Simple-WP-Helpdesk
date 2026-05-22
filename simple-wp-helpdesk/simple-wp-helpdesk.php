@@ -53,6 +53,7 @@ if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'src/Rest/PaletteController.php';
 	require_once SWH_PLUGIN_DIR . 'src/Views/ViewsRepository.php';
 	require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-views-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-plugin-action-links.php';
