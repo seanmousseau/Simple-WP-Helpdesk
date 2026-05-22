@@ -13,7 +13,9 @@ export const ViewsSettingsPage = () => {
 		setLoading( true );
 		try {
 			const data = await apiFetch( { path: '/swh/v1/views' } );
-			setViews( ( data.views || [] ).filter( ( v ) => v.scope === 'global' ) );
+			setViews(
+				( data.views || [] ).filter( ( v ) => v.scope === 'global' )
+			);
 		} catch ( e ) {
 			// eslint-disable-next-line no-alert
 			window.alert( e.message );
@@ -24,10 +26,12 @@ export const ViewsSettingsPage = () => {
 
 	useEffect( () => {
 		refresh();
-	}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [] );
 
 	const onCreate = async () => {
-		if ( ! newName.trim() ) return;
+		if ( ! newName.trim() ) {
+			return;
+		}
 		await apiFetch( {
 			path: '/swh/v1/views',
 			method: 'POST',
@@ -45,15 +49,12 @@ export const ViewsSettingsPage = () => {
 
 	const onDelete = async ( id ) => {
 		// eslint-disable-next-line no-alert
-		if (
-			! window.confirm(
-				__(
-					'Delete this global view for all users?',
-					'simple-wp-helpdesk'
-				)
-			)
-		)
+		const confirmed = window.confirm(
+			__( 'Delete this global view for all users?', 'simple-wp-helpdesk' )
+		);
+		if ( ! confirmed ) {
 			return;
+		}
 		await apiFetch( {
 			path: `/swh/v1/views/${ id }?scope=global`,
 			method: 'DELETE',

@@ -14,7 +14,9 @@ apiFetch.use(
 
 const mount = () => {
 	const root = document.getElementById( 'swh-views-settings-root' );
-	if ( ! root ) return;
+	if ( ! root ) {
+		return;
+	}
 	render( <ViewsSettingsPage />, root );
 };
 

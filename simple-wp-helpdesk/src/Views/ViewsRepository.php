@@ -66,7 +66,8 @@ final class ViewsRepository {
 	/**
 	 * Save a new personal view for the user. Returns the saved view with id.
 	 *
-	 * @param array<string, mixed> $view
+	 * @param int                  $user_id WordPress user ID.
+	 * @param array<string, mixed> $view     View data (name, filters, sort, columns).
 	 * @return array<string, mixed>
 	 */
 	public function save_personal( int $user_id, array $view ): array {
@@ -80,7 +81,9 @@ final class ViewsRepository {
 	/**
 	 * Update a personal view by id. Returns the updated view, or null if not found.
 	 *
-	 * @param array<string, mixed> $patch
+	 * @param int                  $user_id WordPress user ID.
+	 * @param string               $id      View UUID.
+	 * @param array<string, mixed> $patch   Fields to merge into the existing view.
 	 * @return array<string, mixed>|null
 	 */
 	public function update_personal( int $user_id, string $id, array $patch ): ?array {
@@ -134,7 +137,8 @@ final class ViewsRepository {
 	/**
 	 * Update a global view by id. Requires manage_options.
 	 *
-	 * @param array<string, mixed> $patch
+	 * @param string               $id    View UUID.
+	 * @param array<string, mixed> $patch Fields to merge into the existing view.
 	 * @return array<string, mixed>|null
 	 */
 	public function update_global( string $id, array $patch ): ?array {

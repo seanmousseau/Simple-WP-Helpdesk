@@ -27,6 +27,11 @@ class ViewsController extends WP_REST_Controller {
 	public const NAMESPACE = 'swh/v1';
 	public const REST_BASE = 'views';
 
+	/**
+	 * Storage layer for saved views.
+	 *
+	 * @var ViewsRepository
+	 */
 	private ViewsRepository $repo;
 
 	public function __construct( ?ViewsRepository $repo = null ) {
@@ -51,11 +56,28 @@ class ViewsController extends WP_REST_Controller {
 				'callback'            => array( $this, 'create_view' ),
 				'permission_callback' => array( $this, 'permissions_check' ),
 				'args'                => array(
-					'name'    => array( 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ),
-					'scope'   => array( 'type' => 'string', 'default' => 'personal', 'enum' => array( 'personal', 'global' ) ),
-					'filters' => array( 'type' => 'object', 'default' => array() ),
-					'sort'    => array( 'type' => 'string', 'default' => 'last_reply_desc' ),
-					'columns' => array( 'type' => 'array', 'default' => array() ),
+					'name'    => array(
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'scope'   => array(
+						'type'    => 'string',
+						'default' => 'personal',
+						'enum'    => array( 'personal', 'global' ),
+					),
+					'filters' => array(
+						'type'    => 'object',
+						'default' => array(),
+					),
+					'sort'    => array(
+						'type'    => 'string',
+						'default' => 'last_reply_desc',
+					),
+					'columns' => array(
+						'type'    => 'array',
+						'default' => array(),
+					),
 				),
 			)
 		);
@@ -67,9 +89,19 @@ class ViewsController extends WP_REST_Controller {
 				'callback'            => array( $this, 'update_view' ),
 				'permission_callback' => array( $this, 'permissions_check' ),
 				'args'                => array(
-					'id'    => array( 'type' => 'string', 'required' => true ),
-					'scope' => array( 'type' => 'string', 'required' => true, 'enum' => array( 'personal', 'global' ) ),
-					'patch' => array( 'type' => 'object', 'required' => true ),
+					'id'    => array(
+						'type'     => 'string',
+						'required' => true,
+					),
+					'scope' => array(
+						'type'     => 'string',
+						'required' => true,
+						'enum'     => array( 'personal', 'global' ),
+					),
+					'patch' => array(
+						'type'     => 'object',
+						'required' => true,
+					),
 				),
 			)
 		);
@@ -81,14 +113,23 @@ class ViewsController extends WP_REST_Controller {
 				'callback'            => array( $this, 'delete_view' ),
 				'permission_callback' => array( $this, 'permissions_check' ),
 				'args'                => array(
-					'id'    => array( 'type' => 'string', 'required' => true ),
-					'scope' => array( 'type' => 'string', 'required' => true, 'enum' => array( 'personal', 'global' ) ),
+					'id'    => array(
+						'type'     => 'string',
+						'required' => true,
+					),
+					'scope' => array(
+						'type'     => 'string',
+						'required' => true,
+						'enum'     => array( 'personal', 'global' ),
+					),
 				),
 			)
 		);
 	}
 
 	/**
+	 * Check that the current user can access view endpoints.
+	 *
 	 * @param WP_REST_Request $request REST request.
 	 */
 	public function permissions_check( WP_REST_Request $request ): bool {
@@ -97,6 +138,8 @@ class ViewsController extends WP_REST_Controller {
 	}
 
 	/**
+	 * Return the merged global + personal view list for the current user.
+	 *
 	 * @param WP_REST_Request $request REST request.
 	 */
 	public function list_views( $request ): WP_REST_Response {
@@ -106,16 +149,14 @@ class ViewsController extends WP_REST_Controller {
 	}
 
 	/**
+	 * Create a new personal or global saved view.
+	 *
 	 * @param WP_REST_Request $request REST request.
 	 */
 	public function create_view( $request ): WP_REST_Response {
-		$scope = (string) $request->get_param( 'scope' );
-		$view  = array(
-			'name'    => (string) $request->get_param( 'name' ),
-			'filters' => (array) $request->get_param( 'filters' ),
-			'sort'    => (string) $request->get_param( 'sort' ),
-			'columns' => (array) $request->get_param( 'columns' ),
-		);
+		$raw_scope = $request->get_param( 'scope' );
+		$scope     = is_scalar( $raw_scope ) ? (string) $raw_scope : 'personal';
+		$view      = $this->build_view_array( $request );
 
 		if ( 'global' === $scope ) {
 			$saved = $this->repo->save_global( $view );
@@ -132,12 +173,17 @@ class ViewsController extends WP_REST_Controller {
 	}
 
 	/**
+	 * Update a saved view by id and scope.
+	 *
 	 * @param WP_REST_Request $request REST request.
 	 */
 	public function update_view( $request ): WP_REST_Response {
-		$id    = (string) $request->get_param( 'id' );
-		$scope = (string) $request->get_param( 'scope' );
-		$patch = (array) $request->get_param( 'patch' );
+		$raw_id    = $request->get_param( 'id' );
+		$raw_scope = $request->get_param( 'scope' );
+		$raw_patch = $request->get_param( 'patch' );
+		$id        = is_scalar( $raw_id ) ? (string) $raw_id : '';
+		$scope     = is_scalar( $raw_scope ) ? (string) $raw_scope : 'personal';
+		$patch     = $this->to_string_keyed_array( $raw_patch );
 
 		if ( 'global' === $scope ) {
 			$updated = $this->repo->update_global( $id, $patch );
@@ -157,11 +203,15 @@ class ViewsController extends WP_REST_Controller {
 	}
 
 	/**
+	 * Delete a saved view by id and scope.
+	 *
 	 * @param WP_REST_Request $request REST request.
 	 */
 	public function delete_view( $request ): WP_REST_Response {
-		$id    = (string) $request->get_param( 'id' );
-		$scope = (string) $request->get_param( 'scope' );
+		$raw_id    = $request->get_param( 'id' );
+		$raw_scope = $request->get_param( 'scope' );
+		$id        = is_scalar( $raw_id ) ? (string) $raw_id : '';
+		$scope     = is_scalar( $raw_scope ) ? (string) $raw_scope : 'personal';
 
 		if ( 'global' === $scope ) {
 			$ok = $this->repo->delete_global( $id );
@@ -176,6 +226,44 @@ class ViewsController extends WP_REST_Controller {
 			array( 'deleted' => $ok ),
 			$ok ? 200 : 404
 		);
+	}
+
+	/**
+	 * Build a string-keyed view array from request params for save operations.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return array<string, mixed>
+	 */
+	private function build_view_array( $request ): array {
+		$raw_name = $request->get_param( 'name' );
+		$raw_sort = $request->get_param( 'sort' );
+		$filters  = $request->get_param( 'filters' );
+		$columns  = $request->get_param( 'columns' );
+		return array(
+			'name'    => is_scalar( $raw_name ) ? (string) $raw_name : '',
+			'filters' => is_array( $filters ) ? $this->to_string_keyed_array( $filters ) : array(),
+			'sort'    => is_scalar( $raw_sort ) ? (string) $raw_sort : 'last_reply_desc',
+			'columns' => is_array( $columns ) ? array_values( $columns ) : array(),
+		);
+	}
+
+	/**
+	 * Narrow an array to string keys, dropping non-string keys.
+	 *
+	 * @param mixed $value Incoming value (expected to be array).
+	 * @return array<string, mixed>
+	 */
+	private function to_string_keyed_array( $value ): array {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $value as $k => $v ) {
+			if ( is_string( $k ) ) {
+				$out[ $k ] = $v;
+			}
+		}
+		return $out;
 	}
 }
 

@@ -9,57 +9,65 @@ const DEFAULT_STATE = {
 };
 
 const actions = {
-	fetchViews: () => async ( { dispatch } ) => {
-		dispatch( { type: 'FETCH_START' } );
-		try {
-			const data = await apiFetch( { path: '/swh/v1/views' } );
-			dispatch( { type: 'FETCH_SUCCESS', views: data.views || [] } );
-		} catch ( err ) {
-			dispatch( { type: 'FETCH_ERROR', error: err.message } );
-		}
-	},
+	fetchViews:
+		() =>
+		async ( { dispatch } ) => {
+			dispatch( { type: 'FETCH_START' } );
+			try {
+				const data = await apiFetch( { path: '/swh/v1/views' } );
+				dispatch( { type: 'FETCH_SUCCESS', views: data.views || [] } );
+			} catch ( err ) {
+				dispatch( { type: 'FETCH_ERROR', error: err.message } );
+			}
+		},
 
-	createView: ( view ) => async ( { dispatch } ) => {
-		try {
-			const data = await apiFetch( {
-				path: '/swh/v1/views',
-				method: 'POST',
-				data: view,
-			} );
-			dispatch( { type: 'VIEW_CREATED', view: data.view } );
-			return data.view;
-		} catch ( err ) {
-			dispatch( { type: 'FETCH_ERROR', error: err.message } );
-			return null;
-		}
-	},
+	createView:
+		( view ) =>
+		async ( { dispatch } ) => {
+			try {
+				const data = await apiFetch( {
+					path: '/swh/v1/views',
+					method: 'POST',
+					data: view,
+				} );
+				dispatch( { type: 'VIEW_CREATED', view: data.view } );
+				return data.view;
+			} catch ( err ) {
+				dispatch( { type: 'FETCH_ERROR', error: err.message } );
+				return null;
+			}
+		},
 
-	updateView: ( id, scope, patch ) => async ( { dispatch } ) => {
-		try {
-			const data = await apiFetch( {
-				path: `/swh/v1/views/${ id }`,
-				method: 'PATCH',
-				data: { scope, patch },
-			} );
-			dispatch( { type: 'VIEW_UPDATED', view: data.view } );
-			return data.view;
-		} catch ( err ) {
-			dispatch( { type: 'FETCH_ERROR', error: err.message } );
-			return null;
-		}
-	},
+	updateView:
+		( id, scope, patch ) =>
+		async ( { dispatch } ) => {
+			try {
+				const data = await apiFetch( {
+					path: `/swh/v1/views/${ id }`,
+					method: 'PATCH',
+					data: { scope, patch },
+				} );
+				dispatch( { type: 'VIEW_UPDATED', view: data.view } );
+				return data.view;
+			} catch ( err ) {
+				dispatch( { type: 'FETCH_ERROR', error: err.message } );
+				return null;
+			}
+		},
 
-	deleteView: ( id, scope ) => async ( { dispatch } ) => {
-		try {
-			await apiFetch( {
-				path: `/swh/v1/views/${ id }?scope=${ scope }`,
-				method: 'DELETE',
-			} );
-			dispatch( { type: 'VIEW_DELETED', id } );
-		} catch ( err ) {
-			dispatch( { type: 'FETCH_ERROR', error: err.message } );
-		}
-	},
+	deleteView:
+		( id, scope ) =>
+		async ( { dispatch } ) => {
+			try {
+				await apiFetch( {
+					path: `/swh/v1/views/${ id }?scope=${ scope }`,
+					method: 'DELETE',
+				} );
+				dispatch( { type: 'VIEW_DELETED', id } );
+			} catch ( err ) {
+				dispatch( { type: 'FETCH_ERROR', error: err.message } );
+			}
+		},
 };
 
 const reducer = ( state = DEFAULT_STATE, action ) => {

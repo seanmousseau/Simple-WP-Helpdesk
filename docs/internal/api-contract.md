@@ -90,6 +90,10 @@ Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 | `POST` | `/wp-json/swh/v1/inbound-email` | `Authorization: Bearer <swh_inbound_secret>` header. `permission_callback` is `__return_true` (auth enforced inside the handler). | Parsed-email JSON; the handler reads `from`, `subject`, `body`. Subject must contain `[TKT-XXXX]`. Sender email is compared to `_ticket_email` of the matched ticket via `hash_equals`. | `200` on accepted reply; `4xx` on auth / parse / match failure. |
 | `POST /swh/v1/bulk-action` | `edit_posts` | Apply status/assign/priority/tag/close across selected tickets. Body: `{ action, params, ticket_ids[], version_map{} }`. Returns `{ succeeded[], conflicts: [{ id, version_now }] }`. Cap: 200 tickets. Introduced 4.0.0 #353. |
 | `GET /swh/v1/palette/suggest` | `edit_posts` | Ticket suggestions for ⌘K palette. Param `q` (string). Empty `q` → recent by last_activity. Returns `{ tickets: [{ id, title, status }] }`. Up to 8 results. Introduced 4.0.0 #351. |
+| `GET /swh/v1/views` | `edit_posts` | List user's merged views (global + personal, hidden globals filtered). Returns `{ views: [{ id, name, scope, filters, sort, columns }] }`. Introduced 4.0.0 #352. |
+| `POST /swh/v1/views` | `edit_posts` (personal) / `manage_options` (global) | Create a view. Body: `{ name, scope, filters, sort, columns }`. Returns `{ view }` at 201. Introduced 4.0.0 #352. |
+| `PATCH /swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | Update a view. Body: `{ scope, patch }`. Returns `{ view }` at 200. Introduced 4.0.0 #352. |
+| `DELETE /swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | Delete a view. Param: `scope`. Introduced 4.0.0 #352. |
 
 Registered at `simple-wp-helpdesk/simple-wp-helpdesk.php:213`. Handler at `simple-wp-helpdesk/includes/class-email.php:222`.
 

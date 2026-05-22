@@ -39,7 +39,8 @@ function swh_views_settings_enqueue( string $hook ): void {
 	if ( ! file_exists( $asset_file ) ) {
 		return;
 	}
-	$asset = require $asset_file;
+	// @phpstan-ignore-next-line include.fileNotFound
+	$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 
 	wp_enqueue_script(
 		'swh-views-settings',

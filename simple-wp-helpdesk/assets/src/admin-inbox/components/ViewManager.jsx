@@ -23,7 +23,9 @@ export const AddViewButton = () => {
 	const { createView } = useDispatch( SWH_VIEWS_STORE );
 
 	const onSave = async () => {
-		if ( ! name.trim() ) return;
+		if ( ! name.trim() ) {
+			return;
+		}
 		await createView( {
 			name: name.trim(),
 			scope: 'personal',
@@ -45,7 +47,10 @@ export const AddViewButton = () => {
 				{ __( '+ Add view', 'simple-wp-helpdesk' ) }
 			</button>
 			{ isOpen && (
-				<Popover position="middle right" onClose={ () => setOpen( false ) }>
+				<Popover
+					position="middle right"
+					onClose={ () => setOpen( false ) }
+				>
 					<div className="swh-view-popover">
 						<TextControl
 							label={ __( 'View name', 'simple-wp-helpdesk' ) }
@@ -98,7 +103,9 @@ export const ViewRowMenu = ( { view } ) => {
 	const [ isOpen, setOpen ] = useState( false );
 	const { updateView, deleteView } = useDispatch( SWH_VIEWS_STORE );
 
-	if ( view.scope === 'global' ) return null;
+	if ( view.scope === 'global' ) {
+		return null;
+	}
 
 	const onRename = () => {
 		// eslint-disable-next-line no-alert
@@ -113,8 +120,9 @@ export const ViewRowMenu = ( { view } ) => {
 	};
 
 	const onDelete = () => {
-		// eslint-disable-next-line no-alert
-		if ( window.confirm( __( 'Delete this view?', 'simple-wp-helpdesk' ) ) ) {
+		if (
+			window.confirm( __( 'Delete this view?', 'simple-wp-helpdesk' ) ) // eslint-disable-line no-alert
+		) {
 			deleteView( view.id, 'personal' );
 		}
 		setOpen( false );
@@ -134,7 +142,10 @@ export const ViewRowMenu = ( { view } ) => {
 				{ '⋯' /* ⋯ */ }
 			</button>
 			{ isOpen && (
-				<Popover position="bottom right" onClose={ () => setOpen( false ) }>
+				<Popover
+					position="bottom right"
+					onClose={ () => setOpen( false ) }
+				>
 					<button className="swh-view-menu-item" onClick={ onRename }>
 						{ __( 'Rename', 'simple-wp-helpdesk' ) }
 					</button>
