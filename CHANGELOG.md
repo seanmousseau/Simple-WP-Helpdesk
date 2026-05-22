@@ -14,6 +14,12 @@ starting from the next release after 1.8.
 
 - Raised PHP minimum to 8.0 (was 7.4). Hosts on PHP 7.4 must stay on the v3.6 LTS branch. (#357)
 - Raised WordPress minimum to 6.0 (was 5.3). Unlocks `@wordpress/components` as a guaranteed external for the Admin UX rewrite. (#358)
+- Settings schema migrated from flat `swh_<key>` options to grouped `swh_settings_<group>` arrays (7 groups: general, email, portal, notifications, tools, routing, integrations). Automatic one-shot upgrade on `plugins_loaded` priority 5 (idempotent via `swh_db_version`). Legacy flat options remain in storage but become dead reads (forward-only; v3.6 LTS branch remains the supported sidegrade for PHP 7.4 hosts). (#356)
+
+### Added
+
+- `swh_set_option( $group, $key, $value )` helper, mirror of `swh_get_option()`. (#356)
+- `\SWH\Settings\Migration` class — one-shot schema upgrade routine, idempotent, runs on `plugins_loaded` p5. Exposes `Migration::group_for( $flat_key )` for write-side dispatch. (#356)
 
 ### Internal
 

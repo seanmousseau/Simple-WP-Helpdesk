@@ -246,9 +246,9 @@ function swh_handle_settings_save() {
 
 	// SAVE TOOLS/RETENTION SETTINGS (separate form with its own nonce).
 	if ( isset( $_POST['swh_save_settings'], $_POST['swh_tools_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_tools_nonce'] ) ? $_POST['swh_tools_nonce'] : '' ) ), 'swh_save_tools_action' ) ) {
-		update_option( 'swh_retention_attachments_days', isset( $_POST['swh_retention_attachments_days'] ) && is_scalar( $_POST['swh_retention_attachments_days'] ) ? absint( $_POST['swh_retention_attachments_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		update_option( 'swh_retention_tickets_days', isset( $_POST['swh_retention_tickets_days'] ) && is_scalar( $_POST['swh_retention_tickets_days'] ) ? absint( $_POST['swh_retention_tickets_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		update_option( 'swh_delete_on_uninstall', isset( $_POST['swh_delete_on_uninstall'] ) ? 'yes' : 'no' );
+		swh_set_option( 'tools', 'retention_attachments_days', isset( $_POST['swh_retention_attachments_days'] ) && is_scalar( $_POST['swh_retention_attachments_days'] ) ? absint( $_POST['swh_retention_attachments_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		swh_set_option( 'tools', 'retention_tickets_days', isset( $_POST['swh_retention_tickets_days'] ) && is_scalar( $_POST['swh_retention_tickets_days'] ) ? absint( $_POST['swh_retention_tickets_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		swh_set_option( 'tools', 'delete_on_uninstall', isset( $_POST['swh_delete_on_uninstall'] ) ? 'yes' : 'no' );
 		wp_safe_redirect(
 			add_query_arg(
 				array(
@@ -264,7 +264,7 @@ function swh_handle_settings_save() {
 	// SAVE GENERAL SETTINGS (main form).
 	if ( isset( $_POST['swh_save_settings'], $_POST['swh_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_settings_nonce'] ) ? $_POST['swh_settings_nonce'] : '' ) ), 'swh_save_settings_action' ) ) {
 		if ( ! isset( $_POST['swh_restrict_to_assigned'] ) ) {
-			update_option( 'swh_restrict_to_assigned', 'no' );
+			swh_set_option( 'routing', 'restrict_to_assigned', 'no' );
 		}
 		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
@@ -286,7 +286,12 @@ function swh_handle_settings_save() {
 			} else {
 				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
-			update_option( $opt, $val );
+			$entry = \SWH\Settings\Migration::group_for( $opt );
+			if ( null !== $entry ) {
+				swh_set_option( $entry[0], $entry[1], $val );
+			} else {
+				update_option( $opt, $val );
+			}
 		}
 		// Save canned responses (structured option, not part of $options_list).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
@@ -304,7 +309,7 @@ function swh_handle_settings_save() {
 				);
 			}
 		}
-		update_option( 'swh_canned_responses', $canned );
+		swh_set_option( 'tools', 'canned_responses', $canned );
 
 		// Save ticket templates (structured option, not part of $options_list).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
@@ -322,7 +327,7 @@ function swh_handle_settings_save() {
 				);
 			}
 		}
-		update_option( 'swh_ticket_templates', $templates );
+		swh_set_option( 'tools', 'ticket_templates', $templates );
 
 		// Save assignment rules (array of {category_term_id, assignee_user_id}).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by absint() in loop below.
@@ -340,7 +345,7 @@ function swh_handle_settings_save() {
 				);
 			}
 		}
-		update_option( 'swh_assignment_rules', $rules );
+		swh_set_option( 'routing', 'assignment_rules', $rules );
 
 		wp_safe_redirect(
 			add_query_arg(

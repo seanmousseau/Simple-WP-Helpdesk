@@ -53,6 +53,17 @@ if ( is_admin() ) {
 require_once SWH_PLUGIN_DIR . 'frontend/class-shortcode.php';
 require_once SWH_PLUGIN_DIR . 'frontend/class-portal.php';
 
+// Settings schema migration (v4.0.0 #356) — idempotent one-shot upgrade from flat
+// `swh_<key>` options to grouped `swh_settings_<group>` arrays. Priority 5 so the
+// grouped bags exist before any other plugin code reads settings.
+add_action(
+	'plugins_loaded',
+	static function (): void {
+		( new \SWH\Settings\Migration() )->run();
+	},
+	5
+);
+
 // Lifecycle hooks (must reference main plugin __FILE__).
 /** Runs on plugin activation: schedules cron events, registers CPT, seeds defaults. */
 register_activation_hook( __FILE__, 'swh_activate' );
