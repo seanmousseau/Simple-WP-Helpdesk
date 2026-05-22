@@ -90,7 +90,7 @@ function swh_inbox_enqueue( string $hook ): void {
 		$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 		if ( is_array( $asset ) ) {
 			if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
-				$deps = array_values( array_filter( $asset['dependencies'], 'is_string' ) );
+				$deps = swh_filter_known_script_deps( $asset['dependencies'] );
 			}
 			if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
 				$version = $asset['version'];

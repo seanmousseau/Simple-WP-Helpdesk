@@ -179,6 +179,32 @@ function swh_set_option( string $group, string $key, $value ): bool {
 }
 
 /**
+ * Filter a @wordpress/scripts asset-manifest dependency list to only handles
+ * that exist in the current WordPress version.
+ *
+ * `@wordpress/scripts` may emit dependencies that don't exist on older WP
+ * floors (e.g. `react-jsx-runtime` was introduced in WP 6.6). When wp_enqueue_script
+ * is called with any unregistered dep, WP silently skips the enqueue. This helper
+ * strips unknown handles so the script still loads on older WP versions.
+ *
+ * @since 4.0.0
+ * @param array<mixed> $deps Raw dependency list from the asset manifest.
+ * @return array<int, string> Filtered to only registered handles.
+ */
+function swh_filter_known_script_deps( array $deps ): array {
+	$out = array();
+	foreach ( $deps as $handle ) {
+		if ( ! is_string( $handle ) || '' === $handle ) {
+			continue;
+		}
+		if ( function_exists( 'wp_script_is' ) && wp_script_is( $handle, 'registered' ) ) {
+			$out[] = $handle;
+		}
+	}
+	return $out;
+}
+
+/**
  * Updates a ticket's status meta and fires the appropriate lifecycle actions.
  *
  * Wraps `update_post_meta( $ticket_id, '_ticket_status', $new_status )` and

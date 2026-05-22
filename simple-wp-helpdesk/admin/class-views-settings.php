@@ -45,7 +45,7 @@ function swh_views_settings_enqueue( string $hook ): void {
 	wp_enqueue_script(
 		'swh-views-settings',
 		SWH_PLUGIN_URL . 'assets/dist/views-settings.js',
-		$asset['dependencies'] ?? array(),
+		swh_filter_known_script_deps( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ? $asset['dependencies'] : array() ),
 		$asset['version'] ?? SWH_VERSION,
 		true
 	);
