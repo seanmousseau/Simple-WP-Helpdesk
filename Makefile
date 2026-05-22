@@ -27,7 +27,7 @@ phpcs: ## WordPress Coding Standards (zero errors required)
 
 phpstan: ## Static analysis level 9
 	@echo "→ PHPStan..."
-	@vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+	@vendor/bin/phpstan analyse --memory-limit=2G --no-progress
 	@echo "✓ PHPStan passed"
 
 phpunit: ## Unit tests
