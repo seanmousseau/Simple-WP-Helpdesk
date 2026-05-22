@@ -266,6 +266,8 @@ function swh_handle_settings_save() {
 		if ( ! isset( $_POST['swh_restrict_to_assigned'] ) ) {
 			swh_set_option( 'routing', 'restrict_to_assigned', 'no' );
 		}
+		$violet_on = isset( $_POST['swh_use_violet_theme'] );
+		swh_set_option( 'general', 'use_violet_theme', $violet_on );
 		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
 		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses', 'swh_ticket_templates', 'swh_assignment_rules' );
@@ -442,6 +444,21 @@ function swh_render_settings_page() {
 					<table class="form-table">
 						<tr><th scope="row"><?php esc_html_e( 'Max File Upload Size', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_size" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_size', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'MB', 'simple-wp-helpdesk' ); ?></td></tr>
 						<tr><th scope="row"><?php esc_html_e( 'Max Files Per Upload', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_count" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_count', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'files', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'Maximum number of files a user can attach per submission. Set to 0 for unlimited.', 'simple-wp-helpdesk' ); ?></p></td></tr>
+					</table>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Appearance', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Visual theme', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<label><input type="checkbox" name="swh_use_violet_theme" value="1" <?php checked( swh_get_option( 'general', 'use_violet_theme', false ) ); ?>>
+								<?php esc_html_e( 'Use new Violet theme (preview)', 'simple-wp-helpdesk' ); ?></label>
+								<p class="description">
+									<?php esc_html_e( 'Updated visual identity for the admin and client portal. Hard-refresh after enabling so the new fonts load.', 'simple-wp-helpdesk' ); ?>
+								</p>
+							</td>
+						</tr>
 					</table>
 				</fieldset>
 			</div>
