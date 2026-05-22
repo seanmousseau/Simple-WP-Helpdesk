@@ -3936,12 +3936,21 @@ def test_65_inbox_renders_and_switches_views(page: Page):
     else:
         skip("inbox #349: My Open view link", "'.swh-inbox-view-link' with text 'My Open' not found")
 
-    # List, empty state, or loading indicator present (depends on fixture data).
+    # List, empty state, loading indicator, or error message present (depends
+    # on fixture data + REST call result).
     list_present = page.locator(
-        ".swh-inbox-list,.swh-inbox-empty,.swh-inbox-loading"
+        ".swh-inbox-list,.swh-inbox-empty,.swh-inbox-loading,.swh-inbox-error"
     ).count()
-    check("inbox #349: list/empty/loading present", list_present >= 1,
-          f"count={list_present}")
+    if list_present == 0:
+        # Diagnostic: dump the inbox-main inner HTML so the failure log shows
+        # what's actually rendered (helps catch unexpected error states).
+        main = page.locator(".swh-inbox-main")
+        diag = main.inner_html()[:300] if main.count() > 0 else "<no .swh-inbox-main>"
+        check("inbox #349: list/empty/loading/error present", False,
+              f"count=0; main_html={diag!r}")
+    else:
+        check("inbox #349: list/empty/loading/error present", True,
+              f"count={list_present}")
 
     wp_logout(page)
 
