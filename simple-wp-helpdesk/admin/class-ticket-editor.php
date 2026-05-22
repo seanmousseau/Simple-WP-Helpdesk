@@ -587,6 +587,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
 			update_post_meta( $post_id, '_swh_last_activity_at', time() );
 			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
+			\SWH\Concurrency\TicketVersion::bump( $post_id );
 		}
 	}
 
@@ -616,6 +617,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '0' );
 			update_post_meta( $post_id, '_swh_last_activity_at', time() );
 			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
+			\SWH\Concurrency\TicketVersion::bump( $post_id );
 		}
 
 		$tech_orignames = null;

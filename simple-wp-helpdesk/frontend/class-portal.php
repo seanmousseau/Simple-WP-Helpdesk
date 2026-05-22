@@ -222,6 +222,7 @@ function swh_render_client_portal() {
 					}
 					update_post_meta( $ticket_id, '_swh_unread', '1' );
 					delete_transient( 'swh_unread_count' );
+					\SWH\Concurrency\TicketVersion::bump( $ticket_id );
 				}
 				$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 				$admin_email     = swh_get_admin_email( $ticket_id );
