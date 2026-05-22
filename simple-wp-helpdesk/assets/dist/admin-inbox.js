@@ -1,0 +1,1 @@
+(()=>{"use strict";const e=window.wp.element,n=window.ReactJSXRuntime,t=()=>(0,n.jsx)("div",{className:"swh-inbox-loading",children:(0,n.jsx)("p",{children:"Loading inbox…"})}),d=()=>{const d=document.getElementById("swh-inbox-root");d&&(0,e.render)((0,n.jsx)(t,{}),d)};"loading"===document.readyState?document.addEventListener("DOMContentLoaded",d):d()})();
