@@ -27,7 +27,7 @@ See [`docs/internal/component-inventory.md`](component-inventory.md) for the exi
 
 - [ ] [#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356) — Settings schema migration (`swh_options` → topic sub-options) — **enables v4.1 API key storage**
 - [x] [#357](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/357) — Bump PHP minimum to 8.0
-- [ ] [#358](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/358) — Bump WordPress minimum to 6.0
+- [x] [#358](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/358) — Bump WordPress minimum to 6.0
 - [ ] [#360](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/360) — Deprecate pre-3.0 filter hooks
 
 ### Admin UX rewrite

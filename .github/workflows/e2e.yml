@@ -34,8 +34,8 @@ jobs:
         include:
           - wp_version: 'latest'
             wp_image: 'php8.2-apache'
-          - wp_version: '5.3'
-            wp_image: '5.3-php7.4-apache'
+          - wp_version: '6.0'
+            wp_image: '6.0-php8.0-apache'
       fail-fast: false
 
     steps:

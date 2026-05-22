@@ -13,9 +13,11 @@ starting from the next release after 1.8.
 ### Breaking
 
 - Raised PHP minimum to 8.0 (was 7.4). Hosts on PHP 7.4 must stay on the v3.6 LTS branch. (#357)
+- Raised WordPress minimum to 6.0 (was 5.3). Unlocks `@wordpress/components` as a guaranteed external for the Admin UX rewrite. (#358)
 
 ### Internal
 
+- Updated `.vscode/settings.json` `intelephense.environment.phpVersion` 7.4.0 → 8.0.0 (carry-forward from PR #410; file is gitignored — local-only change).
 - Bump `requests` 2.33.1 → 2.34.2 in `testing/requirements.txt` (Dependabot, PR #404).
 - Bump `@wordpress/scripts` 32.1.0 → 32.2.0 (Dependabot, PR #405); rebuilt `simple-wp-helpdesk/assets/dist/`.
 - Established `docs/internal/` as the single-source-of-truth doc set for developers and AI agents: README index, design-document (with 17 numbered load-bearing invariants), coding-guide, testing-guide, security-model, api-contract, data-dictionary, config-reference, design-guide. Every doc carries an Update protocol so the set stays current as part of normal PR flow.
