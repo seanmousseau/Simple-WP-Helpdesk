@@ -4320,6 +4320,50 @@ def test_70_create_personal_view_and_switch(page):
     wp_logout(page)
 
 
+def test_71_violet_theme_toggle(page):
+    """v4.0.0 #355 — toggling the Violet theme setting adds body class + swaps primary color."""
+    print("\n[71] Violet theme toggle (#355)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    # Go to Settings → General.
+    page.goto(WP_ADMIN_URL + "admin.php?page=swh-settings&tab=tab-general")
+    page.wait_for_load_state("networkidle")
+
+    # Toggle ON.
+    checkbox = page.locator("input[name=swh_use_violet_theme]")
+    if not checkbox.is_checked():
+        checkbox.check()
+    page.locator("input[type=submit][name=submit]").click()
+    page.wait_for_load_state("networkidle")
+
+    # Navigate to inbox and confirm class is present.
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+    body = page.locator("body")
+    body_class = body.get_attribute("class") or ""
+    check("violet #355 test_71: body class swh-theme-violet present after enable",
+          "swh-theme-violet" in body_class)
+
+    # Toggle OFF.
+    page.goto(WP_ADMIN_URL + "admin.php?page=swh-settings&tab=tab-general")
+    page.wait_for_load_state("networkidle")
+    checkbox = page.locator("input[name=swh_use_violet_theme]")
+    if checkbox.is_checked():
+        checkbox.uncheck()
+    page.locator("input[type=submit][name=submit]").click()
+    page.wait_for_load_state("networkidle")
+
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+    body_class = page.locator("body").get_attribute("class") or ""
+    check("violet #355 test_71: body class swh-theme-violet absent after disable",
+          "swh-theme-violet" not in body_class)
+
+    wp_logout(page)
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -4442,6 +4486,7 @@ SECTIONS = [
     test_68_palette_opens_with_shortcut_and_switches_view,  # 68 — v4.0.0 palette (#351)
     test_69_bulk_bar_closes_selected_tickets,  # 69 — v4.0.0 bulk bar (#353)
     test_70_create_personal_view_and_switch,   # 70 — v4.0.0 saved views (#352)
+    test_71_violet_theme_toggle,               # 71 — v4.0.0 violet theme (#355)
     test_28_cleanup,                  # 28 — always last
 ]
 

@@ -145,6 +145,7 @@ final class Migration {
 		'swh_ticket_page_id'             => array( 'routing', 'ticket_page_id' ),
 		'swh_token_expiration_days'      => array( 'routing', 'token_expiration_days' ),
 		'swh_restrict_to_assigned'       => array( 'routing', 'restrict_to_assigned' ),
+		'swh_use_violet_theme'           => array( 'general', 'use_violet_theme' ),
 		'swh_assignment_rules'           => array( 'routing', 'assignment_rules' ),
 
 		// Integrations group. Task 3.1: no direct get_option call sites;

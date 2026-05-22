@@ -37,6 +37,7 @@ function swh_get_defaults() {
 			'swh_ticket_page_id'             => 0,
 			'swh_token_expiration_days'      => 90,
 			'swh_restrict_to_assigned'       => 'no',
+			'swh_use_violet_theme'           => false,
 			// Email Format.
 			'swh_email_format'               => 'html',
 			'swh_email_logo_url'             => '',

@@ -38,6 +38,7 @@ require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-email.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-ticket.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-cron.php';
+require_once SWH_PLUGIN_DIR . 'includes/theme-violet.php';
 
 // Admin includes (only in admin context).
 if ( is_admin() ) {
