@@ -50,11 +50,17 @@ function swh_ticket_frontend( $atts = array() ) {
 	/**
 	 * Filters the list of allowed file extensions for ticket attachments.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $exts Array of lowercase file extension strings.
 	 */
-	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
-	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
+	$allowed_exts = swh_apply_deprecated_filter(
+		'swh_allowed_file_types',
+		array( array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	$tmpl_raw     = swh_get_option( 'tools', 'ticket_templates', array() );
 	$tmpl_raw     = is_array( $tmpl_raw ) ? $tmpl_raw : array();
 	$tmpl_js      = array();
@@ -183,7 +189,13 @@ function swh_render_submission_form( $atts = array() ) {
 			 * @since 2.1.0
 			 * @param array<string, string> $data Sanitized submission fields: name, email, title, message, priority, status.
 			 */
-			$data = apply_filters( 'swh_submission_data', $data );
+			$data = swh_apply_deprecated_filter(
+				'swh_submission_data',
+				array( $data ),
+				'4.0',
+				'',
+				'Filter is retained for back-compat through SWH 4.2; subscribe via the v4.1 REST API events instead.'
+			);
 			/**
 			 * Fires immediately before a new ticket is inserted.
 			 *
@@ -514,7 +526,13 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 		return false !== $buf ? $buf : '';
 	}
 	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
-	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
+	$allowed_exts = swh_apply_deprecated_filter(
+		'swh_allowed_file_types',
+		array( array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	wp_localize_script(
 		'swh-frontend',
 		'swhConfig',

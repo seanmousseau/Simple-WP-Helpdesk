@@ -45,10 +45,17 @@ function swh_process_autoclose() {
 	/**
 	 * Filters the number of days before a resolved ticket is automatically closed.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param int $days Number of inactivity days. 0 disables auto-close.
 	 */
-	$filtered_days = apply_filters( 'swh_autoclose_threshold', $days );
+	$filtered_days = swh_apply_deprecated_filter(
+		'swh_autoclose_threshold',
+		array( $days ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	$days          = is_scalar( $filtered_days ) ? intval( $filtered_days ) : $days;
 	if ( $days <= 0 ) {
 		return;

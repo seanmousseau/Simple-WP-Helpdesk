@@ -42,3 +42,20 @@ swh_do_deprecated_action(
     'swh_ticket_status_changed'
 );
 ```
+
+## 4.0.0 deprecations
+
+The following 8 pre-3.0 filter hooks are now wrapped in `swh_apply_deprecated_filter()`. They continue to fire for existing listeners (back-compat preserved) but emit `_doing_it_wrong` in `WP_DEBUG` environments. Earliest removal: SWH 4.2 (per the 2-minor window policy above).
+
+| Hook | Location | Replacement |
+|---|---|---|
+| `swh_ticket_statuses` | `includes/helpers.php` | None yet — see v4.1 REST API #364 |
+| `swh_ticket_priorities` | `includes/helpers.php` | None yet — see v4.1 REST API #364 |
+| `swh_allowed_file_types` | `frontend/class-shortcode.php` (2 sites) | None yet |
+| `swh_submission_data` | `frontend/class-shortcode.php` | Subscribe via the v4.1 REST API events |
+| `swh_autoclose_threshold` | `includes/class-cron.php` | None yet |
+| `swh_rate_limit_ttl` | `includes/helpers.php` | None yet |
+| `swh_parse_template` | `includes/class-email.php` | None yet |
+| `swh_email_headers` | `includes/class-email.php` | None yet |
+
+`swh_sla_open_statuses` (in `includes/class-cron.php`) is post-3.0 and remains supported.

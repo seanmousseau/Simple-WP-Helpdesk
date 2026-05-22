@@ -296,10 +296,17 @@ function swh_get_statuses() {
 	/**
 	 * Filters the list of available ticket statuses.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $statuses Array of status label strings.
 	 */
-	return apply_filters( 'swh_ticket_statuses', $statuses );
+	return swh_apply_deprecated_filter(
+		'swh_ticket_statuses',
+		array( $statuses ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 }
 
 /**
@@ -314,10 +321,17 @@ function swh_get_priorities() {
 	/**
 	 * Filters the list of available ticket priorities.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $priorities Array of priority label strings.
 	 */
-	return apply_filters( 'swh_ticket_priorities', $priorities );
+	return swh_apply_deprecated_filter(
+		'swh_ticket_priorities',
+		array( $priorities ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 }
 
 /**
@@ -802,11 +816,18 @@ function swh_is_rate_limited( $action, $ttl = 30 ) {
 	/**
 	 * Filters the rate-limit TTL (in seconds) for a given action.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param int    $ttl    Lock duration in seconds.
 	 * @param string $action The action identifier being rate-limited.
 	 */
-	$filtered_ttl = apply_filters( 'swh_rate_limit_ttl', $ttl, $action );
+	$filtered_ttl = swh_apply_deprecated_filter(
+		'swh_rate_limit_ttl',
+		array( $ttl, $action ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	$ttl          = is_scalar( $filtered_ttl ) ? intval( $filtered_ttl ) : $ttl;
 	$key          = 'swh_rl_' . md5( $action . '_' . swh_get_client_ip() );
 	$val          = get_option( $key );

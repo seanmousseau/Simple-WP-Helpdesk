@@ -18,7 +18,17 @@ class ReportingTest extends TestCase {
 	public function setUp(): void {
 		parent::setUp();
 		require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+		require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 		require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
+
+		// swh_get_statuses() routes through swh_apply_deprecated_filter()
+		// (v4.0.0 #360); stub apply_filters_deprecated to return arg[0].
+		WP_Mock::userFunction( 'apply_filters_deprecated' )
+			->andReturnUsing(
+				static function ( $hook, $args ) {
+					return $args[0];
+				}
+			);
 	}
 
 	public function tearDown(): void {

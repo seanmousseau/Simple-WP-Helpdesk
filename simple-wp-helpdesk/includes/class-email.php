@@ -62,11 +62,18 @@ function swh_parse_template( $template, $data ) {
 	/**
 	 * Filters the fully-rendered email template string.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string               $template The rendered template output.
 	 * @param array<string, mixed> $data     The template data array.
 	 */
-	return apply_filters( 'swh_parse_template', $template, $data );
+	return swh_apply_deprecated_filter(
+		'swh_parse_template',
+		array( $template, $data ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 }
 
 /**
@@ -101,12 +108,19 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	/**
 	 * Filters the email headers array before sending.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $headers Array of header strings (e.g. 'Content-Type: text/html; charset=UTF-8').
 	 * @param string   $to      Recipient email address.
 	 * @param string   $subject Rendered email subject.
 	 */
-	$headers = apply_filters( 'swh_email_headers', $headers, $to, $subject );
+	$headers = swh_apply_deprecated_filter(
+		'swh_email_headers',
+		array( $headers, $to, $subject ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	if ( 'html' === $format ) {
 		$body = swh_wrap_html_email( $body, $attachments );
 	} elseif ( ! empty( $attachments ) ) {
