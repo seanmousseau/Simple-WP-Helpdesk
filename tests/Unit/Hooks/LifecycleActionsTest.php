@@ -47,6 +47,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'Closed' );
+		// v4.0.A: swh_set_ticket_status() also writes _swh_last_activity_at (#349).
+		WP_Mock::userFunction( 'update_post_meta' )
+			->once()
+			->with( 42, '_swh_last_activity_at', WP_Mock\Functions::type( 'int' ) );
 		// v4.0: swh_get_option('general','closed_status') reads swh_settings_general.
 		WP_Mock::userFunction( 'get_option' )
 			->with( 'swh_settings_general', [] )
@@ -68,6 +72,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'Open' );
+		// v4.0.A: swh_set_ticket_status() also writes _swh_last_activity_at (#349).
+		WP_Mock::userFunction( 'update_post_meta' )
+			->once()
+			->with( 42, '_swh_last_activity_at', WP_Mock\Functions::type( 'int' ) );
 		// v4.0: swh_get_option('general','closed_status') reads swh_settings_general.
 		WP_Mock::userFunction( 'get_option' )
 			->with( 'swh_settings_general', [] )
@@ -89,6 +97,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'In Progress' );
+		// v4.0.A: swh_set_ticket_status() also writes _swh_last_activity_at (#349).
+		WP_Mock::userFunction( 'update_post_meta' )
+			->once()
+			->with( 42, '_swh_last_activity_at', WP_Mock\Functions::type( 'int' ) );
 		// v4.0: swh_get_option('general','closed_status') reads swh_settings_general.
 		WP_Mock::userFunction( 'get_option' )
 			->with( 'swh_settings_general', [] )
@@ -123,6 +135,10 @@ class LifecycleActionsTest extends TestCase {
 		WP_Mock::userFunction( 'update_post_meta' )
 			->once()
 			->with( 42, '_ticket_status', 'Open' );
+		// v4.0.A: _swh_last_activity_at is written even on first-set (#349).
+		WP_Mock::userFunction( 'update_post_meta' )
+			->once()
+			->with( 42, '_swh_last_activity_at', WP_Mock\Functions::type( 'int' ) );
 
 		// No expectAction — first set should be silent.
 

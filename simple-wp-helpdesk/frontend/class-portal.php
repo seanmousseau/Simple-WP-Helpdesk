@@ -95,6 +95,7 @@ function swh_render_client_portal() {
 		);
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '1' );
+			update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 		}
 		swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 		$admin_email = swh_get_admin_email( $ticket_id );
@@ -149,6 +150,7 @@ function swh_render_client_portal() {
 			swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 			if ( $comment_id ) {
 				update_comment_meta( $comment_id, '_is_user_reply', '1' );
+				update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 				if ( ! empty( $attach_urls ) ) {
 					update_comment_meta( $comment_id, '_attachments', $attach_urls );
 					if ( ! empty( $reopen_orignames ) ) {
@@ -211,6 +213,7 @@ function swh_render_client_portal() {
 				swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 				if ( $comment_id ) {
 					update_comment_meta( $comment_id, '_is_user_reply', '1' );
+					update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 					if ( ! empty( $attach_urls ) ) {
 						update_comment_meta( $comment_id, '_attachments', $attach_urls );
 						if ( ! empty( $reply_orignames ) ) {

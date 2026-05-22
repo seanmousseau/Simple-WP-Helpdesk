@@ -18,6 +18,9 @@ starting from the next release after 1.8.
 
 ### Added
 
+- v4.0 admin Tickets inbox shell — dense list + saved-view left rail + filter chips (#349). Replaces the WP_List_Table page. Drawer + palette wire up in subsequent phases.
+- `_swh_last_activity_at` post meta written on every status change and reply insert (used by inbox sort). (#349)
+- REST endpoint `GET /swh/v1/tickets` with 4 default views (unassigned, my\_open, high\_priority, resolved\_this\_week), pagination, and `found_posts` total. (#349)
 - `swh_set_option( $group, $key, $value )` helper, mirror of `swh_get_option()`. (#356)
 - `\SWH\Settings\Migration` class — one-shot schema upgrade routine, idempotent, runs on `plugins_loaded` p5. Exposes `Migration::group_for( $flat_key )` for write-side dispatch. (#356)
 
