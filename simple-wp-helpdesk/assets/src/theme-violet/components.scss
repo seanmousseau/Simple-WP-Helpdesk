@@ -1,0 +1,170 @@
+/**
+ * Violet theme component overrides.
+ *
+ * Every override is scoped under .swh-theme-violet so the stylesheet is a
+ * no-op when the class isn't applied. Consumed by simple-wp-helpdesk/
+ * assets/src/theme-violet/index.js which imports both this file and
+ * tokens.scss.
+ *
+ * Pattern: re-state component selectors with consume-tokens-only changes.
+ * Do NOT add component-specific layout here — that lives in the per-feature
+ * SCSS files (style.scss, drawer.scss, palette.scss).
+ */
+
+/* Inbox shell */
+.swh-theme-violet .swh-inbox {
+    background: var(--swh-surface-card);
+    border-color: var(--swh-border);
+}
+.swh-theme-violet .swh-inbox-topbar {
+    background: var(--swh-text-strong);
+    color: var(--swh-surface-card);
+}
+.swh-theme-violet .swh-inbox-title { color: var(--swh-surface-card); }
+.swh-theme-violet .swh-inbox-palette-hint {
+    border-color: var(--swh-text-muted);
+    color: var(--swh-text-muted);
+    &:hover { color: var(--swh-surface-card); border-color: var(--swh-surface-card); }
+}
+
+/* Left rail */
+.swh-theme-violet .swh-inbox-leftrail {
+    background: var(--swh-surface-elev);
+    border-color: var(--swh-border);
+}
+.swh-theme-violet .swh-inbox-view-link {
+    color: var(--swh-text-muted);
+    &:hover { background: rgba(91, 33, 182, 0.04); }
+    &.is-active {
+        background: var(--swh-surface-card);
+        color: var(--swh-text-strong);
+        border-left-color: var(--swh-primary);
+    }
+}
+.swh-theme-violet .swh-inbox-view-add { color: var(--swh-primary); }
+
+/* List rows */
+.swh-theme-violet .swh-inbox-row {
+    border-color: var(--swh-border);
+    &:nth-child(even) { background: var(--swh-surface-elev); }
+    &:hover { background: var(--swh-primary-soft-bg); }
+    &.is-selected { background: var(--swh-primary-soft-bg); }
+}
+.swh-theme-violet .swh-inbox-row-id { color: var(--swh-primary); }
+.swh-theme-violet .swh-inbox-row-email { color: var(--swh-text-muted); }
+.swh-theme-violet .swh-inbox-row-age   { color: var(--swh-text-muted); }
+
+/* Drawer */
+.swh-theme-violet .swh-drawer {
+    background: var(--swh-surface-card);
+    box-shadow: var(--swh-shadow-lg);
+}
+.swh-theme-violet .swh-drawer-header,
+.swh-theme-violet .swh-drawer-meta-row {
+    background: var(--swh-surface-elev);
+    border-color: var(--swh-border);
+}
+.swh-theme-violet .swh-drawer-meta-pill {
+    background: var(--swh-primary-soft-bg);
+    color: var(--swh-primary-soft-fg);
+    border-radius: var(--swh-radius-full);
+}
+.swh-theme-violet .swh-message-customer .swh-message-body { background: var(--swh-surface-elev); border-radius: var(--swh-radius-md); }
+.swh-theme-violet .swh-message-staff .swh-message-body    { background: var(--swh-primary-soft-bg); border-radius: var(--swh-radius-md); }
+.swh-theme-violet .swh-message-internal .swh-message-body {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    border-radius: var(--swh-radius-md);
+}
+.swh-theme-violet .swh-drawer-composer { background: var(--swh-surface-elev); border-color: var(--swh-border); }
+
+/* Palette */
+.swh-theme-violet .swh-palette-modal {
+    border-radius: var(--swh-radius-lg);
+    box-shadow: var(--swh-shadow-lg);
+}
+.swh-theme-violet .swh-palette-item:hover { background: var(--swh-primary-soft-bg); }
+.swh-theme-violet .swh-palette-item-primary {
+    background: var(--swh-primary-soft-bg);
+    border-left-color: var(--swh-primary);
+}
+.swh-theme-violet .swh-palette-id { color: var(--swh-primary); }
+
+/* Bulk bar */
+.swh-theme-violet .swh-bulk-bar {
+    background: var(--swh-primary-soft-bg);
+    border-top-color: var(--swh-primary);
+    border-bottom-color: var(--swh-border);
+}
+
+/* Buttons — WP / @wordpress/components primary buttons */
+.swh-theme-violet .components-button.is-primary,
+.swh-theme-violet button.button-primary {
+    background: var(--swh-primary);
+    color: var(--swh-primary-fg);
+    border-color: var(--swh-primary);
+    border-radius: var(--swh-radius-md);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    box-shadow: var(--swh-shadow-sm);
+    &:hover, &:focus {
+        background: var(--swh-primary-hover);
+        border-color: var(--swh-primary-hover);
+        box-shadow: var(--swh-shadow-md);
+    }
+}
+
+/* Filter chips */
+.swh-theme-violet .swh-inbox-chip {
+    background: var(--swh-surface-elev);
+    color: var(--swh-text-muted);
+    border-radius: var(--swh-radius-full);
+}
+
+/* Portal (client-facing) */
+.swh-theme-violet .swh-helpdesk-wrapper {
+    color: var(--swh-text-body);
+    background: var(--swh-surface-page);
+}
+.swh-theme-violet .swh-helpdesk-wrapper a { color: var(--swh-link); }
+.swh-theme-violet .swh-helpdesk-wrapper input,
+.swh-theme-violet .swh-helpdesk-wrapper textarea,
+.swh-theme-violet .swh-helpdesk-wrapper select {
+    border-radius: var(--swh-radius-sm);
+    border-color: var(--swh-border);
+    &:focus { box-shadow: var(--swh-focus-ring); border-color: var(--swh-primary); }
+}
+.swh-theme-violet .swh-helpdesk-wrapper button[type="submit"],
+.swh-theme-violet .swh-helpdesk-wrapper .swh-portal-cta {
+    background: var(--swh-primary);
+    color: var(--swh-primary-fg);
+    border-radius: var(--swh-radius-md);
+    box-shadow: var(--swh-shadow-sm);
+}
+
+/* Legacy components — keep visually consistent even though they predate v4.0 */
+.swh-theme-violet .swh-badge {
+    border-radius: var(--swh-radius-full);
+    font-family: 'Geist Sans', 'Geist', -apple-system, sans-serif;
+    letter-spacing: -0.005em;
+}
+.swh-theme-violet .swh-toast {
+    border-radius: var(--swh-radius-md);
+    box-shadow: var(--swh-shadow-md);
+}
+.swh-theme-violet .swh-empty-state {
+    color: var(--swh-text-muted);
+}
+.swh-theme-violet .swh-panel-group {
+    border-color: var(--swh-border);
+    border-radius: var(--swh-radius-md);
+}
+.swh-theme-violet .swh-danger-zone {
+    border-color: var(--swh-danger);
+    border-radius: var(--swh-radius-md);
+}
+.swh-theme-violet .swh-skip-link {
+    background: var(--swh-primary);
+    color: var(--swh-primary-fg);
+    border-radius: var(--swh-radius-sm);
+}
