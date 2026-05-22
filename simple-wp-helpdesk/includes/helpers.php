@@ -191,6 +191,7 @@ function swh_set_ticket_status( int $ticket_id, string $new_status ): void {
 		return;
 	}
 	update_post_meta( $ticket_id, '_ticket_status', $new_status );
+	update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 
 	// Skip the change action when no prior status existed (initial create).
 	if ( '' === $old_status ) {

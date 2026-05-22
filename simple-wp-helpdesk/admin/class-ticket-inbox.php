@@ -36,23 +36,34 @@ function swh_inbox_enqueue( string $hook ): void {
 	}
 
 	$asset_file = SWH_PLUGIN_DIR . 'assets/dist/admin-inbox.asset.php';
-	if ( ! file_exists( $asset_file ) ) {
-		return; // Build not present — degrade silently to WP default list.
+	$deps       = array();
+	$version    = SWH_VERSION;
+
+	if ( file_exists( $asset_file ) ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+		if ( is_array( $asset ) ) {
+			if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+				$deps = array_values( array_filter( $asset['dependencies'], 'is_string' ) );
+			}
+			if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
+				$version = $asset['version'];
+			}
+		}
 	}
-	$asset = require $asset_file;
 
 	wp_enqueue_script(
 		'swh-admin-inbox',
 		SWH_PLUGIN_URL . 'assets/dist/admin-inbox.js',
-		$asset['dependencies'] ?? array(),
-		$asset['version'] ?? SWH_VERSION,
+		$deps,
+		$version,
 		true
 	);
 	wp_enqueue_style(
 		'swh-admin-inbox',
 		SWH_PLUGIN_URL . 'assets/dist/admin-inbox.css',
 		array( 'wp-components' ),
-		$asset['version'] ?? SWH_VERSION
+		$version
 	);
 
 	wp_localize_script(
