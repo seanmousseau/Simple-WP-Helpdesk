@@ -3939,6 +3939,163 @@ def test_65_inbox_renders_and_switches_views(page: Page):
     wp_logout(page)
 
 
+def test_66_drawer_opens_and_edits_status(page: Page):
+    """v4.0.0 #350 — clicking a row opens drawer; status edit persists."""
+    print("\n[66] Drawer opens and status edit persists (#350)")
+
+    # Create a test ticket via WP-CLI so we have a known ID.
+    raw = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        '--post_title="Drawer test ticket B66" --porcelain'
+    )
+    ticket_id = raw.strip() if raw.strip().isdigit() else None
+    if not ticket_id:
+        skip("drawer #350 test_66", "could not create test ticket via WP-CLI")
+        return
+
+    wpcli(f"post meta update {ticket_id} _ticket_status Open")
+    wpcli(f"post meta update {ticket_id} _ticket_email test66@example.com")
+    wpcli(f"post meta update {ticket_id} _swh_version 1")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    page.wait_for_load_state("load")
+
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+
+    check("drawer #350: #swh-inbox-root present",
+          page.locator("#swh-inbox-root").count() > 0)
+
+    # Find the row for our ticket and click it.
+    row = page.locator(f".swh-inbox-row", has_text=f"#{ticket_id}")
+    row_found = False
+    with suppress(PlaywrightTimeoutError):
+        row.first.wait_for(timeout=5000)
+        row_found = True
+
+    if not row_found:
+        skip("drawer #350: row for test ticket", f"row #{ticket_id} not visible in inbox")
+        wpcli(f"post delete {ticket_id} --force")
+        wp_logout(page)
+        return
+
+    row.first.click()
+
+    drawer_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-drawer").wait_for(timeout=5000)
+        drawer_visible = True
+    check("drawer #350: drawer appears on row click", drawer_visible)
+
+    if drawer_visible:
+        title_visible = page.locator(".swh-drawer-title").count() > 0
+        check("drawer #350: drawer title shows ticket id",
+              title_visible and f"#{ticket_id}" in page.locator(".swh-drawer-title").first.inner_text(),
+              f"ticket_id={ticket_id}")
+
+        # Change status to resolved via the select dropdown.
+        status_select = page.locator(".swh-drawer-meta-row select").first
+        if status_select.count() > 0:
+            status_select.select_option(value="resolved")
+            page.wait_for_timeout(800)
+            new_val = status_select.input_value()
+            check("drawer #350: status select reflects resolved",
+                  new_val == "resolved", f"value={new_val!r}")
+        else:
+            skip("drawer #350: status select", "no select in .swh-drawer-meta-row")
+
+        # Close with Escape.
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(500)
+        drawer_gone = page.locator(".swh-drawer").count() == 0
+        check("drawer #350: Escape closes the drawer", drawer_gone)
+
+    wpcli(f"post delete {ticket_id} --force")
+    wp_logout(page)
+
+
+def test_67_drawer_concurrency_conflict_shows_banner(page: Page):
+    """v4.0.0 #350 — version mismatch triggers ConflictBanner."""
+    print("\n[67] Drawer concurrency conflict banner (#350)")
+
+    raw = wpcli(
+        "post create --post_type=helpdesk_ticket --post_status=publish "
+        '--post_title="Conflict test ticket B67" --porcelain'
+    )
+    ticket_id = raw.strip() if raw.strip().isdigit() else None
+    if not ticket_id:
+        skip("drawer #350 test_67", "could not create test ticket via WP-CLI")
+        return
+
+    wpcli(f"post meta update {ticket_id} _ticket_status Open")
+    wpcli(f"post meta update {ticket_id} _ticket_email test67@example.com")
+    wpcli(f"post meta update {ticket_id} _swh_version 1")
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
+    page.wait_for_load_state("load")
+
+    with suppress(PlaywrightTimeoutError):
+        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+
+    row = page.locator(".swh-inbox-row", has_text=f"#{ticket_id}")
+    row_found = False
+    with suppress(PlaywrightTimeoutError):
+        row.first.wait_for(timeout=5000)
+        row_found = True
+
+    if not row_found:
+        skip("drawer #350 test_67: row", f"row #{ticket_id} not visible")
+        wpcli(f"post delete {ticket_id} --force")
+        wp_logout(page)
+        return
+
+    row.first.click()
+
+    drawer_visible = False
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-drawer").wait_for(timeout=5000)
+        drawer_visible = True
+    check("conflict #350: drawer opens", drawer_visible)
+
+    if not drawer_visible:
+        wpcli(f"post delete {ticket_id} --force")
+        wp_logout(page)
+        return
+
+    # Wait for drawer to finish loading (ticket data fetched).
+    with suppress(PlaywrightTimeoutError):
+        page.locator(".swh-drawer-title").wait_for(timeout=5000)
+
+    # Force a server-side concurrent version bump via WP-CLI to simulate conflict.
+    wpcli(
+        f'eval "\\\\SWH\\\\Concurrency\\\\TicketVersion::bump( {ticket_id} );"'
+        f" --path={WP_PATH} --allow-root"
+    )
+
+    # Trigger a PATCH from the UI by changing the status dropdown.
+    status_select = page.locator(".swh-drawer-meta-row select").first
+    if status_select.count() > 0:
+        status_select.select_option(value="in_progress")
+        # Conflict banner should appear.
+        banner_visible = False
+        with suppress(PlaywrightTimeoutError):
+            page.locator(".swh-drawer-conflict, .components-notice").wait_for(timeout=5000)
+            banner_visible = True
+        check("conflict #350: ConflictBanner shown after version mismatch", banner_visible)
+        if banner_visible:
+            banner_text = page.locator(".swh-drawer-conflict, .components-notice").first.inner_text()
+            check("conflict #350: banner mentions concurrent update",
+                  "updated by someone else" in banner_text,
+                  f"text={banner_text[:80]!r}")
+    else:
+        skip("conflict #350: status select", "no select found in meta row")
+
+    wpcli(f"post delete {ticket_id} --force")
+    wp_logout(page)
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):

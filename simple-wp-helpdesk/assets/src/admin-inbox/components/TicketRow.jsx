@@ -1,5 +1,6 @@
 import { useDispatch, useSelect } from '@wordpress/data';
 import { SWH_INBOX_STORE } from '../store/inbox';
+import { SWH_DRAWER_STORE } from '../store/drawer';
 
 const fmtAge = ( ts ) => {
 	if ( ! ts ) {
@@ -24,10 +25,10 @@ export const TicketRow = ( { ticket } ) => {
 		[ ticket.id ]
 	);
 	const { toggleSelected } = useDispatch( SWH_INBOX_STORE );
+	const { open: openDrawer } = useDispatch( SWH_DRAWER_STORE );
 
 	const openEditor = () => {
-		// Phase A: navigate to the legacy edit page; Phase B opens the drawer instead.
-		window.location.href = `post.php?post=${ ticket.id }&action=edit`;
+		openDrawer( ticket.id );
 	};
 
 	const handleRowKeyDown = ( e ) => {

@@ -60,7 +60,9 @@ if ( ! class_exists( 'WP_REST_Server' ) ) {
 	 * Minimal WP_REST_Server stub for unit tests.
 	 */
 	class WP_REST_Server {
-		const READABLE = 'GET';
+		const READABLE  = 'GET';
+		const EDITABLE  = 'POST, PUT, PATCH';
+		const CREATABLE = 'POST';
 	}
 }
 

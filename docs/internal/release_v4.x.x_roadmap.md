@@ -33,7 +33,7 @@ See [`docs/internal/component-inventory.md`](component-inventory.md) for the exi
 ### Admin UX rewrite
 
 - [x] [#349](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/349) — Inbox-style Tickets admin page
-- [ ] [#350](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/350) — Quick-reply drawer from inbox preview
+- [x] [#350](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/350) — Quick-reply drawer from inbox preview
 - [ ] [#351](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/351) — Command palette (Ctrl/Cmd+K)
 - [ ] [#352](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/352) — Saved views (per-user filter persistence)
 - [ ] [#353](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/353) — Sticky bulk-action bar on selection

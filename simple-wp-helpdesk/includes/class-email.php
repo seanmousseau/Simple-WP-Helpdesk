@@ -352,6 +352,7 @@ function swh_handle_inbound_email( $request ) {
 	update_post_meta( $ticket_id, '_swh_unread', '1' );
 	delete_transient( 'swh_unread_count' );
 	swh_fire_ticket_replied( (int) $ticket_id, $comment_id, 0 );
+	\SWH\Concurrency\TicketVersion::bump( $ticket_id );
 
 	// Reopen ticket if resolved/closed.
 	$defs            = swh_get_defaults();

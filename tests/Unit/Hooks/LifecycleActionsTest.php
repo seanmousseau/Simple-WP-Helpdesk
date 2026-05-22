@@ -32,7 +32,18 @@ class LifecycleActionsTest extends TestCase {
 	 */
 	public function setUp(): void {
 		parent::setUp();
+		require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
 		require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+		// v4.0.B: swh_set_ticket_status() now calls TicketVersion::bump() which
+		// reads and writes _swh_version. Register permissive catch-all mocks so
+		// existing lifecycle tests do not fail on unexpected argument errors.
+		WP_Mock::userFunction( 'get_post_meta', [
+			'args'   => [ WP_Mock\Functions::type( 'int' ), '_swh_version', true ],
+			'return' => '1',
+		] );
+		WP_Mock::userFunction( 'update_post_meta', [
+			'args' => [ WP_Mock\Functions::type( 'int' ), '_swh_version', WP_Mock\Functions::type( 'int' ) ],
+		] );
 	}
 
 	// -------------------------------------------------------------------------
