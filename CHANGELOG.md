@@ -21,6 +21,18 @@ starting from the next release after 1.8.
 - `swh_set_option( $group, $key, $value )` helper, mirror of `swh_get_option()`. (#356)
 - `\SWH\Settings\Migration` class — one-shot schema upgrade routine, idempotent, runs on `plugins_loaded` p5. Exposes `Migration::group_for( $flat_key )` for write-side dispatch. (#356)
 
+### Deprecated
+
+- 8 pre-3.0 filter hooks are now wrapped in `swh_apply_deprecated_filter()` and emit `_doing_it_wrong` in `WP_DEBUG` environments. Listeners still fire (back-compat preserved). Earliest removal: 4.2. (#360)
+  - `swh_ticket_statuses`, `swh_ticket_priorities` (`includes/helpers.php`)
+  - `swh_allowed_file_types` — 2 call sites (`frontend/class-shortcode.php`)
+  - `swh_submission_data` (`frontend/class-shortcode.php`)
+  - `swh_autoclose_threshold` (`includes/class-cron.php`)
+  - `swh_rate_limit_ttl` (`includes/helpers.php`)
+  - `swh_parse_template`, `swh_email_headers` (`includes/class-email.php`)
+
+  `swh_sla_open_statuses` is post-3.0 and remains supported.
+
 ### Internal
 
 - Updated `.vscode/settings.json` `intelephense.environment.phpVersion` 7.4.0 → 8.0.0 (carry-forward from PR #410; file is gitignored — local-only change).

@@ -26,12 +26,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 3.7.0
  *
+ * @template TValue
  * @param non-empty-string $hook        Deprecated filter name.
- * @param array<mixed>     $args        Arguments to pass to the filter.
+ * @param array{0: TValue} $args        Arguments to pass to the filter; first element is the filtered value.
  * @param string           $version     SWH version in which the filter was deprecated, e.g. '3.7'.
  * @param string           $replacement Optional. Name of the replacement filter.
  * @param string           $message     Optional. Custom deprecation message.
- * @return mixed Filtered value (the first element of $args after running the filter chain).
+ * @return TValue Filtered value (the first element of $args after running the filter chain).
  */
 function swh_apply_deprecated_filter( $hook, $args, $version, $replacement = '', $message = '' ) {
 	$msg = '' !== $message ? $message : sprintf( 'Use %s instead.', '' !== $replacement ? $replacement : 'the documented replacement' );

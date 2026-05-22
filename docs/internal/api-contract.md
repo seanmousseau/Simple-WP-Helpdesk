@@ -69,17 +69,19 @@ See `docs/developer/hooks.md` for usage examples and full documentation.
 
 Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 
-| Hook | Signature | Purpose | Location |
-|---|---|---|---|
-| `swh_ticket_statuses` | `(string[] $statuses) -> string[]` | Override the available ticket status labels. | `includes/helpers.php:278` |
-| `swh_ticket_priorities` | `(string[] $priorities) -> string[]` | Override the available priority labels. | `includes/helpers.php:296` |
-| `swh_allowed_file_types` | `(string[] $extensions) -> string[]` | Override the upload extension allowlist (default `jpg, jpeg, jpe, png, gif, pdf, doc, docx, txt`). Applied at both submit and reply upload paths. | `frontend/class-shortcode.php:57, 517` |
-| `swh_submission_data` | `(array $data) -> array` | Mutate sanitized submission fields before insert. Fires after sanitization, before `swh_pre_ticket_create`. | `frontend/class-shortcode.php:186` |
-| `swh_autoclose_threshold` | `(int $days) -> int` | Override the auto-close threshold (default `swh_autoclose_days` option). | `includes/class-cron.php:51` |
-| `swh_sla_open_statuses` | `(string[] $statuses) -> string[]` | Statuses considered "open" by the SLA cron. | `includes/class-cron.php:343` |
-| `swh_rate_limit_ttl` | `(int $ttl, string $action) -> int` | Override the rate-limit TTL per action. | `includes/helpers.php:785` |
-| `swh_parse_template` | `(string $rendered, array $data) -> string` | Post-process a parsed email template body or subject. | `includes/class-email.php:69` |
-| `swh_email_headers` | `(string[] $headers, string $to, string $subject) -> string[]` | Add or replace email headers. Canonical place to add Reply-To, BCC, or X-* headers. | `includes/class-email.php:109` |
+| Hook | Signature | Purpose | Since | Deprecated | Location |
+|---|---|---|---|---|---|
+| `swh_ticket_statuses` | `(string[] $statuses) -> string[]` | Override the available ticket status labels. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/helpers.php` |
+| `swh_ticket_priorities` | `(string[] $priorities) -> string[]` | Override the available priority labels. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/helpers.php` |
+| `swh_allowed_file_types` | `(string[] $extensions) -> string[]` | Override the upload extension allowlist (default `jpg, jpeg, jpe, png, gif, pdf, doc, docx, txt`). Applied at both submit and reply upload paths. | pre-3.0 | 4.0 (removal target: 4.2) | `frontend/class-shortcode.php` (2 sites) |
+| `swh_submission_data` | `(array $data) -> array` | Mutate sanitized submission fields before insert. Fires after sanitization, before `swh_pre_ticket_create`. | pre-3.0 | 4.0 (removal target: 4.2) | `frontend/class-shortcode.php` |
+| `swh_autoclose_threshold` | `(int $days) -> int` | Override the auto-close threshold (default `swh_autoclose_days` option). | pre-3.0 | 4.0 (removal target: 4.2) | `includes/class-cron.php` |
+| `swh_rate_limit_ttl` | `(int $ttl, string $action) -> int` | Override the rate-limit TTL per action. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/helpers.php` |
+| `swh_parse_template` | `(string $rendered, array $data) -> string` | Post-process a parsed email template body or subject. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/class-email.php` |
+| `swh_email_headers` | `(string[] $headers, string $to, string $subject) -> string[]` | Add or replace email headers. Canonical place to add Reply-To, BCC, or X-* headers. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/class-email.php` |
+| `swh_sla_open_statuses` | `(string[] $statuses) -> string[]` | Statuses considered "open" by the SLA cron. | post-3.0 | — | `includes/class-cron.php` |
+
+**Note:** 8 of the 9 filters listed above were wrapped in `swh_apply_deprecated_filter()` in v4.0.0 (#360). They continue to fire for existing listeners (back-compat preserved) but emit `_doing_it_wrong` notices in `WP_DEBUG` environments. Earliest removal: v4.2. `swh_sla_open_statuses` is post-3.0 and remains supported.
 
 ## REST endpoints
 
