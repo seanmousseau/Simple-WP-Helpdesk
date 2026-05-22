@@ -12,6 +12,7 @@ starting from the next release after 1.8.
 
 ### Internal
 
+- Bump `requests` 2.33.1 → 2.34.2 in `testing/requirements.txt` (Dependabot, PR #404).
 - Established `docs/internal/` as the single-source-of-truth doc set for developers and AI agents: README index, design-document (with 17 numbered load-bearing invariants), coding-guide, testing-guide, security-model, api-contract, data-dictionary, config-reference, design-guide. Every doc carries an Update protocol so the set stays current as part of normal PR flow.
 - Trimmed `CLAUDE.md` from 398 to 133 lines — now a routing index + hot-invariants list + dev environment reference. Sprawling sections (Common Pitfalls, full test taxonomy, security conventions, release process) replaced with pointers to the corresponding internal doc.
 
