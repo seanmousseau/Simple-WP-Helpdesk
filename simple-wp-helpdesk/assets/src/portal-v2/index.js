@@ -123,7 +123,11 @@ const init = () => {
 			try {
 				const data = new FormData( form );
 				data.set( 'reply_body', text ); // ta is now empty; restore for FormData
-				const response = await fetch( form.action, {
+				// DOM named-element access shadows form.action with the
+				// <input name="action"> element. Use getAttribute() to
+				// get the actual URL string.
+				const actionUrl = form.getAttribute( 'action' );
+				const response = await fetch( actionUrl, {
 					method: 'POST',
 					body: data,
 					credentials: 'same-origin',
