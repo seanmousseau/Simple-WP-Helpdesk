@@ -1694,7 +1694,7 @@ def test_29_humanized_timestamps(page: Page):
 
     wp_logout(page)
     page.goto(state['portal_url'])
-    page.wait_for_selector(".swh-card, .swh-alert")
+    page.wait_for_selector(".swh-portal-v2, .swh-card, .swh-alert")
 
     # Portal v2 uses .swh-msg-time (rendered by _message.php);
     # portal v2 JS in index.js calls formatRelative() on [datetime] attributes.
@@ -4324,8 +4324,10 @@ def test_69_bulk_bar_closes_selected_tickets(page):
                 f"document.querySelector(\".swh-inbox-row[data-ticket-id='{ticket_id}']\") !== null",
                 timeout=6000,
             )
+        # The interactive element is the wrapping .swh-inbox-row-check button;
+        # the <input type=checkbox> inside is aria-hidden with tabIndex=-1.
         row_check = page.locator(
-            f".swh-inbox-row[data-ticket-id='{ticket_id}'] input[type=checkbox]"
+            f".swh-inbox-row[data-ticket-id='{ticket_id}'] .swh-inbox-row-check"
         ).first
         row_found = False
         with suppress(PlaywrightTimeoutError):
