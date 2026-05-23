@@ -4344,6 +4344,18 @@ def test_69_bulk_bar_closes_selected_tickets(page):
     with suppress(PlaywrightTimeoutError):
         page.locator(".swh-bulk-bar").wait_for(timeout=5000)
         bulk_bar_visible = True
+    # DIAG: capture row state and any aria-pressed values
+    diag_rows = page.evaluate(
+        "Array.from(document.querySelectorAll('.swh-inbox-row-check'))"
+        ".map(b => ({pressed: b.getAttribute('aria-pressed'), "
+        "checked: b.querySelector('input')?.checked, "
+        "row: b.closest('.swh-inbox-row')?.getAttribute('data-ticket-id')}))"
+    )
+    bulk_bar_html = page.evaluate(
+        "document.querySelector('.swh-bulk-bar')?.outerHTML || 'NOT IN DOM'"
+    )
+    print(f"[DIAG test_69] row checks: {diag_rows}")
+    print(f"[DIAG test_69] bulk bar in DOM: {bulk_bar_html[:200]}")
     check("bulk #353: bulk bar appears when rows selected", bulk_bar_visible)
 
     if bulk_bar_visible:
