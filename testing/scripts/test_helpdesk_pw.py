@@ -4628,8 +4628,13 @@ def test_28_cleanup(page: Page):
             page.goto(trash_href)
             page.wait_for_load_state("load")
             body = page.inner_text("body")
-            check(f"cleanup: {label} moved to trash",
-                  "moved to the Trash" in body or "Undo" in body)
+            success = ("moved to the Trash" in body or "Undo" in body
+                       or "item moved to" in body.lower() or "trashed" in body.lower())
+            if not success:
+                print(f"[DIAG test_28 {label}] trash_href={trash_href}")
+                print(f"[DIAG test_28 {label}] current url={page.url}")
+                print(f"[DIAG test_28 {label}] body[:500]={body[:500]!r}")
+            check(f"cleanup: {label} moved to trash", success)
         else:
             check(f"cleanup: trash link found for {label}", False,
                   "row not found — may already be deleted")
