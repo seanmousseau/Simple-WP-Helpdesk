@@ -10,6 +10,76 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Enqueue Portal v2 assets. Called from swh_render_client_portal() so
+ * the bundle only loads on pages that actually render the portal.
+ *
+ * @since 4.0.0 (#354)
+ */
+function swh_portal_v2_enqueue_assets(): void {
+	// Filled in Task 7.
+}
+
+/**
+ * Render the messenger-style thread for Portal v2.
+ *
+ * Treats the ticket's post body as the first synthetic customer message,
+ * then loops over comment_type='helpdesk_reply' comments (skipping internal
+ * notes) in chronological order. Returns the rendered HTML as a string.
+ *
+ * @since 4.0.0 (#354)
+ *
+ * @param int $ticket_id The ticket post ID.
+ * @return string Rendered HTML, or empty string if the ticket doesn't exist.
+ */
+function swh_portal_render_thread( int $ticket_id ): string {
+	$post = get_post( $ticket_id );
+	if ( ! $post ) {
+		return '';
+	}
+
+	$customer_email = (string) get_post_meta( $ticket_id, '_ticket_email', true );
+
+	$messages = array(
+		array(
+			'id'       => 0,
+			'author'   => $customer_email,
+			'body'     => $post->post_content,
+			'date_gmt' => $post->post_date_gmt,
+			'is_staff' => false,
+		),
+	);
+
+	$comments = get_comments( array(
+		'post_id' => $ticket_id,
+		'type'    => 'helpdesk_reply',
+		'orderby' => 'comment_date_gmt',
+		'order'   => 'ASC',
+	) );
+
+	if ( is_array( $comments ) ) {
+		foreach ( $comments as $c ) {
+			$is_internal = (string) get_comment_meta( $c->comment_ID, '_is_internal_note', true ) === '1';
+			if ( $is_internal ) {
+				continue;
+			}
+			$messages[] = array(
+				'id'       => (int) $c->comment_ID,
+				'author'   => $c->comment_author,
+				'body'     => $c->comment_content,
+				'date_gmt' => $c->comment_date_gmt,
+				'is_staff' => (int) $c->user_id > 0,
+			);
+		}
+	}
+
+	ob_start();
+	foreach ( $messages as $msg ) {
+		include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/_message.php';
+	}
+	return (string) ob_get_clean();
+}
+
+/**
  * Renders the client portal view for a single ticket.
  *
  * Called from the router (swh_ticket_frontend or swh_helpdesk_portal_shortcode)
