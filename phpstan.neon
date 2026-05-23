@@ -8,6 +8,8 @@ parameters:
         - simple-wp-helpdesk/
     excludePaths:
         - simple-wp-helpdesk/vendor/
+        # Portal v2 partial templates — variables injected via include() scope; not standalone files.
+        - simple-wp-helpdesk/frontend/templates/portal-v2/
     bootstrapFiles:
         - vendor/szepeviktor/phpstan-wordpress/bootstrap.php
         - phpstan-bootstrap.php
