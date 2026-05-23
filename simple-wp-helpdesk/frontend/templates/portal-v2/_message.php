@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.NotHyphenatedLowercase -- underscore prefix is intentional; this partial is not a standalone file.
 /**
  * Single Portal v2 message bubble (rendered inside swh_portal_render_thread()).
  *
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** @var array{id:int,author:string,body:string,date_gmt:string,is_staff:bool} $msg */
+// @phpstan-ignore-next-line variable.undefined -- $msg is injected by swh_portal_render_thread() via include.
 $cls       = $msg['is_staff'] ? 'swh-msg-staff' : 'swh-msg-customer';
 $ts_attr   = ! empty( $msg['date_gmt'] ) ? $msg['date_gmt'] . 'Z' : '';
 $ts_text   = ! empty( $msg['date_gmt'] ) ? esc_html( $msg['date_gmt'] ) : '';
@@ -24,6 +24,6 @@ $body_html = nl2br( esc_html( (string) $msg['body'] ) );
 		<?php if ( $msg['is_staff'] ) : ?>
 			<span class="swh-msg-tag"><?php esc_html_e( 'staff', 'simple-wp-helpdesk' ); ?></span>
 		<?php endif; ?>
-		· <time datetime="<?php echo esc_attr( $ts_attr ); ?>" class="swh-msg-time"><?php echo $ts_text; ?></time>
+		· <time datetime="<?php echo esc_attr( $ts_attr ); ?>" class="swh-msg-time"><?php echo $ts_text; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $ts_text is already esc_html()'d above ?></time>
 	</div>
 </article>

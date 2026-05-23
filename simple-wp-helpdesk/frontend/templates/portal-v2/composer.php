@@ -18,9 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php wp_nonce_field( 'swh_portal_reply', 'swh_portal_reply_nonce' ); ?>
 
 	<textarea name="reply_body"
-			  aria-label="<?php esc_attr_e( 'Reply', 'simple-wp-helpdesk' ); ?>"
-			  placeholder="<?php esc_attr_e( 'Type your reply… (Cmd+Enter to send)', 'simple-wp-helpdesk' ); ?>"
-			  rows="2"></textarea>
+				aria-label="<?php esc_attr_e( 'Reply', 'simple-wp-helpdesk' ); ?>"
+				placeholder="<?php esc_attr_e( 'Type your reply… (Cmd+Enter to send)', 'simple-wp-helpdesk' ); ?>"
+				rows="2"></textarea>
 	<div class="swh-portal-v2-composer-toolbar">
 		<label class="swh-portal-v2-attach" title="<?php esc_attr_e( 'Attach file', 'simple-wp-helpdesk' ); ?>">
 			📎
