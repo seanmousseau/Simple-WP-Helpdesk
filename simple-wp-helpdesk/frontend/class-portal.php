@@ -568,6 +568,23 @@ function swh_handle_portal_v2_reply() {
 	$admin_email = swh_get_admin_email( $ticket_id );
 	swh_send_email( $admin_email, 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data );
 
+	// JS-driven fetch sends Accept: application/json — respond in kind so the
+	// frontend gets a clean success signal instead of following the redirect.
+	$accept_header = isset( $_SERVER['HTTP_ACCEPT'] ) && is_string( $_SERVER['HTTP_ACCEPT'] )
+		? sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) )
+		: '';
+	$xhr_header    = isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) && is_string( $_SERVER['HTTP_X_REQUESTED_WITH'] )
+		? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REQUESTED_WITH'] ) )
+		: '';
+	$wants_json    = ( false !== strpos( $accept_header, 'application/json' ) ) || ( 'XMLHttpRequest' === $xhr_header );
+	if ( $wants_json ) {
+		wp_send_json_success(
+			array(
+				'ticket_id'  => $ticket_id,
+				'comment_id' => (int) $comment_id,
+			)
+		);
+	}
 	if ( $portal_url ) {
 		wp_safe_redirect( $portal_url );
 		exit;
