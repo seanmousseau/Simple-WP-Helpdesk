@@ -130,6 +130,11 @@ class ViewsController extends WP_REST_Controller {
 	/**
 	 * Check that the current user can access view endpoints.
 	 *
+	 * Global-scope create/update/delete requires `manage_options`; personal-scope
+	 * and read operations require only `edit_posts`. The scope is checked per-request
+	 * inside each handler to return the right HTTP status; this gate just filters
+	 * out unauthenticated callers early.
+	 *
 	 * @param WP_REST_Request $request REST request.
 	 */
 	public function permissions_check( WP_REST_Request $request ): bool {
@@ -159,9 +164,12 @@ class ViewsController extends WP_REST_Controller {
 		$view      = $this->build_view_array( $request );
 
 		if ( 'global' === $scope ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				return new WP_REST_Response( array( 'error' => 'forbidden' ), 403 );
+			}
 			$saved = $this->repo->save_global( $view );
 			if ( null === $saved ) {
-				return new WP_REST_Response( array( 'error' => 'forbidden' ), 403 );
+				return new WP_REST_Response( array( 'error' => 'save_failed' ), 500 );
 			}
 			$saved['scope'] = 'global';
 			return new WP_REST_Response( array( 'view' => $saved ), 201 );
@@ -186,9 +194,12 @@ class ViewsController extends WP_REST_Controller {
 		$patch     = $this->to_string_keyed_array( $raw_patch );
 
 		if ( 'global' === $scope ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				return new WP_REST_Response( array( 'error' => 'forbidden' ), 403 );
+			}
 			$updated = $this->repo->update_global( $id, $patch );
 			if ( null === $updated ) {
-				return new WP_REST_Response( array( 'error' => 'forbidden_or_not_found' ), 403 );
+				return new WP_REST_Response( array( 'error' => 'not_found' ), 404 );
 			}
 			$updated['scope'] = 'global';
 			return new WP_REST_Response( array( 'view' => $updated ), 200 );
@@ -214,10 +225,13 @@ class ViewsController extends WP_REST_Controller {
 		$scope     = is_scalar( $raw_scope ) ? (string) $raw_scope : 'personal';
 
 		if ( 'global' === $scope ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				return new WP_REST_Response( array( 'error' => 'forbidden' ), 403 );
+			}
 			$ok = $this->repo->delete_global( $id );
 			return new WP_REST_Response(
 				array( 'deleted' => $ok ),
-				$ok ? 200 : 403
+				$ok ? 200 : 404
 			);
 		}
 
@@ -248,7 +262,10 @@ class ViewsController extends WP_REST_Controller {
 	}
 
 	/**
-	 * Narrow an array to string keys, dropping non-string keys.
+	 * Narrow an array to string keys, dropping non-string keys, and sanitize
+	 * scalar leaf values. Only the `name` and `sort` keys carry user-visible
+	 * strings and are sanitized with sanitize_text_field(); structural values
+	 * (filters, columns) are kept as-is but limited to scalar children.
 	 *
 	 * @param mixed $value Incoming value (expected to be array).
 	 * @return array<string, mixed>
@@ -259,7 +276,16 @@ class ViewsController extends WP_REST_Controller {
 		}
 		$out = array();
 		foreach ( $value as $k => $v ) {
-			if ( is_string( $k ) ) {
+			if ( ! is_string( $k ) ) {
+				continue;
+			}
+			// Sanitize the user-facing name and sort key fields.
+			if ( in_array( $k, array( 'name', 'sort' ), true ) ) {
+				$out[ $k ] = sanitize_text_field( is_scalar( $v ) ? (string) $v : '' );
+			} elseif ( is_array( $v ) ) {
+				// Recurse one level for filters/columns (no deeper nesting expected).
+				$out[ $k ] = $this->to_string_keyed_array( $v );
+			} elseif ( is_scalar( $v ) ) {
 				$out[ $k ] = $v;
 			}
 		}

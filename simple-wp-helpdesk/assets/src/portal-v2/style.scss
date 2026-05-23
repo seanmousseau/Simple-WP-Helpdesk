@@ -58,6 +58,10 @@
 	border-radius: var(--swh-radius-sm, 4px);
 	&:hover { background: var(--swh-surface-elev, #f6f7f7); }
 	&[aria-expanded="true"] { background: var(--swh-surface-elev, #f6f7f7); }
+	&:focus-visible {
+		outline: 2px solid var(--swh-primary, #2271b1);
+		outline-offset: 2px;
+	}
 }
 .swh-portal-v2-menu {
 	position: absolute;
@@ -84,6 +88,10 @@
 		font-size: 13px;
 		color: var(--swh-text-body, #1d2327);
 		&:hover { background: var(--swh-surface-elev, #f6f7f7); }
+		&:focus-visible {
+			outline: 2px solid var(--swh-primary, #2271b1);
+			outline-offset: -2px;
+		}
 	}
 }
 

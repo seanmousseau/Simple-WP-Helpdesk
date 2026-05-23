@@ -52,17 +52,44 @@ export const TicketDrawer = () => {
 		return null;
 	}
 
+	// Shared close handler: applies the draft-body guard before closing so that
+	// clicking the backdrop uses the same confirmation flow as pressing Escape.
+	const requestClose = () => {
+		if ( draftBody ) {
+			// eslint-disable-next-line no-alert
+			const confirmed = window.confirm(
+				__( 'Discard draft?', 'simple-wp-helpdesk' )
+			);
+			if ( ! confirmed ) {
+				return;
+			}
+		}
+		close();
+	};
+
 	return (
 		// eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
 		<div
 			className="swh-drawer-backdrop"
 			onClick={ ( e ) => {
 				if ( e.target === e.currentTarget ) {
-					close();
+					requestClose();
 				}
 			} }
 		>
-			<aside className="swh-drawer" role="dialog" aria-modal="true">
+			<aside
+				className="swh-drawer"
+				role="dialog"
+				aria-modal="true"
+				aria-label={
+					ticket
+						? `${ __(
+								'Ticket',
+								'simple-wp-helpdesk'
+						  ) } #${ ticket.id }`
+						: __( 'Ticket drawer', 'simple-wp-helpdesk' )
+				}
+			>
 				{ loading && ! ticket && (
 					<div className="swh-drawer-loading">
 						{ __( 'Loading ticket…', 'simple-wp-helpdesk' ) }

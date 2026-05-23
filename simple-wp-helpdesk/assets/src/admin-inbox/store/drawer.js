@@ -33,17 +33,27 @@ const actions = {
 			if ( ! id ) {
 				return;
 			}
+			// Capture the ticket id at fetch start so we can discard stale responses
+			// if the user has switched to a different ticket before this resolves.
+			const fetchedForId = id;
 			dispatch( { type: 'FETCH_START' } );
 			try {
 				const data = await apiFetch( {
 					path: `/swh/v1/tickets/${ id }`,
 				} );
+				// Discard if the drawer has moved to a different ticket.
+				if ( select.getTicketId() !== fetchedForId ) {
+					return;
+				}
 				dispatch( { type: 'FETCH_SUCCESS', ticket: data } );
 				const draft = loadDraft( id );
 				if ( draft ) {
 					dispatch( { type: 'SET_DRAFT', body: draft } );
 				}
 			} catch ( err ) {
+				if ( select.getTicketId() !== fetchedForId ) {
+					return;
+				}
 				dispatch( {
 					type: 'FETCH_ERROR',
 					error: err.message || 'Failed to load ticket',
@@ -58,6 +68,7 @@ const actions = {
 			if ( ! ticket ) {
 				return;
 			}
+			const patchedForId = ticket.id;
 			dispatch( { type: 'SAVE_START' } );
 			try {
 				const data = await apiFetch( {
@@ -65,8 +76,14 @@ const actions = {
 					method: 'PATCH',
 					data: { expected_version: ticket.version, patch },
 				} );
+				if ( select.getTicketId() !== patchedForId ) {
+					return;
+				}
 				dispatch( { type: 'SAVE_SUCCESS', ticket: data } );
 			} catch ( err ) {
+				if ( select.getTicketId() !== patchedForId ) {
+					return;
+				}
 				if (
 					err.code === 'version_conflict' ||
 					err.data?.status === 409
@@ -76,7 +93,9 @@ const actions = {
 						current: err.data?.current || err.current,
 					} );
 				} else {
-					dispatch( { type: 'FETCH_ERROR', error: err.message } );
+					// Use SAVE_ERROR to clear `saving: true` reliably; FETCH_ERROR
+					// does not clear `saving` state.
+					dispatch( { type: 'SAVE_ERROR', error: err.message } );
 				}
 			}
 		},
@@ -89,6 +108,7 @@ const actions = {
 			if ( ! ticket || ! body ) {
 				return;
 			}
+			const repliedForId = ticket.id;
 			const internal = select.getDraftInternal();
 			const resolved = select.getDraftMarkResolved();
 			dispatch( { type: 'SAVE_START' } );
@@ -103,10 +123,16 @@ const actions = {
 						mark_resolved: resolved,
 					},
 				} );
+				if ( select.getTicketId() !== repliedForId ) {
+					return;
+				}
 				dispatch( { type: 'SAVE_SUCCESS', ticket: data } );
 				dispatch( { type: 'CLEAR_DRAFT' } );
 				clearDraft( ticket.id );
 			} catch ( err ) {
+				if ( select.getTicketId() !== repliedForId ) {
+					return;
+				}
 				if (
 					err.code === 'version_conflict' ||
 					err.data?.status === 409
@@ -116,7 +142,8 @@ const actions = {
 						current: err.data?.current || err.current,
 					} );
 				} else {
-					dispatch( { type: 'FETCH_ERROR', error: err.message } );
+					// Use SAVE_ERROR to clear `saving: true` reliably.
+					dispatch( { type: 'SAVE_ERROR', error: err.message } );
 				}
 			}
 		},
@@ -142,6 +169,11 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 			return { ...state, saving: true, conflict: null };
 		case 'SAVE_SUCCESS':
 			return { ...state, saving: false, ticket: action.ticket };
+		// SAVE_ERROR clears `saving` so the Composer isn't stuck in a saving state
+		// after a failed patchMeta or sendReply call. FETCH_ERROR intentionally does
+		// NOT clear saving (fetch and save are orthogonal operations).
+		case 'SAVE_ERROR':
+			return { ...state, saving: false, error: action.error };
 		case 'CONFLICT':
 			return {
 				...state,

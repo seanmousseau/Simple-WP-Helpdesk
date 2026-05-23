@@ -9,7 +9,7 @@ export const fuzzyMatch = ( query, candidates, getKey = ( c ) => c ) => {
 	}
 	return candidates
 		.map( ( c ) => {
-			const k = getKey( c ).toLowerCase();
+			const k = String( getKey( c ) ?? '' ).toLowerCase();
 			let i = 0;
 			for ( const ch of q ) {
 				const found = k.indexOf( ch, i );

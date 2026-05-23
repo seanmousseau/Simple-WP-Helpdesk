@@ -102,6 +102,9 @@ const fetchReport = async ( type, range ) => {
 		range_start: range.start,
 		range_end: range.end,
 		compare_to_prior: '1',
+		// Pass range_mode so the PHP handler can use the correct prior-window
+		// calculation (ytd = same period last year; shift = length-shifted window).
+		range_mode: range.mode || 'shift',
 	} );
 	const response = await fetch( url, {
 		method: 'POST',

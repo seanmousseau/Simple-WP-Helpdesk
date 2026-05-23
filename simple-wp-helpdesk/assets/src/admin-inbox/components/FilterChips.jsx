@@ -13,16 +13,25 @@ export const FilterChips = () => {
 	const chips = [];
 	if ( def.filters?.status ) {
 		chips.push(
-			`Status: ${ [].concat( def.filters.status ).join( ', ' ) }`
+			/* translators: followed by a list of status values */
+			`${ __( 'Status:', 'simple-wp-helpdesk' ) } ${ []
+				.concat( def.filters.status )
+				.join( ', ' ) }`
 		);
 	}
 	if ( def.filters?.priority ) {
 		chips.push(
-			`Priority: ${ [].concat( def.filters.priority ).join( ', ' ) }`
+			/* translators: followed by a list of priority values */
+			`${ __( 'Priority:', 'simple-wp-helpdesk' ) } ${ []
+				.concat( def.filters.priority )
+				.join( ', ' ) }`
 		);
 	}
 	if ( def.filters?.assignee ) {
-		chips.push( `Assignee: ${ def.filters.assignee }` );
+		chips.push(
+			/* translators: followed by an assignee name or ID */
+			`${ __( 'Assignee:', 'simple-wp-helpdesk' ) } ${ def.filters.assignee }`
+		);
 	}
 
 	return (

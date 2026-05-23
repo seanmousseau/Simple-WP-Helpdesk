@@ -1,5 +1,6 @@
 // components/ViewManager.jsx
 import { useState } from '@wordpress/element';
+import { sprintf } from '@wordpress/i18n';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { Button, Popover, TextControl } from '@wordpress/components';
@@ -13,6 +14,8 @@ import { SWH_VIEWS_STORE } from '../store/views';
 export const AddViewButton = () => {
 	const [ isOpen, setOpen ] = useState( false );
 	const [ name, setName ] = useState( '' );
+	const [ saving, setSaving ] = useState( false );
+	const [ saveError, setSaveError ] = useState( '' );
 	const { view, sort } = useSelect(
 		( s ) => ( {
 			view: s( SWH_INBOX_STORE ).getView(),
@@ -26,15 +29,23 @@ export const AddViewButton = () => {
 		if ( ! name.trim() ) {
 			return;
 		}
-		await createView( {
-			name: name.trim(),
-			scope: 'personal',
-			filters: { view }, // capture current default-view selection as a starting filter
-			sort,
-			columns: arrayDefaultColumns(),
-		} );
-		setName( '' );
-		setOpen( false );
+		setSaving( true );
+		setSaveError( '' );
+		try {
+			await createView( {
+				name: name.trim(),
+				scope: 'personal',
+				filters: { view }, // capture current default-view selection as a starting filter
+				sort,
+				columns: arrayDefaultColumns(),
+			} );
+			setName( '' );
+			setOpen( false );
+		} catch ( err ) {
+			setSaveError( err.message || __( 'Failed to save view.', 'simple-wp-helpdesk' ) );
+		} finally {
+			setSaving( false );
+		}
 	};
 
 	return (
@@ -66,6 +77,11 @@ export const AddViewButton = () => {
 								'simple-wp-helpdesk'
 							) }
 						</p>
+						{ saveError && (
+							<p className="swh-view-popover-error" role="alert">
+								{ saveError }
+							</p>
+						) }
 						<div className="swh-view-popover-actions">
 							<Button onClick={ () => setOpen( false ) }>
 								{ __( 'Cancel', 'simple-wp-helpdesk' ) }
@@ -73,7 +89,8 @@ export const AddViewButton = () => {
 							<Button
 								variant="primary"
 								onClick={ onSave }
-								disabled={ ! name.trim() }
+								disabled={ ! name.trim() || saving }
+								isBusy={ saving }
 							>
 								{ __( 'Save', 'simple-wp-helpdesk' ) }
 							</Button>
@@ -146,10 +163,11 @@ export const ViewRowMenu = ( { view } ) => {
 					position="bottom right"
 					onClose={ () => setOpen( false ) }
 				>
-					<button className="swh-view-menu-item" onClick={ onRename }>
+					<button type="button" className="swh-view-menu-item" onClick={ onRename }>
 						{ __( 'Rename', 'simple-wp-helpdesk' ) }
 					</button>
 					<button
+						type="button"
 						className="swh-view-menu-item swh-view-menu-item-danger"
 						onClick={ onDelete }
 					>

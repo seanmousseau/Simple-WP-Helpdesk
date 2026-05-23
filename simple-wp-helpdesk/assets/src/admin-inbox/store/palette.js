@@ -47,6 +47,9 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 				isOpen: false,
 				query: '',
 				tickets: [],
+				// Reset loading so a re-open after an in-flight close doesn't show
+				// a stale spinner on the next open.
+				loading: false,
 				error: null,
 			};
 		case 'SET_QUERY':

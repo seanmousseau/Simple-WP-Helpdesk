@@ -112,6 +112,25 @@ class BulkController extends WP_REST_Controller {
 		$conflicts = array();
 
 		foreach ( $ticket_ids as $id ) {
+			// Per-ticket authorization: ensure the post exists, is the correct type,
+			// and the current user can edit it.
+			$post = get_post( $id );
+			if ( ! $post || 'helpdesk_ticket' !== $post->post_type ) {
+				$conflicts[] = array(
+					'id'          => $id,
+					'version_now' => 0,
+					'error'       => 'not_found',
+				);
+				continue;
+			}
+			if ( ! current_user_can( 'edit_post', $id ) ) {
+				$conflicts[] = array(
+					'id'          => $id,
+					'version_now' => TicketVersion::current( $id ),
+					'error'       => 'forbidden',
+				);
+				continue;
+			}
 			$raw_expected = isset( $version_map[ $id ] ) ? $version_map[ $id ] : 0;
 			$expected     = is_scalar( $raw_expected ) ? (int) $raw_expected : 0;
 			$current      = TicketVersion::current( $id );

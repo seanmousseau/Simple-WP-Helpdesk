@@ -23,13 +23,51 @@ function swh_violet_is_enabled(): bool {
 }
 
 /**
- * Enqueue the violet stylesheet on admin + frontend when the setting is on.
+ * True when the current admin page belongs to the helpdesk plugin.
  *
- * Hooked to both `admin_enqueue_scripts` and `wp_enqueue_scripts` so it covers
- * the inbox/settings admin pages AND the portal frontend shortcode contexts.
+ * Used to scope violet-theme hooks so unrelated admin screens and frontend pages
+ * are not affected (prevents style bleed and extra payload on non-helpdesk pages).
+ *
+ * @return bool
+ */
+function swh_violet_is_helpdesk_screen(): bool {
+	if ( is_admin() ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && 'helpdesk_ticket' === $screen->post_type ) {
+			return true;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen guard.
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+		if ( '' !== $page && 0 === strpos( $page, 'swh-' ) ) {
+			return true;
+		}
+		return false;
+	}
+	// Frontend: only load on pages that use helpdesk shortcodes.
+	global $post;
+	if ( $post instanceof WP_Post ) {
+		$content = $post->post_content;
+		if (
+			has_shortcode( $content, 'helpdesk_portal' ) ||
+			has_shortcode( $content, 'submit_ticket' )
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Enqueue the violet stylesheet on helpdesk admin pages and portal shortcode
+ * pages only. Scoped to avoid style bleed on unrelated screens.
+ *
+ * Hooked to both `admin_enqueue_scripts` and `wp_enqueue_scripts`.
  */
 function swh_violet_enqueue(): void {
 	if ( ! swh_violet_is_enabled() ) {
+		return;
+	}
+	if ( ! swh_violet_is_helpdesk_screen() ) {
 		return;
 	}
 
@@ -69,6 +107,9 @@ function swh_violet_filter_body_class( $classes ) {
 	if ( ! swh_violet_is_enabled() ) {
 		return $classes;
 	}
+	if ( ! swh_violet_is_helpdesk_screen() ) {
+		return $classes;
+	}
 
 	// Admin filter passes a string; frontend passes an array.
 	if ( is_array( $classes ) ) {
@@ -85,6 +126,9 @@ add_filter( 'body_class', 'swh_violet_filter_body_class' );
  */
 function swh_violet_preload_font(): void {
 	if ( ! swh_violet_is_enabled() ) {
+		return;
+	}
+	if ( ! swh_violet_is_helpdesk_screen() ) {
 		return;
 	}
 	printf(
