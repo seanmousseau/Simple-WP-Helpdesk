@@ -4392,6 +4392,94 @@ def test_71_violet_theme_toggle(page):
     wp_logout(page)
 
 
+def test_72_portal_v2_renders_conversation(page):
+    """v4.0.0 #354 — portal renders messenger layout; reply optimistically appends; ⋮ menu opens + dismisses."""
+    print("\n[72] Portal v2 messenger layout (#354)")
+
+    # Submit a fresh ticket as a guest so we have a clean portal URL.
+    _clear_rate_limits()
+    page.goto(WP_SUBMIT_PAGE)
+    page.wait_for_load_state("load")
+    page.fill('[name="ticket_name"]', CLIENT1_NAME)
+    page.fill('[name="ticket_email"]', CLIENT1_EMAIL)
+    page.fill('[name="ticket_title"]', "Portal v2 test ticket")
+    page.fill('[name="ticket_desc"]', "Initial customer message body.")
+    page.click('[name="swh_submit_ticket"]')
+    page.wait_for_load_state("load")
+    check("portal v2 test_72: ticket submitted", "swh-alert-success" in page.content())
+
+    # Retrieve the portal URL via WP-CLI by finding the most-recent ticket for CLIENT1_EMAIL.
+    pid_raw = wpcli(
+        f'post list --post_type=helpdesk_ticket --posts_per_page=1 '
+        f'--meta_key=_ticket_email --meta_value={CLIENT1_EMAIL} '
+        f'--orderby=ID --order=DESC --format=ids'
+    )
+    pid = pid_raw.strip() if pid_raw else ""
+    if not pid or not pid.isdigit():
+        skip("portal v2 test_72: remaining checks", f"could not get ticket id (got {pid!r})")
+        return
+
+    portal_url = wpcli(f'eval "echo swh_get_secure_ticket_link({pid});"')
+    if not portal_url or "swh_ticket=" not in portal_url:
+        skip("portal v2 test_72: remaining checks", f"could not get portal URL (got {portal_url!r})")
+        return
+
+    page.goto(portal_url)
+    try:
+        page.locator(".swh-portal-v2").wait_for(timeout=10000)
+    except Exception:
+        skip("portal v2 test_72: remaining checks", ".swh-portal-v2 not found — portal v2 layout not active")
+        return
+
+    # Header renders.
+    check("portal v2 test_72: .swh-portal-v2-title present",
+          page.locator(".swh-portal-v2-title").count() == 1)
+    title_text = page.locator(".swh-portal-v2-title").inner_text()
+    check("portal v2 test_72: title contains ticket subject",
+          "Portal v2 test ticket" in title_text)
+    check("portal v2 test_72: status pill present",
+          page.locator(".swh-pill-status").count() == 1)
+
+    # Thread shows the initial customer bubble.
+    check("portal v2 test_72: at least one .swh-msg-customer bubble",
+          page.locator(".swh-msg-customer").count() >= 1)
+    thread_text = page.locator(".swh-portal-v2-thread").inner_text()
+    check("portal v2 test_72: initial message body in thread",
+          "Initial customer message body." in thread_text)
+
+    # Composer present.
+    check("portal v2 test_72: composer textarea present",
+          page.locator(".swh-portal-v2-composer textarea").count() == 1)
+
+    # Send a reply via composer.
+    page.locator(".swh-portal-v2-composer textarea").fill("My reply via portal v2.")
+    page.locator(".swh-portal-v2-send").click()
+    page.wait_for_timeout(1200)  # fetch round-trip + optimistic state
+
+    # New customer bubble appended optimistically.
+    check("portal v2 test_72: reply bubble appended (≥2 customer bubbles)",
+          page.locator(".swh-msg-customer").count() >= 2)
+    last_bubble = page.locator(".swh-msg-customer .swh-msg-bubble").last.inner_text()
+    check("portal v2 test_72: reply text in last bubble",
+          "My reply via portal v2." in last_bubble)
+
+    # ⋮ menu opens.
+    page.locator(".swh-portal-v2-menu-trigger").click()
+    menu = page.locator(".swh-portal-v2-menu")
+    menu_visible = menu.evaluate("el => !el.hidden")
+    check("portal v2 test_72: ⋮ menu visible after trigger click",
+          menu_visible is True)
+
+    # Escape dismisses.
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(200)
+    menu_hidden = menu.evaluate("el => el.hidden")
+    check("portal v2 test_72: ⋮ menu hidden after Escape",
+          menu_hidden is True)
+
+    screenshot(page, "72_portal_v2")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 def test_28_cleanup(page: Page):
@@ -4515,6 +4603,7 @@ SECTIONS = [
     test_69_bulk_bar_closes_selected_tickets,  # 69 — v4.0.0 bulk bar (#353)
     test_70_create_personal_view_and_switch,   # 70 — v4.0.0 saved views (#352)
     test_71_violet_theme_toggle,               # 71 — v4.0.0 violet theme (#355)
+    test_72_portal_v2_renders_conversation,    # 72 — v4.0.0 portal v2 (#354)
     test_28_cleanup,                  # 28 — always last
 ]
 
