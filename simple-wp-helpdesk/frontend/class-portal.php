@@ -16,7 +16,36 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 4.0.0 (#354)
  */
 function swh_portal_v2_enqueue_assets(): void {
-	// Filled in Task 7.
+	$asset_file = SWH_PLUGIN_DIR . 'assets/dist/portal-v2.asset.php';
+	$deps       = array();
+	$version    = SWH_VERSION;
+	if ( file_exists( $asset_file ) ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+		if ( is_array( $asset ) ) {
+			if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+				$deps = array_values( array_filter( $asset['dependencies'], 'is_string' ) );
+			}
+			if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
+				$version = $asset['version'];
+			}
+		}
+	}
+
+	// wp-scripts names the CSS chunk after the SCSS filename (style.scss → style-portal-v2.css).
+	wp_enqueue_style(
+		'swh-portal-v2',
+		SWH_PLUGIN_URL . 'assets/dist/style-portal-v2.css',
+		array(),
+		$version
+	);
+	wp_enqueue_script(
+		'swh-portal-v2',
+		SWH_PLUGIN_URL . 'assets/dist/portal-v2.js',
+		$deps,
+		$version,
+		true
+	);
 }
 
 /**
