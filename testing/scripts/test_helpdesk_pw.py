@@ -4356,7 +4356,7 @@ def test_71_violet_theme_toggle(page):
     checkbox = page.locator("input[name=swh_use_violet_theme]")
     if not checkbox.is_checked():
         checkbox.check(force=True)
-    page.locator("input[type=submit][name=submit]").first.click(force=True)
+    page.locator("input[type=submit][name=swh_save_settings]").first.click(force=True)
     page.wait_for_load_state("networkidle")
 
     # Navigate to inbox and confirm class is present.
@@ -4379,7 +4379,7 @@ def test_71_violet_theme_toggle(page):
     checkbox = page.locator("input[name=swh_use_violet_theme]")
     if checkbox.is_checked():
         checkbox.uncheck(force=True)
-    page.locator("input[type=submit][name=submit]").first.click(force=True)
+    page.locator("input[type=submit][name=swh_save_settings]").first.click(force=True)
     page.wait_for_load_state("networkidle")
 
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")

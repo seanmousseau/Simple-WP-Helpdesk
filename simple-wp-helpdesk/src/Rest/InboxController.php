@@ -181,10 +181,19 @@ class InboxController extends WP_REST_Controller {
 						'value'   => array( 'open', 'in_progress' ),
 						'compare' => 'IN',
 					),
+					// Match tickets where _ticket_assigned is empty OR missing
+					// entirely — new tickets may not have the meta key set.
 					array(
-						'key'     => '_ticket_assigned',
-						'value'   => '',
-						'compare' => '=',
+						'relation' => 'OR',
+						array(
+							'key'     => '_ticket_assigned',
+							'value'   => '',
+							'compare' => '=',
+						),
+						array(
+							'key'     => '_ticket_assigned',
+							'compare' => 'NOT EXISTS',
+						),
 					),
 				);
 				break;
