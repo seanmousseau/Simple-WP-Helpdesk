@@ -10,6 +10,16 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+---
+
+## [4.0.0] — 2026-05-23
+
+Theme: **Workflow-First Admin.** A structural rewrite of the operator
+experience — inbox-style triage, slide-over drawer, ⌘K palette, saved
+views, sticky bulk-action bar — plus the foundation that makes future
+v4.x integrations cleaner (PSR-4, grouped settings schema, optimistic
+concurrency, pre-3.0 filter deprecations). Closes milestone [#18](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/18) (12/12).
+
 ### Breaking
 
 - Raised PHP minimum to 8.0 (was 7.4). Hosts on PHP 7.4 must stay on the v3.6 LTS branch. (#357)
@@ -18,24 +28,24 @@ starting from the next release after 1.8.
 
 ### Added
 
-- Reports redesign: time-range selector (7d / 30d / 90d / YTD / Custom), period-over-period comparison deltas on every report card, click-to-drill-down navigation from chart segments to the inbox filtered by status + date range. Closes #359.
-- Opt-in Violet theme for admin + client portal. Setting at Settings → General → Appearance (default off). Vivid Violet palette (violet-800 primary), Geist Sans typography self-hosted under OFL 1.1, tighter spacing, softer shadows. Emails unchanged. Closes #355.
-- Saved views CRUD — personal views (per user) + global views (admin-managed) with management UI in the inbox left rail and at Settings → Helpdesk → Views. Defaults (Unassigned, My Open, High priority, Resolved this week) ship pre-baked; technicians add their own. Closes #352.
-- New REST endpoints: `GET /swh/v1/views`, `POST /swh/v1/views`, `PATCH /swh/v1/views/{id}`, `DELETE /swh/v1/views/{id}`.
-- ⌘K command palette (Cmd+K / Ctrl+K) — fuzzy search over tickets, saved views, settings pages; bulk commands group when rows are selected. Uses @wordpress/components Modal. Closes #351.
-- Sticky bulk-action bar — appears above the ticket list when ≥1 row is selected. Status + Priority + Close. 200-ticket cap. Per-ticket optimistic concurrency via POST /swh/v1/bulk-action; conflicts surface in an alert with the skipped ticket ids. Closes #353.
-- New REST endpoints: `POST /swh/v1/bulk-action`, `GET /swh/v1/palette/suggest`.
-- v4.0 quick-reply drawer with workhorse meta (status/priority/assignee/tags), thread, composer with internal-note + mark-resolved toggles, draft persistence (localStorage, 7d), cmd-Enter send. Replaces row → legacy edit nav from Phase A. Closes #350.
-- Optimistic concurrency: every ticket mutation bumps `_swh_version` post meta. REST PATCH + reply endpoints check the client-supplied expected version; mismatch returns 409 with current state. ConflictBanner surfaces in the drawer with draft preserved.
-- v4.0 admin Tickets inbox shell — dense list + saved-view left rail + filter chips (#349). Replaces the WP_List_Table page. Drawer + palette wire up in subsequent phases.
-- `_swh_last_activity_at` post meta written on every status change and reply insert (used by inbox sort). (#349)
-- REST endpoint `GET /swh/v1/tickets` with 4 default views (unassigned, my\_open, high\_priority, resolved\_this\_week), pagination, and `found_posts` total. (#349)
-- `swh_set_option( $group, $key, $value )` helper, mirror of `swh_get_option()`. (#356)
-- `\SWH\Settings\Migration` class — one-shot schema upgrade routine, idempotent, runs on `plugins_loaded` p5. Exposes `Migration::group_for( $flat_key )` for write-side dispatch. (#356)
+- **Admin Tickets inbox shell (#349):** Dense list + saved-view left rail + filter chips. Replaces the WP_List_Table page. `_swh_last_activity_at` post meta written on every status change and reply insert (used by inbox sort). REST endpoint `GET /swh/v1/tickets` with 4 default views (unassigned, my\_open, high\_priority, resolved\_this\_week), pagination, and `found_posts` total.
+- **Quick-reply drawer (#350):** Slide-over drawer with workhorse meta (status/priority/assignee/tags), full thread, composer with internal-note + mark-resolved toggles, draft persistence (localStorage, 7d), cmd-Enter send. Replaces row → legacy edit navigation.
+- **Optimistic concurrency (#350):** Every ticket mutation bumps `_swh_version` post meta. REST PATCH + reply endpoints check the client-supplied expected version; mismatch returns 409 with current state. ConflictBanner surfaces in the drawer with draft preserved.
+- **⌘K command palette (#351):** Cmd+K / Ctrl+K — fuzzy search over tickets, saved views, settings pages; bulk commands group when rows are selected. Uses @wordpress/components Modal.
+- **Saved views CRUD (#352):** Personal views (per user) + global views (admin-managed) with management UI in the inbox left rail and at Settings → Helpdesk → Views. Defaults (Unassigned, My Open, High priority, Resolved this week) ship pre-baked; technicians add their own. New REST endpoints: `GET /swh/v1/views`, `POST /swh/v1/views`, `PATCH /swh/v1/views/{id}`, `DELETE /swh/v1/views/{id}`.
+- **Sticky bulk-action bar (#353):** Appears above the ticket list when ≥1 row is selected. Status + Priority + Close. 200-ticket cap. Per-ticket optimistic concurrency via `POST /swh/v1/bulk-action`; conflicts surface in an alert with the skipped ticket IDs. New REST endpoint: `GET /swh/v1/palette/suggest`.
+- **Opt-in Violet theme (#355):** Setting at Settings → General → Appearance (default off). Vivid Violet palette (violet-800 primary), Geist Sans typography self-hosted under OFL 1.1, tighter spacing, softer shadows. Emails unchanged.
+- **Reports redesign (#359):** Time-range selector (7d / 30d / 90d / YTD / Custom), period-over-period comparison deltas on every report card, click-to-drill-down navigation from chart segments to the inbox filtered by status + date range.
+- **`swh_set_option( $group, $key, $value )` helper (#356):** Write-side mirror of `swh_get_option()`.
+- **`\SWH\Settings\Migration` class (#356):** One-shot schema upgrade routine, idempotent, runs on `plugins_loaded` p5. Exposes `Migration::group_for( $flat_key )` for write-side dispatch.
+
+### Changed
+
+- **Portal v2 (#354):** Client-facing portal rewritten to a messenger-style conversation-first layout. Thread leads visually with customer/staff bubbles; composer pinned to the bottom; ticket-level actions (close, reopen, CSAT) consolidated into a single `⋮` header menu. Server-rendered PHP + ~3KB vanilla JS for AJAX/auto-scroll/menu. Same URLs, same endpoints, same features.
 
 ### Deprecated
 
-- 8 pre-3.0 filter hooks are now wrapped in `swh_apply_deprecated_filter()` and emit `_doing_it_wrong` in `WP_DEBUG` environments. Listeners still fire (back-compat preserved). Earliest removal: 4.2. (#360)
+- 8 pre-3.0 filter hooks are now wrapped in `swh_apply_deprecated_filter()` and emit `_doing_it_wrong` in `WP_DEBUG` environments. Listeners still fire (back-compat preserved). Earliest removal: v4.2. (#360)
   - `swh_ticket_statuses`, `swh_ticket_priorities` (`includes/helpers.php`)
   - `swh_allowed_file_types` — 2 call sites (`frontend/class-shortcode.php`)
   - `swh_submission_data` (`frontend/class-shortcode.php`)
@@ -44,10 +54,6 @@ starting from the next release after 1.8.
   - `swh_parse_template`, `swh_email_headers` (`includes/class-email.php`)
 
   `swh_sla_open_statuses` is post-3.0 and remains supported.
-
-### Changed
-
-- Portal v2 (#354): client-facing portal rewritten to a messenger-style conversation-first layout. Thread leads visually with customer/staff bubbles; composer pinned to the bottom; ticket-level actions (close, reopen, CSAT) consolidated into a single `⋮` header menu. Server-rendered PHP + ~3KB vanilla JS for AJAX/auto-scroll/menu. Same URLs, same endpoints, same features.
 
 ### Internal
 
@@ -642,7 +648,8 @@ Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — 
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.7.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.7.0...v4.0.0
 [3.7.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.4.1...v3.5.0
