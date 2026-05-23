@@ -4290,10 +4290,13 @@ def test_69_bulk_bar_closes_selected_tickets(page):
         wp_logout(page)
         return
 
-    wpcli(f"post meta update {ticket_a} _ticket_status open")
-    wpcli(f"post meta update {ticket_a} _swh_version 1")
-    wpcli(f"post meta update {ticket_b} _ticket_status open")
-    wpcli(f"post meta update {ticket_b} _swh_version 1")
+    # Inbox 'unassigned' view orderby _swh_last_activity_at — meta_value_num
+    # ordering excludes posts without that key, so set it to a recent epoch.
+    now_ts = str(int(__import__('time').time()))
+    for tid in (ticket_a, ticket_b):
+        wpcli(f"post meta update {tid} _ticket_status open")
+        wpcli(f"post meta update {tid} _swh_version 1")
+        wpcli(f"post meta update {tid} _swh_last_activity_at {now_ts}")
 
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
     with suppress(PlaywrightTimeoutError):
@@ -4344,20 +4347,6 @@ def test_69_bulk_bar_closes_selected_tickets(page):
     with suppress(PlaywrightTimeoutError):
         page.locator(".swh-bulk-bar").wait_for(timeout=5000)
         bulk_bar_visible = True
-    diag_all_rows = page.evaluate(
-        "Array.from(document.querySelectorAll('.swh-inbox-row'))"
-        ".map(r => r.getAttribute('data-ticket-id'))"
-    )
-    diag_row_checks = page.evaluate(
-        "document.querySelectorAll('.swh-inbox-row-check').length"
-    )
-    diag_inbox_root = page.evaluate(
-        "document.querySelector('#swh-inbox-root')?.innerHTML?.slice(0, 300) || 'no root'"
-    )
-    print(f"[DIAG test_69] tickets created: {ticket_a}, {ticket_b}")
-    print(f"[DIAG test_69] all rows in DOM (count={len(diag_all_rows)}): {diag_all_rows[:20]}")
-    print(f"[DIAG test_69] row-check button count: {diag_row_checks}")
-    print(f"[DIAG test_69] #swh-inbox-root start: {diag_inbox_root!r}")
     check("bulk #353: bulk bar appears when rows selected", bulk_bar_visible)
 
     if bulk_bar_visible:
