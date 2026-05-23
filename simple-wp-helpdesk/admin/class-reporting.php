@@ -14,7 +14,11 @@ add_action( 'wp_ajax_swh_report_data', 'swh_ajax_report_data' );
  * AJAX handler that returns reporting data as JSON.
  *
  * Accepts a `type` parameter: 'status_breakdown', 'avg_resolution_time',
- * 'weekly_trend', 'first_response_time', or 'kpi'. Results are cached in a 1-hour transient.
+ * 'weekly_trend', 'first_response_time', or 'kpi'. Optional range params
+ * `range_start`, `range_end`, and `compare_to_prior` extend the response
+ * with `prior`, `range`, and `prior_range` keys (#359).
+ *
+ * When no range params are provided, results are cached in a 1-hour transient.
  *
  * @since 3.0.0
  * @return void
@@ -24,46 +28,121 @@ function swh_ajax_report_data() {
 		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'simple-wp-helpdesk' ) ), 403 );
 	}
 	check_ajax_referer( 'swh_report_data', 'nonce' );
-	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by sanitize_key().
-	$type = isset( $_POST['type'] ) && is_string( $_POST['type'] ) ? sanitize_key( $_POST['type'] ) : '';
 
-	$transient_key = 'swh_report_' . $type;
-	$cached        = get_transient( $transient_key );
-	if ( false !== $cached && is_array( $cached ) ) {
-		wp_send_json_success( $cached );
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by sanitize_key().
+	$type = isset( $_REQUEST['type'] ) && is_string( $_REQUEST['type'] ) ? sanitize_key( wp_unslash( $_REQUEST['type'] ) ) : '';
+
+	// Range params (v4.0.0 #359) — optional; validate as ISO Y-m-d.
+	$start_raw = isset( $_REQUEST['range_start'] ) && is_string( $_REQUEST['range_start'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['range_start'] ) ) : null;
+	$end_raw   = isset( $_REQUEST['range_end'] ) && is_string( $_REQUEST['range_end'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['range_end'] ) ) : null;
+	$start     = $start_raw;
+	$end       = $end_raw;
+	if ( null !== $start && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $start ) ) {
+		$start = null;
+	}
+	if ( null !== $end && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $end ) ) {
+		$end = null;
+	}
+	$compare_raw = isset( $_REQUEST['compare_to_prior'] ) && is_string( $_REQUEST['compare_to_prior'] ) ? sanitize_key( wp_unslash( $_REQUEST['compare_to_prior'] ) ) : null;
+	$compare     = null === $compare_raw || '1' === $compare_raw;
+
+	// Only use transient cache when no custom range is requested.
+	$use_cache = ( null === $start && null === $end );
+	if ( $use_cache ) {
+		$transient_key = 'swh_report_' . $type;
+		$cached        = get_transient( $transient_key );
+		if ( false !== $cached && is_array( $cached ) ) {
+			wp_send_json_success( $cached );
+		}
 	}
 
 	switch ( $type ) {
 		case 'status_breakdown':
-			$data = swh_report_status_breakdown();
+			$data = swh_report_status_breakdown( $start, $end, $compare );
 			break;
 		case 'avg_resolution_time':
-			$data = swh_report_avg_resolution_time();
+			$data = swh_report_avg_resolution_time( $start, $end, $compare );
 			break;
 		case 'weekly_trend':
-			$data = swh_report_weekly_trend();
+			$data = swh_report_weekly_trend( $start, $end, $compare );
 			break;
 		case 'first_response_time':
-			$data = swh_report_first_response_time();
+			$data = swh_report_first_response_time( $start, $end, $compare );
 			break;
 		case 'kpi':
-			$data = swh_report_kpi_data();
+			$data = swh_report_kpi_data( $start, $end, $compare );
 			break;
 		default:
 			wp_send_json_error( array( 'message' => __( 'Unknown report type.', 'simple-wp-helpdesk' ) ) );
+			// wp_send_json_error calls wp_die() which terminates execution.
+			// phpcs:ignore Squiz.PHP.NonExecutableCode.ReturnNotRequired -- defensive; WP_Mock may not terminate in tests.
+			return; // @phpstan-ignore-line
 	}
 
-	set_transient( $transient_key, $data, HOUR_IN_SECONDS );
+	if ( $use_cache ) {
+		set_transient( $transient_key, $data, HOUR_IN_SECONDS );
+	}
 	wp_send_json_success( $data );
 }
 
 /**
- * Returns ticket counts grouped by status.
+ * Returns ticket counts grouped by status, optionally constrained to a date range.
+ *
+ * Return shape (v4.0.0+): array with keys `data`, `range`, `prior`, `prior_range`.
+ * When $compare is false, `prior` and `prior_range` are null.
  *
  * @since 3.0.0
- * @return array<string, int> Map of status label => count.
+ * @since 4.0.0 Accepts optional range args; return shape extended (#359).
+ *
+ * @param string|null $range_start ISO date (Y-m-d); null → defaults to 30d window.
+ * @param string|null $range_end   ISO date; null → defaults to today.
+ * @param bool        $compare     Whether to compute and return the prior-range data.
+ * @return array{data: array<string,int>, range: array{start:string,end:string}, prior: array<string,int>|null, prior_range: array{start:string,end:string}|null}
  */
-function swh_report_status_breakdown() {
+function swh_report_status_breakdown( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+	if ( null === $range_start || null === $range_end ) {
+		$range_end   = gmdate( 'Y-m-d' );
+		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+	}
+
+	$data = swh_report_status_breakdown_query( $range_start, $range_end );
+
+	if ( ! $compare ) {
+		return array(
+			'data'        => $data,
+			'range'       => array(
+				'start' => $range_start,
+				'end'   => $range_end,
+			),
+			'prior'       => null,
+			'prior_range' => null,
+		);
+	}
+
+	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior       = swh_report_status_breakdown_query( $prior_range['start'], $prior_range['end'] );
+
+	return array(
+		'data'        => $data,
+		'range'       => array(
+			'start' => $range_start,
+			'end'   => $range_end,
+		),
+		'prior'       => $prior,
+		'prior_range' => $prior_range,
+	);
+}
+
+/**
+ * Inner query for swh_report_status_breakdown — counts tickets by status within a date window.
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param string $start ISO date (Y-m-d), inclusive.
+ * @param string $end   ISO date (Y-m-d), inclusive.
+ * @return array<string, int>
+ */
+function swh_report_status_breakdown_query( string $start, string $end ): array {
 	$statuses = swh_get_statuses();
 	$result   = array();
 	foreach ( $statuses as $status ) {
@@ -80,6 +159,13 @@ function swh_report_status_breakdown() {
 						'value' => $status,
 					),
 				),
+				'date_query'     => array(
+					array(
+						'after'     => $start,
+						'before'    => $end,
+						'inclusive' => true,
+					),
+				),
 			)
 		) )->found_posts;
 		$result[ $status ] = $count;
@@ -88,17 +174,69 @@ function swh_report_status_breakdown() {
 }
 
 /**
- * Returns the average ticket resolution time in seconds for tickets closed in the last 30 days.
+ * Returns the average ticket resolution time in seconds, optionally constrained to a date range.
  *
  * @since 3.0.0
+ * @since 4.0.0 Accepts optional range args; return shape extended (#359).
+ *
+ * @param string|null $range_start ISO date; null → 30d window.
+ * @param string|null $range_end   ISO date; null → today.
+ * @param bool        $compare     Whether to compute and return prior-range data.
+ * @return array{data: array{avg_seconds:int,count:int}, range: array{start:string,end:string}, prior: array{avg_seconds:int,count:int}|null, prior_range: array{start:string,end:string}|null}
+ */
+function swh_report_avg_resolution_time( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+	if ( null === $range_start || null === $range_end ) {
+		$range_end   = gmdate( 'Y-m-d' );
+		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+	}
+
+	$data = swh_report_avg_resolution_time_query( $range_start, $range_end );
+
+	if ( ! $compare ) {
+		return array(
+			'data'        => $data,
+			'range'       => array(
+				'start' => $range_start,
+				'end'   => $range_end,
+			),
+			'prior'       => null,
+			'prior_range' => null,
+		);
+	}
+
+	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior       = swh_report_avg_resolution_time_query( $prior_range['start'], $prior_range['end'] );
+
+	return array(
+		'data'        => $data,
+		'range'       => array(
+			'start' => $range_start,
+			'end'   => $range_end,
+		),
+		'prior'       => $prior,
+		'prior_range' => $prior_range,
+	);
+}
+
+/**
+ * Inner query for swh_report_avg_resolution_time — computes average within a date window.
+ *
+ * Constrains the window by post_modified_gmt (when ticket was last updated, i.e. resolved).
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param string $start ISO date (Y-m-d), inclusive.
+ * @param string $end   ISO date (Y-m-d), inclusive.
  * @return array{avg_seconds: int, count: int}
  */
-function swh_report_avg_resolution_time() {
+function swh_report_avg_resolution_time_query( string $start, string $end ): array {
 	global $wpdb;
 	$defs            = swh_get_defaults();
 	$closed_status   = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 	$resolved_status = swh_get_option( 'general', 'resolved_status', $defs['swh_resolved_status'] );
-	$since           = gmdate( 'Y-m-d H:i:s', time() - ( 30 * DAY_IN_SECONDS ) );
+	// Convert Y-m-d boundaries to full datetime strings for the SQL comparison.
+	$since_dt = $start . ' 00:00:00';
+	$until_dt = $end . ' 23:59:59';
 
 	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->prepare(
@@ -109,11 +247,13 @@ function swh_report_avg_resolution_time() {
 			WHERE p.post_type = %s
 			  AND p.post_status = 'publish'
 			  AND ms.meta_value IN (%s, %s)
-			  AND p.post_modified_gmt >= %s",
+			  AND p.post_modified_gmt >= %s
+			  AND p.post_modified_gmt <= %s",
 			'helpdesk_ticket',
 			$closed_status,
 			$resolved_status,
-			$since
+			$since_dt,
+			$until_dt
 		)
 	);
 
@@ -140,19 +280,71 @@ function swh_report_avg_resolution_time() {
 }
 
 /**
- * Returns weekly opened/closed ticket counts for the last 8 weeks.
+ * Returns weekly opened/closed ticket counts, optionally constrained to a date range.
  *
  * @since 3.0.0
+ * @since 4.0.0 Accepts optional range args; return shape extended (#359).
+ *
+ * @param string|null $range_start ISO date; null → last 8 weeks.
+ * @param string|null $range_end   ISO date; null → today.
+ * @param bool        $compare     Whether to compute and return prior-range data.
+ * @return array{data: array<int,array{week:string,opened:int,closed:int}>, range: array{start:string,end:string}, prior: array<int,array{week:string,opened:int,closed:int}>|null, prior_range: array{start:string,end:string}|null}
+ */
+function swh_report_weekly_trend( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+	if ( null === $range_start || null === $range_end ) {
+		$range_end   = gmdate( 'Y-m-d' );
+		$range_start = gmdate( 'Y-m-d', strtotime( '-8 weeks' ) );
+	}
+
+	$data = swh_report_weekly_trend_query( $range_start, $range_end );
+
+	if ( ! $compare ) {
+		return array(
+			'data'        => $data,
+			'range'       => array(
+				'start' => $range_start,
+				'end'   => $range_end,
+			),
+			'prior'       => null,
+			'prior_range' => null,
+		);
+	}
+
+	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior       = swh_report_weekly_trend_query( $prior_range['start'], $prior_range['end'] );
+
+	return array(
+		'data'        => $data,
+		'range'       => array(
+			'start' => $range_start,
+			'end'   => $range_end,
+		),
+		'prior'       => $prior,
+		'prior_range' => $prior_range,
+	);
+}
+
+/**
+ * Inner query for swh_report_weekly_trend — weekly buckets within a date window.
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param string $start ISO date (Y-m-d), inclusive.
+ * @param string $end   ISO date (Y-m-d), inclusive.
  * @return array<int, array{week: string, opened: int, closed: int}>
  */
-function swh_report_weekly_trend() {
+function swh_report_weekly_trend_query( string $start, string $end ): array {
 	$defs          = swh_get_defaults();
 	$closed_status = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 	$result        = array();
 	for ( $i = 7; $i >= 0; $i-- ) {
 		$week_start = gmdate( 'Y-m-d', strtotime( '-' . $i . ' weeks Monday this week' ) );
 		$week_end   = gmdate( 'Y-m-d', strtotime( '-' . $i . ' weeks Sunday this week' ) + DAY_IN_SECONDS );
-		$opened     = (int) ( new WP_Query(
+		// Skip weeks entirely outside the requested range.
+		if ( $week_end < $start || $week_start > $end ) {
+			continue;
+		}
+		$opened = (int) ( new WP_Query(
 			array(
 				'post_type'      => 'helpdesk_ticket',
 				'post_status'    => 'any',
@@ -199,14 +391,65 @@ function swh_report_weekly_trend() {
 }
 
 /**
- * Returns the average first-response time in seconds for tickets responded to in the last 30 days.
+ * Returns the average first-response time in seconds, optionally constrained to a date range.
  *
  * @since 3.0.0
+ * @since 4.0.0 Accepts optional range args; return shape extended (#359).
+ *
+ * @param string|null $range_start ISO date; null → 30d window.
+ * @param string|null $range_end   ISO date; null → today.
+ * @param bool        $compare     Whether to compute and return prior-range data.
+ * @return array{data: array{avg_seconds:int,count:int}, range: array{start:string,end:string}, prior: array{avg_seconds:int,count:int}|null, prior_range: array{start:string,end:string}|null}
+ */
+function swh_report_first_response_time( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+	if ( null === $range_start || null === $range_end ) {
+		$range_end   = gmdate( 'Y-m-d' );
+		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+	}
+
+	$data = swh_report_first_response_time_query( $range_start, $range_end );
+
+	if ( ! $compare ) {
+		return array(
+			'data'        => $data,
+			'range'       => array(
+				'start' => $range_start,
+				'end'   => $range_end,
+			),
+			'prior'       => null,
+			'prior_range' => null,
+		);
+	}
+
+	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior       = swh_report_first_response_time_query( $prior_range['start'], $prior_range['end'] );
+
+	return array(
+		'data'        => $data,
+		'range'       => array(
+			'start' => $range_start,
+			'end'   => $range_end,
+		),
+		'prior'       => $prior,
+		'prior_range' => $prior_range,
+	);
+}
+
+/**
+ * Inner query for swh_report_first_response_time — average response time within a date window.
+ *
+ * Constrains the window by `_ticket_first_response_at` unix timestamp falling within [start, end].
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param string $start ISO date (Y-m-d), inclusive.
+ * @param string $end   ISO date (Y-m-d), inclusive.
  * @return array{avg_seconds: int, count: int}
  */
-function swh_report_first_response_time() {
+function swh_report_first_response_time_query( string $start, string $end ): array {
 	global $wpdb;
-	$since = time() - ( 30 * DAY_IN_SECONDS );
+	$since_ts = strtotime( $start . ' 00:00:00' );
+	$until_ts = strtotime( $end . ' 23:59:59' );
 
 	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->prepare(
@@ -215,9 +458,11 @@ function swh_report_first_response_time() {
 			INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = '_ticket_first_response_at'
 			WHERE p.post_type = %s
 			  AND p.post_status = 'publish'
-			  AND CAST(m.meta_value AS UNSIGNED) >= %d",
+			  AND CAST(m.meta_value AS UNSIGNED) >= %d
+			  AND CAST(m.meta_value AS UNSIGNED) <= %d",
 			'helpdesk_ticket',
-			$since
+			$since_ts,
+			$until_ts
 		)
 	);
 
@@ -247,9 +492,57 @@ function swh_report_first_response_time() {
  * Returns top-level KPI summary data for the reporting dashboard.
  *
  * @since 3.4.0
+ * @since 4.0.0 Accepts optional range args; return shape extended (#359).
+ *
+ * @param string|null $range_start ISO date; null → 30d window.
+ * @param string|null $range_end   ISO date; null → today.
+ * @param bool        $compare     Whether to compute and return prior-range data.
+ * @return array{data: array{total:int,open:int,avg_resolution:int,avg_first_response:int}, range: array{start:string,end:string}, prior: array{total:int,open:int,avg_resolution:int,avg_first_response:int}|null, prior_range: array{start:string,end:string}|null}
+ */
+function swh_report_kpi_data( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+	if ( null === $range_start || null === $range_end ) {
+		$range_end   = gmdate( 'Y-m-d' );
+		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+	}
+
+	$data = swh_report_kpi_data_query( $range_start, $range_end );
+
+	if ( ! $compare ) {
+		return array(
+			'data'        => $data,
+			'range'       => array(
+				'start' => $range_start,
+				'end'   => $range_end,
+			),
+			'prior'       => null,
+			'prior_range' => null,
+		);
+	}
+
+	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior       = swh_report_kpi_data_query( $prior_range['start'], $prior_range['end'] );
+
+	return array(
+		'data'        => $data,
+		'range'       => array(
+			'start' => $range_start,
+			'end'   => $range_end,
+		),
+		'prior'       => $prior,
+		'prior_range' => $prior_range,
+	);
+}
+
+/**
+ * Inner query for swh_report_kpi_data — computes KPIs within a date window.
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param string $start ISO date (Y-m-d), inclusive.
+ * @param string $end   ISO date (Y-m-d), inclusive.
  * @return array{total: int, open: int, avg_resolution: int, avg_first_response: int}
  */
-function swh_report_kpi_data() {
+function swh_report_kpi_data_query( string $start, string $end ): array {
 	$defs            = swh_get_defaults();
 	$closed_status   = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
 	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
@@ -260,6 +553,13 @@ function swh_report_kpi_data() {
 			'post_status'    => 'publish',
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
+			'date_query'     => array(
+				array(
+					'after'     => $start,
+					'before'    => $end,
+					'inclusive' => true,
+				),
+			),
 		)
 	) )->found_posts;
 
@@ -270,6 +570,13 @@ function swh_report_kpi_data() {
 			'post_status'    => 'publish',
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
+			'date_query'     => array(
+				array(
+					'after'     => $start,
+					'before'    => $end,
+					'inclusive' => true,
+				),
+			),
 			'meta_query'     => array(
 				'relation' => 'AND',
 				array(
@@ -286,21 +593,8 @@ function swh_report_kpi_data() {
 		)
 	) )->found_posts;
 
-	$cached_resolution = get_transient( 'swh_report_avg_resolution_time' );
-	if ( is_array( $cached_resolution ) ) {
-		$resolution = $cached_resolution;
-	} else {
-		$resolution = swh_report_avg_resolution_time();
-		set_transient( 'swh_report_avg_resolution_time', $resolution, HOUR_IN_SECONDS );
-	}
-
-	$cached_first_response = get_transient( 'swh_report_first_response_time' );
-	if ( is_array( $cached_first_response ) ) {
-		$first_response = $cached_first_response;
-	} else {
-		$first_response = swh_report_first_response_time();
-		set_transient( 'swh_report_first_response_time', $first_response, HOUR_IN_SECONDS );
-	}
+	$resolution     = swh_report_avg_resolution_time_query( $start, $end );
+	$first_response = swh_report_first_response_time_query( $start, $end );
 
 	$avg_res_raw  = $resolution['avg_seconds'] ?? null;
 	$avg_fres_raw = $first_response['avg_seconds'] ?? null;
@@ -329,13 +623,17 @@ function swh_report_kpi_data() {
  */
 function swh_report_prior_range( string $start, string $end, string $mode = 'shift' ): array {
 	if ( 'ytd' === $mode ) {
+		$start_ytd = strtotime( $start . ' -1 year' );
+		$end_ytd   = strtotime( $end . ' -1 year' );
 		return array(
-			'start' => (string) gmdate( 'Y-m-d', strtotime( $start . ' -1 year' ) ),
-			'end'   => (string) gmdate( 'Y-m-d', strtotime( $end . ' -1 year' ) ),
+			'start' => (string) gmdate( 'Y-m-d', false !== $start_ytd ? $start_ytd : 0 ),
+			'end'   => (string) gmdate( 'Y-m-d', false !== $end_ytd ? $end_ytd : 0 ),
 		);
 	}
 	$start_ts = strtotime( $start );
 	$end_ts   = strtotime( $end );
+	$start_ts = false !== $start_ts ? $start_ts : 0;
+	$end_ts   = false !== $end_ts ? $end_ts : 0;
 	$length   = $end_ts - $start_ts;
 	return array(
 		'start' => (string) gmdate( 'Y-m-d', $start_ts - $length ),
