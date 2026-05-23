@@ -1,0 +1,124 @@
+/**
+ * Reports v2 — range selector + delta chips + drill-down cursor.
+ *
+ * Uses --swh-* tokens so it works under both default and Violet themes.
+ */
+
+.swh-reports-range-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	background: var(--swh-surface-card, #fff);
+	border: 1px solid var(--swh-border, #c3c4c7);
+	border-radius: var(--swh-radius-md, 8px);
+	margin-bottom: 16px;
+	font-size: 13px;
+}
+
+.swh-range-buttons {
+	display: flex;
+	gap: 4px;
+}
+
+.swh-range-btn {
+	background: var(--swh-surface-elev, #f6f7f7);
+	border: 1px solid var(--swh-border, #c3c4c7);
+	border-radius: var(--swh-radius-sm, 4px);
+	padding: 4px 12px;
+	cursor: pointer;
+	color: var(--swh-text-body, #1d2327);
+	font-size: 12px;
+	font-weight: 500;
+
+	&:hover {
+		background: var(--swh-primary-soft-bg, #e6f0fa);
+	}
+
+	&.is-active {
+		background: var(--swh-primary, #2271b1);
+		color: var(--swh-primary-fg, #fff);
+		border-color: var(--swh-primary, #2271b1);
+	}
+}
+
+.swh-range-custom {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+
+	label {
+		display: inline-flex;
+		gap: 4px;
+		align-items: center;
+	}
+
+	input[type='date'] {
+		border: 1px solid var(--swh-border, #c3c4c7);
+		border-radius: var(--swh-radius-sm, 4px);
+		padding: 3px 6px;
+	}
+}
+
+.swh-range-label {
+	margin-left: auto;
+	color: var(--swh-text-muted, #50575e);
+	font-size: 12px;
+}
+
+.swh-range-current,
+.swh-range-prior {
+	color: var(--swh-text-strong, #1d2327);
+	font-weight: 500;
+	margin: 0 4px;
+}
+
+.swh-report-card-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 8px;
+
+	h2 {
+		margin: 0;
+		flex: 1;
+	}
+}
+
+.swh-report-delta {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px 8px;
+	border-radius: var(--swh-radius-full, 999px);
+	font-size: 11px;
+	font-weight: 600;
+	background: var(--swh-surface-elev, #f0f0f1);
+	color: var(--swh-text-muted, #50575e);
+
+	&.is-good {
+		background: #d4f4dd;
+		color: #1e7137;
+	}
+
+	&.is-bad {
+		background: #fcd6d6;
+		color: #8a2222;
+	}
+
+	&.is-neutral {
+		background: #f0f0f1;
+		color: #50575e;
+	}
+}
+
+[data-clickable='1'] {
+	cursor: pointer;
+}
+
+[data-clickable='1']:hover {
+	outline: 2px solid var(--swh-primary, #2271b1);
+	outline-offset: 2px;
+}
