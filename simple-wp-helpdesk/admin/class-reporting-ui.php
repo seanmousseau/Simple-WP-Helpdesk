@@ -75,6 +75,39 @@ function swh_enqueue_reporting_assets( $hook ) {
 			'inboxUrl' => admin_url( 'edit.php?post_type=helpdesk_ticket' ),
 		)
 	);
+
+	// reports-v2 bundle: range selector + delta chips + drill-down (#359).
+	$rv2_asset_file = SWH_PLUGIN_DIR . 'assets/dist/reports-v2.asset.php';
+	$rv2_deps       = array();
+	$rv2_version    = SWH_VERSION;
+	if ( file_exists( $rv2_asset_file ) ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		$rv2_asset = include $rv2_asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+		if ( is_array( $rv2_asset ) ) {
+			if ( isset( $rv2_asset['dependencies'] ) && is_array( $rv2_asset['dependencies'] ) ) {
+				$rv2_deps = function_exists( 'swh_filter_known_script_deps' )
+					? swh_filter_known_script_deps( $rv2_asset['dependencies'] )
+					: array();
+			}
+			if ( isset( $rv2_asset['version'] ) && is_string( $rv2_asset['version'] ) ) {
+				$rv2_version = $rv2_asset['version'];
+			}
+		}
+	}
+	wp_enqueue_script(
+		'swh-reports-v2',
+		SWH_PLUGIN_URL . 'assets/dist/reports-v2.js',
+		$rv2_deps,
+		$rv2_version,
+		true
+	);
+	// wp-scripts emits CSS from SCSS as style-<entry>[-rtl].css.
+	wp_enqueue_style(
+		'swh-reports-v2',
+		SWH_PLUGIN_URL . 'assets/dist/style-reports-v2.css',
+		array(),
+		$rv2_version
+	);
 }
 
 /**

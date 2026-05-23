@@ -41,32 +41,51 @@ const yearStart = () => new Date().toISOString().slice( 0, 4 ) + '-01-01';
 const getSavedRange = () => {
 	try {
 		return JSON.parse( localStorage.getItem( STORAGE_KEY ) || 'null' );
-	} catch ( e ) {
+	} catch {
 		return null;
 	}
 };
 const saveRange = ( range ) => {
 	try {
 		localStorage.setItem( STORAGE_KEY, JSON.stringify( range ) );
-	} catch ( e ) {
+	} catch {
 		// Silently ignore storage errors (private browsing, quota exceeded).
 	}
 };
 
+const deltaArrow = ( pct ) => {
+	if ( pct > 0 ) {
+		return '↑';
+	}
+	if ( pct < 0 ) {
+		return '↓';
+	}
+	return '→';
+};
+
 const formatDelta = ( pct ) => {
-	if ( pct === null || pct === undefined ) return '— no prior data';
-	const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '→';
-	return `${ arrow } ${ Math.abs( pct ).toFixed( 1 ) }%`;
+	if ( pct === null || pct === undefined ) {
+		return '— no prior data';
+	}
+	return `${ deltaArrow( pct ) } ${ Math.abs( pct ).toFixed( 1 ) }%`;
 };
 
 const directionClass = ( reportType, segment, delta ) => {
-	if ( delta === null || delta === undefined || delta === 0 ) return 'is-neutral';
+	if ( delta === null || delta === undefined || delta === 0 ) {
+		return 'is-neutral';
+	}
 	const key = segment ? `${ reportType }:${ segment }` : reportType;
 	const dir = DIRECTION[ key ] || DIRECTION[ reportType ] || 'neutral';
-	if ( dir === 'neutral' ) return 'is-neutral';
+	if ( dir === 'neutral' ) {
+		return 'is-neutral';
+	}
 	// If "higher is bad" → positive delta = bad, negative = good.
-	if ( dir === 'bad' ) return delta > 0 ? 'is-bad' : 'is-good';
-	if ( dir === 'good' ) return delta > 0 ? 'is-good' : 'is-bad';
+	if ( dir === 'bad' ) {
+		return delta > 0 ? 'is-bad' : 'is-good';
+	}
+	if ( dir === 'good' ) {
+		return delta > 0 ? 'is-good' : 'is-bad';
+	}
 	return 'is-neutral';
 };
 
@@ -90,58 +109,48 @@ const fetchReport = async ( type, range ) => {
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: params.toString(),
 	} );
-	if ( ! response.ok ) throw new Error( `HTTP ${ response.status }` );
+	if ( ! response.ok ) {
+		throw new Error( `HTTP ${ response.status }` );
+	}
 	const json = await response.json();
-	if ( ! json.success ) throw new Error( json.data?.message || 'Server error' );
+	if ( ! json.success ) {
+		throw new Error( ( json.data && json.data.message ) || 'Server error' );
+	}
 	return json.data;
 };
 
+const setNoPriorData = ( slot ) => {
+	slot.textContent = '— no prior data';
+	slot.className = 'swh-report-delta is-neutral';
+};
+
 const renderDeltaChip = ( reportType, payload ) => {
-	const slot = document.querySelector(
-		`[data-delta-for="${ reportType }"]`
-	);
-	if ( ! slot ) return;
+	const slot = document.querySelector( `[data-delta-for="${ reportType }"]` );
+	if ( ! slot ) {
+		return;
+	}
 
 	const data = payload && payload.data;
 	const prior = payload && payload.prior;
 
 	if ( data === null || data === undefined ) {
-		slot.textContent = '— no prior data';
-		slot.className = 'swh-report-delta is-neutral';
+		setNoPriorData( slot );
 		return;
 	}
 
 	if ( typeof data === 'number' ) {
 		const priorNum = typeof prior === 'number' ? prior : null;
 		if ( priorNum === null || priorNum === 0 ) {
-			slot.textContent = '— no prior data';
-			slot.className = 'swh-report-delta is-neutral';
+			setNoPriorData( slot );
 			return;
 		}
 		const delta = ( ( data - priorNum ) / priorNum ) * 100;
 		slot.textContent = formatDelta( delta );
-		slot.className = `swh-report-delta ${ directionClass( reportType, null, delta ) }`;
-		return;
-	}
-
-	// Object (e.g. status_breakdown returns { open: N, resolved: M, ... }).
-	if ( typeof data === 'object' && prior && typeof prior === 'object' ) {
-		const currentTotal = Object.values( data ).reduce(
-			( a, b ) => a + ( Number( b ) || 0 ),
-			0
-		);
-		const priorTotal = Object.values( prior ).reduce(
-			( a, b ) => a + ( Number( b ) || 0 ),
-			0
-		);
-		if ( priorTotal === 0 ) {
-			slot.textContent = '— no prior data';
-			slot.className = 'swh-report-delta is-neutral';
-			return;
-		}
-		const delta = ( ( currentTotal - priorTotal ) / priorTotal ) * 100;
-		slot.textContent = `Total ${ formatDelta( delta ) }`;
-		slot.className = `swh-report-delta ${ directionClass( reportType, null, delta ) }`;
+		slot.className = `swh-report-delta ${ directionClass(
+			reportType,
+			null,
+			delta
+		) }`;
 		return;
 	}
 
@@ -152,8 +161,7 @@ const renderDeltaChip = ( reportType, payload ) => {
 				? prior
 				: null;
 		if ( ! priorObj || priorObj.avg_seconds === 0 ) {
-			slot.textContent = '— no prior data';
-			slot.className = 'swh-report-delta is-neutral';
+			setNoPriorData( slot );
 			return;
 		}
 		const delta =
@@ -161,25 +169,61 @@ const renderDeltaChip = ( reportType, payload ) => {
 				priorObj.avg_seconds ) *
 			100;
 		slot.textContent = formatDelta( delta );
-		slot.className = `swh-report-delta ${ directionClass( reportType, null, delta ) }`;
+		slot.className = `swh-report-delta ${ directionClass(
+			reportType,
+			null,
+			delta
+		) }`;
 		return;
 	}
 
-	slot.textContent = '— no prior data';
-	slot.className = 'swh-report-delta is-neutral';
+	// Plain object (e.g. status_breakdown returns { open: N, resolved: M, ... }).
+	if (
+		typeof data === 'object' &&
+		data !== null &&
+		prior &&
+		typeof prior === 'object'
+	) {
+		const currentTotal = Object.values( data ).reduce(
+			( a, b ) => a + ( Number( b ) || 0 ),
+			0
+		);
+		const priorTotal = Object.values( prior ).reduce(
+			( a, b ) => a + ( Number( b ) || 0 ),
+			0
+		);
+		if ( priorTotal === 0 ) {
+			setNoPriorData( slot );
+			return;
+		}
+		const delta = ( ( currentTotal - priorTotal ) / priorTotal ) * 100;
+		slot.textContent = `Total ${ formatDelta( delta ) }`;
+		slot.className = `swh-report-delta ${ directionClass(
+			reportType,
+			null,
+			delta
+		) }`;
+		return;
+	}
+
+	setNoPriorData( slot );
 };
 
-const priorSpan = () => document.querySelector( '[data-prior]' );
-const currentSpan = () => document.querySelector( '[data-current]' );
+const getPriorSpan = () => document.querySelector( '[data-prior]' );
+const getCurrentSpan = () => document.querySelector( '[data-current]' );
 
 const refreshAll = async ( range ) => {
 	const cards = document.querySelectorAll(
 		'.swh-report-card[data-report-type]'
 	);
-	const curSpan = currentSpan();
-	const priSpan = priorSpan();
-	if ( curSpan ) curSpan.textContent = `${ range.start } → ${ range.end }`;
-	if ( priSpan ) priSpan.textContent = '…';
+	const curSpan = getCurrentSpan();
+	const priSpan = getPriorSpan();
+	if ( curSpan ) {
+		curSpan.textContent = `${ range.start } → ${ range.end }`;
+	}
+	if ( priSpan ) {
+		priSpan.textContent = '…';
+	}
 
 	const fetches = Array.from( cards ).map( ( card ) => {
 		const type = card.getAttribute( 'data-report-type' );
@@ -200,21 +244,26 @@ const refreshAll = async ( range ) => {
 			} )
 			.catch( ( err ) => {
 				// eslint-disable-next-line no-console
-				console.error( '[swh-reports] report fetch failed', { type, err } );
+				console.error( '[swh-reports] report fetch failed', {
+					type,
+					err,
+				} );
 			} );
 	} );
 	await Promise.all( fetches );
 };
 
 const setActiveRange = ( key, range ) => {
-	document.querySelectorAll( '.swh-range-btn' ).forEach( ( b ) =>
+	document.querySelectorAll( '.swh-range-btn' ).forEach( ( b ) => {
 		b.classList.toggle(
 			'is-active',
 			b.getAttribute( 'data-range' ) === key
-		)
-	);
+		);
+	} );
 	const custom = document.querySelector( '.swh-range-custom' );
-	if ( custom ) custom.hidden = key !== 'custom';
+	if ( custom ) {
+		custom.hidden = key !== 'custom';
+	}
 	refreshAll( range );
 };
 
@@ -222,7 +271,9 @@ const wireRangeSelector = () => {
 	document.querySelectorAll( '.swh-range-btn' ).forEach( ( btn ) => {
 		btn.addEventListener( 'click', () => {
 			const key = btn.getAttribute( 'data-range' );
-			if ( ! key ) return;
+			if ( ! key ) {
+				return;
+			}
 			if ( key === 'custom' ) {
 				setActiveRange( key, getSavedRange() || PRESETS[ '30d' ]() );
 				return;
@@ -241,7 +292,9 @@ const wireRangeSelector = () => {
 			const toEl = document.querySelector( '.swh-range-to' );
 			const start = fromEl ? fromEl.value : '';
 			const end = toEl ? toEl.value : '';
-			if ( ! start || ! end ) return;
+			if ( ! start || ! end ) {
+				return;
+			}
 			const range = { start, end, mode: 'shift' };
 			saveRange( { ...range, preset: 'custom' } );
 			setActiveRange( 'custom', range );
@@ -259,29 +312,35 @@ const wireDrillDown = () => {
 				const card = chart.closest(
 					'.swh-report-card[data-filter-key]'
 				);
-				if ( ! card ) return;
-				const filterKey = card.getAttribute( 'data-filter-key' );
+				if ( ! card ) {
+					return;
+				}
 				const targetEl = e.target.closest( '[data-filter-value]' );
 				const filterValue = targetEl
 					? targetEl.getAttribute( 'data-filter-value' )
 					: null;
-				if ( ! filterValue ) return;
+				if ( ! filterValue ) {
+					return;
+				}
+				const filterKey = card.getAttribute( 'data-filter-key' );
 				const range = getSavedRange() || PRESETS[ '30d' ]();
 				const hash = `#filter=${ filterKey }:${ filterValue }&range_start=${ range.start }&range_end=${ range.end }`;
+				const fallbackBase = window.location.pathname.replace(
+					/\/wp-admin\/.*/,
+					'/wp-admin/'
+				);
 				const inboxUrl =
 					( window.swhReports && window.swhReports.inboxUrl ) ||
-					location.pathname.replace(
-						/\/wp-admin\/.*/,
-						'/wp-admin/'
-					) +
-						'edit.php?post_type=helpdesk_ticket';
+					fallbackBase + 'edit.php?post_type=helpdesk_ticket';
 				window.location.assign( inboxUrl + hash );
 			} );
 		} );
 };
 
 const init = () => {
-	if ( ! document.querySelector( '.swh-reports-range-bar' ) ) return;
+	if ( ! document.querySelector( '.swh-reports-range-bar' ) ) {
+		return;
+	}
 	wireRangeSelector();
 	wireDrillDown();
 
@@ -291,8 +350,12 @@ const init = () => {
 	if ( initialKey === 'custom' && saved ) {
 		const fromEl = document.querySelector( '.swh-range-from' );
 		const toEl = document.querySelector( '.swh-range-to' );
-		if ( fromEl ) fromEl.value = saved.start;
-		if ( toEl ) toEl.value = saved.end;
+		if ( fromEl ) {
+			fromEl.value = saved.start;
+		}
+		if ( toEl ) {
+			toEl.value = saved.end;
+		}
 		setActiveRange( 'custom', saved );
 	} else {
 		const preset = PRESETS[ initialKey ];
