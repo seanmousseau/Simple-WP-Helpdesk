@@ -92,7 +92,7 @@
     --swh-shadow-lg: 0 8px 24px rgba(46, 16, 101, 0.12), 0 2px 6px rgba(46, 16, 101, 0.06);
 
     /* Typography */
-    font-family: 'Geist Sans', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Geist Sans', Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     letter-spacing: -0.005em;
 }
 
@@ -123,7 +123,7 @@ body.swh-admin-theme-dark .swh-theme-violet {
 .swh-theme-violet h2,
 .swh-theme-violet h3,
 .swh-theme-violet .swh-drawer-title {
-    font-family: 'Geist Sans', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Geist Sans', Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     letter-spacing: -0.01em;
     color: var(--swh-text-strong);
 }
