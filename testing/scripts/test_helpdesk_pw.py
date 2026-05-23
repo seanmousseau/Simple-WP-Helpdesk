@@ -4532,6 +4532,78 @@ def test_28_cleanup(page: Page):
     screenshot(page, "39_final_state")
 
 
+def test_73_reports_range_and_drilldown(page: Page):
+    """v4.0.0 #359 — reports range selector + drill-down navigation."""
+    print("\n[73] Reports range + drill-down (#359)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    reports_url = f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-reports"
+    page.goto(reports_url)
+    page.wait_for_load_state("networkidle")
+
+    # Range bar visible.
+    check(
+        "reports #359: range bar visible",
+        page.locator(".swh-reports-range-bar").count() > 0,
+    )
+
+    # Click 90d button.
+    btn_90d = page.locator('.swh-range-btn[data-range="90d"]')
+    if btn_90d.count() > 0:
+        btn_90d.first.click()
+        page.wait_for_timeout(800)
+        check(
+            "reports #359: 90d button becomes active",
+            page.locator('.swh-range-btn[data-range="90d"].is-active').count() > 0,
+        )
+    else:
+        skip("reports #359: 90d button click", "button not found — range bar may not have rendered")
+
+    # At least one delta chip should be present (may still say — while loading).
+    chip = page.locator(".swh-report-delta").first
+    check(
+        "reports #359: delta chip element present",
+        chip.count() > 0,
+        "no .swh-report-delta elements found",
+    )
+
+    # Drill-down: click a segment that has data-filter-value (only if fixture has data).
+    drill = page.locator(".swh-report-card[data-filter-key] [data-filter-value]").first
+    if drill.count() > 0:
+        drill.click()
+        page.wait_for_load_state("load")
+        check(
+            "reports #359: drill-down navigated to inbox",
+            "edit.php?post_type=helpdesk_ticket" in page.url
+            and "#filter=" in page.url,
+            f"url={page.url!r}",
+        )
+        # Synthetic view chip visible in left rail.
+        with suppress(PlaywrightTimeoutError):
+            page.locator(".swh-inbox-synthetic-view").wait_for(timeout=5000)
+        check(
+            "reports #359: synthetic view chip visible",
+            page.locator(".swh-inbox-synthetic-view").count() > 0,
+        )
+        # × Clear removes the chip.
+        clear_btn = page.locator(".swh-inbox-synthetic-clear").first
+        if clear_btn.count() > 0:
+            clear_btn.click()
+            page.wait_for_timeout(300)
+            check(
+                "reports #359: × Clear removes synthetic view",
+                page.locator(".swh-inbox-synthetic-view").count() == 0,
+            )
+    else:
+        skip(
+            "reports #359: drill-down",
+            "no data-filter-value segments present in fixture data",
+        )
+
+    screenshot(page, "73_reports_range_drilldown")
+    wp_logout(page)
+
+
 # ── Section registry ──────────────────────────────────────────────────────────
 
 SECTIONS = [
@@ -4604,6 +4676,7 @@ SECTIONS = [
     test_70_create_personal_view_and_switch,   # 70 — v4.0.0 saved views (#352)
     test_71_violet_theme_toggle,               # 71 — v4.0.0 violet theme (#355)
     test_72_portal_v2_renders_conversation,    # 72 — v4.0.0 portal v2 (#354)
+    test_73_reports_range_and_drilldown,       # 73 — v4.0.0 reports redesign (#359)
     test_28_cleanup,                  # 28 — always last
 ]
 

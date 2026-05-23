@@ -18,6 +18,7 @@ starting from the next release after 1.8.
 
 ### Added
 
+- Reports redesign: time-range selector (7d / 30d / 90d / YTD / Custom), period-over-period comparison deltas on every report card, click-to-drill-down navigation from chart segments to the inbox filtered by status + date range. Closes #359.
 - Opt-in Violet theme for admin + client portal. Setting at Settings → General → Appearance (default off). Vivid Violet palette (violet-800 primary), Geist Sans typography self-hosted under OFL 1.1, tighter spacing, softer shadows. Emails unchanged. Closes #355.
 - Saved views CRUD — personal views (per user) + global views (admin-managed) with management UI in the inbox left rail and at Settings → Helpdesk → Views. Defaults (Unassigned, My Open, High priority, Resolved this week) ship pre-baked; technicians add their own. Closes #352.
 - New REST endpoints: `GET /swh/v1/views`, `POST /swh/v1/views`, `PATCH /swh/v1/views/{id}`, `DELETE /swh/v1/views/{id}`.

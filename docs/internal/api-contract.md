@@ -110,6 +110,13 @@ Registered at `simple-wp-helpdesk/simple-wp-helpdesk.php:213`. Handler at `simpl
 | `wp_ajax_swh_send_test_email` | `manage_options` + nonce | Admin-only test email sender. **Internal.** |
 | `wp_ajax_swh_report_data` | `manage_options` + nonce | Reporting data fetch with transient caching. **Internal.** |
 
+> **Reports v2 (#359):** `swh_report_data` action accepts optional params:
+> - `range_start`, `range_end` (ISO `Y-m-d` dates) — constrain the reporting window.
+> - `compare_to_prior` (`1`/`0`; default `1`) — compute prior-period data.
+>
+> Response shape extends with `range`, `prior`, and `prior_range` keys when range params are supplied.
+> Existing callers that ignore those keys keep working. Transient cache is bypassed when a custom range is provided.
+
 Registered:
 
 - `class-ticket.php:391-392` — CSAT.
