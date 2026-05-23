@@ -357,9 +357,10 @@ function swh_render_client_portal() {
 	$title       = $post->post_title;
 	$status      = is_string( $meta_status ) ? $meta_status : '';
 	$priority    = is_string( $meta_prio ) ? $meta_prio : '';
-	// Use the operator-configured closed/resolved status values rather than
-	// hardcoded strings so custom status labels are handled correctly.
-	$is_closed = in_array( $status, array( $closed_status, $resolved_status ), true );
+	// Only the explicit Closed status hides the "Close ticket" menu item.
+	// A Resolved ticket still shows "Close ticket" so the customer can
+	// confirm closure (matches legacy portal behavior).
+	$is_closed = ( $status === $closed_status );
 
 	swh_portal_v2_enqueue_assets();
 
