@@ -127,6 +127,13 @@ const init = () => {
 					method: 'POST',
 					body: data,
 					credentials: 'same-origin',
+					headers: {
+						// Signal to the PHP handler to respond with JSON instead of
+						// the HTML-redirect fallback, so the fetch result is a
+						// clean success/failure signal.
+						Accept: 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+					},
 				} );
 				if ( ! response.ok ) {
 					throw new Error( `Server returned ${ response.status }` );
