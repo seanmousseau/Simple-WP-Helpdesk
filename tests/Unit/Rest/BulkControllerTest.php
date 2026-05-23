@@ -30,6 +30,17 @@ final class BulkControllerTest extends TestCase {
 
 	public function test_bulk_action_applies_status_to_all_matching_versions(): void {
 		WP_Mock::userFunction( 'current_user_can', array( 'return' => true ) );
+		// Per-ticket auth in BulkController::bulk_action() calls get_post() to verify
+		// post existence and post_type before processing.
+		$make_post = static function ( int $id ): \WP_Post {
+			$p            = \Mockery::mock( \WP_Post::class );
+			$p->ID        = $id;
+			$p->post_type = 'helpdesk_ticket';
+			return $p;
+		};
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 10 ), 'return' => $make_post( 10 ) ) );
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 11 ), 'return' => $make_post( 11 ) ) );
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 12 ), 'return' => $make_post( 12 ) ) );
 		// _swh_version reads for TicketVersion::current() — all match.
 		WP_Mock::userFunction(
 			'get_post_meta',
@@ -81,6 +92,17 @@ final class BulkControllerTest extends TestCase {
 
 	public function test_bulk_action_separates_conflicts(): void {
 		WP_Mock::userFunction( 'current_user_can', array( 'return' => true ) );
+		// Per-ticket auth in BulkController::bulk_action() calls get_post() to verify
+		// post existence and post_type before processing.
+		$make_post = static function ( int $id ): \WP_Post {
+			$p            = \Mockery::mock( \WP_Post::class );
+			$p->ID        = $id;
+			$p->post_type = 'helpdesk_ticket';
+			return $p;
+		};
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 10 ), 'return' => $make_post( 10 ) ) );
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 11 ), 'return' => $make_post( 11 ) ) );
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 12 ), 'return' => $make_post( 12 ) ) );
 		// id 10: version matches (1); id 11: version mismatch (99 != 2); id 12: version matches (3).
 		WP_Mock::userFunction(
 			'get_post_meta',

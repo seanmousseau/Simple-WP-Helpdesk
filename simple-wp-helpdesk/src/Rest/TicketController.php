@@ -118,14 +118,29 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * Check that the current user can edit posts.
+	 * Check that the current user can access ticket endpoints.
+	 *
+	 * Global gate: `edit_posts` (technician minimum).
+	 * Per-ticket gate: `edit_post` on the specific post ID when present in the
+	 * request. This prevents a technician with `edit_posts` but without access to
+	 * a specific post (e.g. restricted-to-assigned mode) from reading or mutating
+	 * another user's ticket via the REST drawer endpoints.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return bool
 	 */
 	public function permissions_check( WP_REST_Request $request ): bool {
-		unset( $request );
-		return current_user_can( 'edit_posts' );
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return false;
+		}
+		$raw_id = $request->get_param( 'id' );
+		if ( null !== $raw_id && is_numeric( $raw_id ) ) {
+			$id = (int) $raw_id;
+			if ( $id > 0 && ! current_user_can( 'edit_post', $id ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -260,7 +275,16 @@ class TicketController extends WP_REST_Controller {
 			)
 		);
 
-		if ( $internal && $comment_id ) {
+		// Guard: wp_insert_comment() returns false on failure. Do not bump version
+		// or report success if the comment was not actually persisted.
+		if ( false === $comment_id || 0 === $comment_id ) {
+			return new WP_REST_Response(
+				array( 'error' => 'comment_insert_failed' ),
+				500
+			);
+		}
+
+		if ( $internal ) {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
 		}
 

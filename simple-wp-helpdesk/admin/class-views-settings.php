@@ -61,6 +61,9 @@ function swh_views_settings_enqueue( string $hook ): void {
 		'swhViewsSettings',
 		array(
 			'restUrl'   => esc_url_raw( rest_url( 'swh/v1/' ) ),
+			// restRoot is the WP REST API root (e.g. /wp-json/); passed to
+			// createRootURLMiddleware so the JS does not need to know the namespace.
+			'restRoot'  => esc_url_raw( rest_url() ),
 			'restNonce' => wp_create_nonce( 'wp_rest' ),
 		)
 	);

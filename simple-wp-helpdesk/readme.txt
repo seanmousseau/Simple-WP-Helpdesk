@@ -74,6 +74,21 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 == Changelog ==
 
+= 4.0.0 =
+* Added: Workflow-First Admin Inbox — React/Redux inbox shell with left-rail view switching, optimistic updates, and ⌘K command palette (#349–#353).
+* Added: Quick-reply drawer with optimistic-concurrency version guard (409 conflict detection), draft persistence in localStorage (#350).
+* Added: Saved views — personal and global, CRUD via REST, left-rail management (#352).
+* Added: Bulk actions — status, priority, assign, tag, close with per-ticket version validation (#353).
+* Added: Portal v2 messenger-style layout replacing the legacy table UI (#354).
+* Added: Violet theme opt-in — Geist font, CSS custom properties, dark variant (#355).
+* Added: Settings schema migration (group-based `swh_settings_*` option bags) with backwards-compatible shim (#356).
+* Added: `TicketVersion` optimistic-concurrency counter (`_swh_version` post meta) — invariant #18 (#350).
+* Added: Reports redesign — range selector (7d/30d/90d/YTD/custom), prior-period delta chips, drill-down inbox navigation (#359).
+* Added: Views settings page for admins to manage global saved views (#352).
+* Changed: Minimum PHP version raised to 8.0; minimum WordPress version raised to 6.0.
+* Changed: Pre-3.0 filter hooks deprecated via `swh_apply_deprecated_filter()` (#393 / #362).
+* Internal: PSR-4 autoloading, `@wordpress/scripts` build pipeline, Playwright E2E suite expanded to 73+ sections.
+
 = 3.7.0 =
 * Added: 7 lifecycle action hooks for integrators — `swh_ticket_replied`, `swh_ticket_status_changed`, `swh_ticket_closed`, `swh_ticket_reopened`, `swh_ticket_assigned`, `swh_sla_breached`, `swh_csat_submitted` (#361). See `docs/developer/hooks.md`.
 * Added: `swh_get_option( $group, $key, $default )` helper — read-through wrapper preparing for the v4.0 settings schema split (#391).
@@ -306,6 +321,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.0 =
+Major release: PHP 8.0+ and WordPress 6.0+ now required. Includes a new workflow-first inbox, portal v2, settings migration, and optimistic-concurrency version guard. Read the changelog before upgrading. Back up your database first.
 
 = 3.1.0 =
 Locale-aware timestamps, unread reply indicators, and the new test-email tool. Upgrade recommended.

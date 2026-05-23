@@ -120,6 +120,13 @@ class InboxController extends WP_REST_Controller {
 
 		$query_args = $this->build_query_args( $view, $sort );
 
+		// Apply search param to WP_Query when present (#349 CR fix: param was
+		// registered but never forwarded to the query args).
+		$search_raw = $request->get_param( 'search' );
+		if ( is_string( $search_raw ) && '' !== $search_raw ) {
+			$query_args['s'] = sanitize_text_field( $search_raw );
+		}
+
 		// Optional date range constraint — from URL hash drill-down (v4.0.0 #359).
 		$created_after  = $request->get_param( 'range_start' );
 		$created_before = $request->get_param( 'range_end' );

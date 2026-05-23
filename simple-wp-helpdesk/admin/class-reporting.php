@@ -46,11 +46,22 @@ function swh_ajax_report_data() {
 	$compare_raw = isset( $_REQUEST['compare_to_prior'] ) && is_string( $_REQUEST['compare_to_prior'] ) ? sanitize_key( wp_unslash( $_REQUEST['compare_to_prior'] ) ) : null;
 	$compare     = null === $compare_raw || '1' === $compare_raw;
 
-	// Only use transient cache when no custom range is requested.
+	// Range mode (v4.0.0): 'shift' (default) or 'ytd'. Passed from the JS preset.
+	// Without this, YTD prior comparisons always used the 'shift' window, returning
+	// wrong prior-period data (e.g. 30 days before Jan 1 instead of Jan 1 last year).
+	$range_mode_raw = isset( $_REQUEST['range_mode'] ) && is_string( $_REQUEST['range_mode'] ) ? sanitize_key( wp_unslash( $_REQUEST['range_mode'] ) ) : 'shift';
+	$range_mode     = in_array( $range_mode_raw, array( 'shift', 'ytd' ), true ) ? $range_mode_raw : 'shift';
+
+	// Only use transient cache when no custom range is requested and compare mode is
+	// the default (1). Include compare flag and range_mode in the key to avoid
+	// cross-request cache poisoning: a compare_to_prior=0 response (prior=null) must
+	// not be served to a default compare=1 request; a 'ytd' prior must not be served
+	// for a 'shift' request.
 	$use_cache = ( null === $start && null === $end );
 	if ( $use_cache ) {
-		$transient_key = 'swh_report_' . $type;
-		$cached        = get_transient( $transient_key );
+		$compare_suffix = $compare ? '1' : '0';
+		$transient_key  = 'swh_report_' . $type . '_c' . $compare_suffix . '_m' . $range_mode;
+		$cached         = get_transient( $transient_key );
 		if ( false !== $cached && is_array( $cached ) ) {
 			wp_send_json_success( $cached );
 		}
@@ -58,19 +69,19 @@ function swh_ajax_report_data() {
 
 	switch ( $type ) {
 		case 'status_breakdown':
-			$data = swh_report_status_breakdown( $start, $end, $compare );
+			$data = swh_report_status_breakdown( $start, $end, $compare, $range_mode );
 			break;
 		case 'avg_resolution_time':
-			$data = swh_report_avg_resolution_time( $start, $end, $compare );
+			$data = swh_report_avg_resolution_time( $start, $end, $compare, $range_mode );
 			break;
 		case 'weekly_trend':
-			$data = swh_report_weekly_trend( $start, $end, $compare );
+			$data = swh_report_weekly_trend( $start, $end, $compare, $range_mode );
 			break;
 		case 'first_response_time':
-			$data = swh_report_first_response_time( $start, $end, $compare );
+			$data = swh_report_first_response_time( $start, $end, $compare, $range_mode );
 			break;
 		case 'kpi':
-			$data = swh_report_kpi_data( $start, $end, $compare );
+			$data = swh_report_kpi_data( $start, $end, $compare, $range_mode );
 			break;
 		default:
 			wp_send_json_error( array( 'message' => __( 'Unknown report type.', 'simple-wp-helpdesk' ) ) );
@@ -80,7 +91,7 @@ function swh_ajax_report_data() {
 	}
 
 	if ( $use_cache ) {
-		set_transient( $transient_key, $data, HOUR_IN_SECONDS );
+		set_transient( $transient_key, $data, HOUR_IN_SECONDS ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions -- transient_key is safe.
 	}
 	wp_send_json_success( $data );
 }
@@ -97,9 +108,10 @@ function swh_ajax_report_data() {
  * @param string|null $range_start ISO date (Y-m-d); null → defaults to 30d window.
  * @param string|null $range_end   ISO date; null → defaults to today.
  * @param bool        $compare     Whether to compute and return the prior-range data.
+ * @param string      $range_mode  Prior comparison mode: 'shift' (default) or 'ytd'.
  * @return array{data: array<string,int>, range: array{start:string,end:string}, prior: array<string,int>|null, prior_range: array{start:string,end:string}|null}
  */
-function swh_report_status_breakdown( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+function swh_report_status_breakdown( ?string $range_start = null, ?string $range_end = null, bool $compare = true, string $range_mode = 'shift' ): array {
 	if ( null === $range_start || null === $range_end ) {
 		$range_end   = gmdate( 'Y-m-d' );
 		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
@@ -119,7 +131,7 @@ function swh_report_status_breakdown( ?string $range_start = null, ?string $rang
 		);
 	}
 
-	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior_range = swh_report_prior_range( $range_start, $range_end, $range_mode );
 	$prior       = swh_report_status_breakdown_query( $prior_range['start'], $prior_range['end'] );
 
 	return array(
@@ -182,9 +194,10 @@ function swh_report_status_breakdown_query( string $start, string $end ): array 
  * @param string|null $range_start ISO date; null → 30d window.
  * @param string|null $range_end   ISO date; null → today.
  * @param bool        $compare     Whether to compute and return prior-range data.
+ * @param string      $range_mode  Prior comparison mode: 'shift' (default) or 'ytd'.
  * @return array{data: array{avg_seconds:int,count:int}, range: array{start:string,end:string}, prior: array{avg_seconds:int,count:int}|null, prior_range: array{start:string,end:string}|null}
  */
-function swh_report_avg_resolution_time( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+function swh_report_avg_resolution_time( ?string $range_start = null, ?string $range_end = null, bool $compare = true, string $range_mode = 'shift' ): array {
 	if ( null === $range_start || null === $range_end ) {
 		$range_end   = gmdate( 'Y-m-d' );
 		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
@@ -204,7 +217,7 @@ function swh_report_avg_resolution_time( ?string $range_start = null, ?string $r
 		);
 	}
 
-	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior_range = swh_report_prior_range( $range_start, $range_end, $range_mode );
 	$prior       = swh_report_avg_resolution_time_query( $prior_range['start'], $prior_range['end'] );
 
 	return array(
@@ -288,9 +301,10 @@ function swh_report_avg_resolution_time_query( string $start, string $end ): arr
  * @param string|null $range_start ISO date; null → last 8 weeks.
  * @param string|null $range_end   ISO date; null → today.
  * @param bool        $compare     Whether to compute and return prior-range data.
+ * @param string      $range_mode  Prior comparison mode: 'shift' (default) or 'ytd'.
  * @return array{data: array<int,array{week:string,opened:int,closed:int}>, range: array{start:string,end:string}, prior: array<int,array{week:string,opened:int,closed:int}>|null, prior_range: array{start:string,end:string}|null}
  */
-function swh_report_weekly_trend( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+function swh_report_weekly_trend( ?string $range_start = null, ?string $range_end = null, bool $compare = true, string $range_mode = 'shift' ): array {
 	if ( null === $range_start || null === $range_end ) {
 		$range_end   = gmdate( 'Y-m-d' );
 		$range_start = gmdate( 'Y-m-d', strtotime( '-8 weeks' ) );
@@ -310,7 +324,7 @@ function swh_report_weekly_trend( ?string $range_start = null, ?string $range_en
 		);
 	}
 
-	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior_range = swh_report_prior_range( $range_start, $range_end, $range_mode );
 	$prior       = swh_report_weekly_trend_query( $prior_range['start'], $prior_range['end'] );
 
 	return array(
@@ -337,9 +351,20 @@ function swh_report_weekly_trend_query( string $start, string $end ): array {
 	$defs          = swh_get_defaults();
 	$closed_status = swh_get_option( 'general', 'closed_status', $defs['swh_closed_status'] );
 	$result        = array();
+	// Anchor week-bucket generation to the REQUESTED range end (not "this week") so
+	// custom and prior ranges return correct/non-empty data (#359 CR fix).
+	$anchor_ts = strtotime( $end );
+	$anchor_ts = false !== $anchor_ts ? $anchor_ts : time();
+	// Find the Monday of the week containing $end to anchor backward from.
+	$anchor_monday_ts = strtotime( 'Monday this week', $anchor_ts );
+	if ( false === $anchor_monday_ts ) {
+		$anchor_monday_ts = $anchor_ts - ( (int) gmdate( 'N', $anchor_ts ) - 1 ) * DAY_IN_SECONDS;
+	}
 	for ( $i = 7; $i >= 0; $i-- ) {
-		$week_start = gmdate( 'Y-m-d', strtotime( '-' . $i . ' weeks Monday this week' ) );
-		$week_end   = gmdate( 'Y-m-d', strtotime( '-' . $i . ' weeks Sunday this week' ) + DAY_IN_SECONDS );
+		$week_start_ts = $anchor_monday_ts - $i * WEEK_IN_SECONDS;
+		$week_end_ts   = $week_start_ts + 6 * DAY_IN_SECONDS;
+		$week_start    = gmdate( 'Y-m-d', $week_start_ts );
+		$week_end      = gmdate( 'Y-m-d', $week_end_ts );
 		// Skip weeks entirely outside the requested range.
 		if ( $week_end < $start || $week_start > $end ) {
 			continue;
@@ -399,9 +424,10 @@ function swh_report_weekly_trend_query( string $start, string $end ): array {
  * @param string|null $range_start ISO date; null → 30d window.
  * @param string|null $range_end   ISO date; null → today.
  * @param bool        $compare     Whether to compute and return prior-range data.
+ * @param string      $range_mode  Prior comparison mode: 'shift' (default) or 'ytd'.
  * @return array{data: array{avg_seconds:int,count:int}, range: array{start:string,end:string}, prior: array{avg_seconds:int,count:int}|null, prior_range: array{start:string,end:string}|null}
  */
-function swh_report_first_response_time( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+function swh_report_first_response_time( ?string $range_start = null, ?string $range_end = null, bool $compare = true, string $range_mode = 'shift' ): array {
 	if ( null === $range_start || null === $range_end ) {
 		$range_end   = gmdate( 'Y-m-d' );
 		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
@@ -421,7 +447,7 @@ function swh_report_first_response_time( ?string $range_start = null, ?string $r
 		);
 	}
 
-	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior_range = swh_report_prior_range( $range_start, $range_end, $range_mode );
 	$prior       = swh_report_first_response_time_query( $prior_range['start'], $prior_range['end'] );
 
 	return array(
@@ -497,9 +523,10 @@ function swh_report_first_response_time_query( string $start, string $end ): arr
  * @param string|null $range_start ISO date; null → 30d window.
  * @param string|null $range_end   ISO date; null → today.
  * @param bool        $compare     Whether to compute and return prior-range data.
+ * @param string      $range_mode  Prior comparison mode: 'shift' (default) or 'ytd'.
  * @return array{data: array{total:int,open:int,avg_resolution:int,avg_first_response:int}, range: array{start:string,end:string}, prior: array{total:int,open:int,avg_resolution:int,avg_first_response:int}|null, prior_range: array{start:string,end:string}|null}
  */
-function swh_report_kpi_data( ?string $range_start = null, ?string $range_end = null, bool $compare = true ): array {
+function swh_report_kpi_data( ?string $range_start = null, ?string $range_end = null, bool $compare = true, string $range_mode = 'shift' ): array {
 	if ( null === $range_start || null === $range_end ) {
 		$range_end   = gmdate( 'Y-m-d' );
 		$range_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
@@ -519,7 +546,7 @@ function swh_report_kpi_data( ?string $range_start = null, ?string $range_end = 
 		);
 	}
 
-	$prior_range = swh_report_prior_range( $range_start, $range_end );
+	$prior_range = swh_report_prior_range( $range_start, $range_end, $range_mode );
 	$prior       = swh_report_kpi_data_query( $prior_range['start'], $prior_range['end'] );
 
 	return array(

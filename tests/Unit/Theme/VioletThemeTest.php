@@ -37,6 +37,12 @@ final class VioletThemeTest extends TestCase {
 			'args'   => [ 'swh_settings_general', [] ],
 			'return' => array( 'use_violet_theme' => true ),
 		] );
+		// swh_violet_is_helpdesk_screen() calls is_admin() then get_current_screen().
+		// Simulate an admin helpdesk_ticket screen so the guard passes.
+		WP_Mock::userFunction( 'is_admin', [ 'return' => true ] );
+		$mock_screen            = new \stdClass();
+		$mock_screen->post_type = 'helpdesk_ticket';
+		WP_Mock::userFunction( 'get_current_screen', [ 'return' => $mock_screen ] );
 		WP_Mock::userFunction( 'wp_enqueue_style', [
 			'args'   => array(
 				'swh-theme-violet',
@@ -55,6 +61,12 @@ final class VioletThemeTest extends TestCase {
 			'args'   => [ 'swh_settings_general', [] ],
 			'return' => array( 'use_violet_theme' => true ),
 		] );
+		// swh_violet_filter_body_class calls swh_violet_is_helpdesk_screen() which
+		// requires is_admin() and get_current_screen() to be stubbed.
+		WP_Mock::userFunction( 'is_admin', [ 'return' => true ] );
+		$mock_screen            = new \stdClass();
+		$mock_screen->post_type = 'helpdesk_ticket';
+		WP_Mock::userFunction( 'get_current_screen', [ 'return' => $mock_screen ] );
 
 		$result = swh_violet_filter_body_class( 'existing-class' );
 		$this->assertStringContainsString( 'swh-theme-violet', $result );
