@@ -646,8 +646,12 @@ def test_08_client_portal(page: Page):
     # Capture network response + console messages for diagnosis.
     captured_responses: list = []
     captured_console: list = []
-    page.on("response", lambda r: captured_responses.append((r.url, r.status, r.request.method)) if "admin-post.php" in r.url else None)
-    page.on("console", lambda m: captured_console.append(f"[{m.type}] {m.text}"))
+    page.on("response", lambda r: captured_responses.append((r.status, r.request.method, r.url)) if r.status >= 300 or "admin-post" in r.url or "portal" in r.url else None)
+    page.on("console", lambda m: captured_console.append(f"[{m.type}] {m.text} @ {m.location.get('url','?')}:{m.location.get('lineNumber','?')}"))
+    page.on("requestfailed", lambda r: captured_console.append(f"[requestfailed] {r.method} {r.url} -> {r.failure}"))
+    # Also log the form action attribute at click time.
+    form_action = page.locator('.swh-portal-v2-composer').get_attribute('action') or '(none)'
+    print(f"[DIAG test_08] form action: {form_action!r}")
     # Portal v2 JS intercepts submit via fetch (optimistic). After the fetch
     # completes, the message bubble gets .swh-msg-sent (success) or
     # .swh-msg-failed (network error). The admin-post handler redirects back
