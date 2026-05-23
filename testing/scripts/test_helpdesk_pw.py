@@ -4344,18 +4344,20 @@ def test_69_bulk_bar_closes_selected_tickets(page):
     with suppress(PlaywrightTimeoutError):
         page.locator(".swh-bulk-bar").wait_for(timeout=5000)
         bulk_bar_visible = True
-    # DIAG: capture row state and any aria-pressed values
-    diag_rows = page.evaluate(
-        "Array.from(document.querySelectorAll('.swh-inbox-row-check'))"
-        ".map(b => ({pressed: b.getAttribute('aria-pressed'), "
-        "checked: b.querySelector('input')?.checked, "
-        "row: b.closest('.swh-inbox-row')?.getAttribute('data-ticket-id')}))"
+    diag_all_rows = page.evaluate(
+        "Array.from(document.querySelectorAll('.swh-inbox-row'))"
+        ".map(r => r.getAttribute('data-ticket-id'))"
     )
-    bulk_bar_html = page.evaluate(
-        "document.querySelector('.swh-bulk-bar')?.outerHTML || 'NOT IN DOM'"
+    diag_row_checks = page.evaluate(
+        "document.querySelectorAll('.swh-inbox-row-check').length"
     )
-    print(f"[DIAG test_69] row checks: {diag_rows}")
-    print(f"[DIAG test_69] bulk bar in DOM: {bulk_bar_html[:200]}")
+    diag_inbox_root = page.evaluate(
+        "document.querySelector('#swh-inbox-root')?.innerHTML?.slice(0, 300) || 'no root'"
+    )
+    print(f"[DIAG test_69] tickets created: {ticket_a}, {ticket_b}")
+    print(f"[DIAG test_69] all rows in DOM (count={len(diag_all_rows)}): {diag_all_rows[:20]}")
+    print(f"[DIAG test_69] row-check button count: {diag_row_checks}")
+    print(f"[DIAG test_69] #swh-inbox-root start: {diag_inbox_root!r}")
     check("bulk #353: bulk bar appears when rows selected", bulk_bar_visible)
 
     if bulk_bar_visible:
