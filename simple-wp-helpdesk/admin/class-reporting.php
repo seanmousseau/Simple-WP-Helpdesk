@@ -311,3 +311,54 @@ function swh_report_kpi_data() {
 		'avg_first_response' => is_int( $avg_fres_raw ) ? $avg_fres_raw : 0,
 	);
 }
+
+/**
+ * Compute the prior comparison range for a selected range.
+ *
+ * Default (mode = 'shift'): prior is the same length immediately preceding the
+ * selected range. e.g. selected = 30d ending today; prior = the 30d before that.
+ *
+ * For mode = 'ytd', prior is the same calendar period in the previous year.
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param string $start ISO date (Y-m-d) — start of selected range, inclusive.
+ * @param string $end   ISO date — end of selected range, inclusive.
+ * @param string $mode  Either 'shift' (default) or 'ytd'.
+ * @return array{start: string, end: string}
+ */
+function swh_report_prior_range( string $start, string $end, string $mode = 'shift' ): array {
+	if ( 'ytd' === $mode ) {
+		return array(
+			'start' => (string) gmdate( 'Y-m-d', strtotime( $start . ' -1 year' ) ),
+			'end'   => (string) gmdate( 'Y-m-d', strtotime( $end . ' -1 year' ) ),
+		);
+	}
+	$start_ts = strtotime( $start );
+	$end_ts   = strtotime( $end );
+	$length   = $end_ts - $start_ts;
+	return array(
+		'start' => (string) gmdate( 'Y-m-d', $start_ts - $length ),
+		'end'   => (string) gmdate( 'Y-m-d', $start_ts ),
+	);
+}
+
+/**
+ * Compute a signed percent delta between current and prior values.
+ *
+ * Returns null when prior is 0 (avoid divide-by-zero; UI shows "— no prior data").
+ *
+ * @since 4.0.0 (#359)
+ *
+ * @param int|float $current
+ * @param int|float $prior
+ * @return float|null Signed percent (e.g. 25.0 = +25%, -20.0 = -20%) or null.
+ */
+function swh_report_delta_percent( $current, $prior ): ?float {
+	$prior_f   = (float) $prior;
+	$current_f = (float) $current;
+	if ( 0.0 === $prior_f ) {
+		return null;
+	}
+	return round( ( ( $current_f - $prior_f ) / $prior_f ) * 100.0, 1 );
+}
