@@ -4628,13 +4628,13 @@ def test_28_cleanup(page: Page):
             page.goto(trash_href)
             page.wait_for_load_state("load")
             body = page.inner_text("body")
-            success = ("moved to the Trash" in body or "Undo" in body
-                       or "item moved to" in body.lower() or "trashed" in body.lower())
-            if not success:
-                print(f"[DIAG test_28 {label}] trash_href={trash_href}")
-                print(f"[DIAG test_28 {label}] current url={page.url}")
-                print(f"[DIAG test_28 {label}] body[:500]={body[:500]!r}")
-            check(f"cleanup: {label} moved to trash", success)
+            # WP redirects to the list on success (lands on React inbox now,
+            # which doesn't render the WP "moved to Trash" notice). The most
+            # reliable success signal is landing back on edit.php for our
+            # post_type without an error page.
+            on_list = "post_type=helpdesk_ticket" in page.url and "/edit.php" in page.url
+            had_notice = "moved to the Trash" in body or "Undo" in body
+            check(f"cleanup: {label} moved to trash", on_list or had_notice)
         else:
             check(f"cleanup: trash link found for {label}", False,
                   "row not found — may already be deleted")
