@@ -4416,6 +4416,19 @@ def test_70_create_personal_view_and_switch(page):
 
     # Personal section appears with new view.
     my_views_heading = page.locator(".swh-inbox-leftrail-heading").filter(has_text="My views")
+    if my_views_heading.count() == 0:
+        diag_headings = page.evaluate(
+            "Array.from(document.querySelectorAll('.swh-inbox-leftrail-heading')).map(h => h.textContent)"
+        )
+        diag_links = page.evaluate(
+            "Array.from(document.querySelectorAll('.swh-inbox-view-link')).map(a => a.textContent)"
+        )
+        diag_store = page.evaluate(
+            "wp?.data?.select?.('swh/views')?.getViews?.() || 'store not available'"
+        )
+        print(f"[DIAG test_70] headings present: {diag_headings}")
+        print(f"[DIAG test_70] view links present: {diag_links}")
+        print(f"[DIAG test_70] swh/views store getViews(): {diag_store}")
     check("views #352 test_70: My views heading appears", my_views_heading.count() > 0)
 
     new_link = page.locator(".swh-inbox-view-link").filter(has_text="Playwright test view")
