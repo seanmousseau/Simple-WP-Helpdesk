@@ -57,7 +57,8 @@ const runMenuAction = ( root, action ) => {
 	const ticketId = root.querySelector( 'input[name="ticket_id"]' )?.value;
 	const token = root.querySelector( 'input[name="token"]' )?.value;
 	const composer = root.querySelector( '.swh-portal-v2-composer' );
-	const actionURL = composer?.action;
+	// getAttribute() — composer.action is shadowed by <input name="action">.
+	const actionURL = composer?.getAttribute( 'action' );
 	const nonceField = composer?.querySelector(
 		'input[name="swh_portal_reply_nonce"]'
 	);
