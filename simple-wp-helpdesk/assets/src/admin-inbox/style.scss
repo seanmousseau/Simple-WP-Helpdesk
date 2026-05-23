@@ -210,3 +210,31 @@
 .swh-inbox-error {
 	color: #b32d2e;
 }
+
+// Synthetic view chip — shown at top of LeftRail when drill-down from reports. v4.0.0 #359.
+.swh-inbox-synthetic-view {
+	margin: 8px 0;
+	padding: 6px 12px;
+	background: var(--swh-primary-soft-bg, #e6f0fa);
+	color: var(--swh-primary-soft-fg, #135e96);
+	border-radius: var(--swh-radius-md, 8px);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.swh-inbox-synthetic-clear {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	color: inherit;
+	font-size: 14px;
+	padding: 0 4px;
+	margin-left: auto;
+
+	&:hover {
+		color: var(--swh-primary, #2271b1);
+	}
+}
