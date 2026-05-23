@@ -102,9 +102,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	showKpiSkeleton();
-	fetchReport( 'kpi' ).then( function ( data ) {
+	fetchReport( 'kpi' ).then( function ( payload ) {
 		hideKpiSkeleton();
-		if ( ! data || data.__error ) { return; }
+		if ( ! payload || payload.__error ) { return; }
+		// v4.0.0+: response is wrapped as {data:{…}, prior:…, range:…, prior_range:…}.
+		// Fall back to the raw payload for backwards compatibility with v3.x caches.
+		var data = ( payload && payload.data && typeof payload.data === 'object' ) ? payload.data : payload;
 		var total = document.getElementById( 'swh-kpi-total' );
 		var open  = document.getElementById( 'swh-kpi-open' );
 		var res   = document.getElementById( 'swh-kpi-resolution' );

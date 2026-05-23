@@ -31,6 +31,10 @@ export const DrawerHeader = ( { ticket } ) => {
 						'Open full ticket page',
 						'simple-wp-helpdesk'
 					) }
+					aria-label={ __(
+						'Open full ticket page',
+						'simple-wp-helpdesk'
+					) }
 				>
 					⤢
 				</a>

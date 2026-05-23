@@ -1,4 +1,5 @@
 import { useDispatch, useSelect } from '@wordpress/data';
+import { sprintf, __ } from '@wordpress/i18n';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
@@ -63,7 +64,11 @@ export const TicketRow = ( { ticket } ) => {
 					toggleSelected( ticket.id );
 				} }
 				onKeyDown={ handleCheckKeyDown }
-				aria-label={ `Select ticket #${ ticket.id }` }
+				aria-label={ sprintf(
+					/* translators: %d is the ticket ID number */
+					__( 'Select ticket #%d', 'simple-wp-helpdesk' ),
+					ticket.id
+				) }
 				aria-pressed={ selected }
 			>
 				<input

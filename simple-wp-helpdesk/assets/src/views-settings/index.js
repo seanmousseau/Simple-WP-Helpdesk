@@ -6,9 +6,12 @@ import { ViewsSettingsPage } from './ViewsSettingsPage';
 apiFetch.use(
 	apiFetch.createNonceMiddleware( window.swhViewsSettings?.restNonce || '' )
 );
+// Use the site REST root (e.g. /wp-json/) rather than the namespace root
+// (/wp-json/swh/v1/). apiFetch request paths already include /swh/v1/…, so
+// combining with a namespace-prefixed root would produce duplicated segments.
 apiFetch.use(
 	apiFetch.createRootURLMiddleware(
-		window.swhViewsSettings?.restUrl || '/wp-json/swh/v1/'
+		window.swhViewsSettings?.restRoot || '/wp-json/'
 	)
 );
 

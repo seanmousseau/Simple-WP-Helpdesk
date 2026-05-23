@@ -4,17 +4,17 @@ import { __ } from '@wordpress/i18n';
 import { SelectControl } from '@wordpress/components';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
-const STATUS_OPTIONS = [
-	{ value: 'open', label: 'Open' },
-	{ value: 'in_progress', label: 'In Progress' },
-	{ value: 'resolved', label: 'Resolved' },
-	{ value: 'closed', label: 'Closed' },
+const getStatusOptions = () => [
+	{ value: 'open', label: __( 'Open', 'simple-wp-helpdesk' ) },
+	{ value: 'in_progress', label: __( 'In Progress', 'simple-wp-helpdesk' ) },
+	{ value: 'resolved', label: __( 'Resolved', 'simple-wp-helpdesk' ) },
+	{ value: 'closed', label: __( 'Closed', 'simple-wp-helpdesk' ) },
 ];
-const PRIORITY_OPTIONS = [
-	{ value: 'low', label: 'Low' },
-	{ value: 'normal', label: 'Normal' },
-	{ value: 'high', label: 'High' },
-	{ value: 'urgent', label: 'Urgent' },
+const getPriorityOptions = () => [
+	{ value: 'low', label: __( 'Low', 'simple-wp-helpdesk' ) },
+	{ value: 'normal', label: __( 'Normal', 'simple-wp-helpdesk' ) },
+	{ value: 'high', label: __( 'High', 'simple-wp-helpdesk' ) },
+	{ value: 'urgent', label: __( 'Urgent', 'simple-wp-helpdesk' ) },
 ];
 
 export const MetaRow = ( { ticket } ) => {
@@ -23,17 +23,17 @@ export const MetaRow = ( { ticket } ) => {
 		<div className="swh-drawer-meta-row">
 			<SelectControl
 				hideLabelFromVision
-				label="Status"
+				label={ __( 'Status', 'simple-wp-helpdesk' ) }
 				value={ ticket.status }
-				options={ STATUS_OPTIONS }
+				options={ getStatusOptions() }
 				onChange={ ( v ) => patchMeta( { status: v } ) }
 				__nextHasNoMarginBottom
 			/>
 			<SelectControl
 				hideLabelFromVision
-				label="Priority"
+				label={ __( 'Priority', 'simple-wp-helpdesk' ) }
 				value={ ticket.priority }
-				options={ PRIORITY_OPTIONS }
+				options={ getPriorityOptions() }
 				onChange={ ( v ) => patchMeta( { priority: v } ) }
 				__nextHasNoMarginBottom
 			/>

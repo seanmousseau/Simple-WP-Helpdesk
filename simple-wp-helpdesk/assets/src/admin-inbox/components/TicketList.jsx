@@ -1,5 +1,6 @@
 import { useEffect } from '@wordpress/element';
 import { useSelect, useDispatch } from '@wordpress/data';
+import { __ } from '@wordpress/i18n';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { TicketRow } from './TicketRow';
 import { BulkBar } from './BulkBar';
@@ -25,7 +26,11 @@ export const TicketList = () => {
 	}, [ view, sort, page, search ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	if ( loading ) {
-		return <div className="swh-inbox-loading">Loading&hellip;</div>;
+		return (
+			<div className="swh-inbox-loading">
+				{ __( 'Loading…', 'simple-wp-helpdesk' ) }
+			</div>
+		);
 	}
 	if ( error ) {
 		return <div className="swh-inbox-error">{ error }</div>;

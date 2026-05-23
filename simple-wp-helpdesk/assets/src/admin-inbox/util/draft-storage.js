@@ -19,7 +19,12 @@ export const loadDraft = ( ticketId ) => {
 			localStorage.removeItem( userKey( ticketId ) );
 			return null;
 		}
-		return parsed.body || null;
+		// Guard: only return a non-empty string body; non-string or corrupt values
+		// would break text-state consumers in the Composer component.
+		if ( typeof parsed.body !== 'string' || ! parsed.body ) {
+			return null;
+		}
+		return parsed.body;
 	} catch {
 		return null;
 	}

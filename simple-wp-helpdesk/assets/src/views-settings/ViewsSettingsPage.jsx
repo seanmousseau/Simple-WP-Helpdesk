@@ -8,6 +8,7 @@ export const ViewsSettingsPage = () => {
 	const [ views, setViews ] = useState( [] );
 	const [ newName, setNewName ] = useState( '' );
 	const [ loading, setLoading ] = useState( true );
+	const [ actionError, setActionError ] = useState( '' );
 
 	const refresh = async () => {
 		setLoading( true );
@@ -32,19 +33,24 @@ export const ViewsSettingsPage = () => {
 		if ( ! newName.trim() ) {
 			return;
 		}
-		await apiFetch( {
-			path: '/swh/v1/views',
-			method: 'POST',
-			data: {
-				name: newName.trim(),
-				scope: 'global',
-				filters: {},
-				sort: 'last_reply_desc',
-				columns: [],
-			},
-		} );
-		setNewName( '' );
-		refresh();
+		setActionError( '' );
+		try {
+			await apiFetch( {
+				path: '/swh/v1/views',
+				method: 'POST',
+				data: {
+					name: newName.trim(),
+					scope: 'global',
+					filters: {},
+					sort: 'last_reply_desc',
+					columns: [],
+				},
+			} );
+			setNewName( '' );
+			refresh();
+		} catch ( e ) {
+			setActionError( e.message || __( 'Failed to create view.', 'simple-wp-helpdesk' ) );
+		}
 	};
 
 	const onDelete = async ( id ) => {
@@ -55,11 +61,16 @@ export const ViewsSettingsPage = () => {
 		if ( ! confirmed ) {
 			return;
 		}
-		await apiFetch( {
-			path: `/swh/v1/views/${ id }?scope=global`,
-			method: 'DELETE',
-		} );
-		refresh();
+		setActionError( '' );
+		try {
+			await apiFetch( {
+				path: `/swh/v1/views/${ id }?scope=global`,
+				method: 'DELETE',
+			} );
+			refresh();
+		} catch ( e ) {
+			setActionError( e.message || __( 'Failed to delete view.', 'simple-wp-helpdesk' ) );
+		}
 	};
 
 	return (
@@ -89,6 +100,11 @@ export const ViewsSettingsPage = () => {
 			</div>
 
 			{ loading && <p>{ __( 'Loading…', 'simple-wp-helpdesk' ) }</p> }
+			{ actionError && (
+				<div className="notice notice-error is-dismissible" role="alert">
+					<p>{ actionError }</p>
+				</div>
+			) }
 
 			<table className="widefat striped">
 				<thead>

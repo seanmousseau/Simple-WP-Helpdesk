@@ -13,6 +13,7 @@ const DEFAULT_STATE = {
 	error: null,
 	selectedIds: [],
 	syntheticView: null, // { key, label, rangeStart, rangeEnd } | null — v4.0.0 #359
+	activeFetchKey: null, // tracks the most-recent in-flight fetch params string
 };
 
 const actions = {
@@ -48,17 +49,29 @@ const actions = {
 			if ( synth && synth.rangeEnd ) {
 				params.set( 'range_end', synth.rangeEnd );
 			}
-			dispatch( { type: 'FETCH_START' } );
+			// Capture a snapshot of the params string at fetch start.
+			// When multiple fetchTickets calls overlap (e.g. fast filter changes),
+			// only commit results when the params still match — stale responses
+			// are discarded to prevent older data overwriting newer state.
+			const fetchKey = params.toString();
+			dispatch( { type: 'FETCH_START', fetchKey } );
 			try {
 				const data = await apiFetch( {
-					path: `/swh/v1/tickets?${ params.toString() }`,
+					path: `/swh/v1/tickets?${ fetchKey }`,
 				} );
+				// Discard if a newer fetch has already been dispatched.
+				if ( select.getActiveFetchKey() !== fetchKey ) {
+					return;
+				}
 				dispatch( {
 					type: 'FETCH_SUCCESS',
 					tickets: data.tickets,
 					total: data.total,
 				} );
 			} catch ( err ) {
+				if ( select.getActiveFetchKey() !== fetchKey ) {
+					return;
+				}
 				dispatch( {
 					type: 'FETCH_ERROR',
 					error: err.message || 'Unknown error',
@@ -78,7 +91,7 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 		case 'SET_SEARCH':
 			return { ...state, search: action.search, page: 1 };
 		case 'FETCH_START':
-			return { ...state, loading: true, error: null };
+			return { ...state, loading: true, error: null, activeFetchKey: action.fetchKey || null };
 		case 'FETCH_SUCCESS':
 			return {
 				...state,
@@ -133,6 +146,7 @@ const selectors = {
 	 * @return {{ key: string, label: string, rangeStart: string|null, rangeEnd: string|null }|null} Active synthetic view.
 	 */
 	getSyntheticView: ( state ) => state.syntheticView,
+	getActiveFetchKey: ( state ) => state.activeFetchKey,
 };
 
 export const SWH_INBOX_STORE = 'swh/inbox';

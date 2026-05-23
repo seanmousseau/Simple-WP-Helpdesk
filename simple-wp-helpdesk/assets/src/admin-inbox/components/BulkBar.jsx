@@ -6,20 +6,23 @@ import { Button, SelectControl } from '@wordpress/components';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { dispatchBulk } from '../util/bulk-action';
 
-const STATUS_OPTIONS = [
+// Status/priority option labels must be defined inside a function or component so
+// that `__()` is evaluated after i18n is initialized. They are memoized at render
+// time here for simplicity since these lists are static.
+const getStatusOptions = () => [
 	{ value: '', label: __( 'Status…', 'simple-wp-helpdesk' ) },
-	{ value: 'open', label: 'Open' },
-	{ value: 'in_progress', label: 'In Progress' },
-	{ value: 'resolved', label: 'Resolved' },
-	{ value: 'closed', label: 'Closed' },
+	{ value: 'open', label: __( 'Open', 'simple-wp-helpdesk' ) },
+	{ value: 'in_progress', label: __( 'In Progress', 'simple-wp-helpdesk' ) },
+	{ value: 'resolved', label: __( 'Resolved', 'simple-wp-helpdesk' ) },
+	{ value: 'closed', label: __( 'Closed', 'simple-wp-helpdesk' ) },
 ];
 
-const PRIORITY_OPTIONS = [
+const getPriorityOptions = () => [
 	{ value: '', label: __( 'Priority…', 'simple-wp-helpdesk' ) },
-	{ value: 'low', label: 'Low' },
-	{ value: 'normal', label: 'Normal' },
-	{ value: 'high', label: 'High' },
-	{ value: 'urgent', label: 'Urgent' },
+	{ value: 'low', label: __( 'Low', 'simple-wp-helpdesk' ) },
+	{ value: 'normal', label: __( 'Normal', 'simple-wp-helpdesk' ) },
+	{ value: 'high', label: __( 'High', 'simple-wp-helpdesk' ) },
+	{ value: 'urgent', label: __( 'Urgent', 'simple-wp-helpdesk' ) },
 ];
 
 export const BulkBar = () => {
@@ -87,8 +90,8 @@ export const BulkBar = () => {
 			</span>
 			<SelectControl
 				hideLabelFromVision
-				label="Status"
-				options={ STATUS_OPTIONS }
+				label={ __( 'Status', 'simple-wp-helpdesk' ) }
+				options={ getStatusOptions() }
 				value=""
 				onChange={ ( v ) => v && run( 'status', { status: v } ) }
 				disabled={ running }
@@ -96,8 +99,8 @@ export const BulkBar = () => {
 			/>
 			<SelectControl
 				hideLabelFromVision
-				label="Priority"
-				options={ PRIORITY_OPTIONS }
+				label={ __( 'Priority', 'simple-wp-helpdesk' ) }
+				options={ getPriorityOptions() }
 				value=""
 				onChange={ ( v ) => v && run( 'priority', { priority: v } ) }
 				disabled={ running }

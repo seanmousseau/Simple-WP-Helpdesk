@@ -1,5 +1,5 @@
 // components/CommandPalette.jsx
-import { useEffect } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { Modal, TextControl } from '@wordpress/components';
@@ -47,6 +47,9 @@ export const CommandPalette = () => {
 		return () => clearTimeout( t );
 	}, [ query, isOpen ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
+	// Prevent double-clicks from triggering duplicate bulk submissions.
+	const [ bulkRunning, setBulkRunning ] = useState( false );
+
 	if ( ! isOpen ) {
 		return null;
 	}
@@ -62,6 +65,10 @@ export const CommandPalette = () => {
 	}
 
 	const runBulk = async ( action, params ) => {
+		if ( bulkRunning ) {
+			return;
+		}
+		setBulkRunning( true );
 		try {
 			const result = await dispatchBulk(
 				action,
@@ -88,12 +95,14 @@ export const CommandPalette = () => {
 		} catch ( err ) {
 			// eslint-disable-next-line no-alert
 			window.alert( err.message );
+		} finally {
+			setBulkRunning( false );
 		}
 	};
 
 	return (
 		<Modal
-			title=""
+			title={ __( 'Command palette', 'simple-wp-helpdesk' ) }
 			onRequestClose={ close }
 			shouldCloseOnEsc
 			shouldCloseOnClickOutside
@@ -120,8 +129,10 @@ export const CommandPalette = () => {
 							{ selectedIds.length })
 						</div>
 						<button
+							type="button"
 							className="swh-palette-item swh-palette-item-primary"
 							onClick={ () => runBulk( 'close', {} ) }
+							disabled={ bulkRunning }
 						>
 							<span>&#9889;</span>{ ' ' }
 							<strong>
@@ -130,10 +141,12 @@ export const CommandPalette = () => {
 							{ __( 'selected tickets', 'simple-wp-helpdesk' ) }
 						</button>
 						<button
+							type="button"
 							className="swh-palette-item"
 							onClick={ () =>
 								runBulk( 'status', { status: 'resolved' } )
 							}
+							disabled={ bulkRunning }
 						>
 							<span>&#9889;</span>{ ' ' }
 							{ __(
@@ -142,10 +155,12 @@ export const CommandPalette = () => {
 							) }
 						</button>
 						<button
+							type="button"
 							className="swh-palette-item"
 							onClick={ () =>
 								runBulk( 'status', { status: 'in_progress' } )
 							}
+							disabled={ bulkRunning }
 						>
 							<span>&#9889;</span>{ ' ' }
 							{ __(
@@ -168,6 +183,7 @@ export const CommandPalette = () => {
 					{ tickets.map( ( t ) => (
 						<button
 							key={ t.id }
+							type="button"
 							className="swh-palette-item"
 							onClick={ () => {
 								openDrawer( t.id );
@@ -194,6 +210,7 @@ export const CommandPalette = () => {
 						{ matchedViews.map( ( v ) => (
 							<button
 								key={ v.key }
+								type="button"
 								className="swh-palette-item"
 								onClick={ () => {
 									setView( v.key );
