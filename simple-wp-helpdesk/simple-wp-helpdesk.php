@@ -40,19 +40,23 @@ require_once SWH_PLUGIN_DIR . 'includes/class-ticket.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-cron.php';
 require_once SWH_PLUGIN_DIR . 'includes/theme-violet.php';
 
+// REST controllers must load on every request — rest_api_init fires for
+// /wp-json/ calls where is_admin() is false, so guarding these behind
+// is_admin() means the routes never register and every endpoint 404s.
+require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/PaletteController.php';
+require_once SWH_PLUGIN_DIR . 'src/Views/ViewsRepository.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
+
 // Admin includes (only in admin context).
 if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 — kept active; serves ?legacy=1 fallback view with column/filter/badge enhancements.
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';
-	require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
-	require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
-	require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
-	require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';
-	require_once SWH_PLUGIN_DIR . 'src/Rest/PaletteController.php';
-	require_once SWH_PLUGIN_DIR . 'src/Views/ViewsRepository.php';
-	require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-views-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';

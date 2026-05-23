@@ -4298,13 +4298,9 @@ def test_69_bulk_bar_closes_selected_tickets(page):
         wpcli(f"post meta update {tid} _swh_version 1")
         wpcli(f"post meta update {tid} _swh_last_activity_at {now_ts}")
 
-    inbox_responses: list = []
-    page.on("response", lambda r: inbox_responses.append((r.status, r.url)) if "/swh/v1/inbox" in r.url else None)
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
     with suppress(PlaywrightTimeoutError):
         page.locator("#swh-inbox-root").wait_for(timeout=10000)
-    print(f"[DIAG test_69] tickets created: {ticket_a}, {ticket_b}")
-    print(f"[DIAG test_69] inbox API responses: {inbox_responses}")
 
     check("bulk #353: #swh-inbox-root present",
           page.locator("#swh-inbox-root").count() > 0)
@@ -4396,8 +4392,6 @@ def test_70_create_personal_view_and_switch(page):
         wp_logout(page)
         return
 
-    views_responses: list = []
-    page.on("response", lambda r: views_responses.append((r.status, r.request.method, r.url)) if "/swh/v1/views" in r.url else None)
     add_btn.click()
     popover_visible = False
     with suppress(PlaywrightTimeoutError):
@@ -4422,20 +4416,6 @@ def test_70_create_personal_view_and_switch(page):
 
     # Personal section appears with new view.
     my_views_heading = page.locator(".swh-inbox-leftrail-heading").filter(has_text="My views")
-    if my_views_heading.count() == 0:
-        diag_headings = page.evaluate(
-            "Array.from(document.querySelectorAll('.swh-inbox-leftrail-heading')).map(h => h.textContent)"
-        )
-        diag_links = page.evaluate(
-            "Array.from(document.querySelectorAll('.swh-inbox-view-link')).map(a => a.textContent)"
-        )
-        diag_store = page.evaluate(
-            "wp?.data?.select?.('swh/views')?.getViews?.() || 'store not available'"
-        )
-        print(f"[DIAG test_70] headings present: {diag_headings}")
-        print(f"[DIAG test_70] view links present: {diag_links}")
-        print(f"[DIAG test_70] swh/views store getViews(): {diag_store}")
-        print(f"[DIAG test_70] /swh/v1/views responses: {views_responses}")
     check("views #352 test_70: My views heading appears", my_views_heading.count() > 0)
 
     new_link = page.locator(".swh-inbox-view-link").filter(has_text="Playwright test view")
