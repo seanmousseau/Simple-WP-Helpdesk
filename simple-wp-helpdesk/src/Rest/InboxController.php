@@ -49,31 +49,41 @@ class InboxController extends WP_REST_Controller {
 				'callback'            => array( $this, 'get_items' ),
 				'permission_callback' => array( $this, 'permissions_check' ),
 				'args'                => array(
-					'view'     => array(
+					'view'        => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_key',
 						'default'           => 'unassigned',
 					),
-					'page'     => array(
+					'page'        => array(
 						'type'    => 'integer',
 						'default' => 1,
 						'minimum' => 1,
 					),
-					'per_page' => array(
+					'per_page'    => array(
 						'type'    => 'integer',
 						'default' => 50,
 						'minimum' => 1,
 						'maximum' => 200,
 					),
-					'sort'     => array(
+					'sort'        => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_key',
 						'default'           => 'last_reply_desc',
 					),
-					'search'   => array(
+					'search'      => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 						'default'           => '',
+					),
+					'range_start' => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'range_end'   => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
 			)
@@ -108,7 +118,25 @@ class InboxController extends WP_REST_Controller {
 		$per_page = min( 200, max( 1, is_numeric( $ppp_raw ) ? (int) $ppp_raw : 50 ) );
 		$sort     = is_string( $sort_raw ) ? $sort_raw : 'last_reply_desc';
 
-		$query_args                   = $this->build_query_args( $view, $sort );
+		$query_args = $this->build_query_args( $view, $sort );
+
+		// Optional date range constraint — from URL hash drill-down (v4.0.0 #359).
+		$created_after  = $request->get_param( 'range_start' );
+		$created_before = $request->get_param( 'range_end' );
+		if (
+			is_string( $created_after ) && '' !== $created_after
+			&& preg_match( '/^\d{4}-\d{2}-\d{2}$/', $created_after )
+			&& is_string( $created_before ) && '' !== $created_before
+			&& preg_match( '/^\d{4}-\d{2}-\d{2}$/', $created_before )
+		) {
+			$query_args['date_query'] = array(
+				array(
+					'after'     => $created_after,
+					'before'    => $created_before,
+					'inclusive' => true,
+				),
+			);
+		}
 		$query_args['posts_per_page'] = $per_page;
 		$query_args['paged']          = $page;
 		$query_args['fields']         = 'ids';
@@ -237,6 +265,23 @@ class InboxController extends WP_REST_Controller {
 						'type'    => 'NUMERIC',
 					),
 				);
+				break;
+			default:
+				// Synthetic views driven by URL hash (v4.0.0 #359):
+				// status:open, status:resolved, status:in_progress, status:closed.
+				if ( 0 === strpos( $view, 'status:' ) ) {
+					$status = sanitize_key( substr( $view, strlen( 'status:' ) ) );
+					if ( in_array( $status, array( 'open', 'in_progress', 'resolved', 'closed' ), true ) ) {
+						// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						$base['meta_query'] = array(
+							array(
+								'key'     => '_ticket_status',
+								'value'   => $status,
+								'compare' => '=',
+							),
+						);
+					}
+				}
 				break;
 		}
 

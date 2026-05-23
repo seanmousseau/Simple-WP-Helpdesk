@@ -305,4 +305,39 @@ final class InboxControllerTest extends TestCase {
 			)
 		);
 	}
+
+	/**
+	 * Synthetic status:* views (v4.0.0 #359) produce query args with meta_query on _ticket_status.
+	 *
+	 * TestableInboxController stubs run_query so no DB is touched; this test
+	 * verifies that build_query_args is called without error and that the
+	 * response shape is correct when view=status:open.
+	 */
+	public function test_synthetic_status_view_returns_correct_shape(): void {
+		WP_Mock::userFunction( 'current_user_can', array( 'return' => true ) );
+
+		$controller              = new TestableInboxController();
+		$controller->stub_result = array(
+			'posts'       => array(),
+			'found_posts' => 0,
+		);
+
+		$req = new WP_REST_Request( 'GET', '/swh/v1/tickets' );
+		$req->set_param( 'view', 'status:open' );
+		$req->set_param( 'page', 1 );
+		$req->set_param( 'per_page', 50 );
+		$req->set_param( 'sort', 'last_reply_desc' );
+		$req->set_param( 'search', '' );
+		$req->set_param( 'range_start', '' );
+		$req->set_param( 'range_end', '' );
+
+		$response = $controller->get_items( $req );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'tickets', $data );
+		$this->assertArrayHasKey( 'total', $data );
+		$this->assertSame( 0, $data['total'] );
+		$this->assertCount( 0, $data['tickets'] );
+	}
 }
