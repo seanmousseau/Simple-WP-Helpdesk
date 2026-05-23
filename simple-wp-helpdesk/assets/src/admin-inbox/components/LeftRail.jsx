@@ -8,8 +8,12 @@ import { AddViewButton, ViewRowMenu } from './ViewManager';
 
 export const LeftRail = () => {
 	const activeView = useSelect( ( s ) => s( SWH_INBOX_STORE ).getView(), [] );
+	const syntheticView = useSelect(
+		( s ) => s( SWH_INBOX_STORE ).getSyntheticView(),
+		[]
+	);
 	const userViews = useSelect( ( s ) => s( SWH_VIEWS_STORE ).getViews(), [] );
-	const { setView } = useDispatch( SWH_INBOX_STORE );
+	const { setView, clearSyntheticView } = useDispatch( SWH_INBOX_STORE );
 	const { fetchViews } = useDispatch( SWH_VIEWS_STORE );
 
 	useEffect( () => {
@@ -38,11 +42,39 @@ export const LeftRail = () => {
 		);
 	};
 
+	const handleClearSynthetic = () => {
+		clearSyntheticView();
+		// Remove hash so a page refresh doesn't re-apply the filter.
+		window.history.replaceState(
+			null,
+			'',
+			window.location.pathname + window.location.search
+		);
+	};
+
 	return (
 		<aside
 			className="swh-inbox-leftrail"
 			aria-label={ __( 'Saved views', 'simple-wp-helpdesk' ) }
 		>
+			{ syntheticView && (
+				<div className="swh-inbox-synthetic-view">
+					<span className="swh-inbox-synthetic-label">
+						{ syntheticView.label }
+					</span>
+					<button
+						type="button"
+						className="swh-inbox-synthetic-clear"
+						onClick={ handleClearSynthetic }
+						aria-label={ __(
+							'Clear filter',
+							'simple-wp-helpdesk'
+						) }
+					>
+						{ '×' }
+					</button>
+				</div>
+			) }
 			<h2 className="swh-inbox-leftrail-heading">
 				{ __( 'Saved views', 'simple-wp-helpdesk' ) }
 			</h2>

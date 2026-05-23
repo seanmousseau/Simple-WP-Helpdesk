@@ -12,6 +12,7 @@ const DEFAULT_STATE = {
 	loading: false,
 	error: null,
 	selectedIds: [],
+	syntheticView: null, // { key, label, rangeStart, rangeEnd } | null — v4.0.0 #359
 };
 
 const actions = {
@@ -21,21 +22,36 @@ const actions = {
 	setSearch: ( search ) => ( { type: 'SET_SEARCH', search } ),
 	toggleSelected: ( id ) => ( { type: 'TOGGLE_SELECTED', id } ),
 	clearSelected: () => ( { type: 'CLEAR_SELECTED' } ),
+	/**
+	 * Set a synthetic (URL-hash-driven) view. v4.0.0 #359.
+	 *
+	 * @param {{ key: string, label: string, rangeStart: string|null, rangeEnd: string|null }} view Synthetic view descriptor.
+	 */
+	setSyntheticView: ( view ) => ( { type: 'SET_SYNTHETIC_VIEW', view } ),
+	clearSyntheticView: () => ( { type: 'CLEAR_SYNTHETIC_VIEW' } ),
 	fetchTickets:
 		() =>
 		async ( { select, dispatch } ) => {
-			const { view, sort, page, perPage, search } =
-				select.getInboxParams();
+			const synth = select.getSyntheticView();
+			const { sort, page, perPage, search } = select.getInboxParams();
+			const view = synth ? synth.key : select.getView();
+			const params = new URLSearchParams( {
+				view,
+				sort,
+				page: String( page ),
+				per_page: String( perPage ),
+				search,
+			} );
+			if ( synth && synth.rangeStart ) {
+				params.set( 'range_start', synth.rangeStart );
+			}
+			if ( synth && synth.rangeEnd ) {
+				params.set( 'range_end', synth.rangeEnd );
+			}
 			dispatch( { type: 'FETCH_START' } );
 			try {
 				const data = await apiFetch( {
-					path: `/swh/v1/tickets?view=${ encodeURIComponent(
-						view
-					) }&sort=${ encodeURIComponent(
-						sort
-					) }&page=${ page }&per_page=${ perPage }&search=${ encodeURIComponent(
-						search
-					) }`,
+					path: `/swh/v1/tickets?${ params.toString() }`,
 				} );
 				dispatch( {
 					type: 'FETCH_SUCCESS',
@@ -84,6 +100,10 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 		}
 		case 'CLEAR_SELECTED':
 			return { ...state, selectedIds: [] };
+		case 'SET_SYNTHETIC_VIEW':
+			return { ...state, syntheticView: action.view, selectedIds: [] };
+		case 'CLEAR_SYNTHETIC_VIEW':
+			return { ...state, syntheticView: null };
 		default:
 			return state;
 	}
@@ -106,6 +126,13 @@ const selectors = {
 		perPage: state.perPage,
 		search: state.search,
 	} ),
+	/**
+	 * Returns the active synthetic view, or null. v4.0.0 #359.
+	 *
+	 * @param {Object} state Redux state.
+	 * @return {{ key: string, label: string, rangeStart: string|null, rangeEnd: string|null }|null} Active synthetic view.
+	 */
+	getSyntheticView: ( state ) => state.syntheticView,
 };
 
 export const SWH_INBOX_STORE = 'swh/inbox';
