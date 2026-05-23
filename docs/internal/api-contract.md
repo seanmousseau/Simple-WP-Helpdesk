@@ -129,6 +129,8 @@ Both shortcodes are dispatched by the same handler `swh_submit_ticket_shortcode(
 | `[submit_ticket]` | `show_lookup` | `yes` | Show/hide the "lost your link?" lookup form below the submit form. |
 | `[helpdesk_portal]` | (same attributes) | | When the URL lacks a `token`, renders either the My Tickets dashboard (logged-in users) or the lookup form (guests). |
 
+> **Portal v2 (#354):** The portal's `wp-admin/admin-post.php` POST handlers (`swh_portal_reply`, `swh_portal_close`, `swh_portal_reopen`) are unchanged in v4.0. Portal v2 changes only the rendered HTML — the form `action`, field names (`reply_body`, `ticket_id`, `token`, `swh_portal_reply_nonce`), and response shape are identical to v1. The new JS sends the same POST via `fetch` instead of a full-page submit and falls back to standard form submit on JS failure.
+
 ## Constants
 
 | Constant | Type | Source of truth |

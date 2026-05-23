@@ -40,7 +40,7 @@ See [`docs/internal/component-inventory.md`](component-inventory.md) for the exi
 
 ### Frontend + reporting
 
-- [ ] [#354](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/354) — Portal v2 — conversation-first layout
+- [x] [#354](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/354) — Portal v2 — conversation-first layout
 - [x] [#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355) — Indigo design refresh (opt-in) + typography upgrade — shipped as **Violet theme** opt-in
 - [ ] [#359](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/359) — Reports redesign — drill-down + period-over-period
 

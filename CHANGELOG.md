@@ -44,6 +44,10 @@ starting from the next release after 1.8.
 
   `swh_sla_open_statuses` is post-3.0 and remains supported.
 
+### Changed
+
+- Portal v2 (#354): client-facing portal rewritten to a messenger-style conversation-first layout. Thread leads visually with customer/staff bubbles; composer pinned to the bottom; ticket-level actions (close, reopen, CSAT) consolidated into a single `⋮` header menu. Server-rendered PHP + ~3KB vanilla JS for AJAX/auto-scroll/menu. Same URLs, same endpoints, same features.
+
 ### Internal
 
 - Updated `.vscode/settings.json` `intelephense.environment.phpVersion` 7.4.0 → 8.0.0 (carry-forward from PR #410; file is gitignored — local-only change).
