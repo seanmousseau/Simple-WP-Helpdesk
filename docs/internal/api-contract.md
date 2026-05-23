@@ -88,12 +88,12 @@ Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 | Method | Path | Auth | Body | Response |
 |---|---|---|---|---|
 | `POST` | `/wp-json/swh/v1/inbound-email` | `Authorization: Bearer <swh_inbound_secret>` header. `permission_callback` is `__return_true` (auth enforced inside the handler). | Parsed-email JSON; the handler reads `from`, `subject`, `body`. Subject must contain `[TKT-XXXX]`. Sender email is compared to `_ticket_email` of the matched ticket via `hash_equals`. | `200` on accepted reply; `4xx` on auth / parse / match failure. |
-| `POST /swh/v1/bulk-action` | `edit_posts` | Apply status/assign/priority/tag/close across selected tickets. Body: `{ action, params, ticket_ids[], version_map{} }`. Returns `{ succeeded[], conflicts: [{ id, version_now }] }`. Cap: 200 tickets. Introduced 4.0.0 #353. |
-| `GET /swh/v1/palette/suggest` | `edit_posts` | Ticket suggestions for ⌘K palette. Param `q` (string). Empty `q` → recent by last_activity. Returns `{ tickets: [{ id, title, status }] }`. Up to 8 results. Introduced 4.0.0 #351. |
-| `GET /swh/v1/views` | `edit_posts` | List user's merged views (global + personal, hidden globals filtered). Returns `{ views: [{ id, name, scope, filters, sort, columns }] }`. Introduced 4.0.0 #352. |
-| `POST /swh/v1/views` | `edit_posts` (personal) / `manage_options` (global) | Create a view. Body: `{ name, scope, filters, sort, columns }`. Returns `{ view }` at 201. Introduced 4.0.0 #352. |
-| `PATCH /swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | Update a view. Body: `{ scope, patch }`. Returns `{ view }` at 200. Introduced 4.0.0 #352. |
-| `DELETE /swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | Delete a view. Param: `scope`. Introduced 4.0.0 #352. |
+| `POST` | `/wp-json/swh/v1/bulk-action` | `edit_posts` | `{ action, params, ticket_ids[], version_map{} }` | `{ succeeded[], conflicts: [{ id, version_now }] }`. Cap: 200 tickets. Introduced 4.0.0 #353. |
+| `GET` | `/wp-json/swh/v1/palette/suggest` | `edit_posts` | — | `{ tickets: [{ id, title, status }] }`. Param `q` (string). Up to 8 results. Introduced 4.0.0 #351. |
+| `GET` | `/wp-json/swh/v1/views` | `edit_posts` | — | `{ views: [{ id, name, scope, filters, sort, columns }] }`. Introduced 4.0.0 #352. |
+| `POST` | `/wp-json/swh/v1/views` | `edit_posts` (personal) / `manage_options` (global) | `{ name, scope, filters, sort, columns }` | `{ view }` at 201. Introduced 4.0.0 #352. |
+| `PATCH` | `/wp-json/swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | `{ scope, patch }` | `{ view }` at 200. Introduced 4.0.0 #352. |
+| `DELETE` | `/wp-json/swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | — | `{ deleted: bool }`. Param: `scope`. Introduced 4.0.0 #352. |
 
 Registered at `simple-wp-helpdesk/simple-wp-helpdesk.php:213`. Handler at `simple-wp-helpdesk/includes/class-email.php:222`.
 
@@ -136,7 +136,7 @@ Both shortcodes are dispatched by the same handler `swh_submit_ticket_shortcode(
 | `[submit_ticket]` | `show_lookup` | `yes` | Show/hide the "lost your link?" lookup form below the submit form. |
 | `[helpdesk_portal]` | (same attributes) | | When the URL lacks a `token`, renders either the My Tickets dashboard (logged-in users) or the lookup form (guests). |
 
-> **Portal v2 (#354):** The portal's `wp-admin/admin-post.php` POST handlers (`swh_portal_reply`, `swh_portal_close`, `swh_portal_reopen`) are unchanged in v4.0. Portal v2 changes only the rendered HTML — the form `action`, field names (`reply_body`, `ticket_id`, `token`, `swh_portal_reply_nonce`), and response shape are identical to v1. The new JS sends the same POST via `fetch` instead of a full-page submit and falls back to standard form submit on JS failure.
+> **Portal v2 (#354):** Portal v2 moves reply/close/reopen from inline PHP POST handling (same page) to dedicated `admin-post.php` handlers registered as both `admin_post_nopriv_*` and `admin_post_*`: `swh_portal_reply`, `swh_portal_close`, `swh_portal_reopen`, `swh_portal_csat`. All require `ticket_id` + `token` (verified via `hash_equals`) and `swh_portal_reply_nonce` (verified via `wp_verify_nonce`). On success, each handler does `wp_safe_redirect` back to the portal URL. The reply form field is `reply_body`; the nonce field is `swh_portal_reply_nonce`. The v2 JS sends the reply via `fetch()` optimistically and falls back to a standard full-page form submit if JS is unavailable.
 
 ## Constants
 

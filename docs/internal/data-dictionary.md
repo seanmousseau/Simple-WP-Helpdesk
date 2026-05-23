@@ -49,7 +49,7 @@ Cited from `grep -rEon "(update|get|delete)_post_meta\(...\)"` on `simple-wp-hel
 | `_ticket_csat` | int (1–5) | optional | Client satisfaction rating; not set if the client dismisses the prompt. Written by the `swh_submit_csat` AJAX handler. | 3.0.0 |
 | `_swh_unread` | string (`'1'`) | optional | Set to `'1'` when a client posts a reply; cleared when admin opens the ticket. Pairs with the `swh_unread_count` transient (see invariant #17). | 3.1.0 |
 | `_swh_last_activity_at` | int (unix ts) | optional | Updated on every status change and reply insert. Used by the inbox to sort by recency. Written by `swh_set_ticket_status()` and the three user-visible reply paths. | 4.0.0 (#349) |
-| `_swh_version` | int | optional | Optimistic-concurrency version counter. Increments on every user-visible save (status change, reply, direct meta edit). Mismatch with client-supplied `expected_version` returns 409 from the REST drawer endpoints. Absent on pre-4.0 tickets — `TicketVersion::current()` returns 1 in that case. See invariant #18. | 4.0.0 (#350) |
+| `_swh_version` | int | absent on pre-4.0 tickets (treated as 1 by `TicketVersion::current()`) | Optimistic-concurrency version counter. **Every user-visible ticket mutation MUST bump this** (invariant #18) — use `TicketVersion::bump()`. Mismatch with client-supplied `expected_version` returns 409 from the REST drawer endpoints. New in 4.0.0; absent on pre-4.0 tickets is expected and safe. See invariant #18. | 4.0.0 (#350) |
 | `_edit_lock` | string | WP core | WordPress's own concurrent-edit lock. Not owned by this plugin. | WP core |
 
 ## Comment meta keys
