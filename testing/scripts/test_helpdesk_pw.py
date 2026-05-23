@@ -643,6 +643,11 @@ def test_08_client_portal(page: Page):
 
     mailhog_clear()
     reply_ta.fill(TEST_CLIENT_REPLY)
+    # Capture network response + console messages for diagnosis.
+    captured_responses: list = []
+    captured_console: list = []
+    page.on("response", lambda r: captured_responses.append((r.url, r.status, r.request.method)) if "admin-post.php" in r.url else None)
+    page.on("console", lambda m: captured_console.append(f"[{m.type}] {m.text}"))
     # Portal v2 JS intercepts submit via fetch (optimistic). After the fetch
     # completes, the message bubble gets .swh-msg-sent (success) or
     # .swh-msg-failed (network error). The admin-post handler redirects back
@@ -660,8 +665,16 @@ def test_08_client_portal(page: Page):
     # Allow fetch to resolve so .swh-msg-sent class is applied
     page.wait_for_timeout(1500)
     sent_class = page.locator('.swh-msg-sent').count() > 0
+    failed_class = page.locator('.swh-msg-failed').count() > 0
+    last_bubble_classes = page.locator('.swh-msg.swh-msg-customer').last.get_attribute('class') or '(none)'
+    print(f"[DIAG test_08] bubble class attr: {last_bubble_classes!r}")
+    print(f"[DIAG test_08] .swh-msg-sent count: {page.locator('.swh-msg-sent').count()}  .swh-msg-failed count: {page.locator('.swh-msg-failed').count()}")
+    print(f"[DIAG test_08] admin-post.php responses: {captured_responses}")
+    print(f"[DIAG test_08] console msgs ({len(captured_console)}):")
+    for m in captured_console[-20:]:
+        print(f"  {m}")
     check("portal: reply bubble shows .swh-msg-sent (fetch success)", sent_class,
-          "bubble did not receive .swh-msg-sent — admin-post handler may be missing")
+          f"bubble class={last_bubble_classes!r}, failed={failed_class}, responses={captured_responses}")
     if sent_class:
         expect_email(TECH1_EMAIL, "client reply notification to assigned technician (tech1)")
 
