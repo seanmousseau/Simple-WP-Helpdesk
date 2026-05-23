@@ -26,11 +26,22 @@ const createBubble = ( text, kind, timeLabel ) => {
 };
 
 const formatRelative = ( iso ) => {
-	if ( ! iso ) return '';
-	const diff = Math.max( 0, Math.floor( ( Date.now() - new Date( iso ).getTime() ) / 1000 ) );
-	if ( diff < 60 )    return `${ diff }s ago`;
-	if ( diff < 3600 )  return `${ Math.floor( diff / 60 ) }m ago`;
-	if ( diff < 86400 ) return `${ Math.floor( diff / 3600 ) }h ago`;
+	if ( ! iso ) {
+		return '';
+	}
+	const diff = Math.max(
+		0,
+		Math.floor( ( Date.now() - new Date( iso ).getTime() ) / 1000 )
+	);
+	if ( diff < 60 ) {
+		return `${ diff }s ago`;
+	}
+	if ( diff < 3600 ) {
+		return `${ Math.floor( diff / 60 ) }m ago`;
+	}
+	if ( diff < 86400 ) {
+		return `${ Math.floor( diff / 3600 ) }h ago`;
+	}
 	return `${ Math.floor( diff / 86400 ) }d ago`;
 };
 
@@ -44,13 +55,20 @@ const appendHiddenField = ( form, name, value ) => {
 
 const runMenuAction = ( root, action ) => {
 	const ticketId = root.querySelector( 'input[name="ticket_id"]' )?.value;
-	const token    = root.querySelector( 'input[name="token"]' )?.value;
+	const token = root.querySelector( 'input[name="token"]' )?.value;
 	const composer = root.querySelector( '.swh-portal-v2-composer' );
 	const actionURL = composer?.action;
-	const nonceField = composer?.querySelector( 'input[name="swh_portal_reply_nonce"]' );
-	if ( ! ticketId || ! token || ! actionURL ) return;
+	const nonceField = composer?.querySelector(
+		'input[name="swh_portal_reply_nonce"]'
+	);
+	if ( ! ticketId || ! token || ! actionURL ) {
+		return;
+	}
 
-	if ( action === 'close' && ! window.confirm( 'Close this ticket?' ) ) return; // eslint-disable-line no-alert
+	// eslint-disable-next-line no-alert
+	if ( action === 'close' && ! window.confirm( 'Close this ticket?' ) ) {
+		return;
+	}
 
 	const f = document.createElement( 'form' );
 	f.method = 'post';
@@ -67,16 +85,20 @@ const runMenuAction = ( root, action ) => {
 
 const init = () => {
 	const root = document.querySelector( '.swh-portal-v2' );
-	if ( ! root ) return;
+	if ( ! root ) {
+		return;
+	}
 
 	const thread = root.querySelector( '#swh-portal-thread' );
-	const form   = root.querySelector( '.swh-portal-v2-composer' );
-	const ta     = form?.querySelector( 'textarea' );
+	const form = root.querySelector( '.swh-portal-v2-composer' );
+	const ta = form?.querySelector( 'textarea' );
 	const menuTrigger = root.querySelector( '.swh-portal-v2-menu-trigger' );
-	const menu        = root.querySelector( '.swh-portal-v2-menu' );
+	const menu = root.querySelector( '.swh-portal-v2-menu' );
 
 	// Scroll to bottom on load.
-	if ( thread ) thread.scrollTop = thread.scrollHeight;
+	if ( thread ) {
+		thread.scrollTop = thread.scrollHeight;
+	}
 
 	// Swap ISO timestamps to relative labels.
 	root.querySelectorAll( '.swh-msg-time[datetime]' ).forEach( ( el ) => {
@@ -89,7 +111,9 @@ const init = () => {
 		form.addEventListener( 'submit', async ( e ) => {
 			e.preventDefault();
 			const text = ta.value.trim();
-			if ( ! text ) return;
+			if ( ! text ) {
+				return;
+			}
 
 			const optimistic = createBubble( text, 'customer', 'just now' );
 			thread.appendChild( optimistic );
@@ -104,9 +128,11 @@ const init = () => {
 					body: data,
 					credentials: 'same-origin',
 				} );
-				if ( ! response.ok ) throw new Error( `Server returned ${ response.status }` );
+				if ( ! response.ok ) {
+					throw new Error( `Server returned ${ response.status }` );
+				}
 				optimistic.classList.add( 'swh-msg-sent' );
-			} catch ( err ) {
+			} catch {
 				optimistic.classList.add( 'swh-msg-failed' );
 				ta.value = text; // restore for retry
 			}
@@ -134,21 +160,36 @@ const init = () => {
 
 		menuTrigger.addEventListener( 'click', ( e ) => {
 			e.stopPropagation();
-			if ( menu.hidden ) openMenu(); else closeMenu();
+			if ( menu.hidden ) {
+				openMenu();
+			} else {
+				closeMenu();
+			}
 		} );
 		document.addEventListener( 'click', ( e ) => {
-			if ( menu.hidden ) return;
-			if ( ! menu.contains( e.target ) && ! menuTrigger.contains( e.target ) ) closeMenu();
+			if ( menu.hidden ) {
+				return;
+			}
+			if (
+				! menu.contains( e.target ) &&
+				! menuTrigger.contains( e.target )
+			) {
+				closeMenu();
+			}
 		} );
 		document.addEventListener( 'keydown', ( e ) => {
-			if ( e.key === 'Escape' && ! menu.hidden ) closeMenu();
+			if ( e.key === 'Escape' && ! menu.hidden ) {
+				closeMenu();
+			}
 		} );
 
 		// Menu item actions.
 		menu.querySelectorAll( 'button[data-action]' ).forEach( ( btn ) => {
 			btn.addEventListener( 'click', () => {
 				const action = btn.getAttribute( 'data-action' );
-				if ( action ) runMenuAction( root, action );
+				if ( action ) {
+					runMenuAction( root, action );
+				}
 			} );
 		} );
 	}
