@@ -6,7 +6,7 @@ import { render } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { dispatch as wpDispatch } from '@wordpress/data';
 import { registerInboxStore, SWH_INBOX_STORE } from './store/inbox';
-import { registerDrawerStore } from './store/drawer';
+import { registerDrawerStore, SWH_DRAWER_STORE } from './store/drawer';
 import { registerPaletteStore } from './store/palette';
 import { registerViewsStore } from './store/views';
 import { Inbox } from './components/Inbox';
@@ -71,10 +71,27 @@ registerViewsStore();
 
 // Parse URL hash set by the reports drill-down and dispatch synthetic view.
 // Must run AFTER registerInboxStore() and BEFORE render(). v4.0.0 #359.
-const synth = parseHashFilter( window.location.hash );
-if ( synth ) {
-	wpDispatch( SWH_INBOX_STORE ).setSyntheticView( synth );
-}
+const applyHash = () => {
+	const synth = parseHashFilter( window.location.hash );
+	if ( synth ) {
+		wpDispatch( SWH_INBOX_STORE ).setSyntheticView( synth );
+		// setSyntheticView reducer doesn't trigger a fetch on its own, so
+		// kick one off explicitly to actually filter the visible list.
+		wpDispatch( SWH_INBOX_STORE ).fetchTickets();
+	}
+	// Deep-link from email: edit.php?post_type=helpdesk_ticket#ticket=ID
+	// opens the drawer for that ticket.
+	const hashTicketMatch = window.location.hash.match( /ticket=(\d+)/ );
+	if ( hashTicketMatch ) {
+		const tid = parseInt( hashTicketMatch[ 1 ], 10 );
+		if ( tid > 0 ) {
+			wpDispatch( SWH_DRAWER_STORE ).open( tid );
+		}
+	}
+};
+applyHash();
+// Re-apply on hashchange so drill-down links work without a full reload.
+window.addEventListener( 'hashchange', applyHash );
 
 const mountInbox = () => {
 	const root = document.getElementById( 'swh-inbox-root' );

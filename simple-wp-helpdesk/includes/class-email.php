@@ -374,7 +374,7 @@ function swh_handle_inbound_email( $request ) {
 		'status'     => swh_get_string_meta( $ticket_id, '_ticket_status' ),
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'message'    => $clean_body,
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'ticket_url' => '',
 	);
 	// Admin-only notification — do not inject watcher Cc: headers.

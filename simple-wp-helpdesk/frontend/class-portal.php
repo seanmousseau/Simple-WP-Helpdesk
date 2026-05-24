@@ -132,7 +132,7 @@ function swh_render_client_portal() {
 	$reopened_status = swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' );
 	$default_status  = swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : '' );
 	$spam_method     = swh_get_string_option( 'swh_spam_method', 'none' );
-	$theme_attr      = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
+	$theme_attr      = ( in_array( swh_get_string_option( 'swh_portal_theme', 'auto' ), array( 'light', 'dark' ), true ) ? ' data-swh-theme="' . esc_attr( swh_get_string_option( 'swh_portal_theme', 'auto' ) ) . '"' : '' );
 
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Token-based auth; params verified via hash_equals() below; isset() checked by callers.
 	$ticket_id = isset( $_GET['swh_ticket'] ) && is_scalar( $_GET['swh_ticket'] ) ? absint( $_GET['swh_ticket'] ) : 0;
@@ -168,7 +168,7 @@ function swh_render_client_portal() {
 		'status'     => swh_get_string_meta( $ticket_id, '_ticket_status' ),
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'ticket_url' => swh_get_secure_ticket_link( $ticket_id ),
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'message'    => '',
 	);
 
@@ -383,7 +383,7 @@ function swh_render_client_portal() {
  * @return void
  */
 function swh_render_portal_no_token() {
-	$theme_attr = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
+	$theme_attr = ( in_array( swh_get_string_option( 'swh_portal_theme', 'auto' ), array( 'light', 'dark' ), true ) ? ' data-swh-theme="' . esc_attr( swh_get_string_option( 'swh_portal_theme', 'auto' ) ) . '"' : '' );
 	echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 
 	if ( is_user_logged_in() ) {
@@ -548,6 +548,21 @@ function swh_handle_portal_v2_reply() {
 	);
 	if ( $comment_id && ! is_wp_error( $comment_id ) ) {
 		update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
+		// Process attachments from the portal v2 composer (input name="attachments[]").
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$attach_files = isset( $_FILES['attachments'] ) && is_array( $_FILES['attachments'] ) ? $_FILES['attachments'] : array();
+		$attach_names = null;
+		$skipped      = 0;
+		if ( isset( $attach_files['name'] ) && is_array( $attach_files['name'] ) && ! empty( $attach_files['name'][0] ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			$attach_urls = swh_handle_multiple_uploads( $attach_files, $attach_names, $skipped );
+			if ( ! empty( $attach_urls ) ) {
+				update_comment_meta( (int) $comment_id, '_attachments', $attach_urls );
+				if ( ! empty( $attach_names ) ) {
+					update_comment_meta( (int) $comment_id, '_swh_reply_orignames', $attach_names );
+				}
+			}
+		}
 		update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 		update_post_meta( $ticket_id, '_swh_unread', '1' );
 		delete_transient( 'swh_unread_count' );
@@ -563,7 +578,7 @@ function swh_handle_portal_v2_reply() {
 		'status'     => $meta_status,
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'ticket_url' => $portal_url,
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'message'    => $reply_text,
 	);
 	$admin_email = swh_get_admin_email( $ticket_id );
@@ -663,7 +678,7 @@ function swh_handle_portal_v2_close() {
 		'status'     => $closed_status,
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'ticket_url' => $portal_url,
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'message'    => '',
 	);
 	$admin_email = swh_get_admin_email( $ticket_id );
@@ -749,7 +764,7 @@ function swh_handle_portal_v2_reopen() {
 		'status'     => $reopened_status,
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'ticket_url' => $portal_url,
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'message'    => '',
 	);
 	$admin_email = swh_get_admin_email( $ticket_id );

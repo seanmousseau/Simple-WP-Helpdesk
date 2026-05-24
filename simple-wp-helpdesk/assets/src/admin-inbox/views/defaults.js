@@ -1,5 +1,11 @@
 export const DEFAULT_VIEWS = [
 	{
+		key: 'all',
+		label: 'All',
+		filters: {},
+		sort: 'last_reply_desc',
+	},
+	{
 		key: 'unassigned',
 		label: 'Unassigned',
 		filters: { status: [ 'open', 'in_progress' ], assignee: 'none' },

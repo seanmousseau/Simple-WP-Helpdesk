@@ -24,7 +24,10 @@ export const TicketDrawer = () => {
 	const { fetchTicket, close } = useDispatch( SWH_DRAWER_STORE );
 
 	useEffect( () => {
-		if ( isOpen && ! ticket && ! loading ) {
+		// OPEN reducer presets loading:true, so a `!loading` guard would
+		// skip the fetch and leave the drawer stuck on "Loading ticket…".
+		// Guard against ticket already present (re-open) and error state.
+		if ( isOpen && ! ticket && ! error ) {
 			fetchTicket();
 		}
 	}, [ isOpen ] ); // eslint-disable-line react-hooks/exhaustive-deps

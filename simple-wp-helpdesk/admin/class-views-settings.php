@@ -11,7 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Mounts a React tree for admins to manage global saved views.
  */
 function swh_views_settings_register(): void {
-	add_action( 'admin_menu', 'swh_views_settings_add_menu', 100 );
+	// v4.0.0: Saved Views submenu hidden — view-creation popover lacks filter
+	// pickers, so the page can only manage views that can't be meaningfully
+	// created in the first place. Re-enable in v4.1 with full filter picker UI.
+	// add_action( 'admin_menu', 'swh_views_settings_add_menu', 100 ); // Hidden in v4.0.0.
 	add_action( 'admin_enqueue_scripts', 'swh_views_settings_enqueue' );
 }
 add_action( 'plugins_loaded', 'swh_views_settings_register', 10 );

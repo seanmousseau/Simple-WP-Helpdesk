@@ -286,6 +286,20 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	border-radius: var( --swh-radius-md );
 	padding: var( --swh-space-md );
 	text-align: center;
+	display: block;
+	color: inherit;
+	text-decoration: none;
+	transition: transform 100ms ease, box-shadow 100ms ease;
+}
+a.swh-kpi-card:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+	text-decoration: none;
+	color: inherit;
+}
+a.swh-kpi-card:focus-visible {
+	outline: 2px solid var( --swh-color-primary );
+	outline-offset: 2px;
 }
 
 .swh-kpi-card--warning {

@@ -119,6 +119,7 @@ final class Migration {
 		// Portal group. Task 3.1: no direct get_option call sites; swh_portal_theme
 		// exists in swh_get_defaults() — seeded here so the bag is populated.
 		'swh_portal_theme'               => array( 'portal', 'portal_theme' ),
+		'swh_admin_theme'                => array( 'portal', 'admin_theme' ),
 
 		// Tools group.
 		'swh_spam_method'                => array( 'tools', 'spam_method' ),

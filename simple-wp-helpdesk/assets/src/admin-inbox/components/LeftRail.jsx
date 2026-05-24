@@ -4,7 +4,9 @@ import { __ } from '@wordpress/i18n';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { SWH_VIEWS_STORE } from '../store/views';
 import { DEFAULT_VIEWS } from '../views/defaults';
-import { AddViewButton, ViewRowMenu } from './ViewManager';
+// v4.0.0: AddViewButton hidden — popover lacks filter pickers, only captures
+// the current view state which is useless. Tracked for v4.1.
+import { ViewRowMenu } from './ViewManager';
 
 export const LeftRail = () => {
 	const activeView = useSelect( ( s ) => s( SWH_INBOX_STORE ).getView(), [] );
@@ -92,7 +94,7 @@ export const LeftRail = () => {
 					</ul>
 				</>
 			) }
-			<AddViewButton />
+			{ /* AddViewButton hidden v4.0.0 — see import comment. */ }
 		</aside>
 	);
 };

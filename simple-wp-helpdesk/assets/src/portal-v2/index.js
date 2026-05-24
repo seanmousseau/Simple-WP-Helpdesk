@@ -93,8 +93,94 @@ const init = () => {
 	const thread = root.querySelector( '#swh-portal-thread' );
 	const form = root.querySelector( '.swh-portal-v2-composer' );
 	const ta = form?.querySelector( 'textarea' );
+	const fileInput = form?.querySelector( 'input[type="file"]' );
+	const attachList = form?.querySelector( '.swh-portal-v2-attachment-list' );
+	const errorBox = form?.querySelector( '.swh-portal-v2-composer-error' );
 	const menuTrigger = root.querySelector( '.swh-portal-v2-menu-trigger' );
 	const menu = root.querySelector( '.swh-portal-v2-menu' );
+
+	const ACCEPTED_EXT = [ 'jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ];
+	const maxMb = parseInt( fileInput?.dataset.maxMb || '5', 10 );
+	const maxCount = parseInt( fileInput?.dataset.maxCount || '5', 10 );
+	let selectedFiles = [];
+
+	const showError = ( msg ) => {
+		if ( ! errorBox ) return;
+		errorBox.textContent = msg || '';
+		errorBox.hidden = ! msg;
+	};
+
+	const renderAttachmentList = () => {
+		if ( ! attachList ) return;
+		// Clear children safely without innerHTML
+		while ( attachList.firstChild ) {
+			attachList.removeChild( attachList.firstChild );
+		}
+		if ( selectedFiles.length === 0 ) {
+			attachList.hidden = true;
+			return;
+		}
+		attachList.hidden = false;
+		selectedFiles.forEach( ( f, idx ) => {
+			const li = document.createElement( 'li' );
+			li.className = 'swh-portal-v2-attachment-chip';
+			const sizeKb = Math.round( f.size / 1024 );
+			const label = document.createElement( 'span' );
+			label.textContent = `📎 ${ f.name } (${ sizeKb }KB)`;
+			li.appendChild( label );
+			const rm = document.createElement( 'button' );
+			rm.type = 'button';
+			rm.className = 'swh-portal-v2-attachment-remove';
+			rm.setAttribute( 'aria-label', `Remove ${ f.name }` );
+			rm.textContent = '×';
+			rm.addEventListener( 'click', () => {
+				selectedFiles.splice( idx, 1 );
+				syncInputFromSelected();
+				renderAttachmentList();
+				showError( '' );
+			} );
+			li.appendChild( rm );
+			attachList.appendChild( li );
+		} );
+	};
+
+	const syncInputFromSelected = () => {
+		if ( ! fileInput ) return;
+		const dt = new DataTransfer();
+		selectedFiles.forEach( ( f ) => dt.items.add( f ) );
+		fileInput.files = dt.files;
+	};
+
+	if ( fileInput ) {
+		fileInput.addEventListener( 'change', () => {
+			showError( '' );
+			const incoming = Array.from( fileInput.files || [] );
+			const errors = [];
+			const accepted = [];
+			for ( const f of incoming ) {
+				const ext = ( f.name.split( '.' ).pop() || '' ).toLowerCase();
+				if ( ! ACCEPTED_EXT.includes( ext ) ) {
+					errors.push( `${ f.name }: file type not allowed` );
+					continue;
+				}
+				if ( f.size > maxMb * 1024 * 1024 ) {
+					errors.push( `${ f.name }: exceeds ${ maxMb }MB limit` );
+					continue;
+				}
+				accepted.push( f );
+			}
+			const dedup = new Map();
+			[ ...selectedFiles, ...accepted ].forEach( ( f ) => dedup.set( `${ f.name }:${ f.size }`, f ) );
+			selectedFiles = Array.from( dedup.values() );
+			if ( selectedFiles.length > maxCount ) {
+				errors.push( `Too many files — max ${ maxCount }. Extras were dropped.` );
+				selectedFiles = selectedFiles.slice( 0, maxCount );
+			}
+			syncInputFromSelected();
+			renderAttachmentList();
+			if ( errors.length ) showError( errors.join( ' · ' ) );
+		} );
+	}
 
 	// Scroll to bottom on load.
 	if ( thread ) {
@@ -112,30 +198,26 @@ const init = () => {
 		form.addEventListener( 'submit', async ( e ) => {
 			e.preventDefault();
 			const text = ta.value.trim();
-			if ( ! text ) {
-				return;
+			if ( ! text && selectedFiles.length === 0 ) {
+				return; // empty reply with no attachments — silent no-op
 			}
 
-			const optimistic = createBubble( text, 'customer', 'just now' );
+			showError( '' );
+			const bubbleText = text || `📎 ${ selectedFiles.length } file${ selectedFiles.length === 1 ? '' : 's' }`;
+			const optimistic = createBubble( bubbleText, 'customer', 'just now' );
 			thread.appendChild( optimistic );
 			thread.scrollTop = thread.scrollHeight;
 			ta.value = '';
 
 			try {
 				const data = new FormData( form );
-				data.set( 'reply_body', text ); // ta is now empty; restore for FormData
-				// DOM named-element access shadows form.action with the
-				// <input name="action"> element. Use getAttribute() to
-				// get the actual URL string.
+				data.set( 'reply_body', text );
 				const actionUrl = form.getAttribute( 'action' );
 				const response = await fetch( actionUrl, {
 					method: 'POST',
 					body: data,
 					credentials: 'same-origin',
 					headers: {
-						// Signal to the PHP handler to respond with JSON instead of
-						// the HTML-redirect fallback, so the fetch result is a
-						// clean success/failure signal.
 						Accept: 'application/json',
 						'X-Requested-With': 'XMLHttpRequest',
 					},
@@ -144,9 +226,13 @@ const init = () => {
 					throw new Error( `Server returned ${ response.status }` );
 				}
 				optimistic.classList.add( 'swh-msg-sent' );
-			} catch {
+				selectedFiles = [];
+				syncInputFromSelected();
+				renderAttachmentList();
+			} catch ( err ) {
 				optimistic.classList.add( 'swh-msg-failed' );
-				ta.value = text; // restore for retry
+				ta.value = text;
+				showError( `Send failed: ${ err.message || 'network error' }. Your text was restored.` );
 			}
 		} );
 

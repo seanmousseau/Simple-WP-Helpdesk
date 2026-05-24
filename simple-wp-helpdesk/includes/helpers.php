@@ -116,6 +116,9 @@ function swh_get_defaults() {
 			'swh_em_user_merged_body'        => "Hi {name},\n\nYour ticket ({ticket_id}) has been merged into ticket {target_ticket_id}.\n\nYou can continue viewing your conversation here:\n{target_ticket_url}",
 			// Frontend portal appearance.
 			'swh_portal_theme'               => 'auto',
+			// Admin theme (v4.0.0): light (default — Violet dark is incomplete),
+			// dark (opt-in), auto (follow WP admin color scheme).
+			'swh_admin_theme'                => 'light',
 		);
 	}
 	return $defaults;
@@ -960,6 +963,20 @@ if ( ! function_exists( 'swh_render_empty_state' ) ) {
 	}
 }
 
+if ( ! function_exists( 'swh_admin_ticket_url' ) ) {
+	/**
+	 * Build the admin URL that opens a ticket. v4.0.0+ deep-links into the
+	 * React inbox drawer; pre-v4 callers got the legacy post-editor URL.
+	 *
+	 * @since 4.0.0
+	 * @param int $ticket_id Ticket post ID.
+	 * @return string
+	 */
+	function swh_admin_ticket_url( $ticket_id ) {
+		return admin_url( 'edit.php?post_type=helpdesk_ticket#ticket=' . (int) $ticket_id );
+	}
+}
+
 if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 	/**
 	 * Returns true when the current user's WP admin colour scheme is one of the
@@ -969,6 +986,17 @@ if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 	 * @return bool
 	 */
 	function swh_admin_color_is_dark() {
+		// v4.0.0: admin_theme setting overrides the auto-detect.
+		// Default 'light' — the dark variant of the Violet theme is incomplete
+		// and produces visual issues on the inbox; opt-in only until v4.1.
+		$setting = swh_get_string_option( 'swh_admin_theme', 'light' );
+		if ( 'light' === $setting ) {
+			return false;
+		}
+		if ( 'dark' === $setting ) {
+			return true;
+		}
+		// 'auto' — follow the WP admin colour scheme (midnight/modern/ectoplasm).
 		$dark_schemes = array( 'midnight', 'modern', 'ectoplasm' );
 		$user_id      = get_current_user_id();
 		if ( ! $user_id ) {

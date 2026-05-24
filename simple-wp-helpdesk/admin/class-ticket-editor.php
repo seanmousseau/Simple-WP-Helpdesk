@@ -514,7 +514,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 					'status'         => $new_status,
 					'priority'       => $new_priority,
 					'ticket_url'     => $ticket_link,
-					'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
+					'admin_url'      => swh_admin_ticket_url( $post_id ),
 					'message'        => '',
 					'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
 				);
@@ -538,7 +538,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 				'status'         => $new_status,
 				'priority'       => $new_priority,
 				'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
-				'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
+				'admin_url'      => swh_admin_ticket_url( $post_id ),
 				'message'        => '',
 				'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
 			);
@@ -563,7 +563,7 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		'priority'       => $new_priority,
 		'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
 		'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
-		'admin_url'      => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
+		'admin_url'      => swh_admin_ticket_url( $post_id ),
 		'message'        => '',
 	);
 

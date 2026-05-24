@@ -56,6 +56,7 @@ export const Thread = ( { ticket } ) => {
 		is_internal: false,
 		date_gmt: ticket.created,
 		content: ticket.body,
+		attachments: ticket.attachments || [],
 	};
 	const all = [ original, ...messages ];
 
@@ -95,6 +96,21 @@ export const Thread = ( { ticket } ) => {
 					<div className="swh-message-body">
 						{ renderBody( m.content ) }
 					</div>
+					{ m.attachments && m.attachments.length > 0 && (
+						<ul className="swh-message-attachments">
+							{ m.attachments.map( ( a, i ) => (
+								<li key={ i }>
+									<a
+										href={ a.url }
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										📎 { a.name }
+									</a>
+								</li>
+							) ) }
+						</ul>
+					) }
 				</div>
 			) ) }
 		</div>

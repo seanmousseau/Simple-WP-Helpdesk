@@ -284,7 +284,10 @@ function swh_handle_settings_save() {
 				$val = is_string( $_POST[ $opt ] ) ? esc_url_raw( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} elseif ( 'swh_portal_theme' === $opt ) {
 				$raw = is_string( $_POST[ $opt ] ) ? sanitize_key( wp_unslash( $_POST[ $opt ] ) ) : 'auto'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-				$val = in_array( $raw, array( 'auto', 'light' ), true ) ? $raw : 'auto';
+				$val = in_array( $raw, array( 'auto', 'light', 'dark' ), true ) ? $raw : 'auto';
+			} elseif ( 'swh_admin_theme' === $opt ) {
+				$raw = is_string( $_POST[ $opt ] ) ? sanitize_key( wp_unslash( $_POST[ $opt ] ) ) : 'light'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+				$val = in_array( $raw, array( 'auto', 'light', 'dark' ), true ) ? $raw : 'light';
 			} else {
 				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
@@ -516,8 +519,21 @@ function swh_render_settings_page() {
 						<select name="swh_portal_theme">
 							<option value="auto" <?php selected( $portal_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follows system dark/light mode)', 'simple-wp-helpdesk' ); ?></option>
 							<option value="light" <?php selected( $portal_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode', 'simple-wp-helpdesk' ); ?></option>
+							<option value="dark" <?php selected( $portal_theme, 'dark' ); ?>><?php esc_html_e( 'Force dark mode', 'simple-wp-helpdesk' ); ?></option>
 						</select>
-						<p class="description"><?php esc_html_e( 'Controls whether the frontend helpdesk portal responds to the visitor\'s system dark/light mode preference. Set to "Force light mode" on sites that do not support dark mode.', 'simple-wp-helpdesk' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Controls whether the frontend helpdesk portal responds to the visitor\'s system dark/light mode preference, or forces a single theme regardless.', 'simple-wp-helpdesk' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Admin Theme', 'simple-wp-helpdesk' ); ?></th>
+					<td>
+						<?php $admin_theme = swh_get_string_option( 'swh_admin_theme', 'light' ); ?>
+						<select name="swh_admin_theme">
+							<option value="light" <?php selected( $admin_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode (recommended)', 'simple-wp-helpdesk' ); ?></option>
+							<option value="dark" <?php selected( $admin_theme, 'dark' ); ?>><?php esc_html_e( 'Force dark mode', 'simple-wp-helpdesk' ); ?></option>
+							<option value="auto" <?php selected( $admin_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follow WP admin color scheme)', 'simple-wp-helpdesk' ); ?></option>
+						</select>
+						<p class="description"><?php esc_html_e( 'Controls the appearance of helpdesk admin pages (inbox, drawer, settings, reports). Dark mode styling is partial in v4.0 — light is recommended; full dark variants ship in v4.1.', 'simple-wp-helpdesk' ); ?></p>
 					</td>
 				</tr>
 				<tr>
