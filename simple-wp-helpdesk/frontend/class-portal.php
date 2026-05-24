@@ -10,6 +10,113 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Enqueue Portal v2 assets. Called from swh_render_client_portal() so
+ * the bundle only loads on pages that actually render the portal.
+ *
+ * @since 4.0.0 (#354)
+ */
+function swh_portal_v2_enqueue_assets(): void {
+	$asset_file = SWH_PLUGIN_DIR . 'assets/dist/portal-v2.asset.php';
+	$deps       = array();
+	$version    = SWH_VERSION;
+	if ( file_exists( $asset_file ) ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+		if ( is_array( $asset ) ) {
+			if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+				$deps = array_values( array_filter( $asset['dependencies'], 'is_string' ) );
+			}
+			if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
+				$version = $asset['version'];
+			}
+		}
+	}
+
+	// wp-scripts names the CSS chunk after the SCSS filename (style.scss → style-portal-v2.css).
+	wp_enqueue_style(
+		'swh-portal-v2',
+		SWH_PLUGIN_URL . 'assets/dist/style-portal-v2.css',
+		array(),
+		$version
+	);
+	wp_enqueue_script(
+		'swh-portal-v2',
+		SWH_PLUGIN_URL . 'assets/dist/portal-v2.js',
+		$deps,
+		$version,
+		true
+	);
+}
+
+/**
+ * Render the messenger-style thread for Portal v2.
+ *
+ * Treats the ticket's post body as the first synthetic customer message,
+ * then loops over comment_type='helpdesk_reply' comments (skipping internal
+ * notes) in chronological order. Returns the rendered HTML as a string.
+ *
+ * @since 4.0.0 (#354)
+ *
+ * @param int $ticket_id The ticket post ID.
+ * @return string Rendered HTML, or empty string if the ticket doesn't exist.
+ */
+function swh_portal_render_thread( int $ticket_id ): string {
+	$post = get_post( $ticket_id );
+	if ( ! $post ) {
+		return '';
+	}
+
+	$meta_email     = get_post_meta( $ticket_id, '_ticket_email', true );
+	$customer_email = is_string( $meta_email ) ? $meta_email : '';
+
+	$messages = array(
+		array(
+			'id'       => 0,
+			'author'   => $customer_email,
+			'body'     => $post->post_content,
+			'date_gmt' => $post->post_date_gmt,
+			'is_staff' => false,
+		),
+	);
+
+	$comments = get_comments(
+		array(
+			'post_id' => $ticket_id,
+			'type'    => 'helpdesk_reply',
+			'orderby' => 'comment_date_gmt',
+			'order'   => 'ASC',
+		)
+	);
+
+	if ( is_array( $comments ) ) {
+		foreach ( $comments as $c ) {
+			if ( ! is_object( $c ) || ! property_exists( $c, 'comment_ID' ) ) {
+				continue;
+			}
+			$internal_meta = get_comment_meta( (int) $c->comment_ID, '_is_internal_note', true );
+			$is_internal   = is_string( $internal_meta ) && '1' === $internal_meta;
+			if ( $is_internal ) {
+				continue;
+			}
+			$messages[] = array(
+				'id'       => (int) $c->comment_ID,
+				'author'   => $c->comment_author,
+				'body'     => $c->comment_content,
+				'date_gmt' => $c->comment_date_gmt,
+				'is_staff' => (int) $c->user_id > 0,
+			);
+		}
+	}
+
+	ob_start();
+	foreach ( $messages as $msg ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/_message.php';
+	}
+	return (string) ob_get_clean();
+}
+
+/**
  * Renders the client portal view for a single ticket.
  *
  * Called from the router (swh_ticket_frontend or swh_helpdesk_portal_shortcode)
@@ -25,7 +132,7 @@ function swh_render_client_portal() {
 	$reopened_status = swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' );
 	$default_status  = swh_get_string_option( 'swh_default_status', is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : '' );
 	$spam_method     = swh_get_string_option( 'swh_spam_method', 'none' );
-	$theme_attr      = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
+	$theme_attr      = ( in_array( swh_get_string_option( 'swh_portal_theme', 'auto' ), array( 'light', 'dark' ), true ) ? ' data-swh-theme="' . esc_attr( swh_get_string_option( 'swh_portal_theme', 'auto' ) ) . '"' : '' );
 
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Token-based auth; params verified via hash_equals() below; isset() checked by callers.
 	$ticket_id = isset( $_GET['swh_ticket'] ) && is_scalar( $_GET['swh_ticket'] ) ? absint( $_GET['swh_ticket'] ) : 0;
@@ -61,7 +168,7 @@ function swh_render_client_portal() {
 		'status'     => swh_get_string_meta( $ticket_id, '_ticket_status' ),
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'ticket_url' => swh_get_secure_ticket_link( $ticket_id ),
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'message'    => '',
 	);
 
@@ -95,6 +202,7 @@ function swh_render_client_portal() {
 		);
 		if ( $comment_id ) {
 			update_comment_meta( $comment_id, '_is_user_reply', '1' );
+			update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 		}
 		swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 		$admin_email = swh_get_admin_email( $ticket_id );
@@ -149,6 +257,7 @@ function swh_render_client_portal() {
 			swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 			if ( $comment_id ) {
 				update_comment_meta( $comment_id, '_is_user_reply', '1' );
+				update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 				if ( ! empty( $attach_urls ) ) {
 					update_comment_meta( $comment_id, '_attachments', $attach_urls );
 					if ( ! empty( $reopen_orignames ) ) {
@@ -211,6 +320,7 @@ function swh_render_client_portal() {
 				swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
 				if ( $comment_id ) {
 					update_comment_meta( $comment_id, '_is_user_reply', '1' );
+					update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 					if ( ! empty( $attach_urls ) ) {
 						update_comment_meta( $comment_id, '_attachments', $attach_urls );
 						if ( ! empty( $reply_orignames ) ) {
@@ -219,6 +329,7 @@ function swh_render_client_portal() {
 					}
 					update_post_meta( $ticket_id, '_swh_unread', '1' );
 					delete_transient( 'swh_unread_count' );
+					\SWH\Concurrency\TicketVersion::bump( $ticket_id );
 				}
 				$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 				$admin_email     = swh_get_admin_email( $ticket_id );
@@ -240,172 +351,29 @@ function swh_render_client_portal() {
 			}
 		} // end anti-spam else
 	}
-	?>
-	<div class="swh-helpdesk-wrapper"<?php echo $theme_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string ?>>
-	<div class="swh-card">
-		<div style="float: right; font-weight: bold; color: #666; font-size: 1.2em;"><?php echo esc_html( $data['ticket_id'] ); ?></div>
-		<h1 class="swh-ticket-title"><?php echo esc_html( $data['title'] ); ?></h1>
-		<p style="margin: 0 0 15px 0;"><strong><?php esc_html_e( 'Status:', 'simple-wp-helpdesk' ); ?></strong> <span class="swh-badge <?php echo ( $closed_status === $data['status'] ) ? 'swh-badge-closed' : 'swh-badge-open'; ?>"><?php echo esc_html( $data['status'] ); ?></span>
-		&nbsp;|&nbsp; <strong><?php esc_html_e( 'Priority:', 'simple-wp-helpdesk' ); ?></strong> <?php echo esc_html( $data['priority'] ); ?></p>
-		<hr>
-		<p><?php echo nl2br( esc_html( $post->post_content ) ); ?></p>
-		<?php
-		$attachments = get_post_meta( $ticket_id, '_ticket_attachments', true );
-		if ( ! empty( $attachments ) && is_array( $attachments ) ) {
-			echo '<p><strong>' . esc_html__( 'Attachments:', 'simple-wp-helpdesk' ) . '</strong><br>';
-			foreach ( $attachments as $url ) {
-				if ( ! is_string( $url ) ) {
-					continue;
-				}
-				echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa;">' . esc_html( basename( $url ) ) . '</a>'; // nosemgrep -- $url from post meta (not $_REQUEST); esc_url() + esc_html() applied.
-			}
-			echo '</p>';
-		}
-		?>
-	</div>
-	<h2 class="swh-section-heading"><?php esc_html_e( 'Conversation History', 'simple-wp-helpdesk' ); ?></h2>
-	<div style="margin-bottom: 20px;">
-	<?php
-	$comments = get_comments(
-		array(
-			'post_id' => $ticket_id,
-			'order'   => 'ASC',
-			'type'    => 'helpdesk_reply',
-		)
-	);
-	$comments = is_array( $comments ) ? $comments : array();
-	if ( $comments ) {
-		foreach ( $comments as $comment ) {
-			if ( ! $comment instanceof WP_Comment ) {
-				continue;
-			}
-			if ( get_comment_meta( (int) $comment->comment_ID, '_is_internal_note', true ) ) {
-				continue;
-			}
-			$is_user = get_comment_meta( (int) $comment->comment_ID, '_is_user_reply', true );
-			/* translators: %s: technician name */
-			$author_name  = $is_user ? __( 'You', 'simple-wp-helpdesk' ) : sprintf( __( 'Technician (%s)', 'simple-wp-helpdesk' ), $comment->comment_author );
-			$bubble_class = $is_user ? 'swh-chat-user' : 'swh-chat-tech';
-			$attach_urls  = get_comment_meta( (int) $comment->comment_ID, '_attachments', true );
-			$reply_names  = get_comment_meta( (int) $comment->comment_ID, '_swh_reply_orignames', true );
-			$reply_names  = is_array( $reply_names ) ? $reply_names : array();
-			$gmt_str      = $comment->comment_date_gmt;
-			$utc_ts       = $gmt_str ? strtotime( $gmt_str . ' UTC' ) : false;
-			$utc_ts       = false !== $utc_ts ? $utc_ts : time();
-			$comment_iso  = gmdate( 'c', $utc_ts );
-			$comment_disp = swh_format_comment_date( $comment );
+	// v4.0.0 #354 — Portal v2 messenger layout.
+	$meta_status = get_post_meta( $ticket_id, '_ticket_status', true );
+	$meta_prio   = get_post_meta( $ticket_id, '_ticket_priority', true );
+	$title       = $post->post_title;
+	$status      = is_string( $meta_status ) ? $meta_status : '';
+	$priority    = is_string( $meta_prio ) ? $meta_prio : '';
+	// Only the explicit Closed status hides the "Close ticket" menu item.
+	// A Resolved ticket still shows "Close ticket" so the customer can
+	// confirm closure (matches legacy portal behavior). Case-insensitive
+	// because settings store "Closed" but swh_set_ticket_status writes
+	// the canonical lowercase form to the meta.
+	$is_closed = ( 0 === strcasecmp( $status, $closed_status ) );
 
-			echo '<div class="swh-chat-bubble ' . esc_attr( $bubble_class ) . '">';
-			echo '<strong style="display:block; margin-bottom: 5px;">' . esc_html( $author_name ) . ' <span style="font-weight:normal; font-size: 0.85em; color: #777;">(<time class="swh-timestamp" datetime="' . esc_attr( $comment_iso ) . '" title="' . esc_attr( $comment_disp ) . '">' . esc_html( $comment_disp ) . '</time>)</span></strong>';
-			echo nl2br( esc_html( $comment->comment_content ) );
-			if ( ! empty( $attach_urls ) && is_array( $attach_urls ) ) {
-				echo '<div style="margin-top: 10px;">';
-				foreach ( $attach_urls as $url ) {
-					if ( ! is_string( $url ) ) {
-						continue;
-					}
-					$rn    = isset( $reply_names[ $url ] ) && is_string( $reply_names[ $url ] ) ? $reply_names[ $url ] : '';
-					$label = $rn ? $rn : basename( $url );
-					echo '<a href="' . esc_url( swh_get_file_proxy_url( $url, $ticket_id ) ) . '" target="_blank" style="text-decoration: underline; margin-right:10px; color:#0073aa; font-size:13px;">' . esc_html( $label ) . '</a>'; // nosemgrep -- $url from comment meta (not $_REQUEST); esc_url() + esc_html() applied.
-				}
-				echo '</div>';
-			}
-			echo '</div>';
-		}
-	} else {
-		echo '<p>' . esc_html__( 'No replies yet.', 'simple-wp-helpdesk' ) . '</p>';
-	}
-	?>
-	</div>
-	<?php if ( $resolved_status === $data['status'] ) : ?>
-		<div class="swh-cta-primary">
-			<div class="swh-cta-primary-content">
-				<h3><?php esc_html_e( '&#10003; Your issue is resolved?', 'simple-wp-helpdesk' ); ?></h3>
-				<p><?php esc_html_e( 'Mark this ticket as closed once your issue is fully resolved.', 'simple-wp-helpdesk' ); ?></p>
-			</div>
-			<form method="POST" action="" style="margin:0;">
-				<?php wp_nonce_field( 'swh_user_close', 'swh_close_nonce' ); ?>
-				<input type="submit" name="swh_user_close_ticket_submit" value="<?php esc_attr_e( 'Close Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn">
-			</form>
-		</div>
-		<p class="swh-cta-secondary"><?php esc_html_e( 'Still need help?', 'simple-wp-helpdesk' ); ?> <a href="#swh-reply-text"><?php esc_html_e( 'Reply below &#8595;', 'simple-wp-helpdesk' ); ?></a></p>
-	<?php endif; ?>
-	<?php if ( $closed_status !== $data['status'] ) : ?>
-		<h2 class="swh-section-heading"><?php esc_html_e( 'Reply', 'simple-wp-helpdesk' ); ?></h2>
-		<form method="POST" action="" enctype="multipart/form-data">
-			<?php wp_nonce_field( 'swh_user_reply', 'swh_reply_nonce' ); ?>
-			<div class="swh-form-group">
-				<label for="swh-reply-text"><?php esc_html_e( 'Add a Reply:', 'simple-wp-helpdesk' ); ?></label>
-				<textarea id="swh-reply-text" name="ticket_reply_text" rows="4" class="swh-form-control"></textarea>
-			</div>
-			<div class="swh-form-group">
-				<label for="swh-reply-attachments"><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></label>
-				<input type="file" id="swh-reply-attachments" name="swh_user_reply_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
-				<small class="swh-text-muted" style="display:block; margin-top:5px;">
-				<?php
-					/* translators: 1: max upload size in MB, 2: max file count */
-					printf( esc_html__( 'Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: %1$sMB per file. Max files: %2$s.', 'simple-wp-helpdesk' ), esc_html( (string) swh_get_int_option( 'swh_max_upload_size', 5 ) ), esc_html( (string) swh_get_int_option( 'swh_max_upload_count', 5 ) ) );
-				?>
-				</small>
-			</div>
-			<?php
-			if ( 'honeypot' === $spam_method ) {
-				echo '<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true">' . esc_html__( 'Leave this empty', 'simple-wp-helpdesk' ) . '</label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>';
-			} elseif ( 'recaptcha' === $spam_method ) {
-				$key            = swh_get_string_option( 'swh_recaptcha_site_key' );
-				$recaptcha_type = swh_get_string_option( 'swh_recaptcha_type', 'v2' );
-				echo '<div id="swh-recaptcha-reply" style="margin-bottom: 15px;"></div>';
-				if ( 'enterprise' === $recaptcha_type ) {
-					// phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- External CDN script; null version is intentional.
-					wp_enqueue_script( 'google-recaptcha', 'https://www.google.com/recaptcha/enterprise.js?onload=swhRecaptchaLoad&render=explicit', array(), null, true );
-					wp_add_inline_script( 'google-recaptcha', 'window.swhRecaptchaLoad = function() { document.querySelectorAll("[id^=swh-recaptcha-]").forEach(function(el) { if(window.grecaptcha && !el.hasChildNodes()) { grecaptcha.enterprise.render(el.id, {"sitekey": "' . esc_js( $key ) . '"}); } }); };', 'before' );
-				} else {
-					// phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- External CDN script; null version is intentional.
-					wp_enqueue_script( 'google-recaptcha', 'https://www.google.com/recaptcha/api.js?onload=swhRecaptchaLoad&render=explicit', array(), null, true );
-					wp_add_inline_script( 'google-recaptcha', 'window.swhRecaptchaLoad = function() { document.querySelectorAll("[id^=swh-recaptcha-]").forEach(function(el) { if(window.grecaptcha && !el.hasChildNodes()) { grecaptcha.render(el.id, {"sitekey": "' . esc_js( $key ) . '"}); } }); };', 'before' );
-				}
-			} elseif ( 'turnstile' === $spam_method ) {
-				$key = swh_get_string_option( 'swh_turnstile_site_key' );
-				echo '<div id="swh-turnstile-reply" style="margin-bottom: 15px;"></div>';
-				// phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- External CDN script; null version is intentional.
-				wp_enqueue_script( 'cf-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=swhTurnstileLoad&render=explicit', array(), null, true );
-				wp_add_inline_script( 'cf-turnstile', 'window.swhTurnstileLoad = function() { document.querySelectorAll("[id^=swh-turnstile-]").forEach(function(el) { if(window.turnstile && !el.hasChildNodes()) { turnstile.render("#" + el.id, {sitekey: "' . esc_js( $key ) . '"}); } }); };', 'before' );
-			}
-			?>
-			<div class="swh-form-group">
-				<input type="submit" name="swh_user_reply_submit" value="<?php esc_attr_e( 'Send Reply', 'simple-wp-helpdesk' ); ?>" class="swh-btn">
-			</div>
-		</form>
-	<?php else : ?>
-		<div class="swh-alert swh-alert-error" role="alert">
-			<p style="margin-top: 0; font-weight: bold;"><?php esc_html_e( 'This ticket is closed.', 'simple-wp-helpdesk' ); ?></p>
-			<form method="POST" action="" enctype="multipart/form-data">
-				<?php wp_nonce_field( 'swh_user_reopen', 'swh_reopen_nonce' ); ?>
-				<div class="swh-form-group">
-					<label for="swh-reopen-text"><?php esc_html_e( 'Explain why you need this re-opened:', 'simple-wp-helpdesk' ); ?></label>
-					<textarea id="swh-reopen-text" name="ticket_reopen_text" rows="3" class="swh-form-control"></textarea>
-				</div>
-				<div class="swh-form-group">
-					<label for="swh-reopen-attachments"><?php esc_html_e( 'Attach Files (Optional):', 'simple-wp-helpdesk' ); ?></label>
-					<input type="file" id="swh-reopen-attachments" name="swh_reopen_attachments[]" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt" class="swh-form-control swh-file-input">
-					<small class="swh-text-muted" style="display:block; margin-top:5px;">
-					<?php
-						/* translators: 1: max upload size in MB, 2: max file count */
-						printf( esc_html__( 'Allowed file types: JPG, JPEG, PNG, GIF, PDF, DOC, DOCX, TXT. Max size: %1$sMB. Max files: %2$s.', 'simple-wp-helpdesk' ), esc_html( (string) swh_get_int_option( 'swh_max_upload_size', 5 ) ), esc_html( (string) swh_get_int_option( 'swh_max_upload_count', 5 ) ) );
-					?>
-					</small>
-				</div>
-				<?php if ( 'honeypot' === $spam_method ) : ?>
-					<div aria-hidden="true" style="clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px;"><label aria-hidden="true"><?php esc_html_e( 'Leave this empty', 'simple-wp-helpdesk' ); ?></label><input type="text" name="swh_website_url_hp" value="" tabindex="-1" autocomplete="off"></div>
-				<?php endif; ?>
-				<div class="swh-form-group">
-					<input type="submit" name="swh_user_reopen_submit" value="<?php esc_attr_e( 'Re-open Ticket', 'simple-wp-helpdesk' ); ?>" class="swh-btn swh-btn-danger">
-				</div>
-			</form>
-		</div>
-	<?php endif; ?>
-	</div> <!-- End .swh-helpdesk-wrapper -->
-	<?php
+	swh_portal_v2_enqueue_assets();
+
+	echo '<div class="swh-portal-v2 swh-helpdesk-wrapper">';
+	// @phpstan-ignore-next-line include.fileNotFound
+	include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/header.php';
+	// @phpstan-ignore-next-line include.fileNotFound
+	include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/thread.php';
+	// @phpstan-ignore-next-line include.fileNotFound
+	include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/composer.php';
+	echo '</div>';
 }
 
 /**
@@ -417,7 +385,7 @@ function swh_render_client_portal() {
  * @return void
  */
 function swh_render_portal_no_token() {
-	$theme_attr = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
+	$theme_attr = ( in_array( swh_get_string_option( 'swh_portal_theme', 'auto' ), array( 'light', 'dark' ), true ) ? ' data-swh-theme="' . esc_attr( swh_get_string_option( 'swh_portal_theme', 'auto' ) ) . '"' : '' );
 	echo '<div class="swh-helpdesk-wrapper"' . $theme_attr . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded attribute string
 
 	if ( is_user_logged_in() ) {
@@ -498,6 +466,348 @@ function swh_render_portal_no_token() {
 	}
 
 	echo '</div>';
+}
+
+// ── admin-post.php handlers for portal v2 actions ────────────────────────────
+// These are registered as nopriv so unauthenticated portal visitors can
+// submit without being redirected to wp-login.php.
+
+add_action( 'admin_post_nopriv_swh_portal_reply', 'swh_handle_portal_v2_reply' );
+add_action( 'admin_post_swh_portal_reply', 'swh_handle_portal_v2_reply' );
+
+/**
+ * Handles the portal v2 reply form submission (admin-post.php pathway).
+ *
+ * Validates the token, processes the reply, then redirects back to the portal.
+ * Mirrors the inline POST logic in swh_render_client_portal() for the reply case.
+ *
+ * @return void
+ */
+function swh_handle_portal_v2_reply() {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified via wp_verify_nonce() below.
+	$ticket_id = isset( $_POST['ticket_id'] ) && is_scalar( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+	$token     = sanitize_text_field( wp_unslash( isset( $_POST['token'] ) && is_string( $_POST['token'] ) ? $_POST['token'] : '' ) );
+	$nonce_val = sanitize_text_field( wp_unslash( isset( $_POST['swh_portal_reply_nonce'] ) && is_string( $_POST['swh_portal_reply_nonce'] ) ? $_POST['swh_portal_reply_nonce'] : '' ) );
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+	$post       = $ticket_id ? get_post( $ticket_id ) : null;
+	$db_token   = $ticket_id ? swh_get_string_meta( $ticket_id, '_ticket_token' ) : '';
+	$portal_url = $ticket_id ? swh_get_secure_ticket_link( $ticket_id ) : '';
+
+	if (
+		! $post ||
+		'helpdesk_ticket' !== $post->post_type ||
+		'' === $db_token ||
+		'' === $token ||
+		! hash_equals( $db_token, $token ) ||
+		! wp_verify_nonce( $nonce_val, 'swh_portal_reply' )
+	) {
+		wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
+	}
+
+	if ( swh_is_token_expired( $ticket_id ) ) {
+		wp_die( esc_html__( 'This link has expired. Please request a new link.', 'simple-wp-helpdesk' ), 403 );
+	}
+
+	$defs            = swh_get_defaults();
+	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
+	$reopened_status = swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' );
+	$meta_status     = swh_get_string_meta( $ticket_id, '_ticket_status' );
+	$meta_email      = swh_get_string_meta( $ticket_id, '_ticket_email' );
+	$ticket_name     = swh_get_string_meta( $ticket_id, '_ticket_name' );
+	$reply_text      = isset( $_POST['reply_body'] ) && is_string( $_POST['reply_body'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reply_body'] ) ) : '';
+
+	if ( swh_is_rate_limited( 'portal_reply_' . $ticket_id, 30 ) || ! $reply_text ) {
+		if ( $portal_url ) {
+			wp_safe_redirect( $portal_url );
+			exit;
+		}
+		wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 400 );
+	}
+
+	if ( swh_check_antispam( true ) ) {
+		if ( $portal_url ) {
+			wp_safe_redirect( $portal_url );
+			exit;
+		}
+		wp_die( esc_html__( 'Spam detected.', 'simple-wp-helpdesk' ), 403 );
+	}
+
+	if ( $resolved_status === $meta_status ) {
+		swh_set_ticket_status( $ticket_id, $reopened_status );
+		delete_post_meta( $ticket_id, '_resolved_timestamp' );
+	}
+
+	$comment_id = wp_insert_comment(
+		array(
+			'comment_post_ID'      => $ticket_id,
+			'comment_author'       => $ticket_name ? $ticket_name : 'Client',
+			'comment_author_email' => $meta_email,
+			'comment_content'      => $reply_text,
+			'comment_approved'     => 1,
+			'comment_type'         => 'helpdesk_reply',
+		)
+	);
+	if ( $comment_id && ! is_wp_error( $comment_id ) ) {
+		update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
+		// Process attachments from the portal v2 composer (input name="attachments[]").
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$attach_files = isset( $_FILES['attachments'] ) && is_array( $_FILES['attachments'] ) ? $_FILES['attachments'] : array();
+		$attach_names = null;
+		$skipped      = 0;
+		if ( isset( $attach_files['name'] ) && is_array( $attach_files['name'] ) && ! empty( $attach_files['name'][0] ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			$attach_urls = swh_handle_multiple_uploads( $attach_files, $attach_names, $skipped );
+			if ( ! empty( $attach_urls ) ) {
+				update_comment_meta( (int) $comment_id, '_attachments', $attach_urls );
+				if ( ! empty( $attach_names ) ) {
+					update_comment_meta( (int) $comment_id, '_swh_reply_orignames', $attach_names );
+				}
+			}
+		}
+		update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
+		update_post_meta( $ticket_id, '_swh_unread', '1' );
+		delete_transient( 'swh_unread_count' );
+		\SWH\Concurrency\TicketVersion::bump( $ticket_id );
+	}
+	swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
+
+	$data        = array(
+		'name'       => $ticket_name ? $ticket_name : 'Client',
+		'email'      => $meta_email,
+		'ticket_id'  => swh_get_string_meta( $ticket_id, '_ticket_uid' ),
+		'title'      => $post->post_title,
+		'status'     => $meta_status,
+		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
+		'ticket_url' => $portal_url,
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
+		'message'    => $reply_text,
+	);
+	$admin_email = swh_get_admin_email( $ticket_id );
+	swh_send_email( $admin_email, 'swh_em_admin_reply_sub', 'swh_em_admin_reply_body', $data );
+
+	// JS-driven fetch sends Accept: application/json — respond in kind so the
+	// frontend gets a clean success signal instead of following the redirect.
+	$accept_header = isset( $_SERVER['HTTP_ACCEPT'] ) && is_string( $_SERVER['HTTP_ACCEPT'] )
+		? sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) )
+		: '';
+	$xhr_header    = isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) && is_string( $_SERVER['HTTP_X_REQUESTED_WITH'] )
+		? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REQUESTED_WITH'] ) )
+		: '';
+	$wants_json    = ( false !== strpos( $accept_header, 'application/json' ) ) || ( 'XMLHttpRequest' === $xhr_header );
+	if ( $wants_json ) {
+		wp_send_json_success(
+			array(
+				'ticket_id'  => $ticket_id,
+				'comment_id' => (int) $comment_id,
+			)
+		);
+	}
+	if ( $portal_url ) {
+		wp_safe_redirect( $portal_url );
+		exit;
+	}
+	wp_die( esc_html__( 'Reply sent.', 'simple-wp-helpdesk' ) );
+}
+
+add_action( 'admin_post_nopriv_swh_portal_close', 'swh_handle_portal_v2_close' );
+add_action( 'admin_post_swh_portal_close', 'swh_handle_portal_v2_close' );
+
+/**
+ * Handles the portal v2 close-ticket action (admin-post.php pathway).
+ *
+ * @return void
+ */
+function swh_handle_portal_v2_close() {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified via wp_verify_nonce() below.
+	$ticket_id = isset( $_POST['ticket_id'] ) && is_scalar( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+	$token     = sanitize_text_field( wp_unslash( isset( $_POST['token'] ) && is_string( $_POST['token'] ) ? $_POST['token'] : '' ) );
+	$nonce_val = sanitize_text_field( wp_unslash( isset( $_POST['swh_portal_reply_nonce'] ) && is_string( $_POST['swh_portal_reply_nonce'] ) ? $_POST['swh_portal_reply_nonce'] : '' ) );
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+	$post       = $ticket_id ? get_post( $ticket_id ) : null;
+	$db_token   = $ticket_id ? swh_get_string_meta( $ticket_id, '_ticket_token' ) : '';
+	$portal_url = $ticket_id ? swh_get_secure_ticket_link( $ticket_id ) : '';
+
+	if (
+		! $post ||
+		'helpdesk_ticket' !== $post->post_type ||
+		'' === $db_token ||
+		'' === $token ||
+		! hash_equals( $db_token, $token ) ||
+		! wp_verify_nonce( $nonce_val, 'swh_portal_reply' )
+	) {
+		wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
+	}
+
+	if ( swh_is_rate_limited( 'portal_close_' . $ticket_id, 30 ) ) {
+		if ( $portal_url ) {
+			wp_safe_redirect( $portal_url );
+			exit;
+		}
+		wp_die( esc_html__( 'Please wait before submitting again.', 'simple-wp-helpdesk' ), 429 );
+	}
+
+	$defs          = swh_get_defaults();
+	$closed_status = swh_get_string_option( 'swh_closed_status', is_string( $defs['swh_closed_status'] ) ? $defs['swh_closed_status'] : '' );
+	$ticket_name   = swh_get_string_meta( $ticket_id, '_ticket_name' );
+	$meta_email    = swh_get_string_meta( $ticket_id, '_ticket_email' );
+
+	swh_set_ticket_status( $ticket_id, $closed_status );
+	delete_post_meta( $ticket_id, '_resolved_timestamp' );
+
+	$comment_id = wp_insert_comment(
+		array(
+			'comment_post_ID'      => $ticket_id,
+			'comment_author'       => $ticket_name ? $ticket_name : 'Client',
+			'comment_author_email' => $meta_email,
+			'comment_content'      => __( 'TICKET CLOSED BY CLIENT', 'simple-wp-helpdesk' ),
+			'comment_approved'     => 1,
+			'comment_type'         => 'helpdesk_reply',
+		)
+	);
+	if ( $comment_id && ! is_wp_error( $comment_id ) ) {
+		update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
+		update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
+	}
+	swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
+
+	$data        = array(
+		'name'       => $ticket_name ? $ticket_name : 'Client',
+		'email'      => $meta_email,
+		'ticket_id'  => swh_get_string_meta( $ticket_id, '_ticket_uid' ),
+		'title'      => $post->post_title,
+		'status'     => $closed_status,
+		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
+		'ticket_url' => $portal_url,
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
+		'message'    => '',
+	);
+	$admin_email = swh_get_admin_email( $ticket_id );
+	swh_send_email( $admin_email, 'swh_em_admin_closed_sub', 'swh_em_admin_closed_body', $data );
+	swh_send_email( $meta_email, 'swh_em_user_closed_sub', 'swh_em_user_closed_body', $data );
+
+	if ( $portal_url ) {
+		wp_safe_redirect( $portal_url );
+		exit;
+	}
+	wp_die( esc_html__( 'Ticket closed.', 'simple-wp-helpdesk' ) );
+}
+
+add_action( 'admin_post_nopriv_swh_portal_reopen', 'swh_handle_portal_v2_reopen' );
+add_action( 'admin_post_swh_portal_reopen', 'swh_handle_portal_v2_reopen' );
+
+/**
+ * Handles the portal v2 reopen-ticket action (admin-post.php pathway).
+ *
+ * @return void
+ */
+function swh_handle_portal_v2_reopen() {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified via wp_verify_nonce() below.
+	$ticket_id = isset( $_POST['ticket_id'] ) && is_scalar( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+	$token     = sanitize_text_field( wp_unslash( isset( $_POST['token'] ) && is_string( $_POST['token'] ) ? $_POST['token'] : '' ) );
+	$nonce_val = sanitize_text_field( wp_unslash( isset( $_POST['swh_portal_reply_nonce'] ) && is_string( $_POST['swh_portal_reply_nonce'] ) ? $_POST['swh_portal_reply_nonce'] : '' ) );
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+	$post       = $ticket_id ? get_post( $ticket_id ) : null;
+	$db_token   = $ticket_id ? swh_get_string_meta( $ticket_id, '_ticket_token' ) : '';
+	$portal_url = $ticket_id ? swh_get_secure_ticket_link( $ticket_id ) : '';
+
+	if (
+		! $post ||
+		'helpdesk_ticket' !== $post->post_type ||
+		'' === $db_token ||
+		'' === $token ||
+		! hash_equals( $db_token, $token ) ||
+		! wp_verify_nonce( $nonce_val, 'swh_portal_reply' )
+	) {
+		wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
+	}
+
+	if ( swh_is_rate_limited( 'portal_reopen_' . $ticket_id, 30 ) ) {
+		if ( $portal_url ) {
+			wp_safe_redirect( $portal_url );
+			exit;
+		}
+		wp_die( esc_html__( 'Please wait before submitting again.', 'simple-wp-helpdesk' ), 429 );
+	}
+
+	$defs            = swh_get_defaults();
+	$reopened_status = swh_get_string_option( 'swh_reopened_status', is_string( $defs['swh_reopened_status'] ) ? $defs['swh_reopened_status'] : '' );
+	$ticket_name     = swh_get_string_meta( $ticket_id, '_ticket_name' );
+	$meta_email      = swh_get_string_meta( $ticket_id, '_ticket_email' );
+
+	swh_set_ticket_status( $ticket_id, $reopened_status );
+	delete_post_meta( $ticket_id, '_resolved_timestamp' );
+
+	$comment_id = wp_insert_comment(
+		array(
+			'comment_post_ID'      => $ticket_id,
+			'comment_author'       => $ticket_name ? $ticket_name : 'Client',
+			'comment_author_email' => $meta_email,
+			'comment_content'      => __( 'TICKET RE-OPENED BY CLIENT', 'simple-wp-helpdesk' ),
+			'comment_approved'     => 1,
+			'comment_type'         => 'helpdesk_reply',
+		)
+	);
+	if ( $comment_id && ! is_wp_error( $comment_id ) ) {
+		update_comment_meta( (int) $comment_id, '_is_user_reply', '1' );
+		update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
+		update_post_meta( $ticket_id, '_swh_unread', '1' );
+		delete_transient( 'swh_unread_count' );
+	}
+	swh_fire_ticket_replied( $ticket_id, $comment_id, 0 );
+
+	$data        = array(
+		'name'       => $ticket_name ? $ticket_name : 'Client',
+		'email'      => $meta_email,
+		'ticket_id'  => swh_get_string_meta( $ticket_id, '_ticket_uid' ),
+		'title'      => $post->post_title,
+		'status'     => $reopened_status,
+		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
+		'ticket_url' => $portal_url,
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
+		'message'    => '',
+	);
+	$admin_email = swh_get_admin_email( $ticket_id );
+	swh_send_email( $admin_email, 'swh_em_admin_reopen_sub', 'swh_em_admin_reopen_body', $data );
+	swh_send_email( $meta_email, 'swh_em_user_reopen_sub', 'swh_em_user_reopen_body', $data );
+
+	if ( $portal_url ) {
+		wp_safe_redirect( $portal_url );
+		exit;
+	}
+	wp_die( esc_html__( 'Ticket re-opened.', 'simple-wp-helpdesk' ) );
+}
+
+add_action( 'admin_post_nopriv_swh_portal_csat', 'swh_handle_portal_v2_csat' );
+add_action( 'admin_post_swh_portal_csat', 'swh_handle_portal_v2_csat' );
+
+/**
+ * Handles the portal v2 CSAT menu action — opens portal with CSAT widget visible.
+ *
+ * The CSAT widget already renders via AJAX (wp_ajax_nopriv_swh_submit_csat).
+ * This handler just redirects to the portal URL so the menu action has somewhere
+ * to go; the actual rating is submitted via the existing AJAX endpoint.
+ *
+ * @return void
+ */
+function swh_handle_portal_v2_csat() {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- token auth only; no nonce needed for redirect.
+	$ticket_id = isset( $_POST['ticket_id'] ) && is_scalar( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+	$token     = sanitize_text_field( wp_unslash( isset( $_POST['token'] ) && is_string( $_POST['token'] ) ? $_POST['token'] : '' ) );
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+	$post     = $ticket_id ? get_post( $ticket_id ) : null;
+	$db_token = $ticket_id ? swh_get_string_meta( $ticket_id, '_ticket_token' ) : '';
+	if ( ! $post || '' === $db_token || '' === $token || ! hash_equals( $db_token, $token ) ) {
+		wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
+	}
+	$portal_url = swh_get_secure_ticket_link( $ticket_id );
+	if ( $portal_url ) {
+		wp_safe_redirect( $portal_url );
+		exit;
+	}
+	wp_die( esc_html__( 'Invalid request.', 'simple-wp-helpdesk' ), 403 );
 }
 
 /**

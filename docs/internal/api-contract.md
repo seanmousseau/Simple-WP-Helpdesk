@@ -69,23 +69,31 @@ See `docs/developer/hooks.md` for usage examples and full documentation.
 
 Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 
-| Hook | Signature | Purpose | Location |
-|---|---|---|---|
-| `swh_ticket_statuses` | `(string[] $statuses) -> string[]` | Override the available ticket status labels. | `includes/helpers.php:278` |
-| `swh_ticket_priorities` | `(string[] $priorities) -> string[]` | Override the available priority labels. | `includes/helpers.php:296` |
-| `swh_allowed_file_types` | `(string[] $extensions) -> string[]` | Override the upload extension allowlist (default `jpg, jpeg, jpe, png, gif, pdf, doc, docx, txt`). Applied at both submit and reply upload paths. | `frontend/class-shortcode.php:57, 517` |
-| `swh_submission_data` | `(array $data) -> array` | Mutate sanitized submission fields before insert. Fires after sanitization, before `swh_pre_ticket_create`. | `frontend/class-shortcode.php:186` |
-| `swh_autoclose_threshold` | `(int $days) -> int` | Override the auto-close threshold (default `swh_autoclose_days` option). | `includes/class-cron.php:51` |
-| `swh_sla_open_statuses` | `(string[] $statuses) -> string[]` | Statuses considered "open" by the SLA cron. | `includes/class-cron.php:343` |
-| `swh_rate_limit_ttl` | `(int $ttl, string $action) -> int` | Override the rate-limit TTL per action. | `includes/helpers.php:785` |
-| `swh_parse_template` | `(string $rendered, array $data) -> string` | Post-process a parsed email template body or subject. | `includes/class-email.php:69` |
-| `swh_email_headers` | `(string[] $headers, string $to, string $subject) -> string[]` | Add or replace email headers. Canonical place to add Reply-To, BCC, or X-* headers. | `includes/class-email.php:109` |
+| Hook | Signature | Purpose | Since | Deprecated | Location |
+|---|---|---|---|---|---|
+| `swh_ticket_statuses` | `(string[] $statuses) -> string[]` | Override the available ticket status labels. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/helpers.php` |
+| `swh_ticket_priorities` | `(string[] $priorities) -> string[]` | Override the available priority labels. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/helpers.php` |
+| `swh_allowed_file_types` | `(string[] $extensions) -> string[]` | Override the upload extension allowlist (default `jpg, jpeg, jpe, png, gif, pdf, doc, docx, txt`). Applied at both submit and reply upload paths. | pre-3.0 | 4.0 (removal target: 4.2) | `frontend/class-shortcode.php` (2 sites) |
+| `swh_submission_data` | `(array $data) -> array` | Mutate sanitized submission fields before insert. Fires after sanitization, before `swh_pre_ticket_create`. | pre-3.0 | 4.0 (removal target: 4.2) | `frontend/class-shortcode.php` |
+| `swh_autoclose_threshold` | `(int $days) -> int` | Override the auto-close threshold (default `swh_autoclose_days` option). | pre-3.0 | 4.0 (removal target: 4.2) | `includes/class-cron.php` |
+| `swh_rate_limit_ttl` | `(int $ttl, string $action) -> int` | Override the rate-limit TTL per action. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/helpers.php` |
+| `swh_parse_template` | `(string $rendered, array $data) -> string` | Post-process a parsed email template body or subject. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/class-email.php` |
+| `swh_email_headers` | `(string[] $headers, string $to, string $subject) -> string[]` | Add or replace email headers. Canonical place to add Reply-To, BCC, or X-* headers. | pre-3.0 | 4.0 (removal target: 4.2) | `includes/class-email.php` |
+| `swh_sla_open_statuses` | `(string[] $statuses) -> string[]` | Statuses considered "open" by the SLA cron. | post-3.0 | — | `includes/class-cron.php` |
+
+**Note:** 8 of the 9 filters listed above were wrapped in `swh_apply_deprecated_filter()` in v4.0.0 (#360). They continue to fire for existing listeners (back-compat preserved) but emit `_doing_it_wrong` notices in `WP_DEBUG` environments. Earliest removal: v4.2. `swh_sla_open_statuses` is post-3.0 and remains supported.
 
 ## REST endpoints
 
 | Method | Path | Auth | Body | Response |
 |---|---|---|---|---|
 | `POST` | `/wp-json/swh/v1/inbound-email` | `Authorization: Bearer <swh_inbound_secret>` header. `permission_callback` is `__return_true` (auth enforced inside the handler). | Parsed-email JSON; the handler reads `from`, `subject`, `body`. Subject must contain `[TKT-XXXX]`. Sender email is compared to `_ticket_email` of the matched ticket via `hash_equals`. | `200` on accepted reply; `4xx` on auth / parse / match failure. |
+| `POST` | `/wp-json/swh/v1/bulk-action` | `edit_posts` | `{ action, params, ticket_ids[], version_map{} }` | `{ succeeded[], conflicts: [{ id, version_now }] }`. Cap: 200 tickets. Introduced 4.0.0 #353. |
+| `GET` | `/wp-json/swh/v1/palette/suggest` | `edit_posts` | — | `{ tickets: [{ id, title, status }] }`. Param `q` (string). Up to 8 results. Introduced 4.0.0 #351. |
+| `GET` | `/wp-json/swh/v1/views` | `edit_posts` | — | `{ views: [{ id, name, scope, filters, sort, columns }] }`. Introduced 4.0.0 #352. |
+| `POST` | `/wp-json/swh/v1/views` | `edit_posts` (personal) / `manage_options` (global) | `{ name, scope, filters, sort, columns }` | `{ view }` at 201. Introduced 4.0.0 #352. |
+| `PATCH` | `/wp-json/swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | `{ scope, patch }` | `{ view }` at 200. Introduced 4.0.0 #352. |
+| `DELETE` | `/wp-json/swh/v1/views/{id}` | `edit_posts` (personal) / `manage_options` (global) | — | `{ deleted: bool }`. Param: `scope`. Introduced 4.0.0 #352. |
 
 Registered at `simple-wp-helpdesk/simple-wp-helpdesk.php:213`. Handler at `simple-wp-helpdesk/includes/class-email.php:222`.
 
@@ -101,6 +109,13 @@ Registered at `simple-wp-helpdesk/simple-wp-helpdesk.php:213`. Handler at `simpl
 | `wp_ajax_swh_merge_ticket` | `manage_options` + nonce | Admin-only ticket merge. **Internal.** |
 | `wp_ajax_swh_send_test_email` | `manage_options` + nonce | Admin-only test email sender. **Internal.** |
 | `wp_ajax_swh_report_data` | `manage_options` + nonce | Reporting data fetch with transient caching. **Internal.** |
+
+> **Reports v2 (#359):** `swh_report_data` action accepts optional params:
+> - `range_start`, `range_end` (ISO `Y-m-d` dates) — constrain the reporting window.
+> - `compare_to_prior` (`1`/`0`; default `1`) — compute prior-period data.
+>
+> Response shape extends with `range`, `prior`, and `prior_range` keys when range params are supplied.
+> Existing callers that ignore those keys keep working. Transient cache is bypassed when a custom range is provided.
 
 Registered:
 
@@ -120,6 +135,8 @@ Both shortcodes are dispatched by the same handler `swh_submit_ticket_shortcode(
 | `[submit_ticket]` | `default_status` | `Open` (from `swh_default_status`) | Pre-set the new ticket status on save. |
 | `[submit_ticket]` | `show_lookup` | `yes` | Show/hide the "lost your link?" lookup form below the submit form. |
 | `[helpdesk_portal]` | (same attributes) | | When the URL lacks a `token`, renders either the My Tickets dashboard (logged-in users) or the lookup form (guests). |
+
+> **Portal v2 (#354):** Portal v2 moves reply/close/reopen from inline PHP POST handling (same page) to dedicated `admin-post.php` handlers registered as both `admin_post_nopriv_*` and `admin_post_*`: `swh_portal_reply`, `swh_portal_close`, `swh_portal_reopen`, `swh_portal_csat`. All require `ticket_id` + `token` (verified via `hash_equals`) and `swh_portal_reply_nonce` (verified via `wp_verify_nonce`). On success, each handler does `wp_safe_redirect` back to the portal URL. The reply form field is `reply_body`; the nonce field is `swh_portal_reply_nonce`. The v2 JS sends the reply via `fetch()` optimistically and falls back to a standard full-page form submit if JS is unavailable.
 
 ## Constants
 

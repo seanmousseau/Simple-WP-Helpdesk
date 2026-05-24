@@ -48,6 +48,8 @@ Cited from `grep -rEon "(update|get|delete)_post_meta\(...\)"` on `simple-wp-hel
 | `_ticket_template` | string | optional | Label of the ticket template selected at submission. | 3.0.0 |
 | `_ticket_csat` | int (1–5) | optional | Client satisfaction rating; not set if the client dismisses the prompt. Written by the `swh_submit_csat` AJAX handler. | 3.0.0 |
 | `_swh_unread` | string (`'1'`) | optional | Set to `'1'` when a client posts a reply; cleared when admin opens the ticket. Pairs with the `swh_unread_count` transient (see invariant #17). | 3.1.0 |
+| `_swh_last_activity_at` | int (unix ts) | optional | Updated on every status change and reply insert. Used by the inbox to sort by recency. Written by `swh_set_ticket_status()` and the three user-visible reply paths. | 4.0.0 (#349) |
+| `_swh_version` | int | absent on pre-4.0 tickets (treated as 1 by `TicketVersion::current()`) | Optimistic-concurrency version counter. **Every user-visible ticket mutation MUST bump this** (invariant #18) — use `TicketVersion::bump()`. Mismatch with client-supplied `expected_version` returns 409 from the REST drawer endpoints. New in 4.0.0; absent on pre-4.0 tickets is expected and safe. See invariant #18. | 4.0.0 (#350) |
 | `_edit_lock` | string | WP core | WordPress's own concurrent-edit lock. Not owned by this plugin. | WP core |
 
 ## Comment meta keys
@@ -60,6 +62,15 @@ Comments carry these meta when `comment_type='helpdesk_reply'`:
 | `_is_user_reply` | string (`'1'`) | optional | Marks a portal-side or inbound-email reply (i.e. came from the client, not staff). Used by reporting to attribute first-response time correctly. | 2.0.0 |
 | `_swh_reply_orignames` | array<string,string> | optional | Per-comment map of attachment URL → original filename for replies and reopens. Falls back to `basename($url)` if missing. | 2.3.0 |
 | `_attachments` | string[] (URLs) | optional | Attachment URLs on the reply comment. | 1.0 |
+
+## User meta keys
+
+Per-user data stored in `wp_usermeta`.
+
+| Key | Type | Purpose | Capability | Since |
+|---|---|---|---|---|
+| `swh_personal_views` | array | Per-user saved views (`{ id, name, filters, sort, columns }`). Managed via `ViewsRepository::save_personal()` / `update_personal()` / `delete_personal()`. | `edit_posts` | 4.0.0 (#352) |
+| `swh_hidden_global_views` | array | List of global view ids the user has hidden from their left rail. Managed via `ViewsRepository::set_hidden_for_user()`. | `edit_posts` (self) | 4.0.0 (#352) |
 
 ## Options
 
@@ -83,8 +94,24 @@ Categories:
 
 Additionally:
 
-- `swh_db_version` — installed plugin version; updated by `swh_run_upgrade_routine()` at `class-installer.php:147`. **Not** in `swh_get_defaults()` and **excluded** from bulk operations (`swh_get_all_option_keys()` filters it out).
+- `swh_db_version` — installed plugin version; updated by `swh_run_upgrade_routine()` at `class-installer.php:147` AND by `\SWH\Settings\Migration::run()` (v4.0.0+, sets to `'4.0.0'` after grouped-options migration). **Not** in `swh_get_defaults()` and **excluded** from bulk operations (`swh_get_all_option_keys()` filters it out).
+- `swh_global_views` — array of admin-managed global saved views (`{ id, name, filters, sort, columns }`). Managed via `ViewsRepository::save_global()` / `update_global()` / `delete_global()`. Requires `manage_options`. Introduced 4.0.0 (#352).
 - `swh_comment_type_v2`, `swh_tech_caps_v2` — one-time migration flags. Cleaned on uninstall.
+
+### Grouped settings (v4.0.0+) — `swh_settings_<group>`
+
+Storage shape introduced by #356. Each group is a single top-level option holding an array of setting key → value pairs. Reads via `swh_get_option( $group, $key, $default )`; writes via `swh_set_option( $group, $key, $value )`. Both helpers live in `simple-wp-helpdesk/includes/helpers.php`. A one-shot upgrade routine in `simple-wp-helpdesk/src/Settings/Migration.php` runs on `plugins_loaded` priority 5, seeds the bags from legacy flat options, and bumps `swh_db_version` to `'4.0.0'`. Idempotent. Legacy flat `swh_<key>` options REMAIN in storage after migration (forward-only policy — they become dead reads but allow rollback to v3.7).
+
+| Option | Type | Contents |
+|---|---|---|
+| `swh_settings_general` | array | Statuses, priorities, autoclose, upload limits, user-facing messages. |
+| `swh_settings_general.use_violet_theme` | bool | Opt-in for the v4.0 Violet theme. Default `false`. Toggled by site admins at Settings → General → Appearance. Introduced 4.0.0 (#355). |
+| `swh_settings_email` | array | Email format, logo URL, 14+ template subject/body pairs (user + admin). |
+| `swh_settings_portal` | array | `portal_theme` (auto/light). Other portal settings are scaffolded but unused as of 4.0.0. |
+| `swh_settings_notifications` | array | NOT seeded by the 4.0.0 migration — no call sites or defaults today. Future work. |
+| `swh_settings_tools` | array | Spam method, reCAPTCHA/Turnstile keys, retention windows, delete-on-uninstall, canned responses, ticket templates, SLA thresholds. |
+| `swh_settings_routing` | array | Default assignee, fallback email, ticket page id, token TTL, restrict-to-assigned, assignment rules. |
+| `swh_settings_integrations` | array | `inbound_secret`. Outbound webhook config in v4.2+. |
 
 ## Transients
 

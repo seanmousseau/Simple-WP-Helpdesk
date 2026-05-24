@@ -69,9 +69,44 @@ function swh_enqueue_reporting_assets( $hook ) {
 		'swh-reports',
 		'swhReports',
 		array(
-			'ajaxurl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'swh_report_data' ),
+			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
+			'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+			'nonce'    => wp_create_nonce( 'swh_report_data' ),
+			'inboxUrl' => admin_url( 'edit.php?post_type=helpdesk_ticket' ),
 		)
+	);
+
+	// reports-v2 bundle: range selector + delta chips + drill-down (#359).
+	$rv2_asset_file = SWH_PLUGIN_DIR . 'assets/dist/reports-v2.asset.php';
+	$rv2_deps       = array();
+	$rv2_version    = SWH_VERSION;
+	if ( file_exists( $rv2_asset_file ) ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		$rv2_asset = include $rv2_asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+		if ( is_array( $rv2_asset ) ) {
+			if ( isset( $rv2_asset['dependencies'] ) && is_array( $rv2_asset['dependencies'] ) ) {
+				$rv2_deps = function_exists( 'swh_filter_known_script_deps' )
+					? swh_filter_known_script_deps( $rv2_asset['dependencies'] )
+					: array();
+			}
+			if ( isset( $rv2_asset['version'] ) && is_string( $rv2_asset['version'] ) ) {
+				$rv2_version = $rv2_asset['version'];
+			}
+		}
+	}
+	wp_enqueue_script(
+		'swh-reports-v2',
+		SWH_PLUGIN_URL . 'assets/dist/reports-v2.js',
+		$rv2_deps,
+		$rv2_version,
+		true
+	);
+	// wp-scripts emits CSS from SCSS as style-<entry>[-rtl].css.
+	wp_enqueue_style(
+		'swh-reports-v2',
+		SWH_PLUGIN_URL . 'assets/dist/style-reports-v2.css',
+		array(),
+		$rv2_version
 	);
 }
 
@@ -90,19 +125,44 @@ function swh_render_reports_page() {
 		<a class="swh-skip-link" href="#swh-main-content"><?php esc_html_e( 'Skip to report content', 'simple-wp-helpdesk' ); ?></a>
 		<h1><?php esc_html_e( 'Helpdesk Reports', 'simple-wp-helpdesk' ); ?></h1>
 		<div id="swh-main-content" tabindex="-1">
+		<div class="swh-reports-range-bar" role="toolbar" aria-label="<?php esc_attr_e( 'Reporting time range', 'simple-wp-helpdesk' ); ?>">
+			<div class="swh-range-buttons" role="group">
+				<button type="button" class="swh-range-btn" data-range="7d"><?php esc_html_e( '7d', 'simple-wp-helpdesk' ); ?></button>
+				<button type="button" class="swh-range-btn is-active" data-range="30d"><?php esc_html_e( '30d', 'simple-wp-helpdesk' ); ?></button>
+				<button type="button" class="swh-range-btn" data-range="90d"><?php esc_html_e( '90d', 'simple-wp-helpdesk' ); ?></button>
+				<button type="button" class="swh-range-btn" data-range="ytd"><?php esc_html_e( 'YTD', 'simple-wp-helpdesk' ); ?></button>
+				<button type="button" class="swh-range-btn" data-range="custom"><?php esc_html_e( 'Custom', 'simple-wp-helpdesk' ); ?></button>
+			</div>
+			<div class="swh-range-custom" hidden>
+				<label><?php esc_html_e( 'From', 'simple-wp-helpdesk' ); ?>
+					<input type="date" class="swh-range-from" />
+				</label>
+				<label><?php esc_html_e( 'To', 'simple-wp-helpdesk' ); ?>
+					<input type="date" class="swh-range-to" />
+				</label>
+				<button type="button" class="button swh-range-apply"><?php esc_html_e( 'Apply', 'simple-wp-helpdesk' ); ?></button>
+			</div>
+			<div class="swh-range-label">
+				<?php esc_html_e( 'Period:', 'simple-wp-helpdesk' ); ?>
+				<span class="swh-range-current" data-current>—</span>
+				<?php esc_html_e( 'vs prior:', 'simple-wp-helpdesk' ); ?>
+				<span class="swh-range-prior" data-prior>—</span>
+			</div>
+		</div>
 		<div class="swh-kpi-grid" id="swh-kpi-grid" aria-label="<?php esc_attr_e( 'Key performance indicators', 'simple-wp-helpdesk' ); ?>" aria-busy="true">
-			<div class="swh-kpi-card">
+			<?php $swh_inbox_base = admin_url( 'edit.php?post_type=helpdesk_ticket' ); ?>
+			<a class="swh-kpi-card" href="<?php echo esc_url( $swh_inbox_base ); ?>" title="<?php esc_attr_e( 'View all tickets', 'simple-wp-helpdesk' ); ?>">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zM4 8V6h16v2H4z"/></svg>
 				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-total-skeleton" aria-hidden="true"></div>
 				<div data-metric="total" aria-live="polite" aria-atomic="true"><p class="swh-kpi-value" id="swh-kpi-total" hidden>&mdash;</p></div>
 				<p class="swh-kpi-label"><?php esc_html_e( 'Total Tickets', 'simple-wp-helpdesk' ); ?></p>
-			</div>
-			<div class="swh-kpi-card swh-kpi-card--warning">
+			</a>
+			<a class="swh-kpi-card swh-kpi-card--warning" href="<?php echo esc_url( $swh_inbox_base . '#filter=status:open' ); ?>" title="<?php esc_attr_e( 'View open tickets', 'simple-wp-helpdesk' ); ?>">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
 				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-open-skeleton" aria-hidden="true"></div>
 				<div data-metric="open" aria-live="polite" aria-atomic="true"><p class="swh-kpi-value" id="swh-kpi-open" hidden>&mdash;</p></div>
 				<p class="swh-kpi-label"><?php esc_html_e( 'Open Tickets', 'simple-wp-helpdesk' ); ?></p>
-			</div>
+			</a>
 			<div class="swh-kpi-card swh-kpi-card--success">
 				<svg class="swh-kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm.75 14.5h-1.5V11h1.5v5.5zm0-7h-1.5V8h1.5v1.5z"/></svg>
 				<div class="swh-skeleton swh-kpi-skeleton" id="swh-kpi-resolution-skeleton" aria-hidden="true"></div>
@@ -117,24 +177,38 @@ function swh_render_reports_page() {
 			</div>
 		</div>
 		<div class="swh-report-grid">
-			<div class="swh-report-card" id="swh-report-card-status" aria-busy="true">
-				<h2><?php esc_html_e( 'Tickets by Status', 'simple-wp-helpdesk' ); ?></h2>
+			<div class="swh-report-card" id="swh-report-card-status" data-report-type="status_breakdown" data-filter-key="status" aria-busy="true">
+				<header class="swh-report-card-header">
+					<h2><?php esc_html_e( 'Tickets by Status', 'simple-wp-helpdesk' ); ?></h2>
+					<span class="swh-report-delta" data-delta-for="status_breakdown">—</span>
+				</header>
 				<div class="swh-skeleton swh-chart-skeleton" id="swh-chart-status-skeleton" aria-hidden="true"></div>
-				<canvas id="swh-chart-status" height="200" hidden></canvas>
+				<div class="swh-report-chart" id="swh-chart-status-wrap" data-clickable="1">
+					<canvas id="swh-chart-status" height="200" hidden></canvas>
+				</div>
 				<p id="swh-chart-status-empty" class="swh-chart-empty" hidden><?php esc_html_e( 'No ticket data yet.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
-			<div class="swh-report-card" id="swh-report-card-trend" aria-busy="true">
-				<h2><?php esc_html_e( 'Weekly Trend (8 Weeks)', 'simple-wp-helpdesk' ); ?></h2>
+			<div class="swh-report-card" id="swh-report-card-trend" data-report-type="weekly_trend" aria-busy="true">
+				<header class="swh-report-card-header">
+					<h2><?php esc_html_e( 'Weekly Trend (8 Weeks)', 'simple-wp-helpdesk' ); ?></h2>
+					<span class="swh-report-delta" data-delta-for="weekly_trend">—</span>
+				</header>
 				<div class="swh-skeleton swh-chart-skeleton" id="swh-chart-trend-skeleton" aria-hidden="true"></div>
 				<canvas id="swh-chart-trend" height="200" hidden></canvas>
 				<p id="swh-chart-trend-empty" class="swh-chart-empty" hidden><?php esc_html_e( 'No ticket data yet.', 'simple-wp-helpdesk' ); ?></p>
 			</div>
-			<div class="swh-report-card">
-				<h2><?php esc_html_e( 'Avg. Resolution Time (30 Days)', 'simple-wp-helpdesk' ); ?></h2>
+			<div class="swh-report-card" data-report-type="avg_resolution_time">
+				<header class="swh-report-card-header">
+					<h2><?php esc_html_e( 'Avg. Resolution Time (30 Days)', 'simple-wp-helpdesk' ); ?></h2>
+					<span class="swh-report-delta" data-delta-for="avg_resolution_time">—</span>
+				</header>
 				<p id="swh-avg-resolution" class="swh-stat-value">&mdash;</p>
 			</div>
-			<div class="swh-report-card">
-				<h2><?php esc_html_e( 'Avg. First Response Time (30 Days)', 'simple-wp-helpdesk' ); ?></h2>
+			<div class="swh-report-card" data-report-type="first_response_time">
+				<header class="swh-report-card-header">
+					<h2><?php esc_html_e( 'Avg. First Response Time (30 Days)', 'simple-wp-helpdesk' ); ?></h2>
+					<span class="swh-report-delta" data-delta-for="first_response_time">—</span>
+				</header>
 				<p id="swh-avg-first-response" class="swh-stat-value">&mdash;</p>
 			</div>
 		</div>

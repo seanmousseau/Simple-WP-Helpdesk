@@ -20,7 +20,19 @@ class EmailTest extends TestCase {
 	public function setUp(): void {
 		parent::setUp();
 		require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+		require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 		require_once SWH_PLUGIN_DIR . 'includes/class-email.php';
+
+		// swh_parse_template / swh_email_headers now route through
+		// swh_apply_deprecated_filter() (v4.0.0 #360), which calls
+		// apply_filters_deprecated(). Stub it to mirror the apply_filters
+		// behavior these tests expect: return the first arg unchanged.
+		WP_Mock::userFunction( 'apply_filters_deprecated' )
+			->andReturnUsing(
+				static function ( $hook, $args ) {
+					return $args[0];
+				}
+			);
 	}
 
 	// -------------------------------------------------------------------------
@@ -157,14 +169,9 @@ class EmailTest extends TestCase {
 	// -------------------------------------------------------------------------
 
 	/** Apply_filters result is returned (filter can modify output). */
-	public function test_apply_filters_result_returned(): void {
-		$data = array( 'name' => 'Alice' );
-
-		WP_Mock::onFilter( 'swh_parse_template' )
-			->with( 'Hello Alice!', $data )
-			->reply( 'FILTERED' );
-
-		$result = swh_parse_template( 'Hello {name}!', $data );
-		$this->assertSame( 'FILTERED', $result );
-	}
+	// Removed in v4.0.0 #360: test_apply_filters_result_returned previously
+	// verified `apply_filters( 'swh_parse_template', ... )` honored listener
+	// overrides. swh_parse_template now routes through swh_apply_deprecated_filter()
+	// → apply_filters_deprecated(). The "listeners still fire" guarantee is now
+	// covered by tests/Unit/Deprecations/Pre30FiltersDeprecatedTest.php.
 }

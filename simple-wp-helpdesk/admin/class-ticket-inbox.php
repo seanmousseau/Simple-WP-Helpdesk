@@ -1,0 +1,134 @@
+<?php
+/**
+ * Admin Tickets inbox page mount + script enqueue (v4.0.0 #349).
+ *
+ * @package Simple_WP_Helpdesk
+ */
+
+declare(strict_types=1);
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Register the inbox screen. The React mount is injected via `in_admin_header`
+ * because WordPress core renders edit.php?post_type=helpdesk_ticket via its
+ * own template; we can't replace that with a submenu callback at the same
+ * slug. Instead we inject our React root + a style block that hides the
+ * default WP_Posts_List_Table chrome.
+ */
+function swh_inbox_register(): void {
+	add_action( 'admin_enqueue_scripts', 'swh_inbox_enqueue' );
+	add_action( 'in_admin_header', 'swh_inbox_inject_root', 99 );
+}
+add_action( 'plugins_loaded', 'swh_inbox_register', 10 );
+
+/**
+ * Inject the React mount on the CPT list screen, BEFORE WP renders the
+ * default `<div class="wrap">…WP_List_Table…</div>`. A style block hides
+ * any subsequent `.wrap` so operators see only the new UI.
+ */
+function swh_inbox_inject_root(): void {
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
+		return;
+	}
+	// Skip injection (let the WP_List_Table render normally) for any of:
+	// - explicit ?legacy=1 opt-out
+	// - any active WP_List_Table search/filter query — preserves operator
+	// workflows that use the WP admin search box, status/priority/category
+	// dropdowns, date filters, or trash/bulk-delete URLs. The inbox doesn't
+	// render those UIs, so this implicitly routes those workflows to legacy.
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only opt-out flags, no state change.
+	$legacy_signals = array(
+		'legacy',
+		's',
+		'post_status',
+		'author',
+		'm',
+		'orderby',
+		'swh_status_filter',
+		'swh_priority_filter',
+		'helpdesk_category',
+		'action',
+		'action2',
+	);
+	foreach ( $legacy_signals as $key ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only opt-out flag, no state change.
+		if ( isset( $_GET[ $key ] ) && '' !== $_GET[ $key ] ) {
+			return;
+		}
+	}
+
+	echo '<div class="wrap" id="swh-inbox-mount-wrap" style="margin:0;padding:0;"><div id="swh-inbox-root"></div>';
+	echo '<noscript><p>' . esc_html__( 'JavaScript is required for the Tickets inbox. Please enable JavaScript or visit ?legacy=1 for the classic list view.', 'simple-wp-helpdesk' ) . '</p></noscript>';
+	echo '</div>';
+	echo '<style id="swh-inbox-hide-default">body.post-type-helpdesk_ticket #wpbody-content > .wrap:not(#swh-inbox-mount-wrap){display:none !important;}</style>';
+}
+
+/**
+ * Enqueue the built React entry on the inbox screen only.
+ *
+ * @param string $hook The current admin page hook suffix.
+ */
+function swh_inbox_enqueue( string $hook ): void {
+	if ( 'edit.php' !== $hook ) {
+		return;
+	}
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || 'edit-helpdesk_ticket' !== $screen->id ) {
+		return;
+	}
+
+	$asset_file = SWH_PLUGIN_DIR . 'assets/dist/admin-inbox.asset.php';
+	$deps       = array();
+	$version    = SWH_VERSION;
+
+	if ( file_exists( $asset_file ) ) {
+		// @phpstan-ignore-next-line include.fileNotFound
+		$asset = include $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+		if ( is_array( $asset ) ) {
+			if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+				$deps = swh_filter_known_script_deps( $asset['dependencies'] );
+			}
+			if ( isset( $asset['version'] ) && is_string( $asset['version'] ) ) {
+				$version = $asset['version'];
+			}
+		}
+	}
+
+	wp_enqueue_script(
+		'swh-admin-inbox',
+		SWH_PLUGIN_URL . 'assets/dist/admin-inbox.js',
+		$deps,
+		$version,
+		true
+	);
+	// @wordpress/scripts splits imported style.scss into a separate
+	// style-<entry>.css bundle. That file holds the inbox layout grid (.swh-inbox-body
+	// flex, .swh-inbox-leftrail width). Omitting it collapses the entire
+	// layout into a vertical stack.
+	wp_enqueue_style(
+		'swh-admin-inbox-layout',
+		SWH_PLUGIN_URL . 'assets/dist/style-admin-inbox.css',
+		array( 'wp-components' ),
+		$version
+	);
+	wp_enqueue_style(
+		'swh-admin-inbox',
+		SWH_PLUGIN_URL . 'assets/dist/admin-inbox.css',
+		array( 'swh-admin-inbox-layout' ),
+		$version
+	);
+
+	wp_localize_script(
+		'swh-admin-inbox',
+		'swhInbox',
+		array(
+			'restUrl'       => esc_url_raw( rest_url( 'swh/v1/' ) ),
+			'restNonce'     => wp_create_nonce( 'wp_rest' ),
+			'currentUserId' => get_current_user_id(),
+		)
+	);
+}

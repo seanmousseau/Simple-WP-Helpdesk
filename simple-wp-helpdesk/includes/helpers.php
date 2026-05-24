@@ -37,6 +37,7 @@ function swh_get_defaults() {
 			'swh_ticket_page_id'             => 0,
 			'swh_token_expiration_days'      => 90,
 			'swh_restrict_to_assigned'       => 'no',
+			'swh_use_violet_theme'           => false,
 			// Email Format.
 			'swh_email_format'               => 'html',
 			'swh_email_logo_url'             => '',
@@ -115,31 +116,142 @@ function swh_get_defaults() {
 			'swh_em_user_merged_body'        => "Hi {name},\n\nYour ticket ({ticket_id}) has been merged into ticket {target_ticket_id}.\n\nYou can continue viewing your conversation here:\n{target_ticket_url}",
 			// Frontend portal appearance.
 			'swh_portal_theme'               => 'auto',
+			// Admin theme (v4.0.0): light (default — Violet dark is incomplete),
+			// dark (opt-in), auto (follow WP admin color scheme).
+			'swh_admin_theme'                => 'light',
 		);
 	}
 	return $defaults;
 }
 
 /**
- * Read a SWH setting.
+ * Read a SWH setting from grouped storage.
  *
- * The $group argument is advisory in v3.7 — it captures the logical settings
- * group at each call site so v4.0 (#356) can change the helper body without
- * touching any caller. In v3.7 the body reads directly from top-level options.
+ * Reads `swh_settings_<group>` (an array option introduced in v4.0.0 #356)
+ * and returns the value for $key, or $default if the group or key is absent.
  *
  * @since 3.7.0
- * @param string $group   Logical group: 'general', 'email', 'portal',
- *                        'notifications', 'tools', 'routing', 'integrations'.
- *                        Ignored in v3.7; consumed by v4.0 schema split.
- * @param string $key     Option key WITHOUT the 'swh_' prefix
- *                        (e.g. 'assignment_rules' for the option 'swh_assignment_rules').
- * @param mixed  $default Returned when the option is absent.
+ * @since 4.0.0 Body rewritten to read from `swh_settings_<group>` arrays.
+ *              Signature is unchanged — callers are unaffected.
+ * @param string $group   One of: 'general', 'email', 'portal', 'notifications',
+ *                        'tools', 'routing', 'integrations'.
+ * @param string $key     Setting key within the group, WITHOUT the 'swh_' prefix
+ *                        (e.g. 'assignment_rules' → stored as key in swh_settings_routing).
+ * @param mixed  $default Returned when the group or key is absent.
  * @return mixed
  */
-function swh_get_option( $group, $key, $default = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Signature locked for v4.0 #356; $default name preserved to match WP core `get_option()`.
-	unset( $group ); // Advisory in v3.7; consumed by v4.0 #356 schema split.
-	return get_option( 'swh_' . $key, $default );
+function swh_get_option( string $group, string $key, $default = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Signature locked for v4.0 #356; $default name preserved to match WP core `get_option()`.
+	$bag = get_option( 'swh_settings_' . $group, array() );
+	return is_array( $bag ) && array_key_exists( $key, $bag )
+		? $bag[ $key ]
+		: $default;
 }
+
+/**
+ * Write a SWH setting to grouped storage.
+ *
+ * Reads the `swh_settings_<group>` array, updates $key, and writes it back.
+ * Do NOT add caching here — WordPress's options API already caches per-request.
+ *
+ * @since 4.0.0
+ * @param string $group One of: 'general', 'email', 'portal', 'notifications',
+ *                      'tools', 'routing', 'integrations'.
+ * @param string $key   Setting key within the group.
+ * @param mixed  $value New value.
+ * @return bool True on success, false on failure (mirrors update_option()).
+ */
+function swh_set_option( string $group, string $key, $value ): bool {
+	$bag = get_option( 'swh_settings_' . $group, array() );
+	if ( ! is_array( $bag ) ) {
+		$bag = array();
+	}
+	$bag[ $key ] = $value;
+	$result      = (bool) update_option( 'swh_settings_' . $group, $bag );
+
+	// Back-compat: mirror the write to the legacy flat key for any key that
+	// has an entry in the migration MAP. Keeps `get_option('swh_xxx')` and
+	// `swh_get_string_option('swh_xxx')` etc. returning current values, even
+	// though grouped storage is the source of truth.
+	$flat_key = 'swh_' . $key;
+	if ( class_exists( '\\SWH\\Settings\\Migration' )
+		&& null !== \SWH\Settings\Migration::group_for( $flat_key ) ) {
+		update_option( $flat_key, $value );
+	}
+
+	return $result;
+}
+
+/**
+ * Filter a @wordpress/scripts asset-manifest dependency list to only handles
+ * that exist in the current WordPress version.
+ *
+ * `@wordpress/scripts` may emit dependencies that don't exist on older WP
+ * floors (e.g. `react-jsx-runtime` was introduced in WP 6.6). When wp_enqueue_script
+ * is called with any unregistered dep, WP silently skips the enqueue. This helper
+ * strips unknown handles so the script still loads on older WP versions.
+ *
+ * @since 4.0.0
+ * @param array<mixed> $deps Raw dependency list from the asset manifest.
+ * @return array<int, string> Filtered to only registered handles.
+ */
+function swh_filter_known_script_deps( array $deps ): array {
+	$out = array();
+	foreach ( $deps as $handle ) {
+		if ( ! is_string( $handle ) || '' === $handle ) {
+			continue;
+		}
+		if ( function_exists( 'wp_script_is' ) && wp_script_is( $handle, 'registered' ) ) {
+			$out[] = $handle;
+		}
+	}
+	return $out;
+}
+
+/**
+ * Polyfill `window.ReactJSXRuntime` on WP < 6.6 by registering a fake
+ * `react-jsx-runtime` script handle that depends on `wp-element` and
+ * attaches the polyfill as an inline script.
+ *
+ * @wordpress/scripts compiles JSX to react-jsx-runtime imports that webpack
+ * externalizes to `window.ReactJSXRuntime`. WP 6.6 ships a native handle;
+ * earlier WP versions do not. Registering our own under the same handle
+ * makes wp_enqueue_script work consistently across WP versions: the
+ * dependency resolves, the inline polyfill runs after wp-element loads,
+ * and the bundle finds window.ReactJSXRuntime when it executes.
+ *
+ * @since 4.0.0
+ */
+function swh_jsx_runtime_polyfill_register(): void {
+	if ( ! function_exists( 'wp_register_script' ) ) {
+		return;
+	}
+	if ( wp_script_is( 'react-jsx-runtime', 'registered' ) ) {
+		return; // WP 6.6+ — native runtime present.
+	}
+	// Empty src — WP treats this as a virtual handle that just holds inline
+	// scripts and propagates the wp-element dep.
+	wp_register_script( 'react-jsx-runtime', '', array( 'wp-element' ), SWH_VERSION, true );
+	$polyfill = <<<'JS'
+( function () {
+    if ( window.ReactJSXRuntime || ! ( window.wp && window.wp.element ) ) return;
+    var createElement = window.wp.element.createElement;
+    var Fragment = window.wp.element.Fragment;
+    function jsx( type, props, key ) {
+        var rest = {};
+        for ( var k in props ) if ( k !== 'children' ) rest[ k ] = props[ k ];
+        if ( typeof key !== 'undefined' ) rest.key = key;
+        var children = props.children;
+        if ( children === undefined || children === null ) return createElement( type, rest );
+        if ( Array.isArray( children ) ) return createElement.apply( null, [ type, rest ].concat( children ) );
+        return createElement( type, rest, children );
+    }
+    window.ReactJSXRuntime = { jsx: jsx, jsxs: jsx, jsxDEV: jsx, Fragment: Fragment };
+} )();
+JS;
+	wp_add_inline_script( 'react-jsx-runtime', $polyfill );
+}
+add_action( 'init', 'swh_jsx_runtime_polyfill_register', 1 );
+add_action( 'admin_init', 'swh_jsx_runtime_polyfill_register', 1 );
 
 /**
  * Updates a ticket's status meta and fires the appropriate lifecycle actions.
@@ -167,6 +279,8 @@ function swh_set_ticket_status( int $ticket_id, string $new_status ): void {
 		return;
 	}
 	update_post_meta( $ticket_id, '_ticket_status', $new_status );
+	update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
+	\SWH\Concurrency\TicketVersion::bump( $ticket_id );
 
 	// Skip the change action when no prior status existed (initial create).
 	if ( '' === $old_status ) {
@@ -272,10 +386,17 @@ function swh_get_statuses() {
 	/**
 	 * Filters the list of available ticket statuses.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $statuses Array of status label strings.
 	 */
-	return apply_filters( 'swh_ticket_statuses', $statuses );
+	return swh_apply_deprecated_filter(
+		'swh_ticket_statuses',
+		array( $statuses ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 }
 
 /**
@@ -290,10 +411,17 @@ function swh_get_priorities() {
 	/**
 	 * Filters the list of available ticket priorities.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $priorities Array of priority label strings.
 	 */
-	return apply_filters( 'swh_ticket_priorities', $priorities );
+	return swh_apply_deprecated_filter(
+		'swh_ticket_priorities',
+		array( $priorities ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 }
 
 /**
@@ -778,11 +906,18 @@ function swh_is_rate_limited( $action, $ttl = 30 ) {
 	/**
 	 * Filters the rate-limit TTL (in seconds) for a given action.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param int    $ttl    Lock duration in seconds.
 	 * @param string $action The action identifier being rate-limited.
 	 */
-	$filtered_ttl = apply_filters( 'swh_rate_limit_ttl', $ttl, $action );
+	$filtered_ttl = swh_apply_deprecated_filter(
+		'swh_rate_limit_ttl',
+		array( $ttl, $action ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	$ttl          = is_scalar( $filtered_ttl ) ? intval( $filtered_ttl ) : $ttl;
 	$key          = 'swh_rl_' . md5( $action . '_' . swh_get_client_ip() );
 	$val          = get_option( $key );
@@ -828,6 +963,20 @@ if ( ! function_exists( 'swh_render_empty_state' ) ) {
 	}
 }
 
+if ( ! function_exists( 'swh_admin_ticket_url' ) ) {
+	/**
+	 * Build the admin URL that opens a ticket. v4.0.0+ deep-links into the
+	 * React inbox drawer; pre-v4 callers got the legacy post-editor URL.
+	 *
+	 * @since 4.0.0
+	 * @param int $ticket_id Ticket post ID.
+	 * @return string
+	 */
+	function swh_admin_ticket_url( $ticket_id ) {
+		return admin_url( 'edit.php?post_type=helpdesk_ticket#ticket=' . (int) $ticket_id );
+	}
+}
+
 if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 	/**
 	 * Returns true when the current user's WP admin colour scheme is one of the
@@ -837,6 +986,17 @@ if ( ! function_exists( 'swh_admin_color_is_dark' ) ) {
 	 * @return bool
 	 */
 	function swh_admin_color_is_dark() {
+		// v4.0.0: admin_theme setting overrides the auto-detect.
+		// Default 'light' — the dark variant of the Violet theme is incomplete
+		// and produces visual issues on the inbox; opt-in only until v4.1.
+		$setting = swh_get_string_option( 'swh_admin_theme', 'light' );
+		if ( 'light' === $setting ) {
+			return false;
+		}
+		if ( 'dark' === $setting ) {
+			return true;
+		}
+		// 'auto' — follow the WP admin colour scheme (midnight/modern/ectoplasm).
 		$dark_schemes = array( 'midnight', 'modern', 'ectoplasm' );
 		$user_id      = get_current_user_id();
 		if ( ! $user_id ) {

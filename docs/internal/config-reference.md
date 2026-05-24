@@ -4,6 +4,8 @@
 
 > Operators: see `docs/configuration.md` and the rest of `docs/*.md` for end-user / site-admin guidance. This page is the developer-facing reference that mirrors `swh_get_defaults()` in code.
 
+> **Storage change in 4.0.0 (#356):** Settings now live in 7 grouped options (`swh_settings_general`, `swh_settings_email`, `swh_settings_portal`, `swh_settings_notifications`, `swh_settings_tools`, `swh_settings_routing`, `swh_settings_integrations`) — each is an array of setting key → value. Operators querying the database directly should read `swh_settings_<group>`; legacy flat `swh_<key>` options remain in storage after upgrade but are no longer written to. The one-shot migration runs on `plugins_loaded` priority 5 and is idempotent via `swh_db_version`. See `data-dictionary.md` for the canonical storage map.
+
 ## Source of truth
 
 `swh_get_defaults()` at `simple-wp-helpdesk/includes/helpers.php:19-121`. This document reflects that function. **If they disagree, the function wins** — fix the doc.
@@ -42,6 +44,12 @@ The group argument is one of: `general`, `email`, `portal`, `notifications`, `to
 | `swh_autoclose_days` | `3` | int | General | Days a `Resolved` ticket waits before auto-close. Filter: `swh_autoclose_threshold`. |
 | `swh_max_upload_size` | `5` | int (MB) | General | Per-file upload size limit. |
 | `swh_max_upload_count` | `5` | int | General | Per-submission upload count limit. |
+
+### Appearance
+
+| Key | Type | Default | UI location | Notes |
+|---|---|---|---|---|
+| `use_violet_theme` | bool | `false` | Settings → General → Appearance | Site-wide opt-in for the v4.0 Violet theme. Requires hard-refresh after toggle to load Geist Sans fonts. Affects admin + client portal; emails unaffected. |
 
 ### Assignment & Routing
 

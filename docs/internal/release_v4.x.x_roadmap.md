@@ -25,24 +25,24 @@ See [`docs/internal/component-inventory.md`](component-inventory.md) for the exi
 
 ### Foundation
 
-- [ ] [#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356) — Settings schema migration (`swh_options` → topic sub-options) — **enables v4.1 API key storage**
-- [ ] [#357](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/357) — Bump PHP minimum to 8.0
-- [ ] [#358](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/358) — Bump WordPress minimum to 6.0
-- [ ] [#360](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/360) — Deprecate pre-3.0 filter hooks
+- [x] [#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356) — Settings schema migration (`swh_options` → topic sub-options) — **enables v4.1 API key storage**
+- [x] [#357](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/357) — Bump PHP minimum to 8.0
+- [x] [#358](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/358) — Bump WordPress minimum to 6.0
+- [x] [#360](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/360) — Deprecate pre-3.0 filter hooks
 
 ### Admin UX rewrite
 
-- [ ] [#349](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/349) — Inbox-style Tickets admin page
-- [ ] [#350](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/350) — Quick-reply drawer from inbox preview
-- [ ] [#351](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/351) — Command palette (Ctrl/Cmd+K)
-- [ ] [#352](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/352) — Saved views (per-user filter persistence)
-- [ ] [#353](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/353) — Sticky bulk-action bar on selection
+- [x] [#349](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/349) — Inbox-style Tickets admin page
+- [x] [#350](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/350) — Quick-reply drawer from inbox preview
+- [x] [#351](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/351) — Command palette (Ctrl/Cmd+K)
+- [x] [#352](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/352) — Saved views (per-user filter persistence)
+- [x] [#353](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/353) — Sticky bulk-action bar on selection
 
 ### Frontend + reporting
 
-- [ ] [#354](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/354) — Portal v2 — conversation-first layout
-- [ ] [#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355) — Indigo design refresh (opt-in) + typography upgrade — **see parked_features.md, decision pending**
-- [ ] [#359](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/359) — Reports redesign — drill-down + period-over-period
+- [x] [#354](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/354) — Portal v2 — conversation-first layout
+- [x] [#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355) — Indigo design refresh (opt-in) + typography upgrade — shipped as **Violet theme** opt-in
+- [x] [#359](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/359) — Reports redesign — drill-down + period-over-period
 
 ### Migration cost
 

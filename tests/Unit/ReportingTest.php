@@ -18,7 +18,17 @@ class ReportingTest extends TestCase {
 	public function setUp(): void {
 		parent::setUp();
 		require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+		require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 		require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
+
+		// swh_get_statuses() routes through swh_apply_deprecated_filter()
+		// (v4.0.0 #360); stub apply_filters_deprecated to return arg[0].
+		WP_Mock::userFunction( 'apply_filters_deprecated' )
+			->andReturnUsing(
+				static function ( $hook, $args ) {
+					return $args[0];
+				}
+			);
 	}
 
 	public function tearDown(): void {
@@ -48,9 +58,17 @@ class ReportingTest extends TestCase {
 
 		$result = swh_report_status_breakdown();
 
+		// v4.0 shape: { data, range, prior, prior_range }.
 		$this->assertIsArray( $result, 'Return value must be an array' );
-		$this->assertNotEmpty( $result, 'At least one status must be present' );
-		foreach ( $result as $status => $count ) {
+		$this->assertArrayHasKey( 'data', $result );
+		$this->assertArrayHasKey( 'range', $result );
+		$this->assertArrayHasKey( 'prior', $result );
+		$this->assertArrayHasKey( 'prior_range', $result );
+
+		$data = $result['data'];
+		$this->assertIsArray( $data, 'data must be an array' );
+		$this->assertNotEmpty( $data, 'At least one status must be present' );
+		foreach ( $data as $status => $count ) {
 			$this->assertIsString( $status, 'Status key must be a string' );
 			$this->assertIsInt( $count, 'Count must be an integer' );
 		}
@@ -90,7 +108,9 @@ class ReportingTest extends TestCase {
 			->zeroOrMoreTimes()
 			->andReturnUsing( fn( $key, $default = '' ) => $default );
 
-		$result = swh_report_avg_resolution_time();
+		// Call the inner _query helper directly — it tests the exclusion logic
+		// without the v4.0 range-wrapper overhead.
+		$result = swh_report_avg_resolution_time_query( '2026-01-01', '2026-01-31' );
 
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'avg_seconds', $result );
@@ -110,7 +130,8 @@ class ReportingTest extends TestCase {
 			->zeroOrMoreTimes()
 			->andReturnUsing( fn( $key, $default = '' ) => $default );
 
-		$result = swh_report_avg_resolution_time();
+		// Use the inner _query helper for the same reason as above.
+		$result = swh_report_avg_resolution_time_query( '2026-01-01', '2026-01-31' );
 
 		$this->assertSame( 0, $result['avg_seconds'] );
 		$this->assertSame( 0, $result['count'] );

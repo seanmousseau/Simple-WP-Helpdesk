@@ -2,9 +2,9 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 3.7.0
- * Requires at least: 5.3
- * Requires PHP: 7.4
+ * Version: 4.0.0
+ * Requires at least: 6.0
+ * Requires PHP: 8.0
  * Text Domain: simple-wp-helpdesk
  * Author: Sean Mousseau
  * Author URI: https://github.com/seanmousseau/Simple-WP-Helpdesk
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '3.7.0' );
+define( 'SWH_VERSION', '4.0.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -38,12 +38,26 @@ require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-email.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-ticket.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-cron.php';
+require_once SWH_PLUGIN_DIR . 'includes/theme-violet.php';
+
+// REST controllers must load on every request — rest_api_init fires for
+// /wp-json/ calls where is_admin() is false, so guarding these behind
+// is_admin() means the routes never register and every endpoint 404s.
+require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/PaletteController.php';
+require_once SWH_PLUGIN_DIR . 'src/Views/ViewsRepository.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
 
 // Admin includes (only in admin context).
 if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
-	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 — kept active; serves ?legacy=1 fallback view with column/filter/badge enhancements.
+	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';
+	require_once SWH_PLUGIN_DIR . 'admin/class-views-settings.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-reporting-ui.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-plugin-action-links.php';
@@ -52,6 +66,17 @@ if ( is_admin() ) {
 // Frontend includes.
 require_once SWH_PLUGIN_DIR . 'frontend/class-shortcode.php';
 require_once SWH_PLUGIN_DIR . 'frontend/class-portal.php';
+
+// Settings schema migration (v4.0.0 #356) — idempotent one-shot upgrade from flat
+// `swh_<key>` options to grouped `swh_settings_<group>` arrays. Priority 5 so the
+// grouped bags exist before any other plugin code reads settings.
+add_action(
+	'plugins_loaded',
+	static function (): void {
+		( new \SWH\Settings\Migration() )->run();
+	},
+	5
+);
 
 // Lifecycle hooks (must reference main plugin __FILE__).
 /** Runs on plugin activation: schedules cron events, registers CPT, seeds defaults. */

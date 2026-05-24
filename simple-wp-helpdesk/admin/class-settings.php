@@ -246,9 +246,9 @@ function swh_handle_settings_save() {
 
 	// SAVE TOOLS/RETENTION SETTINGS (separate form with its own nonce).
 	if ( isset( $_POST['swh_save_settings'], $_POST['swh_tools_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_tools_nonce'] ) ? $_POST['swh_tools_nonce'] : '' ) ), 'swh_save_tools_action' ) ) {
-		update_option( 'swh_retention_attachments_days', isset( $_POST['swh_retention_attachments_days'] ) && is_scalar( $_POST['swh_retention_attachments_days'] ) ? absint( $_POST['swh_retention_attachments_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		update_option( 'swh_retention_tickets_days', isset( $_POST['swh_retention_tickets_days'] ) && is_scalar( $_POST['swh_retention_tickets_days'] ) ? absint( $_POST['swh_retention_tickets_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		update_option( 'swh_delete_on_uninstall', isset( $_POST['swh_delete_on_uninstall'] ) ? 'yes' : 'no' );
+		swh_set_option( 'tools', 'retention_attachments_days', isset( $_POST['swh_retention_attachments_days'] ) && is_scalar( $_POST['swh_retention_attachments_days'] ) ? absint( $_POST['swh_retention_attachments_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		swh_set_option( 'tools', 'retention_tickets_days', isset( $_POST['swh_retention_tickets_days'] ) && is_scalar( $_POST['swh_retention_tickets_days'] ) ? absint( $_POST['swh_retention_tickets_days'] ) : 0 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		swh_set_option( 'tools', 'delete_on_uninstall', isset( $_POST['swh_delete_on_uninstall'] ) ? 'yes' : 'no' );
 		wp_safe_redirect(
 			add_query_arg(
 				array(
@@ -264,8 +264,10 @@ function swh_handle_settings_save() {
 	// SAVE GENERAL SETTINGS (main form).
 	if ( isset( $_POST['swh_save_settings'], $_POST['swh_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_settings_nonce'] ) ? $_POST['swh_settings_nonce'] : '' ) ), 'swh_save_settings_action' ) ) {
 		if ( ! isset( $_POST['swh_restrict_to_assigned'] ) ) {
-			update_option( 'swh_restrict_to_assigned', 'no' );
+			swh_set_option( 'routing', 'restrict_to_assigned', 'no' );
 		}
+		$violet_on = isset( $_POST['swh_use_violet_theme'] );
+		swh_set_option( 'general', 'use_violet_theme', $violet_on );
 		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
 		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses', 'swh_ticket_templates', 'swh_assignment_rules' );
@@ -282,11 +284,19 @@ function swh_handle_settings_save() {
 				$val = is_string( $_POST[ $opt ] ) ? esc_url_raw( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} elseif ( 'swh_portal_theme' === $opt ) {
 				$raw = is_string( $_POST[ $opt ] ) ? sanitize_key( wp_unslash( $_POST[ $opt ] ) ) : 'auto'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-				$val = in_array( $raw, array( 'auto', 'light' ), true ) ? $raw : 'auto';
+				$val = in_array( $raw, array( 'auto', 'light', 'dark' ), true ) ? $raw : 'auto';
+			} elseif ( 'swh_admin_theme' === $opt ) {
+				$raw = is_string( $_POST[ $opt ] ) ? sanitize_key( wp_unslash( $_POST[ $opt ] ) ) : 'light'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+				$val = in_array( $raw, array( 'auto', 'light', 'dark' ), true ) ? $raw : 'light';
 			} else {
 				$val = is_string( $_POST[ $opt ] ) ? sanitize_text_field( wp_unslash( $_POST[ $opt ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			}
-			update_option( $opt, $val );
+			$entry = \SWH\Settings\Migration::group_for( $opt );
+			if ( null !== $entry ) {
+				swh_set_option( $entry[0], $entry[1], $val );
+			} else {
+				update_option( $opt, $val );
+			}
 		}
 		// Save canned responses (structured option, not part of $options_list).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
@@ -304,7 +314,7 @@ function swh_handle_settings_save() {
 				);
 			}
 		}
-		update_option( 'swh_canned_responses', $canned );
+		swh_set_option( 'tools', 'canned_responses', $canned );
 
 		// Save ticket templates (structured option, not part of $options_list).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
@@ -322,7 +332,7 @@ function swh_handle_settings_save() {
 				);
 			}
 		}
-		update_option( 'swh_ticket_templates', $templates );
+		swh_set_option( 'tools', 'ticket_templates', $templates );
 
 		// Save assignment rules (array of {category_term_id, assignee_user_id}).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by absint() in loop below.
@@ -340,7 +350,7 @@ function swh_handle_settings_save() {
 				);
 			}
 		}
-		update_option( 'swh_assignment_rules', $rules );
+		swh_set_option( 'routing', 'assignment_rules', $rules );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -439,6 +449,21 @@ function swh_render_settings_page() {
 						<tr><th scope="row"><?php esc_html_e( 'Max Files Per Upload', 'simple-wp-helpdesk' ); ?></th><td><input type="number" name="swh_max_upload_count" value="<?php echo esc_attr( swh_get_string_option( 'swh_max_upload_count', '5' ) ); ?>" style="width:80px;"> <?php esc_html_e( 'files', 'simple-wp-helpdesk' ); ?> <p class="description"><?php esc_html_e( 'Maximum number of files a user can attach per submission. Set to 0 for unlimited.', 'simple-wp-helpdesk' ); ?></p></td></tr>
 					</table>
 				</fieldset>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Appearance', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Visual theme', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<label><input type="checkbox" name="swh_use_violet_theme" value="1" <?php checked( swh_get_option( 'general', 'use_violet_theme', false ) ); ?>>
+								<?php esc_html_e( 'Use new Violet theme (preview)', 'simple-wp-helpdesk' ); ?></label>
+								<p class="description">
+									<?php esc_html_e( 'Updated visual identity for the admin and client portal. Hard-refresh after enabling so the new fonts load.', 'simple-wp-helpdesk' ); ?>
+								</p>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
 			</div>
 
 			<div id="tab-routing" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-routing" tabindex="0" style="display:none;">
@@ -494,8 +519,21 @@ function swh_render_settings_page() {
 						<select name="swh_portal_theme">
 							<option value="auto" <?php selected( $portal_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follows system dark/light mode)', 'simple-wp-helpdesk' ); ?></option>
 							<option value="light" <?php selected( $portal_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode', 'simple-wp-helpdesk' ); ?></option>
+							<option value="dark" <?php selected( $portal_theme, 'dark' ); ?>><?php esc_html_e( 'Force dark mode', 'simple-wp-helpdesk' ); ?></option>
 						</select>
-						<p class="description"><?php esc_html_e( 'Controls whether the frontend helpdesk portal responds to the visitor\'s system dark/light mode preference. Set to "Force light mode" on sites that do not support dark mode.', 'simple-wp-helpdesk' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Controls whether the frontend helpdesk portal responds to the visitor\'s system dark/light mode preference, or forces a single theme regardless.', 'simple-wp-helpdesk' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Admin Theme', 'simple-wp-helpdesk' ); ?></th>
+					<td>
+						<?php $admin_theme = swh_get_string_option( 'swh_admin_theme', 'light' ); ?>
+						<select name="swh_admin_theme">
+							<option value="light" <?php selected( $admin_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode (recommended)', 'simple-wp-helpdesk' ); ?></option>
+							<option value="dark" <?php selected( $admin_theme, 'dark' ); ?>><?php esc_html_e( 'Force dark mode', 'simple-wp-helpdesk' ); ?></option>
+							<option value="auto" <?php selected( $admin_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follow WP admin color scheme)', 'simple-wp-helpdesk' ); ?></option>
+						</select>
+						<p class="description"><?php esc_html_e( 'Controls the appearance of helpdesk admin pages (inbox, drawer, settings, reports). Dark mode styling is partial in v4.0 — light is recommended; full dark variants ship in v4.1.', 'simple-wp-helpdesk' ); ?></p>
 					</td>
 				</tr>
 				<tr>

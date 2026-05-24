@@ -45,10 +45,17 @@ function swh_process_autoclose() {
 	/**
 	 * Filters the number of days before a resolved ticket is automatically closed.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param int $days Number of inactivity days. 0 disables auto-close.
 	 */
-	$filtered_days = apply_filters( 'swh_autoclose_threshold', $days );
+	$filtered_days = swh_apply_deprecated_filter(
+		'swh_autoclose_threshold',
+		array( $days ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	$days          = is_scalar( $filtered_days ) ? intval( $filtered_days ) : $days;
 	if ( $days <= 0 ) {
 		return;
@@ -112,7 +119,7 @@ function swh_process_autoclose() {
 			'status'         => $closed_status,
 			'priority'       => swh_get_string_meta( $ticket->ID, '_ticket_priority' ),
 			'ticket_url'     => swh_get_secure_ticket_link( $ticket->ID ),
-			'admin_url'      => admin_url( 'post.php?post=' . $ticket->ID . '&action=edit' ),
+			'admin_url'      => swh_admin_ticket_url( $ticket->ID ),
 			'autoclose_days' => $days,
 			'message'        => '',
 		);
@@ -417,7 +424,7 @@ function swh_process_sla_check() {
 			foreach ( $newly_breached as $breached_ticket ) {
 				$uid         = swh_get_string_meta( $breached_ticket->ID, '_ticket_uid' );
 				$title       = $breached_ticket->post_title;
-				$url         = admin_url( 'post.php?post=' . $breached_ticket->ID . '&action=edit' );
+				$url         = swh_admin_ticket_url( $breached_ticket->ID );
 				$sla_lines[] = ( $uid ? $uid . ': ' : '' ) . $title . ' — ' . $url;
 			}
 			$data = array(

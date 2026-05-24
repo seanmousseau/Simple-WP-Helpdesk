@@ -50,11 +50,17 @@ function swh_ticket_frontend( $atts = array() ) {
 	/**
 	 * Filters the list of allowed file extensions for ticket attachments.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $exts Array of lowercase file extension strings.
 	 */
-	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
-	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
+	$allowed_exts = swh_apply_deprecated_filter(
+		'swh_allowed_file_types',
+		array( array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	$tmpl_raw     = swh_get_option( 'tools', 'ticket_templates', array() );
 	$tmpl_raw     = is_array( $tmpl_raw ) ? $tmpl_raw : array();
 	$tmpl_js      = array();
@@ -138,7 +144,9 @@ function swh_render_submission_form( $atts = array() ) {
 			);
 		}
 	}
-	$theme_attr = 'light' === swh_get_string_option( 'swh_portal_theme', 'auto' ) ? ' data-swh-theme="light"' : '';
+	$theme_attr = in_array( swh_get_string_option( 'swh_portal_theme', 'auto' ), array( 'light', 'dark' ), true )
+		? ' data-swh-theme="' . esc_attr( swh_get_string_option( 'swh_portal_theme', 'auto' ) ) . '"'
+		: '';
 	?>
 	<div class="swh-helpdesk-wrapper"<?php echo $theme_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- value is one of two hardcoded strings ?>>
 	<?php
@@ -183,7 +191,13 @@ function swh_render_submission_form( $atts = array() ) {
 			 * @since 2.1.0
 			 * @param array<string, string> $data Sanitized submission fields: name, email, title, message, priority, status.
 			 */
-			$data = apply_filters( 'swh_submission_data', $data );
+			$data = swh_apply_deprecated_filter(
+				'swh_submission_data',
+				array( $data ),
+				'4.0',
+				'',
+				'Filter is retained for back-compat through SWH 4.2; subscribe via the v4.1 REST API events instead.'
+			);
 			/**
 			 * Fires immediately before a new ticket is inserted.
 			 *
@@ -218,7 +232,7 @@ function swh_render_submission_form( $atts = array() ) {
 				}
 				$token             = wp_generate_password( 20, false );
 				$data['ticket_id'] = 'TKT-' . str_pad( (string) $ticket_id, 4, '0', STR_PAD_LEFT );
-				$data['admin_url'] = admin_url( 'post.php?post=' . $ticket_id . '&action=edit' );
+				$data['admin_url'] = swh_admin_ticket_url( $ticket_id );
 				update_post_meta( $ticket_id, '_ticket_uid', $data['ticket_id'] );
 				update_post_meta( $ticket_id, '_ticket_name', $data['name'] );
 				update_post_meta( $ticket_id, '_ticket_email', $data['email'] );
@@ -227,6 +241,10 @@ function swh_render_submission_form( $atts = array() ) {
 				update_post_meta( $ticket_id, '_ticket_token', $token );
 				update_post_meta( $ticket_id, '_ticket_token_created', time() );
 				update_post_meta( $ticket_id, '_ticket_url', get_permalink() );
+				// v4.0.0 #354 — inbox orders by this meta key; meta_value_num
+				// ordering excludes posts missing the key, so seed it on create
+				// or new tickets won't appear in any inbox view.
+				update_post_meta( $ticket_id, '_swh_last_activity_at', time() );
 				if ( $ticket_template ) {
 					update_post_meta( $ticket_id, '_ticket_template', $ticket_template );
 				}
@@ -514,7 +532,13 @@ function swh_helpdesk_portal_shortcode( $atts = array() ) {
 		return false !== $buf ? $buf : '';
 	}
 	/* @var string[] $allowed_exts */ // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- PHPStan type annotation
-	$allowed_exts = apply_filters( 'swh_allowed_file_types', array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) );
+	$allowed_exts = swh_apply_deprecated_filter(
+		'swh_allowed_file_types',
+		array( array( 'jpg', 'jpeg', 'jpe', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt' ) ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	wp_localize_script(
 		'swh-frontend',
 		'swhConfig',

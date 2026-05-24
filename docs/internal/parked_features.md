@@ -34,12 +34,14 @@ v4.1 REST API ([#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/
 
 These are still on the roadmap but worth a deliberate keep/park decision before they land. Not parked yet — listed here so the question is in front of us.
 
-### Indigo design refresh ([#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355))
+### Indigo design refresh ([#355](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/355)) — RESOLVED
 
-- v4.0 already ships a major UX shift (inbox-style admin, command palette, portal v2). Stacking a brand refresh on top risks change fatigue.
-- **Option A:** keep, ship as opt-in (current plan).
-- **Option B:** park until v4.1+ once the inbox layout has settled.
-- **Option C:** park indefinitely — let users keep current visual identity.
+**Decision (2026-05-22):** Option A — shipped as opt-in in v4.0.0 as the **Violet theme**. Setting: `swh_settings_general.use_violet_theme` (default false). Palette: Vivid Violet (violet-800 primary, Geist Sans typography). Scope: admin + portal; emails out of scope.
+
+See:
+- Design spec: `docs/superpowers/specs/2026-05-22-v4.0.0-violet-theme-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-05-22-v4.0.0-violet-theme.md`
+- CHANGELOG entry under v4.0.0
 
 ### Microsoft Teams integration ([#380](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/380))
 

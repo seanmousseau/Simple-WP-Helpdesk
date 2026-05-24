@@ -62,11 +62,18 @@ function swh_parse_template( $template, $data ) {
 	/**
 	 * Filters the fully-rendered email template string.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string               $template The rendered template output.
 	 * @param array<string, mixed> $data     The template data array.
 	 */
-	return apply_filters( 'swh_parse_template', $template, $data );
+	return swh_apply_deprecated_filter(
+		'swh_parse_template',
+		array( $template, $data ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 }
 
 /**
@@ -101,12 +108,19 @@ function swh_send_email( $to, $subject_key, $body_key, $data, $attachments = arr
 	/**
 	 * Filters the email headers array before sending.
 	 *
+	 * @deprecated 4.0 Retained for back-compat through SWH 4.2.
 	 * @since 2.1.0
 	 * @param string[] $headers Array of header strings (e.g. 'Content-Type: text/html; charset=UTF-8').
 	 * @param string   $to      Recipient email address.
 	 * @param string   $subject Rendered email subject.
 	 */
-	$headers = apply_filters( 'swh_email_headers', $headers, $to, $subject );
+	$headers = swh_apply_deprecated_filter(
+		'swh_email_headers',
+		array( $headers, $to, $subject ),
+		'4.0',
+		'',
+		'Filter is retained for back-compat through SWH 4.2; no direct replacement yet.'
+	);
 	if ( 'html' === $format ) {
 		$body = swh_wrap_html_email( $body, $attachments );
 	} elseif ( ! empty( $attachments ) ) {
@@ -338,6 +352,7 @@ function swh_handle_inbound_email( $request ) {
 	update_post_meta( $ticket_id, '_swh_unread', '1' );
 	delete_transient( 'swh_unread_count' );
 	swh_fire_ticket_replied( (int) $ticket_id, $comment_id, 0 );
+	\SWH\Concurrency\TicketVersion::bump( $ticket_id );
 
 	// Reopen ticket if resolved/closed.
 	$defs            = swh_get_defaults();
@@ -359,7 +374,7 @@ function swh_handle_inbound_email( $request ) {
 		'status'     => swh_get_string_meta( $ticket_id, '_ticket_status' ),
 		'priority'   => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
 		'message'    => $clean_body,
-		'admin_url'  => admin_url( 'post.php?post=' . $ticket_id . '&action=edit' ),
+		'admin_url'  => swh_admin_ticket_url( $ticket_id ),
 		'ticket_url' => '',
 	);
 	// Admin-only notification — do not inject watcher Cc: headers.

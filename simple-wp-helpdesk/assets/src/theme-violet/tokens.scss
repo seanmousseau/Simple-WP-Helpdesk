@@ -1,0 +1,129 @@
+/**
+ * Violet theme tokens — light + dark variants + Geist Sans @font-face.
+ *
+ * Activated when <body> has .swh-theme-violet. Combined with
+ * .swh-admin-theme-dark for the dark variant.
+ *
+ * Variable names mirror the existing SWH conventions in swh-shared.css
+ * so component CSS can use var(--swh-primary) etc. without per-theme
+ * conditional logic.
+ */
+
+@font-face {
+    font-family: 'Geist Sans';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../../fonts/geist-400.woff2') format('woff2');
+    unicode-range: U+0000-007F, U+00A0-00FF;
+}
+@font-face {
+    font-family: 'Geist Sans';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../../fonts/geist-500.woff2') format('woff2');
+    unicode-range: U+0000-007F, U+00A0-00FF;
+}
+@font-face {
+    font-family: 'Geist Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../../fonts/geist-600.woff2') format('woff2');
+    unicode-range: U+0000-007F, U+00A0-00FF;
+}
+@font-face {
+    font-family: 'Geist Sans';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../../fonts/geist-700.woff2') format('woff2');
+    unicode-range: U+0000-007F, U+00A0-00FF;
+}
+
+/* Light theme tokens */
+.swh-theme-violet {
+    /* Primary */
+    --swh-primary: #5b21b6;
+    --swh-primary-hover: #4c1d95;
+    --swh-primary-fg: #fff;
+    --swh-primary-soft-bg: #ede9fe;
+    --swh-primary-soft-fg: #5b21b6;
+    --swh-link: #7c3aed;
+    --swh-focus-ring: 0 0 0 2px #7c3aed;
+
+    /* Surfaces */
+    --swh-surface-page: #fafafa;
+    --swh-surface-card: #fff;
+    --swh-surface-elev: #f5f5f4;
+
+    /* Text */
+    --swh-text-strong: #2e1065;
+    --swh-text-body: #1f2937;
+    --swh-text-muted: #6b7280;
+
+    /* Borders */
+    --swh-border: #e5e7eb;
+
+    /* Status */
+    --swh-success: #15803d;
+    --swh-warning: #a16207;
+    --swh-danger: #b91c1c;
+
+    /* Spacing — tighter rhythm */
+    --swh-space-1: 4px;
+    --swh-space-2: 8px;
+    --swh-space-3: 12px;
+    --swh-space-4: 16px;
+    --swh-space-5: 20px;
+    --swh-space-6: 28px;
+    --swh-space-7: 40px;
+
+    /* Radius scale */
+    --swh-radius-sm: 4px;
+    --swh-radius-md: 8px;
+    --swh-radius-lg: 12px;
+    --swh-radius-full: 999px;
+
+    /* Shadows with primary tint */
+    --swh-shadow-sm: 0 1px 2px rgba(46, 16, 101, 0.06);
+    --swh-shadow-md: 0 2px 8px rgba(46, 16, 101, 0.08), 0 1px 2px rgba(46, 16, 101, 0.04);
+    --swh-shadow-lg: 0 8px 24px rgba(46, 16, 101, 0.12), 0 2px 6px rgba(46, 16, 101, 0.06);
+
+    /* Typography */
+    font-family: 'Geist Sans', Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.005em;
+}
+
+/* Dark variant — when WP color scheme is midnight/modern/ectoplasm */
+.swh-theme-violet.swh-admin-theme-dark,
+body.swh-admin-theme-dark .swh-theme-violet {
+    --swh-primary: #a78bfa;
+    --swh-primary-hover: #8b5cf6;
+    --swh-primary-fg: #1e1b4b;
+    --swh-primary-soft-bg: rgba(46, 16, 101, 0.4);
+    --swh-primary-soft-fg: #c4b5fd;
+    --swh-link: #c4b5fd;
+    --swh-focus-ring: 0 0 0 2px #a78bfa;
+
+    --swh-surface-page: #0a0a0a;
+    --swh-surface-card: #1c1917;
+    --swh-surface-elev: #292524;
+
+    --swh-text-strong: #f4f4f5;
+    --swh-text-body: #e4e4e7;
+    --swh-text-muted: #a1a1aa;
+
+    --swh-border: #27272a;
+}
+
+/* Heading typography */
+.swh-theme-violet h1,
+.swh-theme-violet h2,
+.swh-theme-violet h3,
+.swh-theme-violet .swh-drawer-title {
+    font-family: 'Geist Sans', Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.01em;
+    color: var(--swh-text-strong);
+}

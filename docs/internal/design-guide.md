@@ -80,6 +80,27 @@ See `js-architecture.md`. The short version: vanilla JS, `@wordpress/scripts` bu
 | Admin pages | per-user WP admin colour (`midnight`, `modern`, `ectoplasm`) | `body.swh-helpdesk-admin.swh-admin-theme-dark` | `swh-shared.css` (tokens) and `swh-admin.css` (components) |
 | Email | `<meta name="color-scheme">` + inline `@media (prefers-color-scheme: dark)` | inline in wrapper | `swh_wrap_html_email()` at `class-email.php:145` |
 
+## Violet theme tokens (v4.0.0, opt-in)
+
+Activated when `body.swh-theme-violet` is present (toggled by `swh_settings_general.use_violet_theme`). Combined with `.swh-admin-theme-dark` for dark variant.
+
+| Token | Light | Dark |
+|---|---|---|
+| `--swh-primary` | `#5b21b6` | `#a78bfa` |
+| `--swh-primary-soft-bg` | `#ede9fe` | `rgba(46,16,101,0.4)` |
+| `--swh-surface-page` | `#fafafa` | `#0a0a0a` |
+| `--swh-surface-card` | `#fff` | `#1c1917` |
+| `--swh-text-strong` | `#2e1065` | `#f4f4f5` |
+| `--swh-text-muted` | `#6b7280` | `#a1a1aa` |
+| `--swh-border` | `#e5e7eb` | `#27272a` |
+
+Spacing scale: `--swh-space-1` through `--swh-space-7` (4 / 8 / 12 / 16 / 20 / 28 / 40).
+Radius scale: `--swh-radius-{sm,md,lg,full}` (4 / 8 / 12 / 999).
+Shadows: `--swh-shadow-{sm,md,lg}` with primary-tinted alpha.
+Font: Geist Sans 400/500/600/700, self-hosted under OFL 1.1.
+
+**Known limitation:** Operators using a custom logo (`swh_email_logo_url`) may need to re-upload a theme-appropriate version. The violet theme uses a different surface palette than the current identity.
+
 ## Update protocol
 
 Update this doc when:
