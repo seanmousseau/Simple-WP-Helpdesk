@@ -37,3 +37,4 @@ yarn-error.log*
 
 # Brainstorming session artifacts
 .superpowers/
+testing/extended/__pycache__/
