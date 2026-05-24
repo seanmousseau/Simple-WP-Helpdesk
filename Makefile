@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help lint phpcs phpstan phpunit test-invariants matrix-lint semgrep test test-docker e2e e2e-docker coverage test-all js-build bench test-extended test-extended-cleanup
+.PHONY: help lint phpcs phpstan phpunit test-invariants matrix-lint semgrep test test-docker e2e e2e-docker coverage test-all js-build bench test-extended test-extended-cleanup test-extended-verify
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -86,6 +86,13 @@ test-all: test e2e ## Full gate + E2E
 bench: ## Run perf baseline against the Docker stack (override count with COUNT=500)
 	@bash testing/scripts/bench.sh $${COUNT:-100}
 
+test-extended-verify: ## Verify RC env (vars present, IMAP/SMTP login, SSH+wp-cli) — always run first
+	@if [ -z "$${WP_TESTING_URL:-}" ]; then \
+	  echo "  ✗ Source ~/.claude/dev-secrets.env first: set -a; source ~/.claude/dev-secrets.env; set +a"; \
+	  exit 2; \
+	fi
+	@python3 testing/extended/verify_env.py
+
 test-extended-cleanup: ## Pre/post-RC cleanup — delete CLAUDE-TEST-* tickets + test mailbox messages
 	@echo "→ Extended-test cleanup (dev WP + test mailbox)..."
 	@if [ -z "$${WP_TESTING_URL:-}" ]; then \
@@ -119,11 +126,14 @@ test-extended: ## RC sign-off runbook (manual, ~60-90 min) — see docs/internal
 	@echo "    Mail user : $${MAIL_USERNAME:-NOT SET}"
 	@echo "    Webhook to: $${WP_WEBHOOK_TIED_TO:-NOT SET}"
 	@echo ""
-	@echo "  Step 1 — pre-flight cleanup:"
+	@echo "  Step 1 — verify environment (always do this first):"
+	@echo "    make test-extended-verify"
+	@echo ""
+	@echo "  Step 2 — pre-flight cleanup:"
 	@echo "    make test-extended-cleanup CONFIRM=1"
 	@echo ""
-	@echo "  Step 2 — open the runbook and work through each section:"
+	@echo "  Step 3 — open the runbook and work through each section:"
 	@echo "    \$$EDITOR docs/internal/extended-test-plan.md"
 	@echo ""
-	@echo "  Step 3 — paste the sign-off block (bottom of the runbook) into the RC PR."
+	@echo "  Step 4 — paste the sign-off block (bottom of the runbook) into the RC PR."
 	@echo ""

@@ -45,8 +45,33 @@ Any failure during the runbook blocks the RC. File an issue with the section num
 | Test mailbox (SMTP) | `$MAIL_SMTP_ADDRESS:$MAIL_SMTP_PORT` | same |
 | Webmail (visual confirmation) | `$MAIL_WEB` | same |
 | Webhook inbound addresses | comma-separated list in `$WP_WEBHOOK_TIED_TO` | (no auth — wired to the plugin's inbound endpoint) |
+| WP-CLI bridge (read/write) | `ssh $SSH_TARGET → docker exec $WP_CONTAINER → wp --path=$WP_PATH` | SSH key from operator's machine |
 
-All test tickets created by this runbook must use the prefix **`CLAUDE-TEST-`** in the title so the cleanup script can find them later.
+**Env file gotcha:** values containing `$` must be **single-quoted** in `dev-secrets.env`. Double quotes trigger shell variable expansion when the file is sourced — `$1xyz` becomes empty (or whatever `$1` is set to), silently mangling passwords. The verifier in section 0 cross-checks runtime length against the literal value-length in the file and will flag any mismatch.
+
+All test tickets created by this runbook must use the prefix **`CLAUDE-TEST-`** in the title so the cleanup script can find them later. Scripts auto-append a UTC timestamp (`CLAUDE-TEST-WEBHOOK-YYYYMMDD-HHMMSS-<random>`) so two operators running concurrently don't collide and stale runs are visually distinguishable.
+
+---
+
+## Section 0 — Environment verification (≈1 min — **scripted**)
+
+Always run this BEFORE any other section. Catches dev-secrets.env issues
+that have historically derailed runbook starts (missing vars, password
+mangled by shell expansion, IMAP/SMTP not reachable).
+
+- **Do:**
+  ```bash
+  set -a; source ~/.claude/dev-secrets.env; set +a
+  export SSH_TARGET=root@... WP_CONTAINER=... WP_PATH=...
+  python testing/extended/verify_env.py
+  ```
+- **Expect:** `PASS — environment is ready for the runbook.` and a list of
+  green ticks for each required check.
+- **Verify:** Exit code 0. If anything is red, fix the dev-secrets file
+  (typically: switch a double-quoted password to single quotes) and
+  re-source before continuing.
+
+- [ ] Section 0 complete.
 
 ---
 
@@ -110,14 +135,36 @@ This is the most-critical-and-most-likely-to-break surface. We have a dedicated 
 
 ### 2.4 — Sender mismatch is rejected
 
-- **Do:** `python testing/extended/webhook_roundtrip.py --sender-override unknown@example.com --expect-rejection sender_mismatch`. The script sends from a non-ticket-owner address and expects the webhook to NOT create a comment.
+- **Do:** `python testing/extended/webhook_roundtrip.py --expect-rejection sender_mismatch`. The script auto-uses `$WP_TESTING_CLIENT_EMAIL_2` as the sender (a different authorized alias from the same SMTP account, since the relay rejects MAIL FROM addresses it doesn't own).
 - **Expect:** `PASS — webhook correctly rejected sender_mismatch`.
 - **Verify:** Paste output.
 
 ### 2.5 — No `[TKT-XXXX]` in subject is rejected
 
-- **Do:** `python testing/extended/webhook_roundtrip.py --subject-override "Just a plain subject" --expect-rejection no_ticket_id`.
+- **Do:** `python testing/extended/webhook_roundtrip.py --expect-rejection no_ticket_id`.
 - **Expect:** `PASS — webhook correctly rejected no_ticket_id`.
+- **Verify:** Paste output.
+
+### 2.6 — Subject references a non-existent ticket UID
+
+- **Do:** `python testing/extended/webhook_roundtrip.py --expect-rejection ticket_not_found`. The script crafts a subject like `Re: [TKT-999999] …` referencing a UID that doesn't exist.
+- **Expect:** `PASS — webhook correctly rejected ticket_not_found`.
+- **Verify:** Paste output.
+
+### 2.7 — Auth-layer rejections (bypassing SMTP)
+
+SMTP can't exercise the bearer-auth code paths because by the time SMTP completes, the message is already inbound. These tests POST directly to the webhook with wrong/missing auth:
+
+- **Do:**
+  ```bash
+  # Wrong bearer token
+  python testing/extended/webhook_direct_post.py --post-id <any-real-ticket-id> \
+      --bearer "wrong-secret" --expect-status 401
+  # Missing Authorization header
+  python testing/extended/webhook_direct_post.py --post-id <any-real-ticket-id> \
+      --no-auth-header --expect-status 401
+  ```
+- **Expect:** Both return `PASS` with HTTP 401 and `code: "swh_unauthorized"`.
 - **Verify:** Paste output.
 
 - [ ] Section 2 complete.
@@ -283,11 +330,12 @@ Tick each tab below:
 - **Expect:** Delta chip appears next to each KPI showing a percentage change.
 - **Verify:** Chip is visible AND its color reflects the direction of change (red for worsening metrics, green for improving).
 
-### 7.4 — Dark mode visual sanity
+### 7.4 — Dark mode visual sanity (**partly scripted**)
 
-- **Do:** In `Settings → General → Admin theme`, switch through `Light`, `Dark`, `Auto`. After each switch, open: the inbox, a drawer, the reports page, the settings page.
-- **Expect:** No unreadable text, no broken contrast (light-on-light or dark-on-dark), no leftover light-mode borders/backgrounds in dark mode. The portal in a private window also respects the dark setting if `Portal → Theme` is set to `auto`.
-- **Verify:** Eye check + one screenshot per mode (3 total) attached to the PR.
+- **Do:** Run `python testing/extended/capture_screenshots.py`. The script logs in as admin, toggles `Settings → General → Admin theme` through each of `light` / `dark` / `auto`, and captures the inbox, settings, and reports pages at each setting. PNGs land in `testing/extended/screenshots/<timestamp>/`.
+- **Expect:** Three screenshots per page × three themes = 9 files, no failures reported.
+- **Verify:** Open the 9 PNGs and eye-check: no unreadable text, no broken contrast (light-on-light or dark-on-dark), no leftover light-mode borders/backgrounds in dark mode. Attach the dark and auto shots to the PR.
+- **Manual supplement:** Also open the portal in a private (non-admin) window. Confirm `Portal → Theme = Auto` respects your OS-level preference. (The capture script is admin-only.)
 
 - [ ] Section 7 complete.
 

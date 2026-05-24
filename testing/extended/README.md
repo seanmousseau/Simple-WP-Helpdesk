@@ -34,20 +34,44 @@ exclusively from environment variables; nothing is hard-coded.
 
 ```bash
 set -a; source ~/.claude/dev-secrets.env; set +a
+
+# Three extra vars not in dev-secrets.env yet — for the wp-cli bridge:
+export SSH_TARGET=<user>@<host>
+export WP_CONTAINER=<docker-container-name>
+export WP_PATH=<absolute-path-to-WP-inside-container>
 ```
 
-Verify the load:
+Then run the verifier — it checks every required var, IMAP/SMTP login, and
+SSH+wp-cli reachability in one go:
 
 ```bash
-echo "WP target : ${WP_TESTING_URL:-NOT SET}"
-echo "Mail user : ${MAIL_USERNAME:-NOT SET}"
-echo "Webhook to: ${WP_WEBHOOK_TIED_TO:-NOT SET}"
+python testing/extended/verify_env.py
 ```
 
-If any of those print `NOT SET`, the scripts will exit with code 2 and a clear
-message — but it's faster to catch missing vars here.
+Expected output ends with `PASS — environment is ready for the runbook.` —
+exit code 0. Any red tick means a real problem; don't proceed until it's green.
+
+### Env-file gotcha — single-quote values containing `$`
+
+Values like passwords that contain `$` must be **single-quoted** in
+`dev-secrets.env`. Double quotes trigger shell variable expansion when the
+file is sourced: `"abc$1xyz"` becomes `abcxyz` (the `$1` is the empty
+positional parameter). The `verify_env.py` length check catches this by
+cross-referencing the runtime value length against the literal length in
+the file, but it's faster to just write the file correctly from the start.
 
 ## Scripts
+
+### `verify_env.py`
+
+Pre-flight environment check. Verifies every required env var is set,
+cross-checks password lengths against the literal file values (to catch
+shell-expansion mangling), and live-tests SSH+wp-cli + IMAP + SMTP. Runs
+in ~5s. Always run this before the runbook.
+
+```bash
+python verify_env.py
+```
 
 ### `webhook_roundtrip.py`
 
@@ -60,15 +84,36 @@ runbook.
 # Happy path (uses first address in $WP_WEBHOOK_TIED_TO).
 python webhook_roundtrip.py
 
-# Negative case — sender mismatch:
-python webhook_roundtrip.py --sender-override "nobody@example.invalid" \
-                            --expect-rejection sender_mismatch
+# Negative case — sender mismatch (auto-uses $WP_TESTING_CLIENT_EMAIL_2):
+python webhook_roundtrip.py --expect-rejection sender_mismatch
 
-# Negative case — missing [TKT-XXXX] in subject:
-python webhook_roundtrip.py --subject-override "Plain subject" \
-                            --expect-rejection no_ticket_id
+# Negative case — subject missing [TKT-XXXX]:
+python webhook_roundtrip.py --expect-rejection no_ticket_id
+
+# Negative case — subject references a ticket UID that doesn't exist:
+python webhook_roundtrip.py --expect-rejection ticket_not_found
 
 python webhook_roundtrip.py --help    # full options
+```
+
+### `webhook_direct_post.py`
+
+Direct POST to the webhook (bypassing SMTP) for auth-layer rejection tests
+that SMTP can't exercise — wrong bearer, missing Authorization header, or
+malformed payloads.
+
+```bash
+# Wrong bearer → expect 401
+python webhook_direct_post.py --post-id <real-ticket-id> \
+    --bearer "definitely-not-the-real-secret" --expect-status 401
+
+# Missing Authorization header → expect 401
+python webhook_direct_post.py --post-id <real-ticket-id> \
+    --no-auth-header --expect-status 401
+
+# Omit a required field → expect 200 + success:false
+python webhook_direct_post.py --post-id <real-ticket-id> \
+    --omit-sender --expect-status 200 --expect-success false
 ```
 
 ### `email_delivery_check.py`
@@ -85,6 +130,20 @@ python email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" \
                                --timeout 60
 
 python email_delivery_check.py --help
+```
+
+### `capture_screenshots.py`
+
+Drives a headless Chromium through the admin inbox, settings, and reports
+pages in each of light / dark / auto theme. Saves PNGs to
+`screenshots/<timestamp>/` for visual sanity review in section 7.4 of the
+runbook.
+
+```bash
+pip install playwright && playwright install chromium   # one-time
+python capture_screenshots.py
+python capture_screenshots.py --headed                  # watch it work
+python capture_screenshots.py --only inbox,settings     # subset
 ```
 
 ### `cleanup.py`

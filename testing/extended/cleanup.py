@@ -2,35 +2,33 @@
 """
 Pre-flight and post-run cleanup for the RC extended-test runbook.
 
-Deletes every ticket whose title starts with `CLAUDE-TEST-` from the dev
-WordPress instance, and expunges the test mailbox of messages whose
-subject contains the same prefix.
+Deletes every ticket whose title starts with `CLAUDE-TEST-` and expunges
+the test mailbox of messages whose subject contains the same prefix.
 
-Per the runbook (docs/internal/extended-test-plan.md), this runs:
-  - Before each section starts (pre-flight, to avoid stale state).
-  - After section 9 (post-run, courtesy cleanup so the operator doesn't
-    leave clutter in the dev environment).
+Per the runbook, this runs:
+  - Before each section starts (pre-flight).
+  - After section 9 (post-run, courtesy cleanup).
 
 Usage:
 
-    # Default: prompt for confirmation, show what would be deleted.
-    python testing/extended/cleanup.py
-
-    # Non-interactive (CI-safe) — deletes without prompting.
-    python testing/extended/cleanup.py --confirm
-
-    # Dry-run — list candidates without deleting.
-    python testing/extended/cleanup.py --dry-run
+    python testing/extended/cleanup.py            # interactive (prompts)
+    python testing/extended/cleanup.py --confirm  # non-interactive
+    python testing/extended/cleanup.py --dry-run  # list, don't delete
 
 Exit codes:
-    0  Success (something deleted, or nothing to delete).
-    1  Partial failure (some deletions failed; details on stderr).
-    2  Configuration error.
+    0  Success (something deleted, or nothing to delete)
+    1  Partial failure
+    2  Configuration error
+
+Environment:
+    SSH_TARGET, WP_CONTAINER, WP_PATH    (wp-cli over SSH; see _wpcli.py)
+    MAIL_IMAP_ADDRESS, MAIL_IMAP_PORT
+    MAIL_USERNAME, MAIL_PASSWORD
 
 Safety:
     - Only acts on the documented prefix. Tickets without `CLAUDE-TEST-`
-      are never touched.
-    - WP REST DELETE with force=true (permanent — does NOT trash).
+      are never touched (strict startswith match on title).
+    - wp post delete --force (permanent — does NOT trash).
     - IMAP messages are marked \\Deleted and expunged.
 """
 
@@ -40,89 +38,33 @@ import argparse
 import imaplib
 import os
 import sys
-from typing import Optional
 
-try:
-    import requests
-except ImportError:
-    print("ERROR: `requests` is required. Run: pip install requests", file=sys.stderr)
-    sys.exit(2)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _wpcli import (  # noqa: E402
+    env,
+    list_test_tickets,
+    delete_test_ticket,
+)
 
 PREFIX = "CLAUDE-TEST-"
 
 
-def env(name: str, default: Optional[str] = None) -> str:
-    val = os.environ.get(name, default)
-    if val is None or val == "":
-        print(f"ERROR: env var {name} is not set. Source ~/.claude/dev-secrets.env first.",
-              file=sys.stderr)
-        sys.exit(2)
-    return val
-
-
-def find_test_tickets(wp_url: str, auth: tuple[str, str]) -> list[dict]:
-    """List every helpdesk_ticket whose title starts with CLAUDE-TEST-."""
-    out: list[dict] = []
-    page = 1
-    while True:
-        resp = requests.get(
-            f"{wp_url}/wp-json/wp/v2/helpdesk_ticket",
-            auth=auth,
-            params={
-                "per_page": 100,
-                "page": page,
-                "search": PREFIX,
-                "status": "any",
-            },
-            timeout=20,
-        )
-        if resp.status_code == 400 and page > 1:
-            # WP returns 400 when page exceeds total pages.
-            break
-        if resp.status_code != 200:
-            print(f"ERROR: ticket list returned HTTP {resp.status_code}: {resp.text[:300]}",
-                  file=sys.stderr)
-            sys.exit(2)
-        batch = resp.json()
-        if not batch:
-            break
-        # The search param matches anywhere in title/content. Filter strictly to
-        # tickets whose title actually STARTS with the prefix — protects against
-        # collateral damage if a legitimate ticket happens to mention the prefix.
-        kept = [t for t in batch if isinstance(t, dict)
-                and isinstance(t.get("title"), dict)
-                and str(t["title"].get("rendered", "")).startswith(PREFIX)]
-        out.extend(kept)
-        if len(batch) < 100:
-            break
-        page += 1
-    return out
-
-
-def delete_ticket(wp_url: str, auth: tuple[str, str], post_id: int) -> bool:
-    resp = requests.delete(
-        f"{wp_url}/wp-json/wp/v2/helpdesk_ticket/{post_id}",
-        auth=auth,
-        params={"force": "true"},
-        timeout=15,
-    )
-    return resp.status_code in (200, 410)
-
-
 def cleanup_tickets(args: argparse.Namespace) -> int:
-    wp_url = env("WP_TESTING_URL").rstrip("/")
-    auth = (env("WP_TESTING_USER"), env("WP_TESTING_PASS"))
+    print(f"[tickets] Listing {PREFIX}* tickets via wp-cli...")
+    try:
+        candidates = list_test_tickets(PREFIX)
+    except RuntimeError as e:
+        print(f"ERROR: wp-cli listing failed: {e}", file=sys.stderr)
+        return 2
 
-    print(f"[tickets] Listing CLAUDE-TEST- tickets at {wp_url}...")
-    candidates = find_test_tickets(wp_url, auth)
     if not candidates:
         print("[tickets] None found. Nothing to delete.")
         return 0
 
     print(f"[tickets] Found {len(candidates)} test ticket(s):")
     for t in candidates:
-        title = (t.get("title") or {}).get("rendered", "<no title>")
-        print(f"          id={t.get('id')} title={title!r}")
+        print(f"          id={t.get('ID')} status={t.get('post_status')} "
+              f"title={t.get('post_title')!r}")
 
     if args.dry_run:
         print("[tickets] --dry-run: skipping deletion.")
@@ -134,20 +76,20 @@ def cleanup_tickets(args: argparse.Namespace) -> int:
         except EOFError:
             response = ""
         if response.strip().lower() not in ("y", "yes"):
-            print("[tickets] Aborted. No deletions performed.")
+            print("[tickets] Aborted.")
             return 0
 
     failures = 0
     for t in candidates:
-        post_id = int(t.get("id", 0))
+        post_id = int(t.get("ID", 0))
         if post_id <= 0:
             continue
-        ok = delete_ticket(wp_url, auth, post_id)
-        if not ok:
+        ok = delete_test_ticket(post_id)
+        if ok:
+            print(f"[tickets] deleted id={post_id}")
+        else:
             failures += 1
             print(f"[tickets] FAIL to delete id={post_id}", file=sys.stderr)
-        else:
-            print(f"[tickets] deleted id={post_id}")
     print(f"[tickets] {len(candidates) - failures} deleted, {failures} failed.")
     return 0 if failures == 0 else 1
 
@@ -173,7 +115,6 @@ def cleanup_mailbox(args: argparse.Namespace) -> int:
         return 2
 
     try:
-        # SUBJECT search matches the substring anywhere in the subject header.
         typ, data = conn.search(None, f'(SUBJECT "{PREFIX}")')
         if typ != "OK" or not data or not data[0]:
             print("[mailbox] No test messages found.")
@@ -209,9 +150,9 @@ def cleanup_mailbox(args: argparse.Namespace) -> int:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--confirm", action="store_true",
-                   help="Skip interactive confirmation. Required for non-TTY use (CI).")
+                   help="Skip interactive confirmation. Required for non-TTY use.")
     p.add_argument("--dry-run", action="store_true",
-                   help="List candidates without deleting anything.")
+                   help="List candidates without deleting.")
     p.add_argument("--skip-tickets", action="store_true",
                    help="Skip WP ticket cleanup (mailbox only).")
     p.add_argument("--skip-mailbox", action="store_true",
