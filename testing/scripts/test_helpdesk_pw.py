@@ -3702,10 +3702,18 @@ def test_58_reports_loading_states(page: Page):
 # ── v3.6.0 Dark mode + accessibility (#339–#345) ─────────────────────────────
 
 def test_59_admin_dark_mode(page: Page):
-    """v3.6.0 (#339) Admin pages mirror WP admin_color: midnight → swh-admin-theme-dark."""
+    """v3.6.0 (#339) Admin pages mirror WP admin_color: midnight → swh-admin-theme-dark.
+
+    v4.0.0 made admin-theme opt-in via the swh_admin_theme setting (default 'light').
+    This test exercises 'auto' mode which preserves the v3.6 auto-detect behaviour.
+    """
     print("\n[59] Admin Dark Mode — admin_color → theme tokens (#339)")
 
     settings_url = f"{WP_ADMIN_URL}/edit.php?post_type=helpdesk_ticket&page=swh-settings"
+
+    # v4.0.0: opt into auto-detection so admin_color drives the theme.
+    wpcli('option update swh_admin_theme auto')
+    wpcli('eval "swh_set_option(\\"portal\\", \\"admin_theme\\", \\"auto\\");"')
 
     # Set the admin user's colour scheme to midnight via WP-CLI, then re-login
     # so the cookie/session picks up the changed user meta.
@@ -4012,8 +4020,9 @@ def test_65_inbox_renders_and_switches_views(page: Page):
     check("inbox #349: one view is active on load", active_count >= 1)
     if active_count > 0:
         active_label = page.locator(".swh-inbox-view-link.is-active").first.inner_text()
-        check("inbox #349: default active view is Unassigned",
-              active_label.strip() == "Unassigned",
+        # v4.0.0: default view changed from 'Unassigned' to 'All'.
+        check("inbox #349: default active view is All",
+              active_label.strip() == "All",
               f"active={active_label!r}")
 
     # Click "My Open" — active view updates.
@@ -4101,10 +4110,15 @@ def test_66_drawer_opens_and_edits_status(page: Page):
     check("drawer #350: drawer appears on row click", drawer_visible)
 
     if drawer_visible:
+        # Wait for fetchTicket to resolve so the title actually contains
+        # the ticket id (drawer initially renders "Loading ticket…").
+        with suppress(PlaywrightTimeoutError):
+            page.locator(f'.swh-drawer-title:has-text("#{ticket_id}")').wait_for(timeout=8000)
         title_visible = page.locator(".swh-drawer-title").count() > 0
+        title_text = page.locator(".swh-drawer-title").first.inner_text() if title_visible else ""
         check("drawer #350: drawer title shows ticket id",
-              title_visible and f"#{ticket_id}" in page.locator(".swh-drawer-title").first.inner_text(),
-              f"ticket_id={ticket_id}")
+              title_visible and f"#{ticket_id}" in title_text,
+              f"ticket_id={ticket_id}, title={title_text!r}")
 
         # Change status to resolved via the select dropdown.
         status_select = page.locator(".swh-drawer-meta-row select").first
@@ -4372,8 +4386,8 @@ def test_69_bulk_bar_closes_selected_tickets(page):
 
 
 def test_70_create_personal_view_and_switch(page):
-    """v4.0.0 #352 — create personal view via + Add, switch to it, delete it."""
-    print("\n[70] Saved views CRUD — create personal view, switch, delete (#352)")
+    """v4.0.0 #352 — saved views feature deferred to v4.1 (AddViewButton hidden)."""
+    print("\n[70] Saved views — feature deferred to v4.1 (#352)")
     wp_login(page, ADMIN_USER, ADMIN_PASS)
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
     with suppress(PlaywrightTimeoutError):
@@ -4384,7 +4398,14 @@ def test_70_create_personal_view_and_switch(page):
         wp_logout(page)
         return
 
-    # Click "+ Add view" to open popover.
+    add_btn = page.locator(".swh-inbox-view-add")
+    check("views #352 test_70: + Add view hidden in v4.0 (deferred to v4.1)",
+          add_btn.count() == 0,
+          "AddViewButton should be hidden until v4.1 ships the filter-picker popover")
+    wp_logout(page)
+    return
+
+    # Legacy CRUD assertions below intentionally unreachable until v4.1 lands.
     add_btn = page.locator(".swh-inbox-view-add")
     check("views #352 test_70: + Add view button visible", add_btn.count() > 0)
     if add_btn.count() == 0:
