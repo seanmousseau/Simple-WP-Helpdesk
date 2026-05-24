@@ -21,7 +21,7 @@ This matrix prevents that pattern from recurring by making every gap explicit an
 | Layer | Purpose | Tooling | Location |
 |---|---|---|---|
 | **L1 — Invariants** | Pin every load-bearing rule from `design-document.md` as an executable assertion. Catches "someone bypassed the contract" bugs. | PHPUnit + grep/AST helpers | `tests/Unit/Invariants/` (new) |
-| **L2 — REST/AJAX contracts** | Real WordPress bootstrap (`wp-phpunit`) hitting every endpoint with happy/auth-fail/validation-fail/rate-limit cases, asserting status code AND JSON envelope. | PHPUnit + `wp-phpunit` | `tests/Integration/Rest/`, `tests/Integration/Ajax/` (new) |
+| **L2 — REST/AJAX contracts** | Assert status code AND JSON envelope for every endpoint × every error/success path. **Two sub-layers:** (a) PR 2 ships envelope-shape assertions at the mocked-WP layer (fast feedback, catches v4.0.0-class response-shape regressions); (b) PR 7 adds the `wp-phpunit` integration harness for route dispatch, `permission_callback` enforcement, real auth, and concurrent-write paths that mocks can't model. | PHPUnit + WP-Mock (mocked); PHPUnit + `wp-phpunit` (integration) | `tests/Unit/Rest/Contracts/` (PR 2); `tests/Integration/Rest/`, `tests/Integration/Ajax/` (PR 7) |
 | **L3 — Domain** | State transitions, side effects, guard conditions, normalization. Table-driven where possible. No mocking the function under test. | PHPUnit + WP-Mock (or wp-phpunit for DB-touching tests) | `tests/Unit/` (expand) |
 | **L4 — Behavior E2E** | User-visible outcomes asserted via semantic selectors (`getByRole`, `getByLabel`, `getByText`). Banned: CSS-class selectors except where genuinely non-semantic. | Playwright | `testing/scripts/` (rewrite by feature) |
 | **L5 — Visual regression** | Pixel-diff baselines for critical surfaces × theme variants. Auto-runs on PR, human-approves baseline updates. | Playwright `toHaveScreenshot()` | `testing/visual/` (new) |
@@ -267,6 +267,45 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 - Add `make test-feature FEATURE=<slug>` and document.
 
 **Exit criteria:** a PR that adds a feature without filling its matrix row fails CI.
+
+### PR 7 — `wp-phpunit` integration harness (3–5 days)
+
+PR 2 shipped REST contract assertions at the mocked-WP layer (controller methods called directly, WordPress functions stubbed via WP-Mock). That catches the v4.0.0-class envelope regressions cheaply but leaves six gaps that only a real WordPress test installation can close. This PR adds the integration harness and lifts the existing contract tests into it.
+
+**What the mocked layer cannot test (the trigger for this PR):**
+
+1. **Route registration & dispatch.** We count `register_rest_route()` calls but never dispatch a real request through `WP_REST_Server`. A wrong path regex, wrong HTTP method binding, or missing route passes today.
+2. **`permission_callback` enforcement.** Contract tests bypass the callback by calling the controller method directly. If a permission_callback is changed to `__return_true` or wired to the wrong capability, every test still passes — the API would be wide open in production.
+3. **Cookie / nonce / capability stack.** We mock `current_user_can` to return a fixed value. The real auth flow (cookie auth, application passwords, REST nonce header, role inheritance, multisite super-admin) isn't exercised.
+4. **`rest_*` filters wrapping responses.** `rest_pre_dispatch`, `rest_request_after_callbacks`, `rest_post_dispatch`, and any plugin or future feature that mutates responses globally don't run.
+5. **DB-level invariants.** Real concurrent writes against `TicketVersion::check`, `WP_Query` meta_query joins for the inbox filter, transactional behavior on `wp_insert_comment` failure, capability inheritance through actual roles.
+6. **Full request lifecycle.** JSON serialization, response headers (CORS, cache-control), HTTP status propagation. We assert what the controller returns; we don't assert what the HTTP client receives.
+
+**Scope:**
+
+- Add `wp-phpunit` (and `yoast/phpunit-polyfills` for PHPUnit 9 ↔ WP compatibility) to `composer.json` dev deps.
+- Add `tests/Integration/bootstrap.php` that loads the WordPress test framework, activates the plugin, and sets up a clean DB per test.
+- Add `phpunit-integration.xml` config pointing at `tests/Integration/`.
+- Add a Docker service to `docker-compose.test.yml` for the integration DB, or reuse the existing test DB with a separate prefix.
+- Add `bin/install-wp-tests.sh` (the standard WP CLI tool, adapted for our paths).
+- Lift the existing `tests/Unit/Rest/Contracts/` tests into `tests/Integration/Rest/` as the first consumers, rewriting them to use `WP_UnitTestCase` and `rest_do_request()` instead of WP-Mock. Keep the WP-Mock tests for fast-feedback unit coverage; integration tests run on PR and pre-push.
+- Add the six categories of test the mocked layer can't do:
+  - `RouteRegistrationTest` — assert every documented endpoint resolves, returns expected status for unauth requests.
+  - `PermissionCallbackTest` — assert each endpoint's permission_callback rejects an unauthorized user with the documented envelope.
+  - `AuthIntegrationTest` — cookie + nonce flow, application password flow, technician role with and without `restrict_to_assigned`.
+  - `ConcurrentVersionTest` — two simultaneous PATCH requests against the same ticket; assert one wins, one gets 409.
+  - `MetaQueryTest` — inbox filter with mixed missing/present `_swh_last_activity_at` (the v4.0.0 inbox-default-view regression).
+  - `ResponseHeadersTest` — Content-Type, status code, CORS where applicable.
+- Add `make test-integration` Makefile target; wire into `make test` and the pre-push hook.
+- Add a `Test Integration` CI job alongside the existing PHP gate.
+
+**Exit criteria:** all six L2 categories above are green; the existing PR 2 contract tests run in both `tests/Unit/Rest/Contracts/` (mocked, fast) AND `tests/Integration/Rest/` (real WP, slower); CI completes integration suite in under 3 minutes on the standard runner.
+
+**Trigger to bump priority:** any of the following moves PR 7 ahead of PRs 3–6 in the queue —
+- a permission_callback or capability bug ships to production
+- a REST routing bug (404 / wrong method) ships to production
+- a contract test starts needing more than ~5 lines of `WP_Mock::userFunction` setup just to exercise one method (the mock surface exceeding the real surface)
+- a new endpoint genuinely depends on real DB semantics that WP-Mock can't model
 
 ## Day-zero policy after migration completes
 
