@@ -29,6 +29,7 @@ from __future__ import annotations
 import imaplib
 import os
 import re
+import shlex
 import smtplib
 import socket
 import subprocess
@@ -159,13 +160,26 @@ def check_ssh_wpcli() -> Optional[str]:
     wp_path = os.environ.get("WP_PATH", "")
     if not (ssh_target and container and wp_path):
         return "SSH_TARGET / WP_CONTAINER / WP_PATH are required for wp-cli."
+
+    # Defense in depth: env values come from a trusted secrets file in this
+    # workflow, but build the remote shell command via shlex.join so an
+    # adversarial WP_CONTAINER / WP_PATH (e.g. `foo;rm -rf /`) can't escape
+    # into shell metacharacters. SSH itself passes the command string to the
+    # remote login shell, so quoting at this layer is what matters.
+    remote_cmd = shlex.join([
+        "docker", "exec", "-i", container,
+        "wp", "--allow-root", f"--path={wp_path}", "core", "version",
+    ])
     cmd = [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
         ssh_target,
-        f"docker exec -i {container} wp --allow-root --path={wp_path} core version",
+        remote_cmd,
     ]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        # subprocess.run with a list avoids host-side shell interpretation.
+        # The remote_cmd argument is shlex-quoted above, so the SSH remote
+        # shell receives a safe command string.
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)  # nosemgrep: dangerous-subprocess-use-tainted-env-args
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         return f"SSH or docker invocation failed: {e}"
     if r.returncode != 0:
