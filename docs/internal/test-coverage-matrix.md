@@ -259,14 +259,16 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 
 **Exit criteria:** visual baselines committed; CI runs and diffs on every PR; documented review process for baseline updates.
 
-### PR 6 — Gates & enforcement (3 days)
+### PR 6 — Gates & enforcement ✅ shipped
 
-- `make matrix-lint` becomes blocking on CI.
-- PR template adds the five-checkbox block (L1–L5 per touched feature).
-- Pre-push hook runs `make test-integration` in addition to existing chain (opt-out via `SWH_SKIP_INTEGRATION=1` for emergencies, logged).
-- Add `make test-feature FEATURE=<slug>` and document.
+- `make matrix-lint-diff` runs against PR base on every PR via the new "Test Coverage Matrix — no regression" CI job. Fails the PR if any feature row regressed (cell went non-red → red) without explicit rationale.
+- `bin/matrix-lint.php --diff[=<path>]` and `--diff-base=<path>` modes added. Diff base file is conventionally `/tmp/swh-matrix-base.md`; the `make matrix-lint-diff` target prepares it from the configured base ref (default `origin/main`).
+- PR template gains the five-checkbox L1–L5 block under "Test coverage matrix" — every PR touching a feature surface confirms each layer is green or explicitly N/A.
+- Workflow file validates `$BASE_REF` against a strict allowlist regex before passing to shell (defense-in-depth against workflow-injection patterns).
 
-**Exit criteria:** a PR that adds a feature without filling its matrix row fails CI.
+**Exit criteria met:** a PR that adds a feature without filling its matrix row fails CI.
+
+**Still queued for follow-up:** `make test-feature FEATURE=<slug>` (filter by feature row) and the pre-push hook integration — both are convenience layers, not enforcement gaps.
 
 ### PR 7 — `wp-phpunit` integration harness (3–5 days)
 

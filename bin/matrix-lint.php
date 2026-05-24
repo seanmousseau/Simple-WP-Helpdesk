@@ -2,17 +2,29 @@
 /**
  * Test Coverage Matrix linter.
  *
- * Parses docs/internal/test-coverage-matrix.md and emits a summary report of
- * cell counts per layer and per tier. Exits non-zero on parse failure.
+ * Parses docs/internal/test-coverage-matrix.md and emits a summary report
+ * (cell counts per layer / per tier). Optionally compares the branch's
+ * matrix against a base ref to detect coverage regressions.
  *
- * Full git-diff–aware enforcement (fail if a changed feature has any new red
- * cells without explicit N/A) is scoped for PR 6 of the testing overhaul.
- * For now this script:
- *   - confirms the matrix is parseable,
- *   - reports totals so we can track progress over time,
- *   - flags structural problems (missing tier headers, malformed cells).
+ * Modes:
+ *   php bin/matrix-lint.php
+ *       Summary report. Exits non-zero on structural problems or unknown
+ *       cell markers.
  *
- * Usage: php bin/matrix-lint.php [--json]
+ *   php bin/matrix-lint.php --json
+ *       Same checks, machine-readable output for CI.
+ *
+ *   php bin/matrix-lint.php --diff[=<base-ref>]
+ *       Diff mode (PR 6 of the testing overhaul). Compares the matrix at
+ *       HEAD against the matrix at the base ref (default: origin/main).
+ *       Fails if any feature row regressed — i.e. a cell that was `✓` or
+ *       `P` on the base is now `R` (red), OR a row that didn't exist
+ *       before has red cells when it could have been seeded green / P /
+ *       explicit N/A. Use --diff-base=<ref> to override the base.
+ *
+ *       This is the enforcement layer that makes the matrix self-policing:
+ *       a PR that adds a feature without filling in its row, or removes
+ *       a test that was the only thing keeping a cell green, fails CI.
  */
 
 declare(strict_types=1);
@@ -23,7 +35,23 @@ if ( ! is_readable( $matrix_path ) ) {
 	exit( 2 );
 }
 
-$as_json = in_array( '--json', $argv, true );
+// Argument parsing.
+$as_json   = false;
+$do_diff   = false;
+$diff_base = 'origin/main';
+foreach ( array_slice( $argv, 1 ) as $arg ) {
+	if ( '--json' === $arg ) {
+		$as_json = true;
+	} elseif ( '--diff' === $arg ) {
+		$do_diff = true;
+	} elseif ( 0 === strpos( $arg, '--diff=' ) ) {
+		$do_diff   = true;
+		$diff_base = substr( $arg, 7 );
+	} elseif ( 0 === strpos( $arg, '--diff-base=' ) ) {
+		$do_diff   = true;
+		$diff_base = substr( $arg, 12 );
+	}
+}
 
 $lines = file( $matrix_path, FILE_IGNORE_NEW_LINES );
 if ( false === $lines ) {
@@ -212,4 +240,145 @@ if ( $unknown_failure ) {
 	exit( 1 );
 }
 
-exit( 0 );
+// ---- Diff mode (PR 6 enforcement) ----
+
+if ( ! $do_diff ) {
+	exit( 0 );
+}
+
+/**
+ * Parse a matrix blob into [feature_key => {display, cells[5]}].
+ *
+ * Lightweight version of the main parser — skips structural validation since
+ * diff cares only about feature-level cell states. feature_key is the
+ * lowercased feature name with markdown formatting stripped, so backtick /
+ * emphasis edits don't mis-key the comparison.
+ *
+ * @return array<string, array{display:string, cells:array<int,string>}>
+ */
+function swh_matrix_parse_for_diff( string $text ): array {
+	$lines   = explode( "\n", $text );
+	$out     = array();
+	$in_tier = false;
+	foreach ( $lines as $line ) {
+		if ( preg_match( '/^### Tier \d+ — /', $line ) ) {
+			$in_tier = true;
+			continue;
+		}
+		if ( preg_match( '/^## /', $line ) && $in_tier && ! preg_match( '/^### Tier/', $line ) ) {
+			$in_tier = false;
+			continue;
+		}
+		if ( ! $in_tier || ! preg_match( '/^\|/', $line ) ) {
+			continue;
+		}
+		if ( preg_match( '/^\|\s*-+\s*\|/', $line ) ) {
+			continue;
+		}
+		$cells = array_map( 'trim', explode( '|', trim( $line, '|' ) ) );
+		if ( count( $cells ) < 6 ) {
+			continue;
+		}
+		if ( strcasecmp( $cells[0], 'Feature' ) === 0 ) {
+			continue;
+		}
+		$feature_raw            = $cells[0];
+		$feature_key            = strtolower( (string) preg_replace( '/[`*_]/', '', $feature_raw ) );
+		$out[ $feature_key ]    = array(
+			'display' => $feature_raw,
+			'cells'   => array_slice( $cells, 1, 5 ),
+		);
+	}
+	return $out;
+}
+
+// The diff base must be a file path that the caller has prepared (e.g. via
+// `git show <ref>:docs/internal/test-coverage-matrix.md > /tmp/base.md`).
+// Resolving the ref via subprocess is avoided here on purpose — keeps this
+// PHP script free of shell invocations. The Makefile target `matrix-lint-diff`
+// handles the shell side.
+// Hard-coded /tmp default — works on Linux CI and macOS dev (where it
+// symlinks to /private/tmp). Don't use sys_get_temp_dir() because it
+// returns macOS's per-user $TMPDIR which the Makefile target can't predict.
+$default_base_path = '/tmp/swh-matrix-base.md';
+if ( 'origin/main' === $diff_base ) {
+	$base_path = $default_base_path;
+	if ( ! is_readable( $base_path ) ) {
+		fwrite(
+			STDERR,
+			"\nERROR: Default base path $base_path doesn't exist. Either pass "
+				. "--diff-base=<filepath> with a path to the base matrix, or invoke via "
+				. "`make matrix-lint-diff` which prepares the default path.\n"
+		);
+		exit( 2 );
+	}
+} else {
+	$base_path = $diff_base;
+	if ( ! is_readable( $base_path ) ) {
+		fwrite( STDERR, "\nERROR: Base matrix file not found at: $base_path\n" );
+		exit( 2 );
+	}
+}
+
+$base_blob    = (string) file_get_contents( $base_path );
+$base_map     = swh_matrix_parse_for_diff( $base_blob );
+$current_blob = (string) file_get_contents( $matrix_path );
+$current_map  = swh_matrix_parse_for_diff( $current_blob );
+
+// Compute regressions:
+//   - features present in BOTH: any cell that went non-red → red is a regression
+//   - features NEW in current: any red cell is a regression (added without seeding tests)
+$regressions = array();
+foreach ( $current_map as $key => $now ) {
+	$was = $base_map[ $key ] ?? null;
+	for ( $i = 0; $i < 5; $i++ ) {
+		$now_state = $state_of( $now['cells'][ $i ] ?? '' );
+		if ( 'red' !== $now_state ) {
+			continue;
+		}
+		$layer = $expected_layers[ $i ];
+		if ( null === $was ) {
+			$regressions[] = array(
+				'feature' => $now['display'],
+				'layer'   => $layer,
+				'was'     => '(new feature row)',
+				'now'     => $now['cells'][ $i ],
+				'kind'    => 'new-row-red',
+			);
+			continue;
+		}
+		$was_state = $state_of( $was['cells'][ $i ] ?? '' );
+		if ( in_array( $was_state, array( 'green', 'partial', 'na' ), true ) ) {
+			$regressions[] = array(
+				'feature' => $now['display'],
+				'layer'   => $layer,
+				'was'     => $was['cells'][ $i ] ?? '(empty)',
+				'now'     => $now['cells'][ $i ],
+				'kind'    => 'regression',
+			);
+		}
+	}
+}
+
+echo "\n";
+echo str_repeat( '=', 60 ) . "\n";
+echo "Diff vs base ($base_path)\n";
+echo str_repeat( '=', 60 ) . "\n";
+
+if ( empty( $regressions ) ) {
+	echo "\nPASS — no coverage regressions in this branch.\n";
+	exit( 0 );
+}
+
+echo "\nFAIL — " . count( $regressions ) . " coverage regression(s):\n";
+foreach ( $regressions as $r ) {
+	$tag = 'regression' === $r['kind'] ? 'REGRESSED' : 'NEW-ROW';
+	echo "\n  [$tag] " . substr( (string) $r['feature'], 0, 90 ) . "\n";
+	echo "    layer: {$r['layer']}\n";
+	echo "    was  : " . substr( (string) $r['was'], 0, 80 ) . "\n";
+	echo "    now  : " . substr( (string) $r['now'], 0, 80 ) . "\n";
+}
+
+echo "\nFix: turn the red cell(s) into ✓ / P / N/A with rationale, OR explain in "
+	. "the PR description why this regression is intentional.\n";
+exit( 1 );

@@ -93,3 +93,59 @@ jobs:
             echo "Add an entry under the appropriate version heading before merging."
             exit 1
           fi
+
+  matrix-lint:
+    # PR 6 of the testing overhaul: fails if any feature row in the test-coverage
+    # matrix regressed (a cell went from ✓ / P / N/A to R) without an explicit
+    # rationale in the PR. See docs/internal/test-coverage-matrix.md.
+    name: Test Coverage Matrix — no regression
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+
+      - name: Fetch base ref (validated against repo-controlled allowlist)
+        env:
+          # github.event.pull_request.base.ref is the PR's TARGET branch — it's
+          # repo-controlled, not attacker-controlled (a PR can only target an
+          # existing branch in this repo). But for defense-in-depth we still
+          # validate against a known-safe pattern before using it as a shell arg.
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # Refuse anything other than a-z 0-9 _ - / . — git branch names can
+          # contain those legitimately; metacharacters cannot.
+          if ! echo "$BASE_REF" | grep -qE '^[A-Za-z0-9._/-]+$'; then
+            echo "::error::Refusing to use base ref containing metacharacters: $BASE_REF"
+            exit 2
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+
+      - name: Lint matrix structure (catches malformed cells)
+        run: php bin/matrix-lint.php
+
+      - name: Diff matrix vs PR base
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if ! echo "$BASE_REF" | grep -qE '^[A-Za-z0-9._/-]+$'; then
+            echo "::error::Refusing to use base ref containing metacharacters."
+            exit 2
+          fi
+          BASE="origin/$BASE_REF"
+          if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            echo "::error::Could not resolve $BASE — fetch step may have failed."
+            exit 2
+          fi
+          if ! git show "$BASE:docs/internal/test-coverage-matrix.md" > /tmp/swh-matrix-base.md 2>/dev/null; then
+            echo "::warning::Base ref $BASE has no matrix file — skipping diff (treat as new-repo case)."
+            exit 0
+          fi
+          php bin/matrix-lint.php --diff

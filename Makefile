@@ -43,6 +43,19 @@ test-invariants: ## L1 invariant tests (source-pattern checks; see docs/internal
 matrix-lint: ## Summarise test coverage matrix (docs/internal/test-coverage-matrix.md)
 	@php bin/matrix-lint.php
 
+matrix-lint-diff: ## Compare matrix vs base ref (default origin/main); fail if any feature row regressed
+	@BASE=$${BASE:-origin/main}; \
+	 echo "→ Comparing test-coverage-matrix.md against $$BASE..."; \
+	 if ! git rev-parse --verify $$BASE >/dev/null 2>&1; then \
+	   echo "  ✗ Base ref $$BASE does not exist locally — try: git fetch origin"; \
+	   exit 2; \
+	 fi; \
+	 git show $$BASE:docs/internal/test-coverage-matrix.md > /tmp/swh-matrix-base.md 2>/dev/null || { \
+	   echo "  ✗ Could not extract matrix from $$BASE — it may predate the matrix"; \
+	   exit 2; \
+	 }; \
+	 php bin/matrix-lint.php --diff
+
 semgrep: ## SAST security scan
 	@echo "→ Semgrep..."
 	@semgrep scan --config=auto --error simple-wp-helpdesk/ 2>&1 | tail -5
