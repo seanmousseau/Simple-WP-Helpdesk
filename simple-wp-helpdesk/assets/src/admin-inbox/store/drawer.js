@@ -88,6 +88,7 @@ const actions = {
 				}
 				if (
 					err.code === 'version_conflict' ||
+					err.error === 'version_conflict' ||
 					err.data?.status === 409
 				) {
 					dispatch( {
@@ -156,6 +157,7 @@ const actions = {
 				}
 				if (
 					err.code === 'version_conflict' ||
+					err.error === 'version_conflict' ||
 					err.data?.status === 409
 				) {
 					dispatch( {

@@ -359,8 +359,10 @@ function swh_render_client_portal() {
 	$priority    = is_string( $meta_prio ) ? $meta_prio : '';
 	// Only the explicit Closed status hides the "Close ticket" menu item.
 	// A Resolved ticket still shows "Close ticket" so the customer can
-	// confirm closure (matches legacy portal behavior).
-	$is_closed = ( $status === $closed_status );
+	// confirm closure (matches legacy portal behavior). Case-insensitive
+	// because settings store "Closed" but swh_set_ticket_status writes
+	// the canonical lowercase form to the meta.
+	$is_closed = ( 0 === strcasecmp( $status, $closed_status ) );
 
 	swh_portal_v2_enqueue_assets();
 
