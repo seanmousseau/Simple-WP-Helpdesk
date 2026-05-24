@@ -91,7 +91,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Portal — CSAT submission | R | ✓ AJAX `swh_submit_csat` covered? confirm | ✓ `CsatAjaxTest` (7 cases: nonce, rating bounds, ticket existence, post type, non-closed guard, valid path + hook fires) | P test_33 | R |
 | Portal — guest lookup | N/A | N/A | R | ✓ test_35 | R |
 | Email — `swh_send_email` template parser, `{if}` blocks, HTML wrapper | ✓ `MailDispatcherInvariantTest` (dispatcher pinning) | N/A | ✓ `EmailTest`, `EmailWrapperTest`, `MailerTest` | R | N/A |
-| Email — each of 15 transactional templates renders & dispatches | ✓ `EmailTriggerInvariantTest` (4 cases: subject/body pair shape per call site, every used stem documented, every documented stem has a call site, no dynamic keys) | N/A | P `EmailTest` (template parser only — per-trigger dispatch covered by invariant above) | R (20) | N/A |
+| Email — each of 16 transactional templates renders & dispatches | ✓ `EmailTriggerInvariantTest` (4 cases: subject/body pair shape per call site, every used stem documented, every documented stem has a call site, no dynamic keys) | N/A | P `EmailTest` (template parser only — per-trigger dispatch covered by invariant above) | R (20) | N/A |
 | Email — inbound parsing (reply detection, attachment extraction, signature stripping) | R | ✓ `InboundEmailTest` (REST) | ✓ `InboundEmailTest` | R | N/A |
 | Inbox — default view per role | R (21) | ✓ `InboxControllerTest` | P | P test_12 | ✓ (light + dark snapshot needed) |
 | Inbox — filters (status/assignee/tag/priority/date) | N/A | P `InboxControllerTest` | R | P test_12, test_22, test_37 | R |

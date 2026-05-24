@@ -73,24 +73,35 @@ class EmailTriggerInvariantTest extends SourceScanTestCase {
 	private function extract_call_sites(): array {
 		$out = array();
 		// Match the 2nd and 3rd string-literal args of a swh_send_email( ... ) CALL.
-		// The negative lookbehind on `function ` excludes the swh_send_email() function
-		// declaration itself, where the args are parameter names ($subject_key,
-		// $body_key) rather than literals.
-		$pattern = '/(?<!function )swh_send_email\s*\(\s*[^,]+,\s*[\'"]([a-z_]+)[\'"]\s*,\s*[\'"]([a-z_]+)[\'"]/';
+		// The negative lookbehind on `function\s` excludes the swh_send_email()
+		// function declaration itself, where the args are parameter names
+		// ($subject_key, $body_key) rather than literals. The `s` flag makes `.`
+		// span newlines so multiline call sites — `swh_send_email(\n  $to,\n  'sub',\n  'body', ...)` —
+		// are captured the same as single-line ones. `[^,]` is replaced with
+		// `[^,)]` per-arg so the first arg can span lines without swallowing
+		// commas that belong to subsequent args.
+		$pattern = '/(?<!function\s)swh_send_email\s*\(\s*[^,)]+?,\s*[\'"]([a-z_]+)[\'"]\s*,\s*[\'"]([a-z_]+)[\'"]/s';
+
 		foreach ( $this->plugin_php_files() as $file ) {
-			$lines = file( $file, FILE_IGNORE_NEW_LINES );
-			if ( false === $lines ) {
+			$contents = file_get_contents( $file );
+			if ( false === $contents ) {
 				continue;
 			}
-			foreach ( $lines as $lineno => $line ) {
-				$trimmed = ltrim( $line );
-				if ( '' === $trimmed || str_starts_with( $trimmed, '//' ) || str_starts_with( $trimmed, '*' ) || str_starts_with( $trimmed, '/*' ) ) {
-					continue;
-				}
-				if ( preg_match( $pattern, $line, $m ) ) {
-					$rel   = ltrim( str_replace( $this->plugin_root(), '', $file ), '/' );
-					$out[] = array( $m[1], $m[2], $rel . ':' . ( $lineno + 1 ) );
-				}
+			if ( ! preg_match_all( $pattern, $contents, $matches, PREG_OFFSET_CAPTURE ) ) {
+				continue;
+			}
+			$rel = ltrim( str_replace( $this->plugin_root(), '', $file ), '/' );
+			foreach ( $matches[0] as $i => $whole ) {
+				$offset  = (int) $whole[1];
+				$sub_key  = (string) $matches[1][ $i ][0];
+				$body_key = (string) $matches[2][ $i ][0];
+
+				// Determine the source line by counting newlines before the offset.
+				// substr_count( $contents, "\n", 0, $offset ) gives a 0-based count;
+				// add 1 for 1-based line numbering.
+				$lineno = substr_count( $contents, "\n", 0, $offset ) + 1;
+
+				$out[] = array( $sub_key, $body_key, $rel . ':' . $lineno );
 			}
 		}
 		return $out;
@@ -163,39 +174,38 @@ class EmailTriggerInvariantTest extends SourceScanTestCase {
 
 	public function test_no_dynamic_template_keys(): void {
 		// Catches `swh_send_email( $to, $sub_key, $body_key, ... )` where the
-		// key is a variable rather than a literal. Dynamic keys defeat this
-		// invariant test — flag any new instance for human review.
-		// Negative lookbehind on `function ` excludes the function declaration.
-		$pattern = '/(?<!function )swh_send_email\s*\(\s*[^,]+,\s*\$/';
-		$matches = array();
+		// key is a variable rather than a literal. Dynamic keys defeat the
+		// static-extraction invariants above — flag any new instance for review.
+		// Multiline-aware: same `s` flag pattern as extract_call_sites().
+		$pattern = '/(?<!function\s)swh_send_email\s*\(\s*[^,)]+?,\s*\$/s';
+		$findings = array();
 		foreach ( $this->plugin_php_files() as $file ) {
-			$lines = file( $file, FILE_IGNORE_NEW_LINES );
-			if ( false === $lines ) {
+			$rel = ltrim( str_replace( $this->plugin_root(), '', $file ), '/' );
+			// The facade in src/Email/Mailer.php deliberately uses variable
+			// arguments — it's a thin pass-through to swh_send_email.
+			if ( 'src/Email/Mailer.php' === $rel ) {
 				continue;
 			}
-			foreach ( $lines as $lineno => $line ) {
-				$trimmed = ltrim( $line );
-				if ( '' === $trimmed || str_starts_with( $trimmed, '//' ) || str_starts_with( $trimmed, '*' ) || str_starts_with( $trimmed, '/*' ) ) {
-					continue;
-				}
-				// The facade in src/Email/Mailer.php deliberately uses variable
-				// arguments — pass-through to swh_send_email. Allow that one.
-				$rel = ltrim( str_replace( $this->plugin_root(), '', $file ), '/' );
-				if ( 'src/Email/Mailer.php' === $rel ) {
-					continue;
-				}
-				if ( preg_match( $pattern, $line ) ) {
-					$matches[] = $rel . ':' . ( $lineno + 1 ) . ' — ' . trim( $line );
-				}
+			$contents = file_get_contents( $file );
+			if ( false === $contents ) {
+				continue;
+			}
+			if ( ! preg_match_all( $pattern, $contents, $matches, PREG_OFFSET_CAPTURE ) ) {
+				continue;
+			}
+			foreach ( $matches[0] as $whole ) {
+				$offset    = (int) $whole[1];
+				$lineno    = substr_count( $contents, "\n", 0, $offset ) + 1;
+				$findings[] = $rel . ':' . $lineno;
 			}
 		}
 		$this->assertSame(
 			array(),
-			$matches,
+			$findings,
 			"swh_send_email() called with a dynamic (variable) subject/body key. Either inline the "
 				. "literal so this invariant can verify it, or — if dynamic dispatch is truly required "
 				. "— add the call site to the allow-list in this test and explain:\n  "
-				. implode( "\n  ", $matches )
+				. implode( "\n  ", $findings )
 		);
 	}
 }
