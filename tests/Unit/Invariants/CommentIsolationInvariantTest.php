@@ -77,12 +77,25 @@ class CommentIsolationInvariantTest extends SourceScanTestCase {
 		// Critical: exclusion uses NOT IN (SELECT ID FROM ... WHERE post_type = 'helpdesk_ticket')
 		// because legacy comments may not have comment_type migrated. Filtering only on
 		// comment_type would leak old replies created before v3.6.
+		// Match the full subquery: `NOT IN ( SELECT ID FROM <table> WHERE post_type = 'helpdesk_ticket' )`.
+		// Whitespace and table alias (`{$wpdb->posts}` vs literal) are tolerated; the post_type
+		// literal is the load-bearing part — without it, the exclusion would scope to all posts.
 		$this->assertMatchesRegularExpression(
-			"/comment_post_ID\s+NOT\s+IN\s*\(\s*SELECT\s+ID\s+FROM/i",
+			"/comment_post_ID\s+NOT\s+IN\s*\(\s*SELECT\s+ID\s+FROM\s+\S+\s+WHERE\s+[^)]*post_type\s*=\s*%s[^)]*\)/i",
 			$this->source,
-			'swh_exclude_helpdesk_comments must filter by post_type (subquery on wp_posts), not just comment_type. '
+			'swh_exclude_helpdesk_comments must filter by post_type (subquery on wp_posts with WHERE post_type = %s), '
+				. 'not just by comment_type. The post_type clause is the load-bearing part — without it the subquery '
+				. 'would return EVERY post ID and the exclusion would silently scope to all comments site-wide. '
 				. 'Tickets created before the comment_type_v2 migration may still have comment_type=\'\' '
-				. 'and would leak through a comment_type filter.'
+				. 'and would leak through a comment_type-only filter.'
+		);
+		// Cross-check: the helpdesk_ticket literal must be passed to $wpdb->prepare() so it
+		// actually substitutes into the %s placeholder above. (Catches the case where the
+		// SQL has %s but no value is bound.)
+		$this->assertMatchesRegularExpression(
+			"/\\\$wpdb->prepare\s*\([\s\S]*?['\"]helpdesk_ticket['\"]/",
+			$this->source,
+			'swh_exclude_helpdesk_comments must bind the literal \'helpdesk_ticket\' into the prepared query.'
 		);
 	}
 }

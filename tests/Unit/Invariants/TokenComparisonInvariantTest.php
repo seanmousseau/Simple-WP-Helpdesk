@@ -70,22 +70,36 @@ class TokenComparisonInvariantTest extends SourceScanTestCase {
 			if ( false === $lines ) {
 				continue;
 			}
+			// Operator alternation: ==, !=, ===, !==. Use a non-capturing group so the
+			// pattern is identical wherever it appears.
+			$op = '(?:===|!==|==|!=)';
+
 			foreach ( $lines as $lineno => $line ) {
 				$trimmed = ltrim( $line );
 				if ( '' === $trimmed || str_starts_with( $trimmed, '//' ) || str_starts_with( $trimmed, '*' ) || str_starts_with( $trimmed, '/*' ) ) {
 					continue;
 				}
-				if ( ! preg_match( '/[=!]==?/', $line ) ) {
+				if ( ! preg_match( '/' . $op . '/', $line ) ) {
 					continue;
 				}
 				foreach ( $risky_names as $name ) {
-					// Match `$<name> ==`, `== $<name>`, `$<name> ===`, etc., but not
-					// `'' === $token` (empty-string emptiness check, which is safe).
+					// Match the risky variable on EITHER side of EITHER operator, compared
+					// against (a) another variable, (b) a string literal, or (c) a numeric
+					// literal. This catches `$token == 'x'`, `'x' == $token`, `$token == $other`,
+					// `$token == 1`, and `1 == $token`. The earlier pattern only caught
+					// var-vs-var, so `$token == 'expected'` slipped through.
+					$rhs_operand = '(?:\$\w+|[\'"][^\'"]*[\'"]|-?\d+)';
+					$lhs_operand = $rhs_operand;
 					$has_token_compare = preg_match(
-						'/\$' . $name . '\s*[!=]==?\s*\$|\$\w+\s*[!=]==?\s*\$' . $name . '\b/',
+						'/\$' . $name . '\b\s*' . $op . '\s*' . $rhs_operand . '|' . $lhs_operand . '\s*' . $op . '\s*\$' . $name . '\b/',
 						$line
 					);
-					$is_empty_check = preg_match( '/[\'"]\s*[\'"]\s*[!=]==?\s*\$' . $name . '\b|\$' . $name . '\s*[!=]==?\s*[\'"]\s*[\'"]/', $line );
+					// Empty-string emptiness check is safe (it tests whether the token was
+					// set, not whether it matches an expected value). Exclude both directions.
+					$is_empty_check = preg_match(
+						'/[\'"]\s*[\'"]\s*' . $op . '\s*\$' . $name . '\b|\$' . $name . '\b\s*' . $op . '\s*[\'"]\s*[\'"]/',
+						$line
+					);
 					if ( $has_token_compare && ! $is_empty_check ) {
 						$rel          = ltrim( str_replace( $this->plugin_root(), '', $file ), '/' );
 						$violations[] = $rel . ':' . ( $lineno + 1 ) . ' — ' . trim( $line );

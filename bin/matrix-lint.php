@@ -70,6 +70,20 @@ foreach ( $lines as $lineno => $line ) {
 	$tiers[ $current_tier ][] = $cells;
 }
 
+// Empty-tiers guard: if the matrix has no parseable tier headers or every tier
+// is empty, the document is malformed and the rest of the script would silently
+// emit zeros. Catch that explicitly.
+$has_rows = false;
+foreach ( $tiers as $rows ) {
+	if ( ! empty( $rows ) ) {
+		$has_rows = true;
+		break;
+	}
+}
+if ( ! $has_rows ) {
+	$structural_problems[] = "No tier rows parsed: expected '### Tier N — <title>' headers followed by a markdown table with 6 columns (Feature + 5 layers). Check the matrix structure.";
+}
+
 // Tally cell states per tier/layer. A cell is classified by its leading marker.
 $state_of = static function ( string $cell ): string {
 	$cell = trim( $cell );
@@ -118,17 +132,23 @@ foreach ( $tiers as $tier_name => $rows ) {
 	}
 }
 
+// Unknown markers are validation failures, not just informational counts.
+// They mean a matrix cell exists that the linter cannot classify — the cell
+// will be invisible to coverage reporting until someone fixes it.
+$unknown_failure = $totals['unknown'] > 0;
+
 if ( $as_json ) {
 	echo json_encode(
 		array(
-			'totals'   => $totals,
-			'by_tier'  => $by_tier,
-			'by_layer' => $by_layer,
-			'problems' => $structural_problems,
+			'totals'          => $totals,
+			'by_tier'         => $by_tier,
+			'by_layer'        => $by_layer,
+			'problems'        => $structural_problems,
+			'unknown_markers' => $totals['unknown'],
 		),
 		JSON_PRETTY_PRINT
 	), "\n";
-	exit( empty( $structural_problems ) ? 0 : 1 );
+	exit( ( empty( $structural_problems ) && ! $unknown_failure ) ? 0 : 1 );
 }
 
 $total_cells = $totals['green'] + $totals['partial'] + $totals['red'] + $totals['na'] + $totals['unknown'];
@@ -187,8 +207,8 @@ if ( ! empty( $structural_problems ) ) {
 	exit( 1 );
 }
 
-if ( $totals['unknown'] > 0 ) {
-	echo "\nWARNING: $totals[unknown] cells with unrecognised marker. Cells must start with ✓, P, R, or N/A.\n";
+if ( $unknown_failure ) {
+	echo "\nERROR: {$totals['unknown']} cell(s) with unrecognised marker. Cells must start with ✓, P, R, or N/A.\n";
 	exit( 1 );
 }
 

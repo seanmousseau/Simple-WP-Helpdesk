@@ -209,7 +209,7 @@ Numbered to match parenthesised refs above. Each is a concrete test to write.
 | `wp-phpunit` (WP test framework) | Real DB + WP bootstrap for L2 and DB-touching L3 tests. WP-Mock can't model the things that broke (REST request lifecycle, comment query filters, capability checks). | `tests/Integration/bootstrap.php`, `phpunit-integration.xml` |
 | Playwright `toHaveScreenshot()` | Built-in, no SaaS dependency. Baselines committed under `testing/visual/__screenshots__/`. | `testing/visual/` |
 | `make test-feature FEATURE=portal-v2` | Filters L1–L5 to one feature row. Forces "done = matrix row green". | `Makefile` |
-| `make matrix-lint` | Parses this document + git diff and fails CI if a changed feature has any new red cells without explicit N/A. | `bin/matrix-lint.php`, CI |
+| `make matrix-lint` | **Today:** parses this document, validates the markdown table structure (6 columns per row, recognised `✓` / `P` / `R` / `N/A` markers), and reports coverage totals by layer and tier. Fails non-zero only on structural problems or unrecognised cell markers. **Not yet diff-aware** — does not (yet) inspect git diff or block PRs based on changed features. Diff-aware enforcement is scoped for PR 6. | `bin/matrix-lint.php`, CI |
 | `make visual-update` | Regenerates baselines and prompts for review. Required after intentional UI change. | `Makefile` |
 | `wp-browser` (optional) | Alternative L2 stack if `wp-phpunit` integration proves slow. Evaluate during Phase 1. | n/a |
 
