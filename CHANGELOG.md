@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Added
+
+- **Testing — Coverage Matrix and L1 Invariants** (PR #428). Introduces `docs/internal/test-coverage-matrix.md` as the auditable source of truth for test coverage across five layers (L1 invariants, L2 REST/AJAX contracts, L3 domain, L4 behavior E2E, L5 visual regression). Adds the first six executable invariant tests under `tests/Unit/Invariants/` pinning load-bearing rules from `design-document.md` (status mutator, mail dispatcher, token comparison, file proxy guards, comment isolation). New tooling: `bin/matrix-lint.php` reports current matrix coverage; `make test-invariants` and `make matrix-lint` targets wired into the local gate. Codifies the E2E selector policy in `testing-guide.md`. Closes #421.
+
 ---
 
 ## [4.0.0] — 2026-05-23

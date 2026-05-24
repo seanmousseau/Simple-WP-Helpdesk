@@ -33,6 +33,63 @@ If a change touches both logic and UX, both layers get tests.
 
 New Playwright sections continue from the next available number (currently 65). Add the section to the taxonomy table below.
 
+## Coverage matrix is the source of truth
+
+The five-layer test strategy and the full feature × layer matrix live in
+[`test-coverage-matrix.md`](test-coverage-matrix.md). Read it before adding,
+moving, or removing a test. The short version:
+
+- **L1 Invariants** — `tests/Unit/Invariants/` — pin load-bearing rules from
+  `design-document.md` (status mutator, mail dispatcher, token comparison, file
+  proxy guards, comment isolation). Source-pattern checks; no WP bootstrap.
+- **L2 REST/AJAX contracts** — assert status + JSON envelope for every endpoint.
+- **L3 Domain** — state transitions, side effects, normalization. No mocking
+  the function under test.
+- **L4 Behavior E2E** — `testing/scripts/test_helpdesk_pw.py`. Asserts
+  user-visible outcomes via semantic selectors. See "E2E selector policy" below.
+- **L5 Visual regression** — Playwright screenshot diffs for critical surfaces.
+
+Run `make matrix-lint` to see current coverage totals.
+
+## E2E selector policy
+
+E2E tests must assert what the user sees, not what the markup is. The four
+selector-coupled tests that broke during v4.0.0 (test_59, test_69, test_70,
+test_71) and the three flaky tests from issue #421 all failed because their
+selectors targeted CSS class names that became unstable as React re-renders or
+class names changed.
+
+**Rules:**
+
+1. Prefer `get_by_role`, `get_by_label`, `get_by_text` — they survive markup
+   churn and double as accessibility assertions.
+2. When a class selector is unavoidable, target `data-*` attributes
+   (`data-ticket-id`, `data-testid`), never visual or layout classes.
+3. After any state-changing action that triggers a fetch, wait on the **REST
+   response**, not on a DOM class. Use `page.expect_response()`.
+4. After clicking into a list view, wait for **either the row to appear OR an
+   empty-state marker** before asserting on a specific row. Cold renders take
+   longer than warm ones.
+5. WP admin row-action links (Trash, Edit) may hit an intermediate "Are you
+   sure?" interstitial. For cleanup, prefer `wpcli("post delete <id> --force")`
+   over UI clicks.
+6. Tests are named after a user-visible behavior, not a feature area:
+   `test_drawer_shows_ticket_subject_when_row_clicked`, not
+   `test_drawer_dom`.
+
+Reference fixes in code:
+
+- **test_69** (`test_helpdesk_pw.py:4285`) — uses
+  `page.wait_for_function(...) > 0` for inbox rows before clicking specific
+  rows by `data-ticket-id`.
+- **test_70** (`test_helpdesk_pw.py:4388`) — asserts the
+  v4.1-deferred `.swh-inbox-view-add` is hidden (positive assertion about a
+  deliberate state), with the full CRUD path retained but unreachable until
+  the feature ships.
+- **test_28** (`test_helpdesk_pw.py:4627`) — accepts either the
+  legacy "moved to Trash" notice or a clean redirect back to the admin list as
+  success, because the React inbox replaces the classic WP notice.
+
 ## How to run
 
 ### Local gate

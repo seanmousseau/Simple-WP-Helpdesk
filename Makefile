@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help lint phpcs phpstan phpunit semgrep test test-docker e2e e2e-docker coverage test-all js-build bench
+.PHONY: help lint phpcs phpstan phpunit test-invariants matrix-lint semgrep test test-docker e2e e2e-docker coverage test-all js-build bench
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -35,12 +35,20 @@ phpunit: ## Unit tests
 	@vendor/bin/phpunit
 	@echo "✓ PHPUnit passed"
 
+test-invariants: ## L1 invariant tests (source-pattern checks; see docs/internal/test-coverage-matrix.md)
+	@echo "→ Invariants..."
+	@vendor/bin/phpunit --testsuite Invariants
+	@echo "✓ Invariants passed"
+
+matrix-lint: ## Summarise test coverage matrix (docs/internal/test-coverage-matrix.md)
+	@php bin/matrix-lint.php
+
 semgrep: ## SAST security scan
 	@echo "→ Semgrep..."
 	@semgrep scan --config=auto --error simple-wp-helpdesk/ 2>&1 | tail -5
 	@echo "✓ Semgrep passed"
 
-test: lint phpcs phpstan phpunit semgrep ## Full local gate — run before opening a PR
+test: lint phpcs phpstan phpunit test-invariants matrix-lint semgrep ## Full local gate — run before opening a PR
 	@echo ""
 	@echo "✅ All gate checks passed. Safe to push."
 
