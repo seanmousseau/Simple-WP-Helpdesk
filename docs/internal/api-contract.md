@@ -83,6 +83,23 @@ Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 
 **Note:** 8 of the 9 filters listed above were wrapped in `swh_apply_deprecated_filter()` in v4.0.0 (#360). They continue to fire for existing listeners (back-compat preserved) but emit `_doing_it_wrong` notices in `WP_DEBUG` environments. Earliest removal: v4.2. `swh_sla_open_statuses` is post-3.0 and remains supported.
 
+## REST envelope contract
+
+All `swh/v1` endpoints follow a uniform envelope shape. JS clients (admin-inbox, portal-v2, reports-v2) rely on these shapes — changing one is a breaking change that must update consumers in the same PR. Contract tests in `tests/Unit/Rest/Contracts/` lock these shapes.
+
+| Status | Envelope | Used by | Notes |
+|---|---|---|---|
+| `200` / `201` | resource-keyed: `{ view }`, `{ views }`, `{ tickets }`, full ticket payload | success | The HTTP status code carries the success bit; the body carries the resource. No `success: true` redundancy. |
+| `200` (delete) | `{ deleted: bool }` | DELETE `/views/{id}` | Distinguishes "operation rejected" (would be 403) from "already gone" (`deleted: false` + 404). |
+| `200` (bulk) | `{ succeeded: int[], conflicts: [{ id, version_now, error? }] }` | POST `/bulk-action` | Per-ticket conflicts carry `version_now`; `error` field is present only for non-version conflicts (`not_found`, `forbidden`). Absence of `error` ⇒ stale-version conflict, safe to retry. |
+| `400` | `{ error: <code>, ...extras }` | validation failures | `extras` may include caps like `max`. Example: `{ error: 'too_many_tickets', max: 200 }`. |
+| `403` | `{ error: 'forbidden' }` | capability failures | Returned by `ViewsController` when a non-admin attempts a global-scope mutation. |
+| `404` | `{ error: 'not_found' }` | missing ticket / view | Same shape used by `TicketController` and `ViewsController` update paths. |
+| `409` | `{ error: 'version_conflict', current: <full ticket payload> }` | stale optimistic-lock | The `current` payload lets the React inbox reconcile without an extra round-trip. `current.version` reflects server state; client retries with that value. |
+| `500` | `{ error: <code> }` | internal failure | Codes in use: `comment_insert_failed`, `save_failed`. |
+
+Error envelopes have exactly the keys named above — no extras unless documented per-endpoint (`extras` column in the bulk row). The contract test base asserts both presence of required keys AND absence of undocumented ones.
+
 ## REST endpoints
 
 | Method | Path | Auth | Body | Response |

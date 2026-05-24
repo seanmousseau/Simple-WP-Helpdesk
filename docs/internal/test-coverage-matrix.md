@@ -61,7 +61,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Migration v3→v4 settings schema | N/A | N/A | ✓ `SettingsMigrationTest`, `SwhGetOptionTest` | R (12) | N/A |
 | Migration: comment_type_v2, tech_caps_v2 | N/A | N/A | P `LifecycleActionsTest` (activation only) | R | N/A |
 | Ticket merge | R (13) | R (no REST yet — AJAX `swh_merge_ticket`) | R | P test_43 | R |
-| Optimistic locking (`TicketVersion::check`, 409 envelope) | R (14) | P `TicketControllerTest` (happy) — R for 409 envelope | ✓ `TicketVersionTest` | R | N/A |
+| Optimistic locking (`TicketVersion::check`, 409 envelope) | R (14) | ✓ `TicketControllerContractTest` (409 envelope + `current.version` shape) | ✓ `TicketVersionTest` | R | N/A |
 
 ### Tier 2 — user-facing breakage
 
@@ -76,7 +76,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Reply — inbound email | R (15) | ✓ `InboundEmailTest` | ✓ `InboundEmailTest` | R | N/A |
 | Internal note | R (10) | P `TicketControllerTest` | R | P test_06 | R (drawer must hide for portal screenshot) |
 | Assign / reassign / unassign | R (16) | P `TicketControllerTest` | R | P test_06, test_21 | R |
-| Bulk actions — status change | N/A | ✓ `BulkControllerTest` | ✓ `BulkControllerTest` | ✓ test_20 | R |
+| Bulk actions — status change | N/A | ✓ `BulkControllerContractTest` (400/200 envelopes, conflict shape) | ✓ `BulkControllerTest` | ✓ test_20 | R |
 | Bulk actions — assign, delete | N/A | P `BulkControllerTest` | P | R | R |
 | Delete / trash / restore | N/A | N/A (WP default REST) | R | R | N/A |
 | Auto-close (cron `swh_autoclose_event`) | R | N/A | P (no isolated cron test) | R (17) | N/A — cron |
@@ -96,7 +96,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Inbox — default view per role | R (21) | ✓ `InboxControllerTest` | P | P test_12 | ✓ (light + dark snapshot needed) |
 | Inbox — filters (status/assignee/tag/priority/date) | N/A | P `InboxControllerTest` | R | P test_12, test_22, test_37 | R |
 | Inbox — search (free-text, ID, requester) | N/A | P `InboxControllerTest` | R | P test_22 | R |
-| Inbox — saved/personal views (CRUD + scope) | N/A | ✓ `ViewsControllerTest`, `ViewsRepositoryTest` | ✓ | P test_70 (selector) | R |
+| Inbox — saved/personal views (CRUD + scope) | N/A | ✓ `ViewsControllerContractTest` (403/404/201/200/deleted envelopes) | ✓ `ViewsRepositoryTest` | P test_70 (selector) | R |
 | Inbox — pagination | N/A | P `InboxControllerTest` | R | R | R |
 | Inbox — Cmd+K palette (nav, ID lookup, action invocation) | N/A | P `PaletteControllerTest` (suggest only) | R | R (22) | R |
 | Inbox — deep-link hash routing | N/A | N/A | R | R | N/A |
