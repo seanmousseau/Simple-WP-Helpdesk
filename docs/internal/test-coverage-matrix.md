@@ -56,7 +56,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Capabilities — technician (default) | R (8) | P REST tests assume tech | R | P test_07 | N/A |
 | Capabilities — technician (restricted to assigned) | R (8) | R (`edit_post` per-ticket check) | R | P test_21 | N/A |
 | Capabilities — subscriber blocked | N/A | ✓ permission_callback | N/A | ✓ test_26 | N/A |
-| Rate limiting — per-action keys (`portal_close_`, `portal_reopen_`, `portal_reply_` + id) | R (9) | R (boundary test 0/N/N+1) | R | P test_27 | N/A |
+| Rate limiting — per-action keys (`portal_close_`, `portal_reopen_`, `portal_reply_` + id) | ✓ `RateLimitKeyInvariantTest` | R (boundary test 0/N/N+1) | ✓ `RateLimitTest` (1st-call/2nd-call/different-action/different-ticket/expired-lock) | P test_27 | N/A |
 | Comment isolation — `comment_type='helpdesk_reply'` & `_is_internal_note` filtered from frontend | ✓ `CommentIsolationInvariantTest` | N/A | R | R (11) | R (drawer L5 should snapshot with note hidden) |
 | Migration v3→v4 settings schema | N/A | N/A | ✓ `SettingsMigrationTest`, `SwhGetOptionTest` | R (12) | N/A |
 | Migration: comment_type_v2, tech_caps_v2 | N/A | N/A | P `LifecycleActionsTest` (activation only) | R | N/A |
@@ -88,7 +88,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Portal — close | R (15) | N/A | R | P test_10 | R |
 | Portal — reopen | R (15) | N/A | R | P test_10 | R |
 | Portal — attachment upload | R | N/A | P `TicketTest` | P test_23 | R |
-| Portal — CSAT submission | R | ✓ AJAX `swh_submit_csat` covered? confirm | R (18) | P test_33 | R |
+| Portal — CSAT submission | R | ✓ AJAX `swh_submit_csat` covered? confirm | ✓ `CsatAjaxTest` (7 cases: nonce, rating bounds, ticket existence, post type, non-closed guard, valid path + hook fires) | P test_33 | R |
 | Portal — guest lookup | N/A | N/A | R | ✓ test_35 | R |
 | Email — `swh_send_email` template parser, `{if}` blocks, HTML wrapper | ✓ `MailDispatcherInvariantTest` (dispatcher pinning) | N/A | ✓ `EmailTest`, `EmailWrapperTest`, `MailerTest` | R | N/A |
 | Email — each of 16 transactional templates renders & dispatches | R (19) | N/A | P `EmailTest` (some) | R (20) | N/A |
@@ -139,7 +139,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Multisite activation | N/A | N/A | R | R | N/A |
 | Auto-updater (plugin-update-checker) | N/A | N/A | R | R | N/A |
 | Uninstall — option cleanup honors `swh_delete_on_uninstall` | N/A | N/A | R | R | N/A |
-| Public hooks (`swh_ticket_*`, `swh_csat_submitted`, `swh_sla_breached`) fire with documented payloads | R (25) | N/A | R | R | N/A |
+| Public hooks (`swh_ticket_*`, `swh_csat_submitted`, `swh_sla_breached`) fire with documented payloads | ✓ `PublicHookContractInvariantTest` (presence + typo guards) | N/A | P `LifecycleActionsTest` (lifecycle subset only) | R | N/A |
 | Public filters (`swh_ticket_priorities`, `swh_ticket_statuses`, `swh_sla_open_statuses`) honor return values | R (25) | N/A | R | R | N/A |
 | i18n — string extraction, RTL render | N/A | N/A | R | R | R (RTL snapshot of inbox + drawer + portal) |
 | Deprecated v3 filters still emit notice | N/A | N/A | ✓ `DeprecationHelpersTest`, `Pre30FiltersDeprecatedTest` | R | N/A |
