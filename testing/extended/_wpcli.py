@@ -71,14 +71,9 @@ def wpcli(args: list[str], capture: bool = True, check: bool = True) -> str:
     # Same trust model + mitigation as verify_env.py:check_ssh_wpcli — all
     # env-derived inputs flow through shlex.join, so the SSH remote shell
     # gets safely-quoted command components. See that docstring for the full
-    # rationale; the Semgrep OSS rule is suppressed by full ID here too.
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
-    result = subprocess.run(
-        full,
-        capture_output=capture,
-        text=True,
-        check=False,
-    )
+    # rationale. Semgrep OSS requires the nosemgrep directive on the SAME
+    # line as the subprocess call (not the preceding line).
+    result = subprocess.run(full, capture_output=capture, text=True, check=False)  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
     # When capture=False, result.stdout / result.stderr are None (subprocess
     # streamed them to the parent's stdout/stderr instead of buffering them).
     # Coerce to empty strings so the return type stays str and the failure
