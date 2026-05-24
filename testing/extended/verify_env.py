@@ -185,7 +185,7 @@ def check_ssh_wpcli() -> Optional[str]:
         # malicious env file is already game-over for the operator. The
         # nosemgrep directive must be on the SAME line as the call — Semgrep
         # OSS does NOT honor the comment-on-preceding-line form.
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20, check=False)  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         return f"SSH or docker invocation failed: {e}"
     if r.returncode != 0:
