@@ -34,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php else : ?>
 				<li><button type="button" data-action="reopen"><?php esc_html_e( 'Reopen ticket', 'simple-wp-helpdesk' ); ?></button></li>
 			<?php endif; ?>
-			<li><button type="button" data-action="csat"><?php esc_html_e( 'Rate this support', 'simple-wp-helpdesk' ); ?></button></li>
+			<?php // CSAT inline prompt not implemented in v4.0; v4.1 will add stars UI. Hidden until then. ?>
 		</ul>
 	</div>
 </header>

@@ -11,6 +11,7 @@ const DEFAULT_STATE = {
 	draftBody: '',
 	draftInternal: false,
 	draftMarkResolved: false,
+	draftFiles: [], // File[] — not persisted to localStorage
 	saving: false,
 	conflict: null,
 };
@@ -24,6 +25,7 @@ const actions = {
 		type: 'SET_DRAFT_MARK_RESOLVED',
 		value: !! v,
 	} ),
+	setDraftFiles: ( files ) => ( { type: 'SET_DRAFT_FILES', files } ),
 	dismissConflict: () => ( { type: 'DISMISS_CONFLICT' } ),
 
 	fetchTicket:
@@ -86,6 +88,7 @@ const actions = {
 				}
 				if (
 					err.code === 'version_conflict' ||
+					err.error === 'version_conflict' ||
 					err.data?.status === 409
 				) {
 					dispatch( {
@@ -105,7 +108,8 @@ const actions = {
 		async ( { select, dispatch } ) => {
 			const ticket = select.getTicket();
 			const body = select.getDraftBody();
-			if ( ! ticket || ! body ) {
+			const files = select.getDraftFiles();
+			if ( ! ticket || ( ! body && files.length === 0 ) ) {
 				return;
 			}
 			const repliedForId = ticket.id;
@@ -113,16 +117,34 @@ const actions = {
 			const resolved = select.getDraftMarkResolved();
 			dispatch( { type: 'SAVE_START' } );
 			try {
-				const data = await apiFetch( {
-					path: `/swh/v1/tickets/${ ticket.id }/reply`,
-					method: 'POST',
-					data: {
-						expected_version: ticket.version,
-						body,
-						internal,
-						mark_resolved: resolved,
-					},
-				} );
+				let data;
+				if ( files.length > 0 ) {
+					// Multipart send for attachments — apiFetch defaults to JSON,
+					// so we hand-roll the FormData POST and use its prepared headers
+					// for nonce auth via the rest-nonce middleware-equivalent.
+					const fd = new FormData();
+					fd.append( 'expected_version', String( ticket.version ) );
+					fd.append( 'body', body );
+					fd.append( 'internal', internal ? '1' : '0' );
+					fd.append( 'mark_resolved', resolved ? '1' : '0' );
+					files.forEach( ( f ) => fd.append( 'attachments[]', f ) );
+					data = await apiFetch( {
+						path: `/swh/v1/tickets/${ ticket.id }/reply`,
+						method: 'POST',
+						body: fd,
+					} );
+				} else {
+					data = await apiFetch( {
+						path: `/swh/v1/tickets/${ ticket.id }/reply`,
+						method: 'POST',
+						data: {
+							expected_version: ticket.version,
+							body,
+							internal,
+							mark_resolved: resolved,
+						},
+					} );
+				}
 				if ( select.getTicketId() !== repliedForId ) {
 					return;
 				}
@@ -135,6 +157,7 @@ const actions = {
 				}
 				if (
 					err.code === 'version_conflict' ||
+					err.error === 'version_conflict' ||
 					err.data?.status === 409
 				) {
 					dispatch( {
@@ -195,11 +218,14 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 				draftBody: '',
 				draftInternal: false,
 				draftMarkResolved: false,
+				draftFiles: [],
 			};
 		case 'SET_DRAFT_INTERNAL':
 			return { ...state, draftInternal: action.value };
 		case 'SET_DRAFT_MARK_RESOLVED':
 			return { ...state, draftMarkResolved: action.value };
+		case 'SET_DRAFT_FILES':
+			return { ...state, draftFiles: Array.isArray( action.files ) ? action.files : [] };
 		default:
 			return state;
 	}
@@ -213,6 +239,7 @@ const selectors = {
 	getDraftBody: ( state ) => state.draftBody,
 	getDraftInternal: ( state ) => state.draftInternal,
 	getDraftMarkResolved: ( state ) => state.draftMarkResolved,
+	getDraftFiles: ( state ) => state.draftFiles,
 	getSaving: ( state ) => state.saving,
 	getConflict: ( state ) => state.conflict,
 	isOpen: ( state ) => state.ticketId !== null,

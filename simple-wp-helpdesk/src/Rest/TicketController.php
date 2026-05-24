@@ -18,6 +18,10 @@ use function get_post_meta;
 use function get_userdata;
 use function register_rest_route;
 use function sanitize_key;
+use function admin_url;
+use function swh_get_int_option;
+use function swh_get_secure_ticket_link;
+use function swh_send_email;
 use function swh_set_ticket_status;
 use function update_post_meta;
 use function wp_get_post_terms;
@@ -157,19 +161,33 @@ class TicketController extends WP_REST_Controller {
 			return new WP_REST_Response( array( 'error' => 'not_found' ), 404 );
 		}
 
+		$orig_attach_raw  = get_post_meta( $id, '_ticket_attachments', true );
+		$orig_orig_raw    = get_post_meta( $id, '_swh_attachment_orignames', true );
+		$orig_urls        = is_array( $orig_attach_raw ) ? array_values( array_filter( $orig_attach_raw, 'is_string' ) ) : array();
+		$orig_names       = is_array( $orig_orig_raw ) ? array_values( $orig_orig_raw ) : array();
+		$orig_attachments = array();
+		foreach ( $orig_urls as $i => $url ) {
+			$proxy_url          = function_exists( 'swh_get_file_proxy_url' ) ? swh_get_file_proxy_url( $url, $id ) : $url;
+			$orig_attachments[] = array(
+				'url'  => $proxy_url,
+				'name' => isset( $orig_names[ $i ] ) && is_string( $orig_names[ $i ] ) ? $orig_names[ $i ] : basename( $url ),
+			);
+		}
+
 		return new WP_REST_Response(
 			array(
-				'id'       => $id,
-				'title'    => $post->post_title,
-				'body'     => $post->post_content,
-				'version'  => TicketVersion::current( $id ),
-				'created'  => $post->post_date_gmt,
-				'status'   => $this->meta_string( $id, '_ticket_status' ),
-				'priority' => $this->meta_string( $id, '_ticket_priority' ),
-				'assignee' => $this->meta_int( $id, '_ticket_assigned' ),
-				'email'    => $this->meta_string( $id, '_ticket_email' ),
-				'meta'     => array( 'tags' => $this->prepare_tags( $id ) ),
-				'thread'   => $this->prepare_thread( $id ),
+				'id'          => $id,
+				'title'       => $post->post_title,
+				'body'        => $post->post_content,
+				'attachments' => $orig_attachments,
+				'version'     => TicketVersion::current( $id ),
+				'created'     => $post->post_date_gmt,
+				'status'      => $this->meta_string( $id, '_ticket_status' ),
+				'priority'    => $this->meta_string( $id, '_ticket_priority' ),
+				'assignee'    => $this->meta_int( $id, '_ticket_assigned' ),
+				'email'       => $this->meta_string( $id, '_ticket_email' ),
+				'meta'        => array( 'tags' => $this->prepare_tags( $id ) ),
+				'thread'      => $this->prepare_thread( $id ),
 			),
 			200
 		);
@@ -288,12 +306,58 @@ class TicketController extends WP_REST_Controller {
 			update_comment_meta( $comment_id, '_is_internal_note', '1' );
 		}
 
+		// Process uploaded attachments (multipart REST POST).
+		$file_params = $request->get_file_params();
+		if ( ! empty( $file_params['attachments'] ) && is_array( $file_params['attachments'] ) ) {
+			$names   = null;
+			$skipped = 0;
+			$urls    = swh_handle_multiple_uploads( $file_params['attachments'], $names, $skipped );
+			if ( ! empty( $urls ) ) {
+				update_comment_meta( $comment_id, '_attachments', $urls );
+				if ( ! empty( $names ) ) {
+					update_comment_meta( $comment_id, '_swh_reply_orignames', $names );
+				}
+			}
+		}
+
 		// REST path inserts directly; bump explicitly (B2 hooks cover PHP-side
 		// sites, not this REST route).
 		TicketVersion::bump( $id );
 
+		// Mirror the legacy admin reply flow so activity timestamp updates
+		// (drives inbox ordering + dashboard "stale" badge).
+		update_post_meta( $id, '_swh_last_activity_at', time() );
+
 		if ( $mark_resolved ) {
 			swh_set_ticket_status( $id, 'resolved' );
+		}
+
+		// Email dispatch — internal notes never email the client.
+		// Mirrors the templates the legacy admin-reply handler uses.
+		if ( ! $internal ) {
+			$client_email = $this->meta_string( $id, '_ticket_email' );
+			if ( '' !== $client_email ) {
+				$name_meta = $this->meta_string( $id, '_ticket_name' );
+				$uid_meta  = $this->meta_string( $id, '_ticket_uid' );
+				$title     = is_string( $post->post_title ) ? $post->post_title : '';
+				$data      = array(
+					'name'           => '' !== $name_meta ? $name_meta : __( 'Client', 'simple-wp-helpdesk' ),
+					'email'          => $client_email,
+					'ticket_id'      => '' !== $uid_meta ? $uid_meta : 'TKT-' . str_pad( (string) $id, 4, '0', STR_PAD_LEFT ),
+					'title'          => $title,
+					'status'         => $this->meta_string( $id, '_ticket_status' ),
+					'priority'       => $this->meta_string( $id, '_ticket_priority' ),
+					'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
+					'ticket_url'     => swh_get_secure_ticket_link( $id ),
+					'admin_url'      => swh_admin_ticket_url( $id ),
+					'message'        => $body,
+				);
+				if ( $mark_resolved ) {
+					swh_send_email( $client_email, 'swh_em_user_resolved_sub', 'swh_em_user_resolved_body', $data, array(), $id );
+				} else {
+					swh_send_email( $client_email, 'swh_em_user_reply_sub', 'swh_em_user_reply_body', $data, array(), $id );
+				}
+			}
 		}
 
 		return $this->get_item( $request );
@@ -365,6 +429,19 @@ class TicketController extends WP_REST_Controller {
 			$meta_raw    = get_comment_meta( $comment_id, '_is_internal_note', true );
 			$is_internal = is_string( $meta_raw ) && '1' === $meta_raw;
 
+			$attach_raw   = get_comment_meta( $comment_id, '_attachments', true );
+			$attach_orig  = get_comment_meta( $comment_id, '_swh_reply_orignames', true );
+			$attachments  = array();
+			$attach_urls  = is_array( $attach_raw ) ? array_values( array_filter( $attach_raw, 'is_string' ) ) : array();
+			$attach_names = is_array( $attach_orig ) ? array_values( $attach_orig ) : array();
+			foreach ( $attach_urls as $i => $url ) {
+				$proxy_url     = function_exists( 'swh_get_file_proxy_url' ) ? swh_get_file_proxy_url( $url, $id ) : $url;
+				$attachments[] = array(
+					'url'  => $proxy_url,
+					'name' => isset( $attach_names[ $i ] ) && is_string( $attach_names[ $i ] ) ? $attach_names[ $i ] : basename( $url ),
+				);
+			}
+
 			$out[] = array(
 				'id'           => $comment_id,
 				'author_name'  => $author ? $author->display_name : $c->comment_author,
@@ -373,6 +450,7 @@ class TicketController extends WP_REST_Controller {
 				'is_internal'  => $is_internal,
 				'date_gmt'     => $c->comment_date_gmt,
 				'content'      => $c->comment_content,
+				'attachments'  => $attachments,
 			);
 		}
 		return $out;

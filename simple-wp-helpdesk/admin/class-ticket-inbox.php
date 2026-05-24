@@ -105,10 +105,20 @@ function swh_inbox_enqueue( string $hook ): void {
 		$version,
 		true
 	);
+	// @wordpress/scripts splits imported style.scss into a separate
+	// style-<entry>.css bundle. That file holds the inbox layout grid (.swh-inbox-body
+	// flex, .swh-inbox-leftrail width). Omitting it collapses the entire
+	// layout into a vertical stack.
+	wp_enqueue_style(
+		'swh-admin-inbox-layout',
+		SWH_PLUGIN_URL . 'assets/dist/style-admin-inbox.css',
+		array( 'wp-components' ),
+		$version
+	);
 	wp_enqueue_style(
 		'swh-admin-inbox',
 		SWH_PLUGIN_URL . 'assets/dist/admin-inbox.css',
-		array( 'wp-components' ),
+		array( 'swh-admin-inbox-layout' ),
 		$version
 	);
 

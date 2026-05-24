@@ -51,7 +51,11 @@ class InboxController extends WP_REST_Controller {
 				'args'                => array(
 					'view'        => array(
 						'type'              => 'string',
-						'sanitize_callback' => 'sanitize_key',
+						// Custom: sanitize_key strips colons used by synthetic
+						// views like "status:open"; whitelist alpha/digit/_/colon.
+						'sanitize_callback' => static function ( $v ) {
+							return is_scalar( $v ) ? preg_replace( '/[^a-z0-9_:]/', '', strtolower( (string) $v ) ) : '';
+						},
 						'default'           => 'unassigned',
 					),
 					'page'        => array(
@@ -209,6 +213,13 @@ class InboxController extends WP_REST_Controller {
 		);
 
 		switch ( $view ) {
+			case 'all':
+				// No filters. Order by post_date so legacy tickets without
+				// _swh_last_activity_at meta still appear (meta_value_num
+				// ordering would silently exclude them).
+				unset( $base['meta_key'] );
+				$base['orderby'] = 'date';
+				break;
 			case 'unassigned':
 				$base['meta_query'] = array(
 					array(

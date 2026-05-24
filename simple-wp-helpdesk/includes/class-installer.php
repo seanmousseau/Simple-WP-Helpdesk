@@ -280,7 +280,7 @@ function swh_register_ticket_cpt() {
 				'singular_name'      => __( 'Ticket', 'simple-wp-helpdesk' ),
 				'add_new_item'       => __( 'Add New Ticket', 'simple-wp-helpdesk' ),
 				'edit_item'          => __( 'Edit Ticket', 'simple-wp-helpdesk' ),
-				'all_items'          => __( 'All Tickets', 'simple-wp-helpdesk' ),
+				'all_items'          => __( 'Tickets', 'simple-wp-helpdesk' ),
 				'view_item'          => __( 'View Ticket', 'simple-wp-helpdesk' ),
 				'search_items'       => __( 'Search Tickets', 'simple-wp-helpdesk' ),
 				'not_found'          => __( 'No tickets found.', 'simple-wp-helpdesk' ),

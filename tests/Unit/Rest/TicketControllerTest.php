@@ -36,6 +36,8 @@ final class TicketControllerTest extends TestCase {
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_assigned', true ], 'return' => '3' ] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_email', true ],    'return' => 'bob@example.com' ] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_swh_version', true ],     'return' => '4' ] );
+		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_attachments', true ], 'return' => array() ] );
+		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_swh_attachment_orignames', true ], 'return' => array() ] );
 		WP_Mock::userFunction( 'get_comments', [ 'return' => array() ] );
 		WP_Mock::userFunction( 'wp_get_post_terms', [ 'return' => array() ] );
 

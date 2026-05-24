@@ -2,7 +2,7 @@ import { createReduxStore, register } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
 
 const DEFAULT_STATE = {
-	view: 'unassigned',
+	view: 'all',
 	sort: 'last_reply_desc',
 	page: 1,
 	perPage: 50,

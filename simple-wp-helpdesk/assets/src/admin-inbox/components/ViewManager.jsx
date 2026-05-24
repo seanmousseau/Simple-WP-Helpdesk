@@ -59,7 +59,7 @@ export const AddViewButton = () => {
 			</button>
 			{ isOpen && (
 				<Popover
-					position="middle right"
+					placement="right-start"
 					onClose={ () => setOpen( false ) }
 				>
 					<div className="swh-view-popover">

@@ -87,7 +87,16 @@ class PaletteController extends WP_REST_Controller {
 			'posts_per_page' => 8,
 		);
 		if ( '' !== $q ) {
-			$args['s'] = $q;
+			// Allow searching by ticket ID (numeric query) — fall through to
+			// WP search by title/content otherwise.
+			if ( ctype_digit( $q ) ) {
+				$args['post__in']            = array( (int) $q );
+				$args['orderby']             = 'post__in';
+				$args['ignore_sticky_posts'] = true;
+				unset( $args['meta_key'] );
+			} else {
+				$args['s'] = $q;
+			}
 		}
 		$posts = get_posts( $args );
 

@@ -146,6 +146,22 @@
 	}
 }
 
+/* ── Force dark mode — add data-swh-theme="dark" to apply dark tokens regardless of system preference ── */
+.swh-helpdesk-wrapper[data-swh-theme="dark"] {
+	--swh-color-bg:             #0f172a;
+	--swh-color-bg-subtle:      #1e293b;
+	--swh-color-surface:        #1e293b;
+	--swh-color-bg-highlight:   #1e3a5f;
+	--swh-color-border:         #334155;
+	--swh-color-border-input:   #475569;
+	--swh-color-border-subtle:  #475569;
+	--swh-color-text:           #f1f5f9;
+	--swh-color-text-secondary: #94a3b8;
+	--swh-color-muted:          #64748b;
+	--swh-color-primary:        #818cf8;
+	--swh-color-track:          #334155;
+}
+
 /* ── Light mode escape hatch — add data-swh-theme="light" to override dark ─ */
 .swh-helpdesk-wrapper[data-swh-theme="light"] {
 	--swh-color-bg:             #fff;
