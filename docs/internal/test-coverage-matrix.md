@@ -91,7 +91,7 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Portal — CSAT submission | R | ✓ AJAX `swh_submit_csat` covered? confirm | ✓ `CsatAjaxTest` (7 cases: nonce, rating bounds, ticket existence, post type, non-closed guard, valid path + hook fires) | P test_33 | R |
 | Portal — guest lookup | N/A | N/A | R | ✓ test_35 | R |
 | Email — `swh_send_email` template parser, `{if}` blocks, HTML wrapper | ✓ `MailDispatcherInvariantTest` (dispatcher pinning) | N/A | ✓ `EmailTest`, `EmailWrapperTest`, `MailerTest` | R | N/A |
-| Email — each of 16 transactional templates renders & dispatches | R (19) | N/A | P `EmailTest` (some) | R (20) | N/A |
+| Email — each of 16 transactional templates renders & dispatches | ✓ `EmailTriggerInvariantTest` (4 cases: subject/body pair shape per call site, every used stem documented, every documented stem has a call site, no dynamic keys) | N/A | P `EmailTest` (template parser only — per-trigger dispatch covered by invariant above) | R (20) | N/A |
 | Email — inbound parsing (reply detection, attachment extraction, signature stripping) | R | ✓ `InboundEmailTest` (REST) | ✓ `InboundEmailTest` | R | N/A |
 | Inbox — default view per role | R (21) | ✓ `InboxControllerTest` | P | P test_12 | ✓ (light + dark snapshot needed) |
 | Inbox — filters (status/assignee/tag/priority/date) | N/A | P `InboxControllerTest` | R | P test_12, test_22, test_37 | R |
@@ -188,7 +188,7 @@ Numbered to match parenthesised refs above. Each is a concrete test to write.
 
 19. **Email template engine.** Pin behavior: every placeholder (`{ticket_id}`, `{ticket_status}`, `{user_name}`, `{secure_link}`, …) resolves correctly; `{if}` block honored; missing data falls back gracefully; HTML wrapper applied when `swh_email_format=html`; plain when `plain`. Plus an invariant: no source file calls `wp_mail(` directly outside `class-email.php`.
 
-20. **Each transactional email fires once with right template.** Domain test per trigger (16 templates × triggers): mock `wp_mail`, perform the action, assert the captured mail subject + body keys + recipient match the expected template, and that the parser ran (e.g. placeholders replaced).
+20. **Each transactional email fires once with right template.** Closed by `EmailTriggerInvariantTest` via a source-scan approach (cheaper than 15 fixture-heavy tests, catches the same regression class): every `swh_send_email()` call site uses a matched subject/body pair where the stems are identical, every used stem is on the documented allow-list, and every documented stem has at least one call site (catches both phantom templates and forgotten triggers). The invariant immediately caught a phantom `admin_status` template that was historically in the docs but never had a call site — removed in PR 3.5.
 
 21. **Default-inbox-view invariant.** v4.0.0 shipped with the inbox defaulting to wrong view (later flipped from "Unassigned" to "All"). Pin the default per role with a test that boots a fresh install and asserts the initial REST response shape.
 
