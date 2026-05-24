@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import email
+import email.utils
 import imaplib
 import os
 import sys
@@ -101,15 +102,38 @@ def message_text(msg: Message) -> str:
     return str(payload or "")
 
 
+def _message_timestamp(msg: Message) -> Optional[float]:
+    """
+    Try to extract a unix timestamp from the Date header. Returns None if
+    the header is missing or unparseable. Callers should treat None as
+    "unknown" and decide whether to include or skip.
+    """
+    raw = msg.get("Date") or msg.get("Received") or ""
+    if not raw:
+        return None
+    # parsedate_to_datetime tolerates wide format variation. If the header
+    # has multiple `Received:` hops concatenated, take the most recent one
+    # (first when iterating get_all, but we already grabbed a single value).
+    try:
+        dt = email.utils.parsedate_to_datetime(raw)
+    except (TypeError, ValueError):
+        return None
+    if dt is None:
+        return None
+    try:
+        return dt.timestamp()
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
 def fetch_recent_messages(conn: imaplib.IMAP4_SSL, since_unix: float) -> list[Message]:
     """
-    Returns messages received roughly since the given unix timestamp. IMAP
-    SEARCH supports day-granularity dates (SINCE), so we filter further in
-    Python by Received: header / Date:.
+    Return messages received since `since_unix`. IMAP SINCE only supports
+    day-granularity, so we pad by a day on the server side and then filter
+    by Date header to second-granularity client-side. Messages with no
+    parseable Date are included (better to over-include than to silently
+    miss a message that's there).
     """
-    # IMAP SINCE only supports day granularity — pad by one day on either side
-    # to account for clock skew and timezone differences, then filter precisely
-    # in Python.
     since_struct = time.gmtime(since_unix - 86400)
     since_str = time.strftime("%d-%b-%Y", since_struct)
     typ, data = conn.search(None, f'(SINCE "{since_str}")')
@@ -117,13 +141,22 @@ def fetch_recent_messages(conn: imaplib.IMAP4_SSL, since_unix: float) -> list[Me
         return []
     msg_ids = data[0].split()
     out: list[Message] = []
+    # Tolerance: 60s past the requested floor handles clock skew and Received
+    # vs Date differences. Tightening this would be more precise but risks
+    # dropping just-delivered messages.
+    cutoff = since_unix - 60
     for mid in msg_ids:
         typ, msg_data = conn.fetch(mid, "(RFC822)")
         if typ != "OK" or not msg_data:
             continue
         for part in msg_data:
             if isinstance(part, tuple) and len(part) >= 2 and isinstance(part[1], (bytes, bytearray)):
-                out.append(email.message_from_bytes(bytes(part[1])))
+                msg = email.message_from_bytes(bytes(part[1]))
+                ts = _message_timestamp(msg)
+                # Include messages with no parseable Date — over-include is safer
+                # than under-include for a delivery verifier.
+                if ts is None or ts >= cutoff:
+                    out.append(msg)
     return out
 
 
@@ -153,6 +186,13 @@ def main() -> int:
     p.add_argument("--poll-interval", type=int, default=5,
                    help="Seconds between IMAP polls.")
     args = p.parse_args()
+
+    if args.timeout <= 0:
+        p.error("--timeout must be > 0")
+    if args.poll_interval <= 0:
+        p.error("--poll-interval must be > 0")
+    if args.poll_interval > args.timeout:
+        p.error("--poll-interval cannot exceed --timeout")
 
     imap_host = env("MAIL_IMAP_ADDRESS")
     imap_port_raw = env("MAIL_IMAP_PORT")

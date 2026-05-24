@@ -68,16 +68,31 @@ def wpcli(args: list[str], capture: bool = True, check: bool = True) -> str:
     )
     full = ["ssh", "-o", "BatchMode=yes", ssh_target, docker_inner]
 
+    # Same trust model + mitigation as verify_env.py:check_ssh_wpcli — all
+    # env-derived inputs flow through shlex.join, so the SSH remote shell
+    # gets safely-quoted command components. See that docstring for the full
+    # rationale; the Semgrep OSS rule is suppressed by full ID here too.
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
     result = subprocess.run(
         full,
         capture_output=capture,
         text=True,
         check=False,
     )
+    # When capture=False, result.stdout / result.stderr are None (subprocess
+    # streamed them to the parent's stdout/stderr instead of buffering them).
+    # Coerce to empty strings so the return type stays str and the failure
+    # message below doesn't NoneType-error.
+    stdout_text = result.stdout if result.stdout is not None else ""
+    stderr_text = result.stderr if result.stderr is not None else ""
     if check and result.returncode != 0:
-        msg = f"wp-cli command failed (exit {result.returncode}):\n  cmd: {' '.join(wp_cmd)}\n  stderr: {result.stderr.strip()[:500]}"
+        msg = (
+            f"wp-cli command failed (exit {result.returncode}):\n"
+            f"  cmd: {' '.join(wp_cmd)}\n"
+            f"  stderr: {stderr_text.strip()[:500]}"
+        )
         raise RuntimeError(msg)
-    return result.stdout
+    return stdout_text
 
 
 def wpcli_json(args: list[str]) -> object:

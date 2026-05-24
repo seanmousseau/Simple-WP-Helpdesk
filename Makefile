@@ -99,7 +99,7 @@ test-extended-cleanup: ## Pre/post-RC cleanup — delete CLAUDE-TEST-* tickets +
 	  echo "  ✗ Source ~/.claude/dev-secrets.env first: set -a; source ~/.claude/dev-secrets.env; set +a"; \
 	  exit 2; \
 	fi
-	@python3 testing/extended/cleanup.py $${CONFIRM:+--confirm} $${DRYRUN:+--dry-run}
+	@python3 testing/extended/cleanup.py $(if $(CONFIRM),--confirm,) $(if $(DRYRUN),--dry-run,)
 
 test-extended: ## RC sign-off runbook (manual, ~60-90 min) — see docs/internal/extended-test-plan.md
 	@echo ""

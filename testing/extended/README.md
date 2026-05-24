@@ -45,7 +45,7 @@ Then run the verifier — it checks every required var, IMAP/SMTP login, and
 SSH+wp-cli reachability in one go:
 
 ```bash
-python testing/extended/verify_env.py
+python3 testing/extended/verify_env.py
 ```
 
 Expected output ends with `PASS — environment is ready for the runbook.` —
@@ -70,7 +70,7 @@ shell-expansion mangling), and live-tests SSH+wp-cli + IMAP + SMTP. Runs
 in ~5s. Always run this before the runbook.
 
 ```bash
-python verify_env.py
+python3 verify_env.py
 ```
 
 ### `webhook_roundtrip.py`
@@ -82,18 +82,18 @@ runbook.
 
 ```bash
 # Happy path (uses first address in $WP_WEBHOOK_TIED_TO).
-python webhook_roundtrip.py
+python3 webhook_roundtrip.py
 
 # Negative case — sender mismatch (auto-uses $WP_TESTING_CLIENT_EMAIL_2):
-python webhook_roundtrip.py --expect-rejection sender_mismatch
+python3 webhook_roundtrip.py --expect-rejection sender_mismatch
 
 # Negative case — subject missing [TKT-XXXX]:
-python webhook_roundtrip.py --expect-rejection no_ticket_id
+python3 webhook_roundtrip.py --expect-rejection no_ticket_id
 
 # Negative case — subject references a ticket UID that doesn't exist:
-python webhook_roundtrip.py --expect-rejection ticket_not_found
+python3 webhook_roundtrip.py --expect-rejection ticket_not_found
 
-python webhook_roundtrip.py --help    # full options
+python3 webhook_roundtrip.py --help    # full options
 ```
 
 ### `webhook_direct_post.py`
@@ -104,15 +104,15 @@ malformed payloads.
 
 ```bash
 # Wrong bearer → expect 401
-python webhook_direct_post.py --post-id <real-ticket-id> \
+python3 webhook_direct_post.py --post-id <real-ticket-id> \
     --bearer "definitely-not-the-real-secret" --expect-status 401
 
 # Missing Authorization header → expect 401
-python webhook_direct_post.py --post-id <real-ticket-id> \
+python3 webhook_direct_post.py --post-id <real-ticket-id> \
     --no-auth-header --expect-status 401
 
 # Omit a required field → expect 200 + success:false
-python webhook_direct_post.py --post-id <real-ticket-id> \
+python3 webhook_direct_post.py --post-id <real-ticket-id> \
     --omit-sender --expect-status 200 --expect-success false
 ```
 
@@ -124,12 +124,12 @@ that outbound emails from WP actually arrive.
 
 ```bash
 # Wait up to 60s for a TKT-* message to land at the first client alias:
-python email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" \
+python3 email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" \
                                --subject-contains "TKT-" \
                                --body-contains "UNIQUE-MARKER-HERE" \
                                --timeout 60
 
-python email_delivery_check.py --help
+python3 email_delivery_check.py --help
 ```
 
 ### `capture_screenshots.py`
@@ -141,9 +141,9 @@ runbook.
 
 ```bash
 pip install playwright && playwright install chromium   # one-time
-python capture_screenshots.py
-python capture_screenshots.py --headed                  # watch it work
-python capture_screenshots.py --only inbox,settings     # subset
+python3 capture_screenshots.py
+python3 capture_screenshots.py --headed                  # watch it work
+python3 capture_screenshots.py --only inbox,settings     # subset
 ```
 
 ### `cleanup.py`
@@ -155,17 +155,17 @@ matching messages from the test mailbox. Run at the START of the runbook
 
 ```bash
 # Interactive (prompts before deleting):
-python cleanup.py
+python3 cleanup.py
 
 # Non-interactive (auto-confirms):
-python cleanup.py --confirm
+python3 cleanup.py --confirm
 
 # Show what would be deleted without acting:
-python cleanup.py --dry-run
+python3 cleanup.py --dry-run
 
 # Only touch one side:
-python cleanup.py --skip-mailbox       # tickets only
-python cleanup.py --skip-tickets       # mailbox only
+python3 cleanup.py --skip-mailbox       # tickets only
+python3 cleanup.py --skip-tickets       # mailbox only
 ```
 
 ## Invocation summary

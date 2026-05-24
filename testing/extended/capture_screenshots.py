@@ -112,6 +112,25 @@ def main() -> int:
     theme_filter = [t.strip() for t in args.themes.split(",") if t.strip()]
     shots = [s for s in SHOTS if not shot_filter or s[0] in shot_filter]
 
+    # Validate that filters didn't reduce the work set to empty. Without this
+    # guard a typo like --only=inboxs silently succeeds with 0 screenshots.
+    if shot_filter and not shots:
+        valid = ", ".join(s[0] for s in SHOTS)
+        print(f"ERROR: --only={args.only!r} matched no known shots. "
+              f"Valid: {valid}", file=sys.stderr)
+        return 2
+    if not theme_filter:
+        valid = ", ".join(THEMES)
+        print(f"ERROR: --themes={args.themes!r} produced an empty set. "
+              f"Valid: {valid}", file=sys.stderr)
+        return 2
+    unknown_themes = [t for t in theme_filter if t not in THEMES]
+    if unknown_themes:
+        valid = ", ".join(THEMES)
+        print(f"ERROR: --themes contains unknown value(s): {unknown_themes}. "
+              f"Valid: {valid}", file=sys.stderr)
+        return 2
+
     ts = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
     out_dir = Path(args.out_dir) if args.out_dir else (
         Path(__file__).parent / "screenshots" / ts

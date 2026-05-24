@@ -22,14 +22,19 @@ This is the **slow, human-paced sanity check** that runs once before promoting a
 ## How to use this document
 
 1. Open a real RC PR titled `release/vX.Y.Z` (target branch `main`).
-2. Source the secrets file: `set -a; source ~/.claude/dev-secrets.env; set +a`.
-3. Run pre-flight: `make test-extended-cleanup` (deletes any `CLAUDE-TEST-` tickets and stale test mailbox messages).
-4. Work through each numbered section below. Each step has three parts:
+2. Source the secrets file and set the wp-cli bridge env vars:
+   ```bash
+   set -a; source ~/.claude/dev-secrets.env; set +a
+   export SSH_TARGET=<user@host> WP_CONTAINER=<container> WP_PATH=<path>
+   ```
+3. **Run Section 0 first — `python3 testing/extended/verify_env.py`**. This catches dev-secrets.env issues (missing vars, password mangling, IMAP/SMTP login failures) before they derail later sections. Don't proceed until this is green.
+4. Run pre-flight cleanup: `make test-extended-cleanup CONFIRM=1` (deletes any leftover `CLAUDE-TEST-*` tickets and stale test-mailbox messages).
+5. Work through each numbered section below. Each step has three parts:
    - **Do** — the action to perform (with the exact command or click path).
    - **Expect** — what should happen.
    - **Verify** — how to confirm; often a CLI command whose output you paste into the PR.
-5. As you go, tick the checkbox at the end of each section.
-6. At the bottom, fill in the **Sign-off block** and paste it into the PR description.
+6. As you go, tick the checkbox at the end of each section.
+7. At the bottom, fill in the **Sign-off block** and paste it into the PR description.
 
 Any failure during the runbook blocks the RC. File an issue with the section number and the actual-vs-expected output, then fix and re-run **only the failed section** (unless the fix touches other surfaces).
 
@@ -63,7 +68,7 @@ mangled by shell expansion, IMAP/SMTP not reachable).
   ```bash
   set -a; source ~/.claude/dev-secrets.env; set +a
   export SSH_TARGET=root@... WP_CONTAINER=... WP_PATH=...
-  python testing/extended/verify_env.py
+  python3 testing/extended/verify_env.py
   ```
 - **Expect:** `PASS — environment is ready for the runbook.` and a list of
   green ticks for each required check.
@@ -118,7 +123,7 @@ This is the most-critical-and-most-likely-to-break surface. We have a dedicated 
 
 ### 2.2 — Round-trip: real SMTP send → WP comment
 
-- **Do:** Run `python testing/extended/webhook_roundtrip.py`. The script:
+- **Do:** Run `python3 testing/extended/webhook_roundtrip.py`. The script:
   1. Creates a ticket via WP REST tagged `CLAUDE-TEST-WEBHOOK-<timestamp>`.
   2. Extracts the ticket's `_ticket_uid` (`TKT-NNNN`).
   3. SMTP-sends an email FROM `$MAIL_USERNAME` TO the first address in `$WP_WEBHOOK_TIED_TO` with `Re: [TKT-NNNN] roundtrip` in the subject.
@@ -135,19 +140,19 @@ This is the most-critical-and-most-likely-to-break surface. We have a dedicated 
 
 ### 2.4 — Sender mismatch is rejected
 
-- **Do:** `python testing/extended/webhook_roundtrip.py --expect-rejection sender_mismatch`. The script auto-uses `$WP_TESTING_CLIENT_EMAIL_2` as the sender (a different authorized alias from the same SMTP account, since the relay rejects MAIL FROM addresses it doesn't own).
+- **Do:** `python3 testing/extended/webhook_roundtrip.py --expect-rejection sender_mismatch`. The script auto-uses `$WP_TESTING_CLIENT_EMAIL_2` as the sender (a different authorized alias from the same SMTP account, since the relay rejects MAIL FROM addresses it doesn't own).
 - **Expect:** `PASS — webhook correctly rejected sender_mismatch`.
 - **Verify:** Paste output.
 
 ### 2.5 — No `[TKT-XXXX]` in subject is rejected
 
-- **Do:** `python testing/extended/webhook_roundtrip.py --expect-rejection no_ticket_id`.
+- **Do:** `python3 testing/extended/webhook_roundtrip.py --expect-rejection no_ticket_id`.
 - **Expect:** `PASS — webhook correctly rejected no_ticket_id`.
 - **Verify:** Paste output.
 
 ### 2.6 — Subject references a non-existent ticket UID
 
-- **Do:** `python testing/extended/webhook_roundtrip.py --expect-rejection ticket_not_found`. The script crafts a subject like `Re: [TKT-999999] …` referencing a UID that doesn't exist.
+- **Do:** `python3 testing/extended/webhook_roundtrip.py --expect-rejection ticket_not_found`. The script crafts a subject like `Re: [TKT-999999] …` referencing a UID that doesn't exist.
 - **Expect:** `PASS — webhook correctly rejected ticket_not_found`.
 - **Verify:** Paste output.
 
@@ -158,10 +163,10 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 - **Do:**
   ```bash
   # Wrong bearer token
-  python testing/extended/webhook_direct_post.py --post-id <any-real-ticket-id> \
+  python3 testing/extended/webhook_direct_post.py --post-id <any-real-ticket-id> \
       --bearer "wrong-secret" --expect-status 401
   # Missing Authorization header
-  python testing/extended/webhook_direct_post.py --post-id <any-real-ticket-id> \
+  python3 testing/extended/webhook_direct_post.py --post-id <any-real-ticket-id> \
       --no-auth-header --expect-status 401
   ```
 - **Expect:** Both return `PASS` with HTTP 401 and `code: "swh_unauthorized"`.
@@ -178,7 +183,7 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 - **Do:**
   1. Create `CLAUDE-TEST-OUT-1` ticket as client (use `$WP_TESTING_CLIENT_EMAIL_1` as the requester address). Capture the `_ticket_uid`.
   2. As admin, open the ticket in the drawer and post a reply containing the marker string `OUTBOUND-DELIVERY-CHECK-<timestamp>`.
-  3. Run `python testing/extended/email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" --subject-contains "TKT-" --body-contains "OUTBOUND-DELIVERY-CHECK-<timestamp>" --timeout 60`.
+  3. Run `python3 testing/extended/email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" --subject-contains "TKT-" --body-contains "OUTBOUND-DELIVERY-CHECK-<timestamp>" --timeout 60`.
 - **Expect:** `PASS` — message arrived in the client address's mailbox within 60s with the expected ticket UID in the subject and marker in the body.
 - **Verify:** Paste output.
 
@@ -186,13 +191,13 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 
 - **Do:** Continuing from 3.1's ticket: post a second reply with the "Mark resolved" checkbox checked, marker `RESOLVED-CHECK-<timestamp>`. Wait, then check the inbox again.
 - **Expect:** Email subject reflects the `em_user_resolved` template (typically contains "resolved"), not the plain reply template. Body contains the marker.
-- **Verify:** `python testing/extended/email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" --subject-contains "resolved" --body-contains "RESOLVED-CHECK-<timestamp>" --timeout 60` returns `PASS`.
+- **Verify:** `python3 testing/extended/email_delivery_check.py --to "$WP_TESTING_CLIENT_EMAIL_1" --subject-contains "resolved" --body-contains "RESOLVED-CHECK-<timestamp>" --timeout 60` returns `PASS`.
 
 ### 3.3 — Assignment email fires for the new assignee
 
 - **Do:** Create `CLAUDE-TEST-OUT-3` ticket. In the drawer, set the assignee to tech1.
 - **Expect:** Tech #1's email address (`$WP_TESTING_TECH_EMAIL_1`) receives an "assigned" email within 60s.
-- **Verify:** `python testing/extended/email_delivery_check.py --to "$WP_TESTING_TECH_EMAIL_1" --subject-contains "assigned" --timeout 60`.
+- **Verify:** `python3 testing/extended/email_delivery_check.py --to "$WP_TESTING_TECH_EMAIL_1" --subject-contains "assigned" --timeout 60`.
 
 - [ ] Section 3 complete.
 
@@ -332,7 +337,7 @@ Tick each tab below:
 
 ### 7.4 — Dark mode visual sanity (**partly scripted**)
 
-- **Do:** Run `python testing/extended/capture_screenshots.py`. The script logs in as admin, toggles `Settings → General → Admin theme` through each of `light` / `dark` / `auto`, and captures the inbox, settings, and reports pages at each setting. PNGs land in `testing/extended/screenshots/<timestamp>/`.
+- **Do:** Run `python3 testing/extended/capture_screenshots.py`. The script logs in as admin, toggles `Settings → General → Admin theme` through each of `light` / `dark` / `auto`, and captures the inbox, settings, and reports pages at each setting. PNGs land in `testing/extended/screenshots/<timestamp>/`.
 - **Expect:** Three screenshots per page × three themes = 9 files, no failures reported.
 - **Verify:** Open the 9 PNGs and eye-check: no unreadable text, no broken contrast (light-on-light or dark-on-dark), no leftover light-mode borders/backgrounds in dark mode. Attach the dark and auto shots to the PR.
 - **Manual supplement:** Also open the portal in a private (non-admin) window. Confirm `Portal → Theme = Auto` respects your OS-level preference. (The capture script is admin-only.)
@@ -361,7 +366,7 @@ Tick each tab below:
 
 ## Section 9 — Post-run cleanup (≈2 min)
 
-- **Do:** Run `python testing/extended/cleanup.py --confirm`.
+- **Do:** Run `python3 testing/extended/cleanup.py --confirm`.
 - **Expect:** Script reports how many `CLAUDE-TEST-` tickets it deleted and how many test mailbox messages it expunged.
 - **Verify:** Inbox no longer shows any `CLAUDE-TEST-` titles. The test mailbox's INBOX no longer holds the round-trip test messages.
 

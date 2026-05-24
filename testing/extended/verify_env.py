@@ -178,8 +178,14 @@ def check_ssh_wpcli() -> Optional[str]:
     try:
         # subprocess.run with a list avoids host-side shell interpretation.
         # The remote_cmd argument is shlex-quoted above, so the SSH remote
-        # shell receives a safe command string.
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)  # nosemgrep: dangerous-subprocess-use-tainted-env-args
+        # shell receives a safe command string. We accept env-derived inputs
+        # here only because (a) this is a developer-only test tool that
+        # reads ~/.claude/dev-secrets.env (operator-owned, not network-
+        # sourced), (b) every interpolated value is shlex-joined, and (c) a
+        # malicious env file is already game-over for the operator. The full
+        # rule ID is given so Semgrep OSS honors the suppression.
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         return f"SSH or docker invocation failed: {e}"
     if r.returncode != 0:

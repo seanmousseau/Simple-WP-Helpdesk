@@ -109,7 +109,12 @@ def cleanup_mailbox(args: argparse.Namespace) -> int:
     try:
         conn = imaplib.IMAP4_SSL(host, port, timeout=15)
         conn.login(user, password)
-        conn.select("INBOX")
+        # IMAP select() can fail without raising — check status explicitly so
+        # downstream search/store don't operate on an unselected mailbox.
+        sel_typ, _ = conn.select("INBOX")
+        if sel_typ != "OK":
+            print(f"ERROR: IMAP SELECT INBOX returned non-OK: {sel_typ!r}", file=sys.stderr)
+            return 2
     except Exception as e:  # noqa: BLE001
         print(f"ERROR: IMAP connect/login failed: {e}", file=sys.stderr)
         return 2
@@ -135,9 +140,23 @@ def cleanup_mailbox(args: argparse.Namespace) -> int:
                 print("[mailbox] Aborted.")
                 return 0
 
+        # Check each store() and expunge() — IMAP returns non-OK without raising
+        # if the server refuses (rare but possible: read-only mailbox, server
+        # error, etc.). Reporting success when nothing actually got deleted
+        # would leave the next runbook run thinking state was clean.
+        store_failures = []
         for mid in msg_ids:
-            conn.store(mid, "+FLAGS", "\\Deleted")
-        conn.expunge()
+            store_typ, _ = conn.store(mid, "+FLAGS", "\\Deleted")
+            if store_typ != "OK":
+                store_failures.append(mid.decode("ascii", "replace"))
+        if store_failures:
+            print(f"[mailbox] FAIL — store() refused on {len(store_failures)} message(s): "
+                  f"{', '.join(store_failures[:10])}", file=sys.stderr)
+            return 1
+        expunge_typ, _ = conn.expunge()
+        if expunge_typ != "OK":
+            print(f"[mailbox] FAIL — expunge() returned non-OK: {expunge_typ!r}", file=sys.stderr)
+            return 1
         print(f"[mailbox] Deleted and expunged {len(msg_ids)} message(s).")
         return 0
     finally:
