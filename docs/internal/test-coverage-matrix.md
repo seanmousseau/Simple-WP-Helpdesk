@@ -49,18 +49,18 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Inbound-email bearer auth (`hash_equals`) | ✓ `TokenComparisonInvariantTest` | ✓ `InboundEmailTest` | ✓ `InboundEmailTest` | R (4) | N/A |
 | File proxy auth (token OR cap, expiration check, path traversal guard) | ✓ `FileProxyInvariantTest` | R (6) | P `TicketTest` (upload path only) | P test_23 (download happy path) | N/A |
 | File upload validation (mime, size, count, double-extension, SVG) | R | N/A | P `TicketTest` (size+count only — R for mime exhaustion, SVG, double-extension) | P test_23 | N/A |
-| Anti-spam — honeypot | R | N/A | R (7) | P test_16 | N/A |
-| Anti-spam — reCAPTCHA v2 + Enterprise | R | N/A | R (7) | R | N/A |
-| Anti-spam — Turnstile | R | N/A | R (7) | R | N/A |
+| Anti-spam — honeypot | R | N/A | ✓ `AntispamTest` (3 cases: legit + bot-fills + lookup-forms) | P test_16 | N/A |
+| Anti-spam — reCAPTCHA v2 + Enterprise | R | N/A | ✓ `AntispamTest` (8 cases: v2 happy/fail/non-JSON/skipped, Enterprise missing-creds/below-threshold/above-threshold/invalid-token) | R | N/A |
+| Anti-spam — Turnstile | R | N/A | ✓ `AntispamTest` (3 cases: success/fail/non-JSON fail-closed) | R | N/A |
 | Capabilities — administrator | N/A — WP built-in | ✓ implicit via REST tests | N/A | P test_11 | N/A |
-| Capabilities — technician (default) | R (8) | P REST tests assume tech | R | P test_07 | N/A |
-| Capabilities — technician (restricted to assigned) | R (8) | R (`edit_post` per-ticket check) | R | P test_21 | N/A |
+| Capabilities — technician (default) | R (8) | P REST tests assume tech | ✓ `CapabilityMatrixTest` (REST permissions_check: missing edit_posts → false, admin pass, list endpoints skip per-ticket check) | P test_07 | N/A |
+| Capabilities — technician (restricted to assigned) | R (8) | ✓ `CapabilityMatrixTest` (per-ticket edit_post rejection — load-bearing) | ✓ `CapabilityMatrixTest` (5 cases: setting off, non-tech, tech-assigned, tech-not-assigned 403, wrong post type) | P test_21 | N/A |
 | Capabilities — subscriber blocked | N/A | ✓ permission_callback | N/A | ✓ test_26 | N/A |
 | Rate limiting — per-action keys (`portal_close_`, `portal_reopen_`, `portal_reply_` + id) | ✓ `RateLimitKeyInvariantTest` | R (boundary test 0/N/N+1) | ✓ `RateLimitTest` (1st-call/2nd-call/different-action/different-ticket/expired-lock) | P test_27 | N/A |
 | Comment isolation — `comment_type='helpdesk_reply'` & `_is_internal_note` filtered from frontend | ✓ `CommentIsolationInvariantTest` | N/A | R | R (11) | R (drawer L5 should snapshot with note hidden) |
 | Migration v3→v4 settings schema | N/A | N/A | ✓ `SettingsMigrationTest`, `SwhGetOptionTest` | R (12) | N/A |
 | Migration: comment_type_v2, tech_caps_v2 | N/A | N/A | P `LifecycleActionsTest` (activation only) | R | N/A |
-| Ticket merge | R (13) | R (no REST yet — AJAX `swh_merge_ticket`) | R | P test_43 | R |
+| Ticket merge | R (13) | R (no REST yet — AJAX `swh_merge_ticket`) | ✓ `MergeTicketsTest` (5 cases: invalid source, wrong type, happy path with comment move + attachment merge + cross-ref notes + source close, empty source preserves target, missing target) | P test_43 | R |
 | Optimistic locking (`TicketVersion::check`, 409 envelope) | R (14) | ✓ `TicketControllerContractTest` (409 envelope + `current.version` shape) | ✓ `TicketVersionTest` | R | N/A |
 
 ### Tier 2 — user-facing breakage
@@ -79,10 +79,10 @@ Numbers in parentheses link to detailed gap notes in the next section. Existing 
 | Bulk actions — status change | N/A | ✓ `BulkControllerContractTest` (400/200 envelopes, conflict shape) | ✓ `BulkControllerTest` | ✓ test_20 | R |
 | Bulk actions — assign, delete | N/A | P `BulkControllerTest` | P | R | R |
 | Delete / trash / restore | N/A | N/A (WP default REST) | R | R | N/A |
-| Auto-close (cron `swh_autoclose_event`) | R | N/A | P (no isolated cron test) | R (17) | N/A — cron |
-| SLA tracking + breach digest (cron `swh_sla_check_event`, `swh_sla_breached` hook) | R | N/A | R | R | N/A |
-| Retention — tickets (cron) | R | N/A | R | R | N/A |
-| Retention — attachments (cron) | R | N/A | R | R | N/A |
+| Auto-close (cron `swh_autoclose_event`) | R | N/A | ✓ `CronTest` (3 cases: days=0 kill switch, lock-held short-circuit, lock acquire+release) | R (17) | N/A — cron |
+| SLA tracking + breach digest (cron `swh_sla_check_event`, `swh_sla_breached` hook) | R | N/A | ✓ `CronTest` (3 cases: both-thresholds-disabled kill, lock-held, warn-only proceeds) | R | N/A |
+| Retention — tickets (cron) | R | N/A | ✓ `CronTest` (3 cases: days=0 kill, lock-held, lock-key distinctness) | R | N/A |
+| Retention — attachments (cron) | R | N/A | ✓ `CronTest` (2 cases: days=0 kill, lock-held) | R | N/A |
 | Portal — token link entry (valid/expired/revoked/mismatched) | ✓ (via L1 token invariant) | N/A | P | P test_05, test_24 | R |
 | Portal — logged-in entry (`my-tickets`) | N/A | N/A | R | P test_34 | R |
 | Portal — close | R (15) | N/A | R | P test_10 | R |
