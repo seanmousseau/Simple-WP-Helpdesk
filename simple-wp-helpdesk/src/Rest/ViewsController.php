@@ -105,6 +105,24 @@ class ViewsController extends WP_REST_Controller {
 				),
 			)
 		);
+		// PUT /swh/v1/views/default — set or clear the per-user default view.
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::REST_BASE . '/default',
+			array(
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => array( $this, 'set_default' ),
+				'permission_callback' => array( $this, 'permissions_check' ),
+				'args'                => array(
+					'view' => array(
+						'description' => 'Built-in view key OR personal/global view UUID. Pass null/empty to clear.',
+						'type'        => array( 'string', 'null' ),
+						'required'    => false,
+						'default'     => null,
+					),
+				),
+			)
+		);
 		register_rest_route(
 			self::NAMESPACE,
 			'/' . self::REST_BASE . '/(?P<id>[a-zA-Z0-9-]+)',
@@ -149,8 +167,34 @@ class ViewsController extends WP_REST_Controller {
 	 */
 	public function list_views( $request ): WP_REST_Response {
 		unset( $request );
-		$views = $this->repo->get_all_for_user( get_current_user_id() );
-		return new WP_REST_Response( array( 'views' => $views ), 200 );
+		$user_id = get_current_user_id();
+		$views   = $this->repo->get_all_for_user( $user_id );
+		return new WP_REST_Response(
+			array(
+				'views'   => $views,
+				// `default` is null when no preference is set OR when the
+				// stored preference points at a view that no longer exists
+				// (deleted personal view, hidden global). Client falls back
+				// to the system default in either case.
+				'default' => $this->repo->resolve_default_for_user( $user_id ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * PUT /swh/v1/views/default — set or clear the user's default view.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 */
+	public function set_default( $request ): WP_REST_Response {
+		$raw = $request->get_param( 'view' );
+		$id  = is_string( $raw ) && '' !== $raw ? sanitize_text_field( $raw ) : null;
+		$this->repo->set_default_for_user( get_current_user_id(), $id );
+		return new WP_REST_Response(
+			array( 'default' => $this->repo->resolve_default_for_user( get_current_user_id() ) ),
+			200
+		);
 	}
 
 	/**

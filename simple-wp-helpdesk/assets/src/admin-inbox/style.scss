@@ -83,8 +83,14 @@
 	}
 }
 
+.swh-inbox-leftrail-item {
+	display: flex;
+	align-items: center;
+}
+
 .swh-inbox-view-link {
-	width: 100%;
+	flex: 1;
+	min-width: 0;
 	text-align: left;
 	background: transparent;
 	border: none;
@@ -103,6 +109,35 @@
 		color: #1d2327;
 		font-weight: 600;
 		border-left-color: #2271b1;
+	}
+}
+
+// Per-user default-view toggle (#437). Star button sits to the right of each
+// view link in the leftrail. Empty star ☆ when unset, filled ★ when this
+// view is the user's default. Hover-only by default so the rail stays clean.
+.swh-inbox-view-default-toggle {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	padding: 4px 6px;
+	color: #c3c4c7;
+	font-size: 14px;
+	line-height: 1;
+	opacity: 0;
+	transition: opacity 0.1s ease;
+
+	.swh-inbox-leftrail-item:hover & {
+		opacity: 1;
+	}
+
+	&.is-default {
+		color: #dba617; // WP "warning" yellow — readable on both light + dark rails.
+		opacity: 1;
+	}
+
+	&:hover,
+	&:focus-visible {
+		opacity: 1;
 	}
 }
 

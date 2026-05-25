@@ -23,7 +23,14 @@ final class ViewsRepository {
 
 	public const META_PERSONAL       = 'swh_personal_views';
 	public const META_HIDDEN_GLOBALS = 'swh_hidden_global_views';
+	public const META_DEFAULT_VIEW   = 'swh_default_view';
 	public const OPT_GLOBAL          = 'swh_global_views';
+
+	/**
+	 * Built-in (system) view keys that are always valid as a default.
+	 * Mirror of DEFAULT_VIEWS in assets/src/admin-inbox/views/defaults.js.
+	 */
+	private const BUILTIN_VIEWS = array( 'all', 'unassigned', 'my_open', 'high_priority', 'resolved_this_week' );
 
 	/**
 	 * Returns global + personal views for the user, with personal views
@@ -193,6 +200,59 @@ final class ViewsRepository {
 			);
 		}
 		update_user_meta( $user_id, self::META_HIDDEN_GLOBALS, $existing );
+	}
+
+	/**
+	 * Get the user's stored default view id (or built-in key). Returns null if
+	 * unset. Does NOT validate that the referenced view still exists —
+	 * callers wanting a stale-clean read should use resolve_default_for_user().
+	 */
+	public function get_default_for_user( int $user_id ): ?string {
+		$raw = get_user_meta( $user_id, self::META_DEFAULT_VIEW, true );
+		if ( ! is_string( $raw ) || '' === $raw ) {
+			return null;
+		}
+		return $raw;
+	}
+
+	/**
+	 * Set (or clear, with null) the user's default view. The id can be:
+	 *   - a built-in view key ('all', 'unassigned', 'my_open', etc.)
+	 *   - a personal or global view UUID
+	 *
+	 * No existence check at write time — a default can be set for a view
+	 * that the caller has visible at the moment. Stale defaults are filtered
+	 * out at read time by resolve_default_for_user().
+	 */
+	public function set_default_for_user( int $user_id, ?string $view_id ): void {
+		if ( null === $view_id || '' === $view_id ) {
+			update_user_meta( $user_id, self::META_DEFAULT_VIEW, '' );
+			return;
+		}
+		update_user_meta( $user_id, self::META_DEFAULT_VIEW, $view_id );
+	}
+
+	/**
+	 * Returns the user's default view ID if it still resolves to a real view,
+	 * otherwise null. Built-in views always resolve. For UUIDs, checks against
+	 * the user's visible view set (`get_all_for_user`) — a personal view that
+	 * got deleted, or a global view the user has hidden, returns null so the
+	 * client falls back to the system default.
+	 */
+	public function resolve_default_for_user( int $user_id ): ?string {
+		$raw = $this->get_default_for_user( $user_id );
+		if ( null === $raw ) {
+			return null;
+		}
+		if ( in_array( $raw, self::BUILTIN_VIEWS, true ) ) {
+			return $raw;
+		}
+		foreach ( $this->get_all_for_user( $user_id ) as $v ) {
+			if ( is_array( $v ) && ( $v['id'] ?? '' ) === $raw ) {
+				return $raw;
+			}
+		}
+		return null;
 	}
 
 	/**
