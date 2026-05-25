@@ -29,6 +29,7 @@ Requirements (testing/.venv):
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -39,6 +40,13 @@ from urllib.parse import urlparse
 
 import pytest
 from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
+
+# Semantic selector helpers — see _selectors.py for the policy.
+from _selectors import (
+    bulk_bar,
+    inbox_root,
+    ticket_row,
+)
 
 # ── Load .env file ────────────────────────────────────────────────────────────
 
@@ -4314,71 +4322,58 @@ def test_69_bulk_bar_closes_selected_tickets(page):
 
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
     with suppress(PlaywrightTimeoutError):
-        page.locator("#swh-inbox-root").wait_for(timeout=10000)
+        inbox_root(page).wait_for(timeout=10000)
 
-    check("bulk #353: #swh-inbox-root present",
-          page.locator("#swh-inbox-root").count() > 0)
+    check("bulk #353: inbox root present", inbox_root(page).count() > 0)
 
-    if page.locator("#swh-inbox-root").count() == 0:
-        skip("bulk #353: remaining checks", "#swh-inbox-root not found")
+    if inbox_root(page).count() == 0:
+        skip("bulk #353: remaining checks", "inbox root not found")
         for tid in (ticket_a, ticket_b):
             wpcli(f"post delete {tid} --force")
         wp_logout(page)
         return
 
-    # Wait for the inbox to finish its initial fetch and render the rows.
+    # Wait for the inbox grid to render at least one row.
     with suppress(PlaywrightTimeoutError):
-        page.wait_for_function(
-            "document.querySelectorAll('.swh-inbox-row').length > 0",
-            timeout=8000,
-        )
+        inbox_root(page).get_by_role("row").first.wait_for(timeout=8000)
 
-    # Click checkboxes for both tickets via data-ticket-id attribute.
+    # Select both tickets via the row's aria-labelled select button.
     for ticket_id in (ticket_a, ticket_b):
-        # Wait for the specific row to appear (Redux store may still be loading).
-        with suppress(PlaywrightTimeoutError):
-            page.wait_for_function(
-                f"document.querySelector(\".swh-inbox-row[data-ticket-id='{ticket_id}']\") !== null",
-                timeout=6000,
-            )
-        # The interactive element is the wrapping .swh-inbox-row-check button;
-        # the <input type=checkbox> inside is aria-hidden with tabIndex=-1.
-        row_check = page.locator(
-            f".swh-inbox-row[data-ticket-id='{ticket_id}'] .swh-inbox-row-check"
-        ).first
+        row = ticket_row(page, ticket_id)
         row_found = False
         with suppress(PlaywrightTimeoutError):
-            row_check.wait_for(timeout=3000)
+            row.wait_for(timeout=6000)
             row_found = True
         if row_found:
-            row_check.click(force=True)
+            row.get_by_role("button", name=re.compile(rf"Select ticket #{ticket_id}")).click(
+                force=True,
+            )
         else:
             skip(f"bulk #353: row for ticket {ticket_id}",
-                 f"[data-ticket-id='{ticket_id}'] not visible")
+                 f"ticket row {ticket_id} not visible")
 
-    # Bulk bar should appear.
-    bulk_bar_visible = False
+    # Bulk bar (semantic toolbar) should appear with both rows counted.
+    bar = bulk_bar(page)
+    bar_visible = False
     with suppress(PlaywrightTimeoutError):
-        page.locator(".swh-bulk-bar").wait_for(timeout=5000)
-        bulk_bar_visible = True
-    check("bulk #353: bulk bar appears when rows selected", bulk_bar_visible)
+        bar.wait_for(timeout=5000)
+        bar_visible = True
+    check("bulk #353: bulk bar appears when rows selected", bar_visible)
 
-    if bulk_bar_visible:
-        count_el = page.locator(".swh-bulk-bar-count")
-        if count_el.count() > 0:
-            count_text = count_el.first.inner_text()
-            check("bulk #353: count shows 2 selected", "2" in count_text,
-                  f"count_text={count_text!r}")
+    if bar_visible:
+        bar_text = bar.inner_text()
+        check("bulk #353: count shows 2 selected", "2" in bar_text,
+              f"bar_text={bar_text!r}")
 
-        # Click the Close button (primary Button in BulkBar).
-        close_btn = page.locator(".swh-bulk-bar .components-button")
+        close_btn = bar.get_by_role("button", name="Close")
         if close_btn.count() > 0:
             close_btn.first.click()
-            page.wait_for_timeout(1500)
+            with suppress(PlaywrightTimeoutError):
+                bar.wait_for(state="detached", timeout=5000)
             check("bulk #353: bulk bar vanishes after Close",
-                  page.locator(".swh-bulk-bar").count() == 0)
+                  bulk_bar(page).count() == 0)
         else:
-            skip("bulk #353: close button", "no .components-button in .swh-bulk-bar")
+            skip("bulk #353: close button", "no Close button in bulk-actions toolbar")
 
     for tid in (ticket_a, ticket_b):
         wpcli(f"post delete {tid} --force")
@@ -4628,43 +4623,33 @@ def test_28_cleanup(page: Page):
     print("\n[28] Cleanup")
 
     wp_login(page, ADMIN_USER, ADMIN_PASS)
-    _navigate_admin_list(page)
 
-    def _trash_by_title(title: str, label: str):
-        trash_href = page.evaluate(f"""
-            (function() {{
-                for (var row of document.querySelectorAll('#the-list tr')) {{
-                    var a = row.querySelector('.column-title .row-title, .column-title a');
-                    if (a && a.innerText.includes({json.dumps(title)})) {{
-                        var t = row.querySelector(
-                            '.row-actions .trash a, .row-actions a[href*="action=trash"]'
-                        );
-                        return t ? t.href : null;
-                    }}
-                }}
-                return null;
-            }})()
-        """)
-        if trash_href:
-            page.goto(trash_href)
-            page.wait_for_load_state("load")
-            body = page.inner_text("body")
-            # WP redirects to the list on success (lands on React inbox now,
-            # which doesn't render the WP "moved to Trash" notice). The most
-            # reliable success signal is landing back on edit.php for our
-            # post_type without an error page.
-            on_list = "post_type=helpdesk_ticket" in page.url and "/edit.php" in page.url
-            had_notice = "moved to the Trash" in body or "Undo" in body
-            check(f"cleanup: {label} moved to trash", on_list or had_notice)
-        else:
-            check(f"cleanup: trash link found for {label}", False,
-                  "row not found — may already be deleted")
-        _navigate_admin_list(page)
+    def _trash_by_title(title: str, label: str) -> None:
+        # wp-cli is the load-bearing path here: clicking row-actions trash links
+        # in the admin list goes through WP's "Are you sure?" confirmation page
+        # under some configurations, which makes the test brittle (#421).
+        raw_ids = wpcli(
+            f"post list --post_type=helpdesk_ticket --post_status=publish "
+            f"--title={shlex.quote(title)} --fields=ID --format=ids"
+        ).strip()
+        ids = [tid for tid in raw_ids.split() if tid.isdigit()]
+        if not ids:
+            check(f"cleanup: {label} located via wp-cli", False,
+                  f"no published ticket matched title={title!r}")
+            return
+        # Use --force so the post leaves the inbox immediately. The React
+        # inbox queries tickets by meta and does not filter post_status=trash,
+        # so plain `wp post delete` leaves them visible and breaks the
+        # "no longer in active list" assertion below.
+        for tid in ids:
+            wpcli(f"post delete {tid} --force")
+        check(f"cleanup: {label} deleted", True,
+              f"deleted {len(ids)} ticket(s)")
 
     _trash_by_title(TEST_TICKET_TITLE, "ticket1")
     _trash_by_title(TEST_TICKET2_TITLE, "ticket2")
 
-    # Attachment test ticket — delete permanently via WP-CLI (no need to trash it)
+    # Attachment test ticket — delete permanently (no need to trash).
     if state.get('attach_ticket_id'):
         wpcli(f"post delete {state['attach_ticket_id']} --force 2>/dev/null")
 

@@ -83,7 +83,11 @@ export const BulkBar = () => {
 	};
 
 	return (
-		<div className="swh-bulk-bar">
+		<div
+			className="swh-bulk-bar"
+			role="toolbar"
+			aria-label={ __( 'Bulk actions', 'simple-wp-helpdesk' ) }
+		>
 			<span className="swh-bulk-bar-count">
 				<strong>{ selectedIds.length }</strong>{ ' ' }
 				{ __( 'selected', 'simple-wp-helpdesk' ) }
