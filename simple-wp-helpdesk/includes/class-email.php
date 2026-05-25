@@ -422,3 +422,52 @@ function swh_get_admin_email( $ticket_id = 0 ) {
 	}
 	return swh_get_string_option( 'admin_email' );
 }
+
+/**
+ * Dispatch the "Ticket Assigned to You" email when the assignee changes.
+ *
+ * Hooked to `swh_ticket_assigned` so every assignment path — legacy editor,
+ * v4.0 drawer PATCH, bulk action, automatic assignment rule — fires the same
+ * email. Before v4.0.2 this only fired from the legacy editor (inline at the
+ * save site), so drawer assignments were silent.
+ *
+ * @since 4.0.2
+ *
+ * @param int $ticket_id   Ticket post ID.
+ * @param int $old_user_id Previous assignee user ID (0 if unassigned).
+ * @param int $new_user_id New assignee user ID (0 if unassigned).
+ * @return void
+ */
+function swh_send_assignment_email( $ticket_id, $old_user_id, $new_user_id ) {
+	$ticket_id   = (int) $ticket_id;
+	$new_user_id = (int) $new_user_id;
+	if ( $ticket_id <= 0 || $new_user_id <= 0 ) {
+		return; // Unassign (new=0) does not send an email.
+	}
+	if ( (int) $old_user_id === $new_user_id ) {
+		return;
+	}
+	$ticket = get_post( $ticket_id );
+	if ( ! $ticket || 'helpdesk_ticket' !== $ticket->post_type ) {
+		return;
+	}
+	$assignee_user = get_userdata( $new_user_id );
+	if ( ! $assignee_user || ! $assignee_user->user_email ) {
+		return;
+	}
+	$ticket_uid = swh_get_string_meta( $ticket_id, '_ticket_uid' );
+	$data       = array(
+		'name'           => swh_get_string_meta( $ticket_id, '_ticket_name' ) ? swh_get_string_meta( $ticket_id, '_ticket_name' ) : 'Client',
+		'email'          => swh_get_string_meta( $ticket_id, '_ticket_email' ),
+		'ticket_id'      => $ticket_uid ? $ticket_uid : 'TKT-' . str_pad( (string) $ticket_id, 4, '0', STR_PAD_LEFT ),
+		'title'          => $ticket->post_title,
+		'status'         => swh_get_string_meta( $ticket_id, '_ticket_status' ),
+		'priority'       => swh_get_string_meta( $ticket_id, '_ticket_priority' ),
+		'ticket_url'     => swh_get_secure_ticket_link( $ticket_id ),
+		'admin_url'      => swh_admin_ticket_url( $ticket_id ),
+		'message'        => '',
+		'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
+	);
+	swh_send_email( $assignee_user->user_email, 'swh_em_assigned_sub', 'swh_em_assigned_body', $data );
+}
+add_action( 'swh_ticket_assigned', 'swh_send_assignment_email', 10, 3 );
