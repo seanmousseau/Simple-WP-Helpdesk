@@ -203,6 +203,11 @@ def portal_menu_trigger(page: Page) -> Locator:
     return portal_root(page).get_by_role("button", name="Ticket actions")
 
 
+def portal_title(page: Page) -> Locator:
+    """Portal header heading (#N · ticket subject)."""
+    return portal_root(page).get_by_role("heading", level=1)
+
+
 def portal_close_button(page: Page) -> Locator:
     return portal_root(page).get_by_role("button", name="Close ticket")
 
