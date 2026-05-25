@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Docs
+
+- **v4.x roadmap — patch lane locked.** `docs/internal/release_v4.x.x_roadmap.md` now documents the agreed sequencing: v4.0.2 → v4.0.3 → v4.0.4 → comprehensive doc review (incl. GitHub Pages site) → finish deferred selector sweep (#458) → v4.1. Includes per-patch milestone links, scope hints, and rationale for the doc-review timing.
+
 ### Fixed
 
 - **v4.0.1 — default email subject templates missing `[ ]` around `{ticket_id}` broke inbound webhook reply parsing** (#433). The inbound-email webhook (`swh_handle_inbound_email`) parses the target ticket UID via `/\[(TKT-\d+)\]/i` — it requires literal square brackets around the ticket id. 14 of 15 default subject templates in `swh_get_defaults()` shipped without those brackets (or with the id absent entirely), so when a client clicked "reply" on a notification email, the resulting inbound message had no parseable UID, the webhook returned `{"success": false, "error": "no_ticket_id"}`, and the reply silently never landed on the ticket. Defaults are now updated to wrap `[{ticket_id}]` in every transactional subject (client + tech templates, including the merged-ticket notification). Existing installs are NOT affected — the option-seeding pattern only seeds defaults if the option is absent. Surfaced end-to-end while building the RC extended-test suite.

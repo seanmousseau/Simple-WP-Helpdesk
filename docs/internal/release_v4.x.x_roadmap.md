@@ -2,7 +2,7 @@
 
 Major lane. **Breaking changes allowed.** Raises minimums (PHP 8.0, WP 6.0), introduces a new admin paradigm, and lays the integration foundation for everything downstream.
 
-Last updated: 2026-05-04
+Last updated: 2026-05-25
 
 ---
 
@@ -48,6 +48,46 @@ See [`docs/internal/component-inventory.md`](component-inventory.md) for the exi
 
 - v3.5 → v4.0 upgrade routine handles `swh_options` split-out.
 - Hosts on PHP 7.4 / WP 5.3–5.9 stay on the v3.6 LTS branch.
+
+---
+
+## v4.0.x patch series — bug-fix lane between v4.0.0 and v4.1.0
+
+Locked sequence (agreed 2026-05-25). Each patch ships independently; later items don't depend on earlier ones except where noted.
+
+### v4.0.1 ✅ shipped 2026-05-25
+
+Single-issue patch — closes [#433](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/433): default email subject templates now wrap `[{ticket_id}]` so client replies actually reach the inbound webhook. RC-verified end-to-end via `webhook_roundtrip.py` against the live dev environment.
+
+### v4.0.2 — 5 issues
+
+Milestone: [#24](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/24). Bug-fix batch. Surfaced during v4.0.0 deep-dive sweep + RC testing.
+
+### v4.0.3 — 2 issues
+
+Milestone: [#25](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/25). Bug-fix batch.
+
+### v4.0.4 — 7+ issues + dependency cleanup
+
+Milestone: [#26](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/26). Docs + dev-experience cleanup. Includes:
+
+- [#441](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/441) – [#447](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/447) — extended-test runbook docs + dev-experience refactors surfaced while building the RC suite
+- [#453](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/453) — clear 8 Dependabot alerts (npm devDeps; zero end-user impact)
+- [#458](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/458) — finish the deferred E2E selector sweep (~10 legacy-PHP tests)
+
+### After v4.0.4 — comprehensive documentation review
+
+Full pass before v4.1 work starts. Scope (agreed 2026-05-25):
+
+1. `docs/internal/*.md` — architecture, invariants, conventions, test/security/API contracts, data dictionary, config reference, design guide, component inventory, JS arch, perf baseline, release roadmaps
+2. `docs/*.md` operator docs + **the GitHub Pages site itself** (`docs/index.md`, Jekyll config, plugin/feature pages) — full rewrite-or-prune pass; Pages site is currently a "dog's breakfast" per operator
+3. `CLAUDE.md` (root) — sanity-check after the rest is fixed
+
+Why this timing: v4.0.x patches will surface 2–3 doc-rot items per release that are cheaper to fold in once at the end. v4.1's major additions (event surface, public REST) will rewrite chunks of `api-contract.md` and `data-dictionary.md` anyway — starting v4.1 from a clean doc baseline is the goal.
+
+### After docs review — finish v4.x test refactor
+
+Close [#458](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/458) if not already absorbed into v4.0.4. This is the last of the PR 4.x sweep (selector conversions for legacy PHP admin/settings tests). Lower priority than docs, but blocks the "every E2E test uses semantic selectors" exit criterion in `test-coverage-matrix.md`.
 
 ---
 
