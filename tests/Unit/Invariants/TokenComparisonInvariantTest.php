@@ -35,7 +35,7 @@ class TokenComparisonInvariantTest extends SourceScanTestCase {
 		//   class-portal.php:802 — portal lookup
 		//   class-ticket.php:52  — file proxy token check
 		//   class-email.php:247  — inbound-email bearer auth
-		//   class-email.php:305  — inbound-email From-address match
+		//   class-email.php:310  — inbound-email From-address match
 		$allow = array(
 			'frontend/class-portal.php:144',
 			'frontend/class-portal.php:502',
@@ -44,7 +44,7 @@ class TokenComparisonInvariantTest extends SourceScanTestCase {
 			'frontend/class-portal.php:802',
 			'includes/class-ticket.php:52',
 			'includes/class-email.php:247',
-			'includes/class-email.php:305',
+			'includes/class-email.php:310',
 		);
 		$this->assertSourceMatchesAllowList(
 			$allow,

@@ -257,9 +257,14 @@ function swh_handle_inbound_email( $request ) {
 		isset( $params['from'] ) && is_string( $params['from'] ) ? $params['from'] : ''
 	);
 
-	// Extract email address from "Name <email@example.com>" format.
-	if ( preg_match( '/<([^>]+)>/', $from, $m ) ) {
-		$from = $m[1];
+	// Extract email address + display name from "Name <email@example.com>" format.
+	// Display name is kept separately so wp_insert_comment can attribute each
+	// reply to its actual sender (#438) — important when CC'd parties reply to
+	// a ticket whose primary _ticket_email belongs to someone else.
+	$from_name = '';
+	if ( preg_match( '/^\s*(.*?)\s*<([^>]+)>\s*$/', $from, $m ) ) {
+		$from_name = trim( $m[1], " \t\"'" );
+		$from      = $m[2];
 	}
 	$from = sanitize_email( trim( $from ) );
 
@@ -329,12 +334,15 @@ function swh_handle_inbound_email( $request ) {
 		);
 	}
 
-	// Create reply comment.
-	$comment_id = wp_insert_comment(
+	// Create reply comment. Attribute to the parsed sender (#438) — display
+	// name when present, falling back to the bare address; never the
+	// ticket-level _ticket_name (which would mis-attribute CC replies).
+	$author_name = '' !== $from_name ? $from_name : $from;
+	$comment_id  = wp_insert_comment(
 		array(
 			'comment_post_ID'      => $ticket_id,
-			'comment_author'       => swh_get_string_meta( $ticket_id, '_ticket_name' ),
-			'comment_author_email' => $ticket_email,
+			'comment_author'       => sanitize_text_field( $author_name ),
+			'comment_author_email' => $from,
 			'comment_content'      => wp_kses_post( $clean_body ),
 			'comment_approved'     => 1,
 			'comment_type'         => 'helpdesk_reply',
