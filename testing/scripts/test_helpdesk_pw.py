@@ -52,6 +52,8 @@ from _selectors import (
     portal_reply_box,
     portal_root,
     portal_send_button,
+    portal_thread,
+    portal_title,
     ticket_row,
 )
 
@@ -1709,20 +1711,20 @@ def test_29_humanized_timestamps(page: Page):
 
     wp_logout(page)
     page.goto(state['portal_url'])
-    page.wait_for_selector(".swh-portal-v2, .swh-card, .swh-alert")
+    portal_root(page).wait_for(timeout=10_000)
 
-    # Portal v2 uses .swh-msg-time (rendered by _message.php);
-    # portal v2 JS in index.js calls formatRelative() on [datetime] attributes.
-    ts_count = page.locator('.swh-msg-time').count()
-    check("timestamps: .swh-msg-time elements present in portal (v2)", ts_count > 0,
-          f"found {ts_count} .swh-msg-time elements")
+    # Portal v2's JS (formatRelative in index.js) rewrites <time> elements
+    # under each message bubble. The <time> tag is semantic; we scope to
+    # the portal thread to avoid accidentally picking up admin-side dates.
+    times = portal_thread(page).locator("time[datetime]")
+    ts_count = times.count()
+    check("timestamps: <time> elements present in portal thread", ts_count > 0,
+          f"found {ts_count} <time> elements")
 
-    # Verify JS replaced the raw date string with a relative label
     if ts_count > 0:
-        ts_text = page.locator('.swh-msg-time').first.inner_text()
-        # Portal v2 formatRelative() produces "Xs ago", "Xm ago", "Xh ago", "Xd ago"
-        relative_patterns = ["ago", "now", "s ago", "m ago", "h ago", "d ago"]
-        is_relative = any(p in ts_text for p in relative_patterns)
+        ts_text = times.first.inner_text()
+        # formatRelative() produces "now", "Xs ago", "Xm ago", "Xh ago", "Xd ago".
+        is_relative = any(p in ts_text for p in ("ago", "now"))
         check("timestamps: text contains relative time label", is_relative,
               f"timestamp text: {ts_text!r}")
     screenshot(page, "40_humanized_timestamps")
@@ -1746,23 +1748,21 @@ def test_30_resolved_cta_layout(page: Page):
         state['portal_url'] = fresh_url
 
     page.goto(state['portal_url'])
-    page.wait_for_selector(".swh-portal-v2, .swh-card, .swh-alert")
-    html = page.content()
+    portal_root(page).wait_for(timeout=10_000)
 
-    # Portal v2 replaced the resolved CTA layout (swh-cta-primary/secondary) with
-    # a ⋮ menu that exposes close/reopen actions. Verify the v2 menu structure.
-    check("resolved CTA (v2): .swh-portal-v2 wrapper present", "swh-portal-v2" in html)
-    check("resolved CTA (v2): ⋮ menu trigger present",
-          page.locator('.swh-portal-v2-menu-trigger').count() > 0)
-    menu_trigger = page.locator('.swh-portal-v2-menu-trigger')
-    if menu_trigger.count() > 0:
-        menu_trigger.click()
+    # Portal v2 replaced the resolved CTA layout with a ⋮ menu that exposes
+    # close/reopen actions. Verify the v2 menu structure via aria-labelled
+    # trigger and visible-text action buttons.
+    check("resolved CTA (v2): portal wrapper present", portal_root(page).count() > 0)
+    trigger = portal_menu_trigger(page)
+    check("resolved CTA (v2): ⋮ menu trigger present", trigger.count() > 0)
+    if trigger.count() > 0:
+        trigger.click()
+        close_btn = portal_close_button(page)
         with suppress(PlaywrightTimeoutError):
-            page.locator('.swh-portal-v2-menu button[data-action]').first.wait_for(timeout=3000)
-        action_btns = page.locator('.swh-portal-v2-menu button[data-action]').count()
-        check("resolved CTA (v2): menu has action buttons", action_btns > 0,
-              f"found {action_btns} action buttons")
-        # Close menu after inspection.
+            close_btn.wait_for(timeout=3000)
+        check("resolved CTA (v2): menu exposes Close ticket action",
+              close_btn.count() > 0)
         page.keyboard.press("Escape")
     screenshot(page, "41_resolved_cta_layout")
 
@@ -1788,18 +1788,18 @@ def test_33_csat_prompt(page: Page):
 
     wp_logout(page)
     page.goto(state['portal_url'])
-    page.wait_for_selector(".swh-portal-v2, .swh-card, .swh-alert")
+    portal_root(page).wait_for(timeout=10_000)
 
     # Portal v2: close is in the ⋮ menu.
-    menu_trigger = page.locator('.swh-portal-v2-menu-trigger')
-    if menu_trigger.count() == 0:
+    trigger = portal_menu_trigger(page)
+    if trigger.count() == 0:
         skip("CSAT prompt", "v2 menu trigger not found")
         return
 
-    menu_trigger.click()
+    trigger.click()
+    close_btn = portal_close_button(page)
     with suppress(PlaywrightTimeoutError):
-        page.locator('.swh-portal-v2-menu button[data-action="close"]').wait_for(timeout=3000)
-    close_btn = page.locator('.swh-portal-v2-menu button[data-action="close"]')
+        close_btn.wait_for(timeout=3000)
     if close_btn.count() == 0:
         skip("CSAT prompt", "Close ticket menu item not found — ticket may not be in Resolved state")
         return
@@ -1842,13 +1842,13 @@ def test_33_csat_prompt(page: Page):
         state['portal_url'] = fresh_url
 
     page.goto(state['portal_url'])
-    page.wait_for_selector(".swh-portal-v2, .swh-card, .swh-alert")
-    menu2 = page.locator('.swh-portal-v2-menu-trigger')
-    if menu2.count() > 0:
-        menu2.click()
+    portal_root(page).wait_for(timeout=10_000)
+    trigger2 = portal_menu_trigger(page)
+    if trigger2.count() > 0:
+        trigger2.click()
+        close_btn2 = portal_close_button(page)
         with suppress(PlaywrightTimeoutError):
-            page.locator('.swh-portal-v2-menu button[data-action="close"]').wait_for(timeout=3000)
-        close_btn2 = page.locator('.swh-portal-v2-menu button[data-action="close"]')
+            close_btn2.wait_for(timeout=3000)
         if close_btn2.count() > 0:
             close_btn2.click()
             with suppress(PlaywrightTimeoutError):
@@ -3930,17 +3930,16 @@ def test_63_csat_focus_management(page: Page):
 
     wp_logout(page)
     page.goto(fresh_url)
-    page.wait_for_selector(".swh-portal-v2, .swh-card, .swh-alert")
+    portal_root(page).wait_for(timeout=10_000)
 
-    # Portal v2: close via ⋮ menu (data-action="close").
-    menu_trigger = page.locator('.swh-portal-v2-menu-trigger')
-    if menu_trigger.count() == 0:
+    trigger = portal_menu_trigger(page)
+    if trigger.count() == 0:
         skip("CSAT focus #342", "v2 menu trigger not found in portal")
         return
-    menu_trigger.click()
+    trigger.click()
+    close_btn = portal_close_button(page)
     with suppress(PlaywrightTimeoutError):
-        page.locator('.swh-portal-v2-menu button[data-action="close"]').wait_for(timeout=3000)
-    close_btn = page.locator('.swh-portal-v2-menu button[data-action="close"]')
+        close_btn.wait_for(timeout=3000)
     if close_btn.count() == 0:
         skip("CSAT focus #342", "close button not present in v2 portal menu")
         return
@@ -4570,46 +4569,47 @@ def test_72_portal_v2_renders_conversation(page):
 
     page.goto(portal_url)
     try:
-        page.locator(".swh-portal-v2").wait_for(timeout=10000)
+        portal_root(page).wait_for(timeout=10000)
     except Exception:
-        skip("portal v2 test_72: remaining checks", ".swh-portal-v2 not found — portal v2 layout not active")
+        skip("portal v2 test_72: remaining checks", "portal wrapper not found — portal v2 layout not active")
         return
 
     # Header renders.
-    check("portal v2 test_72: .swh-portal-v2-title present",
-          page.locator(".swh-portal-v2-title").count() == 1)
-    title_text = page.locator(".swh-portal-v2-title").inner_text()
+    title = portal_title(page)
+    check("portal v2 test_72: title heading present", title.count() == 1)
     check("portal v2 test_72: title contains ticket subject",
-          "Portal v2 test ticket" in title_text)
+          "Portal v2 test ticket" in title.inner_text())
+    # The status pill is a content-shape element with no interactive a11y role
+    # (it's a visual indicator). Scoped to portal_root so we don't accidentally
+    # match an admin-side pill.
     check("portal v2 test_72: status pill present",
-          page.locator(".swh-pill-status").count() == 1)
+          portal_root(page).locator(".swh-pill-status").count() == 1)
 
-    # Thread shows the initial customer bubble.
-    check("portal v2 test_72: at least one .swh-msg-customer bubble",
-          page.locator(".swh-msg-customer").count() >= 1)
-    thread_text = page.locator(".swh-portal-v2-thread").inner_text()
+    # Thread shows the initial customer bubble. data-message-author is the
+    # documented E2E hook in _message.php — see component-inventory.md.
+    check("portal v2 test_72: at least one customer message",
+          portal_message(page, "customer").count() >= 1)
     check("portal v2 test_72: initial message body in thread",
-          "Initial customer message body." in thread_text)
+          "Initial customer message body." in portal_thread(page).inner_text())
 
-    # Composer present.
+    # Composer present + send a reply.
     check("portal v2 test_72: composer textarea present",
-          page.locator(".swh-portal-v2-composer textarea").count() == 1)
-
-    # Send a reply via composer.
-    page.locator(".swh-portal-v2-composer textarea").fill("My reply via portal v2.")
-    page.locator(".swh-portal-v2-send").click()
+          portal_reply_box(page).count() == 1)
+    portal_reply_box(page).fill("My reply via portal v2.")
+    portal_send_button(page).click()
     page.wait_for_timeout(1200)  # fetch round-trip + optimistic state
 
     # New customer bubble appended optimistically.
     check("portal v2 test_72: reply bubble appended (≥2 customer bubbles)",
-          page.locator(".swh-msg-customer").count() >= 2)
-    last_bubble = page.locator(".swh-msg-customer .swh-msg-bubble").last.inner_text()
+          portal_message(page, "customer").count() >= 2)
+    last_bubble_text = portal_message(page, "customer").last.inner_text()
     check("portal v2 test_72: reply text in last bubble",
-          "My reply via portal v2." in last_bubble)
+          "My reply via portal v2." in last_bubble_text)
 
-    # ⋮ menu opens.
-    page.locator(".swh-portal-v2-menu-trigger").click()
-    menu = page.locator(".swh-portal-v2-menu")
+    # ⋮ menu opens. The menu element itself uses [hidden] for visibility (no
+    # role-based hook); scope via portal_root to keep the assertion semantic-ish.
+    portal_menu_trigger(page).click()
+    menu = portal_root(page).locator(".swh-portal-v2-menu")
     menu_visible = menu.evaluate("el => !el.hidden")
     check("portal v2 test_72: ⋮ menu visible after trigger click",
           menu_visible is True)
