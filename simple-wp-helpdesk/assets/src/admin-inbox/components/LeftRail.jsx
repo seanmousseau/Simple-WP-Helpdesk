@@ -28,13 +28,15 @@ export const LeftRail = () => {
 	const renderView = ( v, isDefault = false ) => {
 		const key = isDefault ? v.key : v.id;
 		const label = v.label || v.name;
+		const isActive = activeView === key;
 		return (
 			<li key={ key } className="swh-inbox-leftrail-item">
 				<button
 					type="button"
 					className={ `swh-inbox-view-link${
-						activeView === key ? ' is-active' : ''
+						isActive ? ' is-active' : ''
 					}` }
+					aria-current={ isActive ? 'page' : undefined }
 					onClick={ () => setView( key ) }
 				>
 					{ label }
