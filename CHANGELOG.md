@@ -10,6 +10,8 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.2] — 2026-05-25
+
 ### Added
 
 - **v4.0.2 — Per-user default inbox view** (#437). Operator can pin any view (built-in `all` / `unassigned` / `my_open` / `high_priority` / `resolved_this_week`, or any personal/global saved view) as their personal default. On inbox load, the saved default is auto-selected before the first ticket fetch. UI: a small ☆/★ button appears next to each view link on hover; click toggles the default. Storage: per-user meta key `swh_default_view`. REST: new `PUT /swh/v1/views/default` endpoint, plus the existing `GET /swh/v1/views` response now carries `default` alongside `views`. Stale defaults (e.g. a deleted personal view) auto-resolve to null at read time so the system default takes over gracefully.

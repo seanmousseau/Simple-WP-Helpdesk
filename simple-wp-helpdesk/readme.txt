@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.1
+Stable tag: 4.0.2
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,14 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.2 =
+* Fixed: drawer + bulk-action assignment was silently broken — REST controllers wrote `_ticket_assigned`, but the rest of the plugin (lifecycle hook, email dispatch, legacy editor, admin list) used `_ticket_assigned_to`. Consolidated to the canonical key across all surfaces; one-shot upgrade migration copies orphaned values. (#434, #435)
+* Fixed: drawer + bulk assignments now actually send the "Ticket Assigned to You" email — previously the email was inlined in the legacy editor save path so only the legacy editor triggered it. Refactored to a single `swh_send_assignment_email` listener hooked to `swh_ticket_assigned`. (RC follow-up to #434/#435)
+* Fixed: webhook-inserted reply comments now attribute to the actual sender (`comment_author` = parsed display name, `comment_author_email` = parsed address) instead of always using the ticket-level client name. (#438)
+* Added: drawer now shows an unread-reply indicator (red dot in the header) when a ticket has incoming activity since last view. Auto-clears 1.5s after the drawer opens. (#436)
+* Added: drawer Assignee dropdown — the read-only `#<id>` span is replaced with a labelled `SelectControl` backed by a new `GET /swh/v1/technicians` endpoint. (#434)
+* Added: per-user default inbox view — pin any built-in or saved view as your personal default via a ☆/★ toggle next to each view link; auto-selected on next inbox load. New `PUT /swh/v1/views/default` endpoint. (#437)
 
 = 4.0.1 =
 * Fixed: default email subject templates now wrap `[{ticket_id}]` so client replies to notification emails are parsed by the inbound webhook (#433). Previously 14 of 15 default subject templates shipped without the literal `[ ]` brackets the webhook regex requires; the webhook returned `no_ticket_id` and the reply was silently dropped. Existing installs with customised subjects are not affected.
@@ -324,6 +332,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.2 =
+Bug-fix + small-feature patch: drawer assignment now works, assignee emails fire from drawer/bulk paths, webhook replies show per-message authors, drawer shows unread-reply indicator, and users can pin a default inbox view. Safe drop-in upgrade with a one-shot meta-key migration for any tickets assigned via the broken drawer flow.
 
 = 4.0.1 =
 Bug-fix patch: default email subjects now include `[{ticket_id}]` so client replies actually reach the inbound webhook. Safe to install; existing customised subjects are preserved.
