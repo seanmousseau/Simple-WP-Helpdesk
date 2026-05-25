@@ -377,6 +377,30 @@ function swh_render_client_portal() {
 	swh_portal_v2_enqueue_assets();
 
 	echo '<div id="swh-portal-app" class="swh-portal-v2 swh-helpdesk-wrapper">';
+	// CSAT widget — render once a ticket is closed and the client hasn't rated yet.
+	// (#477) Portal v2's close path is a server redirect; the legacy inline-render
+	// branch above only fires on POST-back, so without this block the v4.0.3
+	// portal.csat_enabled toggle has no effect for portal v2 users.
+	$csat_enabled  = (bool) swh_get_option( 'portal', 'csat_enabled', true );
+	$rated_meta    = get_post_meta( $ticket_id, '_ticket_csat', true );
+	$already_rated = is_scalar( $rated_meta ) ? (string) $rated_meta : '';
+	if ( $is_closed && $csat_enabled && '' === $already_rated ) {
+		$csat_nonce  = wp_create_nonce( 'swh_csat_' . $ticket_id );
+		$csat_prompt = swh_get_string_option( 'swh_csat_prompt', is_string( $defs['swh_csat_prompt'] ) ? $defs['swh_csat_prompt'] : '' );
+		$csat_thanks = swh_get_string_option( 'swh_csat_thanks', is_string( $defs['swh_csat_thanks'] ) ? $defs['swh_csat_thanks'] : '' );
+		$csat_skip   = swh_get_string_option( 'swh_csat_skip_label', is_string( $defs['swh_csat_skip_label'] ) ? $defs['swh_csat_skip_label'] : '' );
+		echo '<div id="swh-csat" class="swh-alert swh-alert-info" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '">';
+		echo '<p style="margin:0 0 10px 0;"><strong>' . esc_html( $csat_prompt ) . '</strong></p>';
+		echo '<div class="swh-csat-stars">';
+		for ( $i = 1; $i <= 5; $i++ ) {
+			/* translators: %d: star rating value */
+			echo '<button type="button" class="swh-csat-star" data-rating="' . esc_attr( (string) $i ) . '" aria-label="' . esc_attr( sprintf( __( '%d star', 'simple-wp-helpdesk' ), $i ) ) . '">&#9733;</button>';
+		}
+		echo '</div>';
+		echo '<p style="margin:8px 0 0 0;"><a href="#" id="swh-csat-skip">' . esc_html( $csat_skip ) . '</a></p>';
+		echo '</div>';
+		echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status" tabindex="-1">' . esc_html( $csat_thanks ) . '</div>';
+	}
 	// @phpstan-ignore-next-line include.fileNotFound
 	include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/header.php';
 	// @phpstan-ignore-next-line include.fileNotFound

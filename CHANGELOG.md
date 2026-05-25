@@ -10,6 +10,17 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.4] — 2026-05-25
+
+### Fixed
+
+- **Portal v2 CSAT widget never rendered** (#477). After v4.0.3 added operator-configurable CSAT controls, RC verification surfaced that portal v2 didn't emit the widget at all — the `portal.csat_enabled` toggle was a functional no-op for portal v2 users. The widget was only emitted by the legacy shortcode close branch (POST-back), but portal v2's close path is an `admin-post.php` handler that ends in `wp_safe_redirect()`. The GET-back didn't re-enter the inline-render branch. `swh_render_client_portal()` now emits the CSAT widget inside `#swh-portal-app` whenever the ticket is closed, CSAT is enabled, and the client hasn't rated yet (`_ticket_csat` post meta absent) — Option C from the issue triage, friendliest for clients who don't rate immediately.
+- **Frontend submissions with `swh_default_assignee` set via wp-cli didn't send the assignee email** (#476). `swh_apply_assignment_rules()` reads from the v4.0 grouped key `routing.default_assignee`, but the legacy flat option `swh_default_assignee` is only mirrored to grouped storage when written through `swh_set_option()` (which the settings UI uses). Sites that set the option via `wp option update`, the test setup script, or pre-4.0 installs that never re-saved settings hit a silent gap: the assignment fired but the listener never saw an assignee. Added a legacy-flat fallback when grouped storage is empty.
+
+### Changed
+
+- **Email-templates settings tab — label consistency and grouping** (#439, #440). Every subject field is now labelled `(Subject)` (the abbreviated `(Sub)` variants in the Tech/Admin section are gone). The "Ticket Merged" template moves from the now-removed "Emails Sent to Client (System)" section into the main Client section next to Auto-Closed. UI-only — no option keys change, persistence is unaffected.
+
 ## [4.0.3] — 2026-05-25
 
 ### Added

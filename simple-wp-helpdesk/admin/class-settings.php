@@ -826,6 +826,8 @@ function swh_render_settings_page() {
 					<tr><th scope="row"><?php esc_html_e( 'Client Closed Ticket (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_closed_body', $defs, 'textarea' ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Auto-Closed (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_autoclose_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Auto-Closed (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_autoclose_body', $defs, 'textarea' ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_sub', $defs ); ?></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_body', $defs, 'textarea' ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Lookup (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_lookup_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Lookup (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_lookup_body', $defs, 'textarea' ); ?></td></tr>
 				</table><hr>
@@ -833,21 +835,16 @@ function swh_render_settings_page() {
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'New Ticket (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_new_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'New Ticket (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_new_body', $defs, 'textarea' ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Client Replied (Sub)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_reply_sub', $defs ); ?></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Client Replied (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_reply_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Client Replied (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_reply_body', $defs, 'textarea' ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Ticket Re-opened (Sub)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_reopen_sub', $defs ); ?></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Ticket Re-opened (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_reopen_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Ticket Re-opened (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_reopen_body', $defs, 'textarea' ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Client Closed Ticket (Sub)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_closed_sub', $defs ); ?></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Client Closed Ticket (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_closed_sub', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Client Closed Ticket (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_closed_body', $defs, 'textarea' ); ?></td></tr>
 					<tr style="background:#e6f7ff;"><th scope="row"><?php esc_html_e( 'Ticket Assigned to You (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_assigned_sub', $defs ); ?></td></tr>
 					<tr style="background:#e6f7ff;"><th scope="row"><?php esc_html_e( 'Ticket Assigned to You (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_assigned_body', $defs, 'textarea' ); ?></td></tr>
 					<tr style="background:#fff3cd;"><th scope="row"><?php esc_html_e( 'SLA Breach Alert (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_sla_breach_sub', $defs ); ?></td></tr>
 					<tr style="background:#fff3cd;"><th scope="row"><?php esc_html_e( 'SLA Breach Alert (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_admin_sla_breach_body', $defs, 'textarea' ); ?></td></tr>
-				</table>
-				<h2><?php esc_html_e( 'Emails Sent to Client (System)', 'simple-wp-helpdesk' ); ?></h2>
-				<table class="form-table">
-					<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Subject)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_sub', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Ticket Merged (Body)', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_em_user_merged_body', $defs, 'textarea' ); ?></td></tr>
 				</table>
 			</div>
 
