@@ -63,13 +63,24 @@ Single-issue patch — closes [#433](https://github.com/seanmousseau/Simple-WP-H
 
 Milestone: [#24](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/24). Bug-fix batch. Surfaced during v4.0.0 deep-dive sweep + RC testing.
 
-### v4.0.3 — 2 issues
+### v4.0.3 — Settings page revamp
 
-Milestone: [#25](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/25). Bug-fix batch.
+Milestone: [#27](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/27). Correctness patch on the storage-group ↔ UI-tab gap left over from v4.0.0 (#356). Closes the "features advertised with no way to use them" issue surfaced 2026-05-25.
 
-### v4.0.4 — 7+ issues + dependency cleanup
+- [#470](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/470) — Umbrella: align admin UI tabs with the 7 storage groups
+- [#471](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/471) — New **Portal** tab: CSAT operator controls (previously hardcoded) + portal/admin theme settings
+- [#472](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/472) — New **Integrations** tab (sparse): inbound webhook secret + coming-soon placeholders for v4.1/v4.2/v4.3
+- [#473](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/473) — Docs sync (config-reference, data-dictionary, roadmap)
+- [#474](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/474) — Playwright sections 74 (Portal/CSAT) + 75 (Integrations)
 
-Milestone: [#26](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/26). Docs + dev-experience cleanup. Includes:
+**Decision deferred:** reCAPTCHA stays on the Anti-Spam tab. Moving it to Integrations would fragment a cohesive panel (JS-driven row hiding tied to `spam_method`). Revisit in v4.1 when API-key management lands and a real "third-party credentials" pattern exists.
+
+**Notifications tab also deferred** — `Migration.php` explicitly leaves that group unseeded; nothing to surface yet.
+
+### Renumbered patches
+
+- v4.0.4 (was v4.0.3) — Milestone [#25](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/25). Email-templates wording tweaks (#439, #440).
+- v4.0.5 (was v4.0.4) — Milestone [#26](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/26). Docs + dev-experience cleanup. Includes:
 
 - [#441](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/441) – [#447](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/447) — extended-test runbook docs + dev-experience refactors surfaced while building the RC suite
 - [#453](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/453) — clear 8 Dependabot alerts (npm devDeps; zero end-user impact)

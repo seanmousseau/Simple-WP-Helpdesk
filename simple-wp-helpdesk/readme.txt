@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.2
+Stable tag: 4.0.3
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,11 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.3 =
+* Added: new **Portal** settings tab — surfaces frontend/admin theme picker and operator-configurable CSAT widget controls that were previously hardcoded (enable toggle, prompt text, thank-you message, skip-link label). (#471)
+* Added: new **Integrations** settings tab — surfaces the inbound webhook shared secret and previews REST API (v4.1), outbound webhooks (v4.2), and native Slack/Teams/Discord (v4.3). (#472)
+* Changed: closes the v4.0.0 storage-group ↔ admin-UI-tab gap (#356) — two storage groups (`swh_settings_portal`, `swh_settings_integrations`) finally have UI entry points. No schema changes; existing settings are unaffected.
 
 = 4.0.2 =
 * Fixed: drawer + bulk-action assignment was silently broken — REST controllers wrote `_ticket_assigned`, but the rest of the plugin (lifecycle hook, email dispatch, legacy editor, admin list) used `_ticket_assigned_to`. Consolidated to the canonical key across all surfaces; one-shot upgrade migration copies orphaned values. (#434, #435)
@@ -332,6 +337,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.3 =
+Settings UX patch: new **Portal** and **Integrations** tabs surface configuration for previously-hardcoded features (CSAT widget) and existing storage groups (inbound webhook secret). No schema changes; safe drop-in upgrade.
 
 = 4.0.2 =
 Bug-fix + small-feature patch: drawer assignment now works, assignee emails fire from drawer/bulk paths, webhook replies show per-message authors, drawer shows unread-reply indicator, and users can pin a default inbox view. Safe drop-in upgrade with a one-shot meta-key migration for any tickets assigned via the broken drawer flow.

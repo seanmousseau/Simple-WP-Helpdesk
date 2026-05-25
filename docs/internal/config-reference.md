@@ -155,11 +155,18 @@ These belong to the **Tools** form (separate nonce — see `design-document.md` 
 |---|---|---|---|
 | `swh_inbound_secret` | `''` | string | Bearer token required by the inbound-email REST endpoint. Empty disables the endpoint (every call fails auth). |
 
-### Frontend Portal Appearance
+### Portal (`swh_settings_portal`)
+
+UI: Settings → Portal tab. Groups frontend portal appearance and CSAT widget controls.
 
 | Option key | Default | Type | Purpose |
 |---|---|---|---|
-| `swh_portal_theme` | `auto` | `auto`/`light` | `auto` follows `prefers-color-scheme`; `light` forces light mode via `data-swh-theme="light"` on `.swh-helpdesk-wrapper`. |
+| `swh_portal_theme` | `auto` | `auto`/`light`/`dark` | `auto` follows `prefers-color-scheme`; `light`/`dark` force the corresponding `data-swh-theme` on `.swh-helpdesk-wrapper`. |
+| `swh_admin_theme` | `light` | `light`/`dark`/`auto` | Admin theme override. `auto` follows WP admin color scheme. Stored under `portal.admin_theme` despite the "admin" name — same group covers all theme settings. |
+| `swh_csat_enabled` | `true` | bool | Show the 1–5 star CSAT widget after a client closes a ticket. When `false`, only the close-success message renders (no DOM emission, no AJAX surface). Stored as bool when unchecked, string `"1"` when checked (same pattern as `swh_use_violet_theme`). |
+| `swh_csat_prompt` | `How was your support experience?` | string | Heading shown above the star buttons. |
+| `swh_csat_thanks` | `Thanks for your feedback!` | string | Confirmation shown after a rating submits. |
+| `swh_csat_skip_label` | `Skip` | string | Text for the link that dismisses the widget without rating. |
 
 ## Excluded from defaults but managed
 

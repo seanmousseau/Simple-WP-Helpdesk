@@ -268,6 +268,10 @@ function swh_handle_settings_save() {
 		}
 		$violet_on = isset( $_POST['swh_use_violet_theme'] );
 		swh_set_option( 'general', 'use_violet_theme', $violet_on );
+		// CSAT enable/disable (v4.0.3 #471) — checkbox: absent = disabled.
+		// Text fields (prompt/thanks/skip_label) are saved by the generic loop below.
+		$csat_on = isset( $_POST['swh_csat_enabled'] );
+		swh_set_option( 'portal', 'csat_enabled', $csat_on );
 		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
 		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses', 'swh_ticket_templates', 'swh_assignment_rules' );
@@ -411,9 +415,11 @@ function swh_render_settings_page() {
 		<div class="nav-tab-wrapper" id="swh-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings Sections', 'simple-wp-helpdesk' ); ?>">
 			<button type="button" class="nav-tab nav-tab-active" role="tab" id="swh-tab-general" data-tab="tab-general" aria-selected="true" aria-controls="tab-general" tabindex="0"><span class="dashicons dashicons-admin-generic" aria-hidden="true"></span> <?php esc_html_e( 'General', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-routing" data-tab="tab-routing" aria-selected="false" aria-controls="tab-routing" tabindex="-1"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span> <?php esc_html_e( 'Assignment & Routing', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-portal" data-tab="tab-portal" aria-selected="false" aria-controls="tab-portal" tabindex="-1"><span class="dashicons dashicons-admin-customizer" aria-hidden="true"></span> <?php esc_html_e( 'Portal', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-emails" data-tab="tab-emails" aria-selected="false" aria-controls="tab-emails" tabindex="-1"><span class="dashicons dashicons-email-alt" aria-hidden="true"></span> <?php esc_html_e( 'Email Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-messages" data-tab="tab-messages" aria-selected="false" aria-controls="tab-messages" tabindex="-1"><span class="dashicons dashicons-format-chat" aria-hidden="true"></span> <?php esc_html_e( 'Messages', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-spam" data-tab="tab-spam" aria-selected="false" aria-controls="tab-spam" tabindex="-1"><span class="dashicons dashicons-shield" aria-hidden="true"></span> <?php esc_html_e( 'Anti-Spam', 'simple-wp-helpdesk' ); ?></button>
+			<button type="button" class="nav-tab" role="tab" id="swh-tab-integrations" data-tab="tab-integrations" aria-selected="false" aria-controls="tab-integrations" tabindex="-1"><span class="dashicons dashicons-admin-plugins" aria-hidden="true"></span> <?php esc_html_e( 'Integrations', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-canned" data-tab="tab-canned" aria-selected="false" aria-controls="tab-canned" tabindex="-1"><span class="dashicons dashicons-text-page" aria-hidden="true"></span> <?php esc_html_e( 'Canned Responses', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab" role="tab" id="swh-tab-templates" data-tab="tab-templates" aria-selected="false" aria-controls="tab-templates" tabindex="-1"><span class="dashicons dashicons-layout" aria-hidden="true"></span> <?php esc_html_e( 'Templates', 'simple-wp-helpdesk' ); ?></button>
 			<button type="button" class="nav-tab swh-tab-tools" role="tab" id="swh-tab-tools" data-tab="tab-tools" aria-selected="false" aria-controls="tab-tools" tabindex="-1"><span class="dashicons dashicons-admin-tools" aria-hidden="true"></span> <?php esc_html_e( 'Tools', 'simple-wp-helpdesk' ); ?></button>
@@ -712,6 +718,66 @@ function swh_render_settings_page() {
 				</script>
 			</div>
 
+			<div id="tab-portal" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-portal" tabindex="0" style="display:none;">
+				<p class="description"><?php esc_html_e( 'Frontend portal appearance and post-close customer-satisfaction (CSAT) widget.', 'simple-wp-helpdesk' ); ?></p>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Customer Satisfaction (CSAT)', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Show CSAT widget', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="swh_csat_enabled" id="swh_csat_enabled" value="1" <?php checked( (bool) swh_get_option( 'portal', 'csat_enabled', true ) ); ?>>
+									<?php esc_html_e( 'Show 1–5 star rating after the customer closes a ticket', 'simple-wp-helpdesk' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'When disabled, only the close-success message is shown — no rating widget renders, and no AJAX endpoint is exposed.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Prompt text', 'simple-wp-helpdesk' ); ?></th>
+							<td><?php swh_field( 'swh_csat_prompt', $defs ); ?>
+								<p class="description"><?php esc_html_e( 'Heading shown above the star rating buttons.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Thank-you message', 'simple-wp-helpdesk' ); ?></th>
+							<td><?php swh_field( 'swh_csat_thanks', $defs ); ?>
+								<p class="description"><?php esc_html_e( 'Confirmation shown after the customer submits a rating.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Skip link label', 'simple-wp-helpdesk' ); ?></th>
+							<td><?php swh_field( 'swh_csat_skip_label', $defs ); ?>
+								<p class="description"><?php esc_html_e( 'Text for the link that dismisses the widget without rating.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Theme', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Frontend portal theme', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<?php $portal_theme = swh_get_string_option( 'swh_portal_theme', 'auto' ); ?>
+								<label style="margin-right:15px;"><input type="radio" name="swh_portal_theme" value="auto" <?php checked( $portal_theme, 'auto' ); ?>> <?php esc_html_e( 'Auto (follow visitor)', 'simple-wp-helpdesk' ); ?></label>
+								<label style="margin-right:15px;"><input type="radio" name="swh_portal_theme" value="light" <?php checked( $portal_theme, 'light' ); ?>> <?php esc_html_e( 'Light', 'simple-wp-helpdesk' ); ?></label>
+								<label><input type="radio" name="swh_portal_theme" value="dark" <?php checked( $portal_theme, 'dark' ); ?>> <?php esc_html_e( 'Dark', 'simple-wp-helpdesk' ); ?></label>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Admin theme', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<?php $admin_theme = swh_get_string_option( 'swh_admin_theme', 'light' ); ?>
+								<label style="margin-right:15px;"><input type="radio" name="swh_admin_theme" value="light" <?php checked( $admin_theme, 'light' ); ?>> <?php esc_html_e( 'Light', 'simple-wp-helpdesk' ); ?></label>
+								<label style="margin-right:15px;"><input type="radio" name="swh_admin_theme" value="dark" <?php checked( $admin_theme, 'dark' ); ?>> <?php esc_html_e( 'Dark', 'simple-wp-helpdesk' ); ?></label>
+								<label><input type="radio" name="swh_admin_theme" value="auto" <?php checked( $admin_theme, 'auto' ); ?>> <?php esc_html_e( 'Auto (follow WP admin color scheme)', 'simple-wp-helpdesk' ); ?></label>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
+			</div>
+
 			<div id="tab-emails" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-emails" tabindex="0" style="display:none;">
 				<p>
 					<button type="button" id="swh-test-email-btn" class="button"><?php esc_html_e( 'Send Test Email', 'simple-wp-helpdesk' ); ?></button>
@@ -736,20 +802,6 @@ function swh_render_settings_page() {
 						<td>
 							<input type="url" name="swh_email_logo_url" value="<?php echo esc_attr( swh_get_string_option( 'swh_email_logo_url' ) ); ?>" class="regular-text" placeholder="https://">
 							<p class="description"><?php esc_html_e( 'Optional. A logo image to display in the HTML email header. Leave blank to use the site icon (if set). Displayed at 32×32px.', 'simple-wp-helpdesk' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Reply-by-Email Webhook URL', 'simple-wp-helpdesk' ); ?></th>
-						<td>
-							<code><?php echo esc_html( rest_url( 'swh/v1/inbound-email' ) ); ?></code>
-							<p class="description"><?php esc_html_e( 'Point your email service (Mailgun, SendGrid, Postmark) inbound webhook here. Clients can reply to notification emails and the reply is attached to their ticket.', 'simple-wp-helpdesk' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Webhook Secret', 'simple-wp-helpdesk' ); ?></th>
-						<td>
-							<input type="password" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
-							<p class="description"><?php esc_html_e( 'Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer &lt;secret&gt; in each POST request.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
 				</table>
@@ -892,6 +944,36 @@ function swh_render_settings_page() {
 					swhUpdateSpamRows();
 				})();
 				</script>
+			</div>
+			<div id="tab-integrations" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-integrations" tabindex="0" style="display:none;">
+				<p class="description"><?php esc_html_e( 'Third-party integrations and inbound channels. The webhook signing, REST API key management, and native Slack/Teams/Discord integrations land in future releases — placeholders below indicate what is coming.', 'simple-wp-helpdesk' ); ?></p>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Reply-by-Email Webhook', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Webhook URL', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<code><?php echo esc_html( rest_url( 'swh/v1/inbound-email' ) ); ?></code>
+								<p class="description"><?php esc_html_e( 'Point your email service (Mailgun, SendGrid, Postmark) inbound webhook here. Clients can reply to notification emails and the reply is attached to their ticket.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Webhook secret', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<input type="password" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
+								<p class="description"><?php esc_html_e( 'Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer <secret> in each POST request. Compared in constant time.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
+				<fieldset class="swh-settings-group swh-coming-soon" aria-label="<?php esc_attr_e( 'Coming in future releases', 'simple-wp-helpdesk' ); ?>">
+					<legend><?php esc_html_e( 'Coming soon', 'simple-wp-helpdesk' ); ?></legend>
+					<ul style="margin:0 0 0 20px;list-style:disc;">
+						<li><strong><?php esc_html_e( 'REST API keys', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'scoped key management for the public /swh/v1 API (v4.1).', 'simple-wp-helpdesk' ); ?></li>
+						<li><strong><?php esc_html_e( 'Outbound webhooks', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'HMAC-signed event subscriptions with delivery log + retry (v4.2).', 'simple-wp-helpdesk' ); ?></li>
+						<li><strong><?php esc_html_e( 'Native integrations', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'Slack, Microsoft Teams, Discord, Zapier (v4.3).', 'simple-wp-helpdesk' ); ?></li>
+					</ul>
+				</fieldset>
 			</div>
 			<div id="tab-canned" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-canned" tabindex="0" style="display:none;">
 				<p class="description"><?php esc_html_e( 'Pre-written reply templates. Select one in the ticket editor to insert it into the reply field.', 'simple-wp-helpdesk' ); ?></p>

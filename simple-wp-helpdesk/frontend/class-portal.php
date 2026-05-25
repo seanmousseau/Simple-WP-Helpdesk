@@ -208,20 +208,30 @@ function swh_render_client_portal() {
 		$admin_email = swh_get_admin_email( $ticket_id );
 		swh_send_email( $admin_email, 'swh_em_admin_closed_sub', 'swh_em_admin_closed_body', $data );
 		swh_send_email( $data['email'], 'swh_em_user_closed_sub', 'swh_em_user_closed_body', $data );
-		$csat_nonce = wp_create_nonce( 'swh_csat_' . $ticket_id );
-		$close_msg  = esc_html( swh_get_string_option( 'swh_msg_success_closed', is_string( $defs['swh_msg_success_closed'] ) ? $defs['swh_msg_success_closed'] : '' ) );
-		echo '<div id="swh-csat" class="swh-alert swh-alert-info" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '" data-success="' . esc_attr( $close_msg ) . '">';
-		echo '<p style="margin:0 0 10px 0;"><strong>' . esc_html__( 'How was your support experience?', 'simple-wp-helpdesk' ) . '</strong></p>';
-		echo '<div class="swh-csat-stars">';
-		for ( $i = 1; $i <= 5; $i++ ) {
-			/* translators: %d: star rating value */
-			echo '<button type="button" class="swh-csat-star" data-rating="' . esc_attr( (string) $i ) . '" aria-label="' . esc_attr( sprintf( __( '%d star', 'simple-wp-helpdesk' ), $i ) ) . '">&#9733;</button>';
+		$close_msg = esc_html( swh_get_string_option( 'swh_msg_success_closed', is_string( $defs['swh_msg_success_closed'] ) ? $defs['swh_msg_success_closed'] : '' ) );
+		// CSAT widget — gated on portal.csat_enabled (v4.0.3 #471). When disabled,
+		// only the close-success message renders — no DOM emission, no AJAX surface.
+		$csat_enabled = (bool) swh_get_option( 'portal', 'csat_enabled', true );
+		if ( $csat_enabled ) {
+			$csat_nonce  = wp_create_nonce( 'swh_csat_' . $ticket_id );
+			$csat_prompt = swh_get_string_option( 'swh_csat_prompt', is_string( $defs['swh_csat_prompt'] ) ? $defs['swh_csat_prompt'] : '' );
+			$csat_thanks = swh_get_string_option( 'swh_csat_thanks', is_string( $defs['swh_csat_thanks'] ) ? $defs['swh_csat_thanks'] : '' );
+			$csat_skip   = swh_get_string_option( 'swh_csat_skip_label', is_string( $defs['swh_csat_skip_label'] ) ? $defs['swh_csat_skip_label'] : '' );
+			echo '<div id="swh-csat" class="swh-alert swh-alert-info" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '" data-success="' . esc_attr( $close_msg ) . '">';
+			echo '<p style="margin:0 0 10px 0;"><strong>' . esc_html( $csat_prompt ) . '</strong></p>';
+			echo '<div class="swh-csat-stars">';
+			for ( $i = 1; $i <= 5; $i++ ) {
+				/* translators: %d: star rating value */
+				echo '<button type="button" class="swh-csat-star" data-rating="' . esc_attr( (string) $i ) . '" aria-label="' . esc_attr( sprintf( __( '%d star', 'simple-wp-helpdesk' ), $i ) ) . '">&#9733;</button>';
+			}
+			echo '</div>';
+			echo '<p style="margin:8px 0 0 0;"><a href="#" id="swh-csat-skip">' . esc_html( $csat_skip ) . '</a></p>';
+			echo '</div>';
+			echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status" tabindex="-1">' . esc_html( $csat_thanks ) . '</div>';
+			echo '<div id="swh-close-success" class="swh-alert swh-alert-success" style="display:none;" role="status">' . $close_msg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $close_msg already esc_html()'d above.
+		} else {
+			echo '<div id="swh-close-success" class="swh-alert swh-alert-success" role="status">' . $close_msg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $close_msg already esc_html()'d above.
 		}
-		echo '</div>';
-		echo '<p style="margin:8px 0 0 0;"><a href="#" id="swh-csat-skip">' . esc_html__( 'Skip', 'simple-wp-helpdesk' ) . '</a></p>';
-		echo '</div>';
-		echo '<div id="swh-csat-thanks" class="swh-alert swh-alert-success" style="display:none;" role="status" tabindex="-1">' . esc_html__( 'Thanks for your feedback!', 'simple-wp-helpdesk' ) . '</div>';
-		echo '<div id="swh-close-success" class="swh-alert swh-alert-success" style="display:none;" role="status">' . $close_msg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $close_msg already esc_html()'d above.
 		$data['status'] = $closed_status;
 	} elseif ( $is_post_action && isset( $_POST['swh_user_reopen_submit'], $_POST['swh_reopen_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( is_string( $_POST['swh_reopen_nonce'] ) ? $_POST['swh_reopen_nonce'] : '' ) ), 'swh_user_reopen' ) ) {
 		if ( swh_check_antispam( false ) ) {
