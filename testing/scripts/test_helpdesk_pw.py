@@ -3626,15 +3626,16 @@ def test_57_toast_notifications(page: Page):
     page.locator('#save-btn-container input[type="submit"]').click()
     page.wait_for_load_state('networkidle')
 
-    # Toast should appear with the --visible modifier class.
-    toast = page.locator('.swh-toast.swh-toast--visible')
+    # The toast is rendered with role="status" + aria-live="polite". One toast
+    # at a time, so the role lookup is unambiguous.
+    toast = page.get_by_role("status").filter(has_text=re.compile(r".+"))
     toast_visible = False
     with suppress(PlaywrightTimeoutError):
         toast.wait_for(state='visible', timeout=3000)
         toast_visible = toast.count() > 0 and toast.first.is_visible()
     check("toast #333: toast is visible after settings save",
           toast_visible,
-          "toast element with .swh-toast--visible not found")
+          "no role=status element visible after save")
 
     # URL should not contain swh_notice=saved after JS cleans it.
     check("toast #334: URL param swh_notice=saved stripped by JS",
@@ -3654,13 +3655,14 @@ def test_57_toast_notifications(page: Page):
     _navigate_settings(page)
     page.locator('#save-btn-container input[type="submit"]').click()
     page.wait_for_load_state('networkidle')
-    toast2 = page.locator('.swh-toast.swh-toast--visible')
+    toast2 = page.get_by_role("status").filter(has_text=re.compile(r".+"))
     toast2_visible = False
     with suppress(PlaywrightTimeoutError):
         toast2.wait_for(state='visible', timeout=3000)
         toast2_visible = toast2.count() > 0 and toast2.first.is_visible()
     if toast2_visible:
-        page.locator('.swh-toast__dismiss').click()
+        # Dismiss button is aria-labelled.
+        toast2.get_by_role("button", name="Dismiss").click()
         toast2_hidden = False
         with suppress(PlaywrightTimeoutError):
             toast2.wait_for(state='hidden', timeout=2000)
