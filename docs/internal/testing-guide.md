@@ -77,6 +77,24 @@ class names changed.
    `test_drawer_shows_ticket_subject_when_row_clicked`, not
    `test_drawer_dom`.
 
+**Use the helper library.** `testing/scripts/_selectors.py` provides
+documented primitives for every major surface (inbox, drawer, palette,
+settings, portal). Importing from there gives you consistent, semantic
+locators across the suite — and makes the next markup change a one-file
+update instead of a sweep through 70 tests:
+
+```python
+from _selectors import inbox_root, ticket_row, drawer, settings_form_field
+
+inbox_root(page).wait_for(timeout=10_000)
+ticket_row(page, ticket_id=42).get_by_role("checkbox").check()
+drawer(page).get_by_role("heading", level=2)  # ticket title
+settings_form_field(page, "swh_use_violet_theme").check()
+```
+
+The helper's docstring ranks selector types from best (ARIA role + name) to
+last-resort (`data-testid`). Read it before writing a new selector.
+
 Reference fixes in code:
 
 - **test_69** (`test_helpdesk_pw.py:4285`) — uses

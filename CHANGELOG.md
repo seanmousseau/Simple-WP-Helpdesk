@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Added
+
+- **Testing — E2E selector foundation** (PR 4 of the testing overhaul, foundation only). New `testing/scripts/_selectors.py` helper module with documented semantic-selector primitives for every major admin surface (inbox, drawer, palette, settings, portal). Ranks selector types from best (ARIA role + name) to last-resort (`data-testid`); explicitly bans CSS-class selectors except where documented in `component-inventory.md`. `docs/internal/testing-guide.md`'s E2E selector policy now references the helper library with concrete code examples. **Existing tests are not converted in this PR** — conversions need live-stack verification and are queued as follow-ups (PR 4.1 converts the four selector-coupled tests from #421 as proof-of-pattern; 4.2–4.5 sweep the remaining ~70 sections). Closes the PR 4 foundation; sweeps tracked in `docs/internal/test-coverage-matrix.md`.
+
 ### Changed
 
 - **Testing — bump pytest-playwright 0.7.2 → 0.8.0** (Dependabot PR #408). Picks up `expect.soft()` soft-assertion support, useful for the upcoming E2E rewrite (PR 4 of the testing overhaul). No behavior change for existing tests.

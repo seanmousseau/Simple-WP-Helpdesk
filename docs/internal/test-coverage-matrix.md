@@ -242,14 +242,21 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 
 **Exit criteria:** Tier 1 L3 column is all `✓` or explicit `N/A`.
 
-### PR 4 — Behavior E2E rewrite (2 weeks, can parallelize)
+### PR 4 — Behavior E2E rewrite (foundation shipped; sweeps queued)
 
-- Establish semantic-selector standard in `docs/internal/testing-guide.md`. Add a lint rule that flags `By.css('.foo-class')` patterns in test files.
-- Rewrite the four selector-coupled tests first (test_59 dark mode, test_69 drawer, test_70 views, test_71 inbox default) — proof-of-pattern PRs.
-- Sweep section by section: each PR converts 5–10 tests, asserts user-visible outcomes via `getByRole`/`getByLabel`/`getByText`/data attributes (only for genuinely non-semantic items).
-- Add gap #4 (inbound-email E2E), #11 (internal-note isolation E2E), #12 (migration E2E), #22 (Cmd+K palette E2E).
+**Foundation shipped (this PR):**
+- `testing/scripts/_selectors.py` — documented helper library with semantic-selector primitives for every major surface (inbox, drawer, palette, settings, portal). Ranks selector types from best (ARIA role + name) to last-resort (`data-testid`). Bans CSS-class selectors except where documented in `component-inventory.md`.
+- Selector policy expanded in `testing-guide.md` with a "use the helper library" section and concrete code examples.
+- Existing tests are NOT touched in this PR — that's intentional. Conversions need live-stack verification and converting all ~70 sections is multi-week. The helper makes each subsequent conversion mechanical.
 
-**Exit criteria:** zero CSS-class selectors in `testing/scripts/`; every E2E test name is a user-visible behavior sentence.
+**Sweeps queued as follow-ups (PR 4.1, 4.2, …):**
+- 4.1 — convert the 4 selector-coupled tests from #421: test_59 (dark mode), test_69 (drawer), test_70 (views), test_71 (inbox default). These are the proof-of-pattern set.
+- 4.2 — convert sections 01–20 (smoke + early features)
+- 4.3 — convert sections 21–40 (drawer, attachments, security)
+- 4.4 — convert sections 41–64 (reports, dark mode, a11y, late v4 work)
+- 4.5 — Add gap #4 (inbound-email E2E), #11 (internal-note isolation E2E), #12 (migration E2E), #22 (Cmd+K palette E2E)
+
+**Exit criteria for the full PR 4 series (not yet met):** zero CSS-class selectors in `testing/scripts/`; every E2E test name is a user-visible behavior sentence.
 
 ### PR 5 — Visual regression (1 week)
 
