@@ -10,6 +10,26 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.3] — 2026-05-25
+
+### Added
+
+- **v4.0.3 — Portal settings tab** (#471). New admin tab surfacing the previously-unreachable `swh_settings_portal` storage group: portal/admin theme pickers plus operator-configurable CSAT widget controls (`csat_enabled` bool, `csat_prompt`, `csat_thanks`, `csat_skip_label`). Previously the CSAT widget rendered with hardcoded strings and no way to disable it. When `csat_enabled` is false, no DOM is emitted and no AJAX surface is exposed — the close-success message renders alone.
+- **v4.0.3 — Integrations settings tab** (#472). New admin tab surfacing the `swh_settings_integrations` storage group. Today: the inbound webhook shared secret (already in defaults, never had a UI). Placeholders preview what v4.1 (REST API keys), v4.2 (signed outbound webhooks), and v4.3 (Slack/Teams/Discord) will populate.
+
+### Changed
+
+- **v4.0.3 — Closes the v4.0.0 storage-group ↔ UI gap** (#470). v4.0.0 reorganized settings into 7 grouped options (#356) but the admin UI tabs were never updated to match — leaving two groups (`portal`, `integrations`) with no entry point. Net effect: features that the plugin advertised in docs had zero way to configure. v4.0.3 closes that gap. No data-shape changes; settings move from "implicit defaults" to "operator-tunable" without altering storage. Notifications tab remains deferred — that group is intentionally unseeded.
+
+### Decisions deferred
+
+- reCAPTCHA stays on the **Anti-Spam** tab. Moving it to **Integrations** was discussed but would have fragmented a cohesive panel (JS-driven row visibility tied to `spam_method`). Revisit in v4.1 alongside REST API key management, when a real "third-party credentials" pattern lands.
+
+### Renumbered milestones
+
+- v4.0.4 (was v4.0.3) — Milestone #25. Email-templates wording tweaks (#439, #440).
+- v4.0.5 (was v4.0.4) — Milestone #26. Docs + dev-experience cleanup.
+
 ## [4.0.2] — 2026-05-25
 
 ### Added

@@ -4737,6 +4737,112 @@ def test_73_reports_range_and_drilldown(page: Page):
     wp_logout(page)
 
 
+def test_74_portal_tab_csat_settings(page: Page):
+    """v4.0.3 #471 — Portal tab surfaces CSAT controls; toggle + prompt persist via grouped storage."""
+    print("\n[74] Portal tab + CSAT settings (#471)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    _navigate_settings(page)
+    page.wait_for_load_state("networkidle")
+
+    # Portal tab button exists and activates the panel.
+    portal_tab = page.locator("#swh-tab-portal")
+    check("portal tab #471: nav-tab button present", portal_tab.count() == 1)
+    portal_tab.click()
+    page.wait_for_timeout(200)
+
+    # CSAT controls render inside the panel.
+    panel = page.locator("#tab-portal")
+    check("portal tab #471: CSAT enable checkbox present",
+          panel.locator('input[name="swh_csat_enabled"]').count() == 1)
+    check("portal tab #471: CSAT prompt input present",
+          panel.locator('input[name="swh_csat_prompt"]').count() == 1)
+    check("portal tab #471: CSAT thanks input present",
+          panel.locator('input[name="swh_csat_thanks"]').count() == 1)
+    check("portal tab #471: CSAT skip-label input present",
+          panel.locator('input[name="swh_csat_skip_label"]').count() == 1)
+
+    # Round-trip 1: disable CSAT, change prompt; save; verify both persisted.
+    unique_prompt = f"Rate us! [TEST-{int(time.time())}]"
+    page.evaluate("""() => {
+        document.querySelectorAll('[role="tabpanel"]').forEach(el => { el.style.display = 'none'; });
+        document.getElementById('tab-portal').style.display = 'block';
+    }""")
+    checkbox = page.locator('input[name="swh_csat_enabled"]')
+    if checkbox.is_checked():
+        checkbox.uncheck(force=True)
+    page.fill('input[name="swh_csat_prompt"]', unique_prompt)
+    page.locator('#swh-settings-form input[name="swh_save_settings"]').click(force=True)
+    page.wait_for_load_state("networkidle")
+
+    # Verify via WP-CLI: settings landed in the swh_settings_portal grouped bag.
+    bag = wpcli("option get swh_settings_portal --format=json").strip()
+    check("portal tab #471: csat_enabled=false persists in swh_settings_portal",
+          '"csat_enabled":false' in bag, f"got: {bag}")
+    check("portal tab #471: custom csat_prompt persists in swh_settings_portal",
+          unique_prompt in bag, f"got: {bag}")
+
+    # Verify via UI reload.
+    _navigate_settings(page)
+    page.locator("#swh-tab-portal").click()
+    page.wait_for_timeout(200)
+    check("portal tab #471: csat_enabled unchecked after reload",
+          not page.locator('input[name="swh_csat_enabled"]').is_checked())
+    check("portal tab #471: custom prompt visible after reload",
+          page.input_value('input[name="swh_csat_prompt"]') == unique_prompt)
+
+    # Restore: re-enable CSAT + restore default prompt.
+    page.evaluate("""() => {
+        document.querySelectorAll('[role="tabpanel"]').forEach(el => { el.style.display = 'none'; });
+        document.getElementById('tab-portal').style.display = 'block';
+    }""")
+    page.locator('input[name="swh_csat_enabled"]').check(force=True)
+    page.fill('input[name="swh_csat_prompt"]', "How was your support experience?")
+    page.locator('#swh-settings-form input[name="swh_save_settings"]').click(force=True)
+    page.wait_for_load_state("networkidle")
+
+    screenshot(page, "74_portal_tab_csat_settings")
+    wp_logout(page)
+
+
+def test_75_integrations_tab(page: Page):
+    """v4.0.3 #472 — Integrations tab surfaces inbound secret and coming-soon placeholders."""
+    print("\n[75] Integrations tab (#472)")
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+
+    _navigate_settings(page)
+    page.wait_for_load_state("networkidle")
+
+    integ_tab = page.locator("#swh-tab-integrations")
+    check("integrations tab #472: nav-tab button present", integ_tab.count() == 1)
+    integ_tab.click()
+    page.wait_for_timeout(200)
+
+    panel = page.locator("#tab-integrations")
+    check("integrations tab #472: inbound_secret input present",
+          panel.locator('input[name="swh_inbound_secret"]').count() == 1)
+    panel_html = panel.inner_html()
+    for marker in ("REST API keys", "Outbound webhooks", "Native integrations"):
+        check(f"integrations tab #472: coming-soon mentions '{marker}'", marker in panel_html)
+
+    # Round-trip: change inbound secret; verify storage group.
+    unique_secret = f"swh-test-{int(time.time())}"
+    page.evaluate("""() => {
+        document.querySelectorAll('[role="tabpanel"]').forEach(el => { el.style.display = 'none'; });
+        document.getElementById('tab-integrations').style.display = 'block';
+    }""")
+    page.fill('input[name="swh_inbound_secret"]', unique_secret)
+    page.locator('#swh-settings-form input[name="swh_save_settings"]').click(force=True)
+    page.wait_for_load_state("networkidle")
+
+    bag = wpcli("option get swh_settings_integrations --format=json").strip()
+    check("integrations tab #472: inbound_secret persists in swh_settings_integrations",
+          unique_secret in bag, f"got: {bag}")
+
+    screenshot(page, "75_integrations_tab")
+    wp_logout(page)
+
+
 # ── Section registry ──────────────────────────────────────────────────────────
 
 SECTIONS = [
@@ -4810,6 +4916,8 @@ SECTIONS = [
     test_71_violet_theme_toggle,               # 71 — v4.0.0 violet theme (#355)
     test_72_portal_v2_renders_conversation,    # 72 — v4.0.0 portal v2 (#354)
     test_73_reports_range_and_drilldown,       # 73 — v4.0.0 reports redesign (#359)
+    test_74_portal_tab_csat_settings,          # 74 — v4.0.3 Portal tab + CSAT settings (#471)
+    test_75_integrations_tab,                  # 75 — v4.0.3 Integrations tab (#472)
     test_28_cleanup,                  # 28 — always last
 ]
 

@@ -119,6 +119,12 @@ function swh_get_defaults() {
 			// Admin theme (v4.0.0): light (default — Violet dark is incomplete),
 			// dark (opt-in), auto (follow WP admin color scheme).
 			'swh_admin_theme'                => 'light',
+			// CSAT (Customer Satisfaction) — widget shown after a client closes a ticket.
+			// v4.0.3 #471: previously hardcoded; now operator-configurable.
+			'swh_csat_enabled'               => true,
+			'swh_csat_prompt'                => 'How was your support experience?',
+			'swh_csat_thanks'                => 'Thanks for your feedback!',
+			'swh_csat_skip_label'            => 'Skip',
 		);
 	}
 	return $defaults;

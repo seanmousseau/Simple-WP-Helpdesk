@@ -32,13 +32,15 @@ class RateLimitKeyInvariantTest extends SourceScanTestCase {
 		$pattern = '/swh_is_rate_limited\s*\(\s*[\'"]portal_(close|reopen|reply)_[\'"]\s*\.\s*\$\w+/';
 
 		// Allow-list:
-		//   class-portal.php:520 — portal reply
-		//   class-portal.php:643 — portal close
-		//   class-portal.php:727 — portal reopen
+		//   class-portal.php:530 — portal reply
+		//   class-portal.php:653 — portal close
+		//   class-portal.php:737 — portal reopen
+		// Lines shifted by +10 in v4.0.3 (#471) when the CSAT widget block expanded
+		// for option-driven strings; rate-limit semantics unchanged.
 		$allow = array(
-			'frontend/class-portal.php:520',
-			'frontend/class-portal.php:643',
-			'frontend/class-portal.php:727',
+			'frontend/class-portal.php:530',
+			'frontend/class-portal.php:653',
+			'frontend/class-portal.php:737',
 		);
 
 		$this->assertSourceMatchesAllowList(
