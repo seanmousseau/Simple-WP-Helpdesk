@@ -251,6 +251,7 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 
 **Sweeps queued as follow-ups (PR 4.1, 4.2, …):**
 - 4.1 ✅ shipped — proof-of-pattern conversion of `test_28_cleanup`, `test_69_bulk_bar_closes_selected_tickets`, `test_70_create_personal_view_and_switch` (the three tests called out in #421). `BulkBar` JSX gained `role="toolbar" aria-label="Bulk actions"`; selector helpers `inbox_root`, `ticket_row`, `bulk_bar`, plus a regex-friendly `drawer()` matcher now have real users; `test_28` swapped the row-actions click for `wp post delete` to bypass WP's "Are you sure?" confirmation page (#421 root cause).
+- 4.2 ✅ shipped — portal-v2 conversions: `test_08_client_portal` and `test_10_portal_close_reopen`. Portal wrapper gained `id="swh-portal-app"`; message template added `data-message-author` hook. New helpers `portal_thread()`, `portal_message(author)`, `portal_menu_trigger()`; existing `portal_send_button()` realigned to the actual aria-label "Send reply". Zero new class selectors; only `.swh-msg-sent` (optimistic-send-confirmed UI state) remains as a documented exception with no a11y equivalent.
 - 4.2 — convert sections 01–20 (smoke + early features)
 - 4.3 — convert sections 21–40 (drawer, attachments, security)
 - 4.4 — convert sections 41–64 (reports, dark mode, a11y, late v4 work)
