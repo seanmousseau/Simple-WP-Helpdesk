@@ -804,20 +804,6 @@ function swh_render_settings_page() {
 							<p class="description"><?php esc_html_e( 'Optional. A logo image to display in the HTML email header. Leave blank to use the site icon (if set). Displayed at 32×32px.', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Reply-by-Email Webhook URL', 'simple-wp-helpdesk' ); ?></th>
-						<td>
-							<code><?php echo esc_html( rest_url( 'swh/v1/inbound-email' ) ); ?></code>
-							<p class="description"><?php esc_html_e( 'Point your email service (Mailgun, SendGrid, Postmark) inbound webhook here. Clients can reply to notification emails and the reply is attached to their ticket.', 'simple-wp-helpdesk' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Webhook Secret', 'simple-wp-helpdesk' ); ?></th>
-						<td>
-							<input type="password" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
-							<p class="description"><?php esc_html_e( 'Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer &lt;secret&gt; in each POST request.', 'simple-wp-helpdesk' ); ?></p>
-						</td>
-					</tr>
 				</table>
 				<hr>
 				<p><strong><?php esc_html_e( 'Placeholders:', 'simple-wp-helpdesk' ); ?></strong> <code>{name}</code>, <code>{email}</code>, <code>{ticket_id}</code>, <code>{title}</code>, <code>{status}</code>, <code>{priority}</code>, <code>{message}</code>, <code>{ticket_url}</code>, <code>{admin_url}</code>, <code>{autoclose_days}</code>, <code>{ticket_links}</code> (<?php esc_html_e( 'lookup only', 'simple-wp-helpdesk' ); ?>)</p>
@@ -962,12 +948,20 @@ function swh_render_settings_page() {
 			<div id="tab-integrations" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-integrations" tabindex="0" style="display:none;">
 				<p class="description"><?php esc_html_e( 'Third-party integrations and inbound channels. The webhook signing, REST API key management, and native Slack/Teams/Discord integrations land in future releases — placeholders below indicate what is coming.', 'simple-wp-helpdesk' ); ?></p>
 				<fieldset class="swh-settings-group">
-					<legend><?php esc_html_e( 'Inbound Email Webhook', 'simple-wp-helpdesk' ); ?></legend>
+					<legend><?php esc_html_e( 'Reply-by-Email Webhook', 'simple-wp-helpdesk' ); ?></legend>
 					<table class="form-table">
 						<tr>
-							<th scope="row"><?php esc_html_e( 'Inbound shared secret', 'simple-wp-helpdesk' ); ?></th>
-							<td><?php swh_field( 'swh_inbound_secret', $defs ); ?>
-								<p class="description"><?php esc_html_e( 'Token used to authenticate the inbound-email webhook sender. Set the same value on your inbound parsing service (e.g. SendGrid Inbound Parse, Mailgun Routes). Compared in constant time — leave blank to disable inbound webhook acceptance.', 'simple-wp-helpdesk' ); ?></p>
+							<th scope="row"><?php esc_html_e( 'Webhook URL', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<code><?php echo esc_html( rest_url( 'swh/v1/inbound-email' ) ); ?></code>
+								<p class="description"><?php esc_html_e( 'Point your email service (Mailgun, SendGrid, Postmark) inbound webhook here. Clients can reply to notification emails and the reply is attached to their ticket.', 'simple-wp-helpdesk' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Webhook secret', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<input type="password" name="swh_inbound_secret" value="<?php echo esc_attr( swh_get_string_option( 'swh_inbound_secret' ) ); ?>" class="regular-text" autocomplete="off">
+								<p class="description"><?php esc_html_e( 'Required. The inbound webhook is disabled when blank. Use a strong random string; your mail provider must send Authorization: Bearer <secret> in each POST request. Compared in constant time.', 'simple-wp-helpdesk' ); ?></p>
 							</td>
 						</tr>
 					</table>

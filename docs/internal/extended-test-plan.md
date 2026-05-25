@@ -229,6 +229,19 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 - **Expect:** Prompt is visible, keyboard-focusable. Submit a rating of 4.
 - **Verify:** As admin, navigate to `Reports`. Ticket's CSAT shows as 4.
 
+### 4.4a — CSAT can be disabled (v4.0.3 #471)
+
+- **Do:** As admin, go to Settings → Portal → uncheck "Show CSAT widget". Save. Reload the page; verify the checkbox is unchecked. As a client, close a fresh ticket via the portal.
+- **Expect:** No 1–5 star widget renders. Only the close-success message appears.
+- **Verify:** View page source — search for `swh-csat`. Must yield zero matches.
+- **Restore:** Re-enable the toggle so subsequent runs/tests keep the default behaviour.
+
+### 4.4b — Custom CSAT prompt text persists (v4.0.3 #471)
+
+- **Do:** At Settings → Portal, change the "Prompt text" field to a unique marker like `RC-CSAT-PROMPT-<timestamp>`. Save. Close a fresh ticket as a client.
+- **Expect:** The widget heading shows the custom marker exactly.
+- **Restore:** Reset to default via the "Reset to default" link on the field.
+
 ### 4.5 — Internal note is NOT visible in portal
 
 - **Do:** As admin, add an internal note containing the marker `INTERNAL-LEAK-CHECK-<timestamp>`. Refresh the portal page in the client's window.
@@ -281,9 +294,9 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 
 ---
 
-## Section 6 — Settings (≈7 min)
+## Section 6 — Settings (≈10 min)
 
-For each of the 7 settings tabs (General, Email, Portal, Routing, Tools, Anti-Spam, Integrations):
+For each settings tab (General, Assignment & Routing, Portal, Email Templates, Messages, Anti-Spam, Integrations, Canned Responses, Templates, Tools):
 
 ### 6.x.1 — Tab loads without PHP notices
 
@@ -292,24 +305,39 @@ For each of the 7 settings tabs (General, Email, Portal, Routing, Tools, Anti-Sp
 
 ### 6.x.2 — One field saves and persists across reload
 
-- **Do:** Change a single field on the tab (e.g. on General, edit "Default priority"; on Email, edit the "Email logo URL"; etc.). Save.
+- **Do:** Change a single field on the tab (e.g. on General, edit "Default priority"; on Email, edit "Email Header Logo URL"; on Portal, edit "Thank-you message"; on Integrations, edit "Webhook secret"). Save.
 - **Expect:** Toast/admin notice confirms save. Reload the page.
 - **Verify:** Field value persists.
 
 Tick each tab below:
 
 - [ ] General
-- [ ] Email
-- [ ] Portal
-- [ ] Routing
-- [ ] Tools
+- [ ] Assignment & Routing
+- [ ] Portal (v4.0.3)
+- [ ] Email Templates
+- [ ] Messages
 - [ ] Anti-Spam
-- [ ] Integrations
+- [ ] Integrations (v4.0.3)
+- [ ] Canned Responses
+- [ ] Templates
+- [ ] Tools
+
+### 6.x.3 — Reply-by-Email webhook (v4.0.3 relocation)
+
+- **Do:** Confirm the Reply-by-Email webhook URL + secret fields are on the **Integrations** tab (moved from Email Templates in v4.0.3).
+- **Expect:** Both fields visible under "Reply-by-Email Webhook" fieldset. The webhook URL is non-editable code text. The secret is a `type=password` field with autocomplete off.
+- **Verify:** The Email Templates tab no longer shows the webhook URL or secret.
 
 ### 6.8 — `wp option get swh_settings_<group>` reflects writes
 
 - **Do:** Pick one tab you just edited. Run `wp option get swh_settings_<group> --format=json`.
 - **Expect:** The changed key shows the new value.
+
+### 6.9 — Grouped + flat mirror consistency (v4.0.0 + v4.0.3)
+
+- **Do:** Edit a setting in any non-General tab via the UI (e.g. Portal → "Skip link label" to a unique marker). Save.
+- **Expect:** Both `wp option get swh_settings_<group>` AND `wp option get swh_<key>` return the new value — `swh_set_option()` mirrors writes to the legacy flat option for back-compat. Reads in `swh_get_string_option()` rely on this mirror.
+- **Why this matters:** If the mirror is broken, runtime reads (e.g., the inbound webhook auth) would silently use stale data even though the UI shows the new value.
 
 - [ ] Section 6 complete.
 
