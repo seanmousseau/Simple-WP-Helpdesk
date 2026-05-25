@@ -44,6 +44,19 @@
 	white-space: nowrap;
 }
 
+// Unread-reply indicator (#436). Visible for ~1.5s after the drawer opens,
+// then auto-clears via the mark_read PATCH. Aligned to baseline of the h2.
+.swh-drawer-unread-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: #d63638; // WP error red — matches admin-list unread badge.
+	vertical-align: middle;
+	transform: translateY(-1px);
+}
+
 .swh-drawer-meta {
 	font-size: 11px;
 	color: #50575e;

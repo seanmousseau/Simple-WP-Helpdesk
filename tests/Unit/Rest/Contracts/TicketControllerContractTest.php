@@ -251,6 +251,56 @@ final class TicketControllerContractTest extends TestCase {
 		WP_Mock::assertActionsCalled();
 	}
 
+	/**
+	 * v4.0.2 (#436) — PATCH with `{ mark_read: true }` clears the _swh_unread
+	 * post meta. Used by the drawer ~1.5s after open to auto-clear the unread
+	 * indicator. Regression-pins the no-bump semantics (clearing read-state
+	 * is not a content change other clients reconcile against).
+	 */
+	public function test_update_item_mark_read_deletes_unread_meta(): void {
+		WP_Mock::userFunction( 'current_user_can', array( 'return' => true ) );
+		WP_Mock::userFunction(
+			'get_post',
+			array(
+				'args'   => array( 42 ),
+				'return' => (object) array(
+					'ID'            => 42,
+					'post_type'     => 'helpdesk_ticket',
+					'post_title'    => 'Subject',
+					'post_content'  => 'Body',
+					'post_date_gmt' => '2026-05-22 10:00:00',
+				),
+			)
+		);
+		WP_Mock::userFunction(
+			'get_post_meta',
+			array(
+				'args'   => array( 42, '_swh_version', true ),
+				'return' => '7',
+			)
+		);
+		WP_Mock::userFunction( 'get_post_meta', array( 'return' => '' ) );
+		WP_Mock::userFunction( 'get_comments', array( 'return' => array() ) );
+		WP_Mock::userFunction( 'wp_get_post_terms', array( 'return' => array() ) );
+
+		// The load-bearing assertion: delete_post_meta MUST be called with the
+		// _swh_unread key when mark_read is in the patch.
+		WP_Mock::userFunction(
+			'delete_post_meta',
+			array(
+				'args'  => array( 42, '_swh_unread' ),
+				'times' => 1,
+			)
+		);
+
+		$req = new WP_REST_Request( 'PATCH', '/swh/v1/tickets/42' );
+		$req->set_param( 'id', 42 );
+		$req->set_param( 'expected_version', 7 );
+		$req->set_param( 'patch', array( 'mark_read' => true ) );
+
+		( new TicketController() )->update_item( $req );
+	}
+
 	public function test_create_reply_404_envelope(): void {
 		WP_Mock::userFunction( 'current_user_can', array( 'return' => true ) );
 		WP_Mock::userFunction(
