@@ -158,8 +158,11 @@ function swh_run_upgrade_routine() {
 		);
 		if ( is_array( $orphan_rows ) ) {
 			foreach ( $orphan_rows as $row ) {
-				$pid = (int) $row->post_id;
-				$val = (int) $row->meta_value;
+				if ( ! is_object( $row ) || ! isset( $row->post_id, $row->meta_value ) ) {
+					continue;
+				}
+				$pid = is_scalar( $row->post_id ) ? (int) $row->post_id : 0;
+				$val = is_scalar( $row->meta_value ) ? (int) $row->meta_value : 0;
 				if ( $pid <= 0 || $val <= 0 ) {
 					continue;
 				}
