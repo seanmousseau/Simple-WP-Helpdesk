@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Fixed
+
+- **v4.0.2 — Webhook-inserted reply comments had no per-message author attribution** (#438). `swh_handle_inbound_email` already extracted the email address from `Name <email@example.com>` From headers, but discarded the display name and wrote the ticket-level `_ticket_name` + `_ticket_email` into `wp_insert_comment` as `comment_author` / `comment_author_email`. Visually fine for single-sender threads; broken for CC'd parties or forwarded mail, where every webhook-inserted message showed the same author. Fix: parse the display name alongside the address and use the parsed values (falling back to the bare address if no display name) when inserting the comment. Drawer's activity log now shows the actual reply author per message. The token-comparison invariant allow-list was updated to track the line-number shift caused by the parser change.
+
 ### Docs
 
 - **v4.x roadmap — patch lane locked.** `docs/internal/release_v4.x.x_roadmap.md` now documents the agreed sequencing: v4.0.2 → v4.0.3 → v4.0.4 → comprehensive doc review (incl. GitHub Pages site) → finish deferred selector sweep (#458) → v4.1. Includes per-patch milestone links, scope hints, and rationale for the doc-review timing.
