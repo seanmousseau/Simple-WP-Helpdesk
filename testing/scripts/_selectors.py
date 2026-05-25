@@ -53,6 +53,8 @@ from __future__ import annotations
 # Letting the import fail loudly is the right behaviour — if Playwright isn't
 # installed, the test stack is broken in a way we want to surface immediately,
 # not paper over with string-stubs.
+import re
+
 from playwright.sync_api import Page, Locator
 
 
@@ -94,8 +96,11 @@ def bulk_bar(page: Page) -> Locator:
 # ---------- Drawer ----------
 
 def drawer(page: Page) -> Locator:
-    """The slide-over ticket drawer (open state)."""
-    return page.get_by_role("dialog", name="Ticket details")
+    """
+    The slide-over ticket drawer (open state). aria-label is dynamic:
+    `Ticket #N` when a ticket is loaded, `Ticket drawer` while loading.
+    """
+    return page.get_by_role("dialog", name=re.compile(r"^Ticket( #\d+| drawer)$"))
 
 
 def drawer_title(page: Page) -> Locator:

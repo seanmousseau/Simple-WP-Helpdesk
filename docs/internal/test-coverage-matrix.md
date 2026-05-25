@@ -250,7 +250,7 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 - Existing tests are NOT touched in this PR — that's intentional. Conversions need live-stack verification and converting all ~70 sections is multi-week. The helper makes each subsequent conversion mechanical.
 
 **Sweeps queued as follow-ups (PR 4.1, 4.2, …):**
-- 4.1 — convert the 4 selector-coupled tests from #421: test_59 (dark mode), test_69 (drawer), test_70 (views), test_71 (inbox default). These are the proof-of-pattern set.
+- 4.1 ✅ shipped — proof-of-pattern conversion of `test_28_cleanup`, `test_69_bulk_bar_closes_selected_tickets`, `test_70_create_personal_view_and_switch` (the three tests called out in #421). `BulkBar` JSX gained `role="toolbar" aria-label="Bulk actions"`; selector helpers `inbox_root`, `ticket_row`, `bulk_bar`, plus a regex-friendly `drawer()` matcher now have real users; `test_28` swapped the row-actions click for `wp post delete` to bypass WP's "Are you sure?" confirmation page (#421 root cause).
 - 4.2 — convert sections 01–20 (smoke + early features)
 - 4.3 — convert sections 21–40 (drawer, attachments, security)
 - 4.4 — convert sections 41–64 (reports, dark mode, a11y, late v4 work)
