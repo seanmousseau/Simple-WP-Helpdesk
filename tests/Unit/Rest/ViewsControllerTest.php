@@ -15,9 +15,9 @@ final class ViewsControllerTest extends TestCase {
 	}
 	protected function tearDown(): void { WP_Mock::tearDown(); }
 
-	public function test_register_routes_registers_4_routes(): void {
-		// GET, POST, PATCH, DELETE — 4 separate register_rest_route calls.
-		WP_Mock::userFunction( 'register_rest_route', [ 'times' => 4 ] );
+	public function test_register_routes_registers_5_routes(): void {
+		// GET, POST, PATCH, PUT /default, DELETE — 5 separate register_rest_route calls.
+		WP_Mock::userFunction( 'register_rest_route', [ 'times' => 5 ] );
 		( new ViewsController() )->register_routes();
 	}
 
