@@ -93,6 +93,21 @@ def bulk_bar(page: Page) -> Locator:
     return page.get_by_role("toolbar", name="Bulk actions")
 
 
+def inbox_title(page: Page) -> Locator:
+    """Top-bar h1 heading inside the inbox shell."""
+    return inbox_root(page).get_by_role("heading", level=1)
+
+
+def inbox_view_link(page: Page, name: str) -> Locator:
+    """Saved-views left-rail button by visible label (e.g. 'All', 'My Open')."""
+    return inbox_root(page).get_by_role("button", name=name, exact=True)
+
+
+def inbox_active_view(page: Page) -> Locator:
+    """The currently-active view button (aria-current='page')."""
+    return inbox_root(page).locator('button[aria-current="page"]')
+
+
 # ---------- Drawer ----------
 
 def drawer(page: Page) -> Locator:

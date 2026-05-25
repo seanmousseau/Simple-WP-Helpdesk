@@ -44,7 +44,12 @@ from playwright.sync_api import sync_playwright, Page, TimeoutError as Playwrigh
 # Semantic selector helpers — see _selectors.py for the policy.
 from _selectors import (
     bulk_bar,
+    drawer,
+    drawer_status_select,
+    inbox_active_view,
     inbox_root,
+    inbox_title,
+    inbox_view_link,
     portal_close_button,
     portal_menu_trigger,
     portal_message,
@@ -4010,66 +4015,54 @@ def test_65_inbox_renders_and_switches_views(page: Page):
     page.goto(WP_ADMIN_URL + "edit.php?post_type=helpdesk_ticket")
     page.wait_for_load_state("load")
 
-    # React mount div must be present.
     with suppress(PlaywrightTimeoutError):
-        page.locator("#swh-inbox-root").wait_for(timeout=10000)
-    check("inbox #349: #swh-inbox-root present",
-          page.locator("#swh-inbox-root").count() > 0)
+        inbox_root(page).wait_for(timeout=10000)
+    check("inbox #349: inbox shell present", inbox_root(page).count() > 0)
 
-    # Top bar title visible.
+    # Top bar h1 heading.
+    title = inbox_title(page)
     with suppress(PlaywrightTimeoutError):
-        page.locator(".swh-inbox-title").wait_for(timeout=5000)
-    title_count = page.locator(".swh-inbox-title").count()
-    check("inbox #349: .swh-inbox-title rendered", title_count > 0)
-    if title_count > 0:
-        title_text = page.locator(".swh-inbox-title").first.inner_text()
-        check("inbox #349: title text is 'Tickets'",
-              title_text.strip() == "Tickets",
-              f"title={title_text!r}")
+        title.wait_for(timeout=5000)
+    check("inbox #349: top-bar heading rendered", title.count() > 0)
+    if title.count() > 0:
+        check("inbox #349: heading text is 'Tickets'",
+              title.first.inner_text().strip() == "Tickets",
+              f"title={title.first.inner_text()!r}")
 
-    # Default active view is Unassigned.
+    # Default active view (aria-current='page').
+    active = inbox_active_view(page)
     with suppress(PlaywrightTimeoutError):
-        page.locator(".swh-inbox-view-link.is-active").wait_for(timeout=5000)
-    active_count = page.locator(".swh-inbox-view-link.is-active").count()
-    check("inbox #349: one view is active on load", active_count >= 1)
-    if active_count > 0:
-        active_label = page.locator(".swh-inbox-view-link.is-active").first.inner_text()
+        active.wait_for(timeout=5000)
+    check("inbox #349: one view is active on load", active.count() >= 1)
+    if active.count() > 0:
         # v4.0.0: default view changed from 'Unassigned' to 'All'.
         check("inbox #349: default active view is All",
-              active_label.strip() == "All",
-              f"active={active_label!r}")
+              active.first.inner_text().strip() == "All",
+              f"active={active.first.inner_text()!r}")
 
     # Click "My Open" — active view updates.
-    my_open = page.locator(".swh-inbox-view-link", has_text="My Open")
+    my_open = inbox_view_link(page, "My Open")
     if my_open.count() > 0:
         my_open.first.click()
         page.wait_for_timeout(500)
-        new_active = page.locator(".swh-inbox-view-link.is-active")
+        new_active = inbox_active_view(page)
         if new_active.count() > 0:
-            new_label = new_active.first.inner_text()
             check("inbox #349: 'My Open' becomes active after click",
-                  new_label.strip() == "My Open",
-                  f"new_active={new_label!r}")
+                  new_active.first.inner_text().strip() == "My Open",
+                  f"new_active={new_active.first.inner_text()!r}")
         else:
-            skip("inbox #349: active view after click", "no .is-active after click")
+            skip("inbox #349: active view after click", "no aria-current=page after click")
     else:
-        skip("inbox #349: My Open view link", "'.swh-inbox-view-link' with text 'My Open' not found")
+        skip("inbox #349: My Open view link", "'My Open' view button not found")
 
-    # List, empty state, loading indicator, or error message present (depends
-    # on fixture data + REST call result).
-    list_present = page.locator(
+    # List, empty state, loading indicator, or error message present. These
+    # class-based selectors are content-shape (mutually-exclusive UI states)
+    # with no a11y equivalent — documented exception. Scoped to inbox_root.
+    states = inbox_root(page).locator(
         ".swh-inbox-list,.swh-inbox-empty,.swh-inbox-loading,.swh-inbox-error"
     ).count()
-    if list_present == 0:
-        # Diagnostic: dump the inbox-main inner HTML so the failure log shows
-        # what's actually rendered (helps catch unexpected error states).
-        main = page.locator(".swh-inbox-main")
-        diag = main.inner_html()[:300] if main.count() > 0 else "<no .swh-inbox-main>"
-        check("inbox #349: list/empty/loading/error present", False,
-              f"count=0; main_html={diag!r}")
-    else:
-        check("inbox #349: list/empty/loading/error present", True,
-              f"count={list_present}")
+    check("inbox #349: list/empty/loading/error present", states > 0,
+          f"count={states}")
 
     wp_logout(page)
 
@@ -4097,16 +4090,14 @@ def test_66_drawer_opens_and_edits_status(page: Page):
     page.wait_for_load_state("load")
 
     with suppress(PlaywrightTimeoutError):
-        page.locator("#swh-inbox-root").wait_for(timeout=10000)
-
-    check("drawer #350: #swh-inbox-root present",
-          page.locator("#swh-inbox-root").count() > 0)
+        inbox_root(page).wait_for(timeout=10000)
+    check("drawer #350: inbox shell present", inbox_root(page).count() > 0)
 
     # Find the row for our ticket and click it.
-    row = page.locator(f".swh-inbox-row", has_text=f"#{ticket_id}")
+    row = ticket_row(page, ticket_id)
     row_found = False
     with suppress(PlaywrightTimeoutError):
-        row.first.wait_for(timeout=5000)
+        row.wait_for(timeout=5000)
         row_found = True
 
     if not row_found:
@@ -4115,27 +4106,29 @@ def test_66_drawer_opens_and_edits_status(page: Page):
         wp_logout(page)
         return
 
-    row.first.click()
+    row.click()
 
+    dlg = drawer(page)
     drawer_visible = False
     with suppress(PlaywrightTimeoutError):
-        page.locator(".swh-drawer").wait_for(timeout=5000)
+        dlg.wait_for(timeout=5000)
         drawer_visible = True
     check("drawer #350: drawer appears on row click", drawer_visible)
 
     if drawer_visible:
-        # Wait for fetchTicket to resolve so the title actually contains
-        # the ticket id (drawer initially renders "Loading ticket…").
+        # Wait for fetchTicket to resolve so the title shows the ticket id
+        # (drawer initially renders "Loading ticket…").
+        heading = dlg.get_by_role("heading", level=2)
         with suppress(PlaywrightTimeoutError):
-            page.locator(f'.swh-drawer-title:has-text("#{ticket_id}")').wait_for(timeout=8000)
-        title_visible = page.locator(".swh-drawer-title").count() > 0
-        title_text = page.locator(".swh-drawer-title").first.inner_text() if title_visible else ""
+            heading.filter(has_text=f"#{ticket_id}").wait_for(timeout=8000)
+        title_visible = heading.count() > 0
+        title_text = heading.first.inner_text() if title_visible else ""
         check("drawer #350: drawer title shows ticket id",
               title_visible and f"#{ticket_id}" in title_text,
               f"ticket_id={ticket_id}, title={title_text!r}")
 
-        # Change status to resolved via the select dropdown.
-        status_select = page.locator(".swh-drawer-meta-row select").first
+        # Change status to resolved via the labelled SelectControl.
+        status_select = drawer_status_select(page)
         if status_select.count() > 0:
             status_select.select_option(value="resolved")
             page.wait_for_timeout(800)
@@ -4143,13 +4136,12 @@ def test_66_drawer_opens_and_edits_status(page: Page):
             check("drawer #350: status select reflects resolved",
                   new_val == "resolved", f"value={new_val!r}")
         else:
-            skip("drawer #350: status select", "no select in .swh-drawer-meta-row")
+            skip("drawer #350: status select", "no select labelled 'Status' in drawer")
 
         # Close with Escape.
         page.keyboard.press("Escape")
         page.wait_for_timeout(500)
-        drawer_gone = page.locator(".swh-drawer").count() == 0
-        check("drawer #350: Escape closes the drawer", drawer_gone)
+        check("drawer #350: Escape closes the drawer", drawer(page).count() == 0)
 
     wpcli(f"post delete {ticket_id} --force")
     wp_logout(page)

@@ -15,9 +15,9 @@ export const DrawerHeader = ( { ticket } ) => {
 	return (
 		<div className="swh-drawer-header">
 			<div className="swh-drawer-titles">
-				<div className="swh-drawer-title">
+				<h2 className="swh-drawer-title">
 					#{ ticket.id } · { ticket.title }
-				</div>
+				</h2>
 				<div className="swh-drawer-meta">
 					{ ticket.email } · { __( 'opened', 'simple-wp-helpdesk' ) }{ ' ' }
 					{ fmtDate( ticket.created ) }
