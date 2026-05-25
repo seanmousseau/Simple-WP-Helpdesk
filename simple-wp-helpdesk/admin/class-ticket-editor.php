@@ -523,28 +523,10 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		}
 	}
 
-	// Send assignment notification when a ticket is newly assigned or reassigned.
-	// Token and client meta are now guaranteed to exist before this block runs.
-	if ( $assigned_to && $assigned_to !== $old_assigned_to ) {
-		$assignee_user    = get_userdata( $assigned_to );
-		$assign_raw_name  = swh_get_string_meta( $post_id, '_ticket_name' );
-		$assign_ticket_id = swh_get_string_meta( $post_id, '_ticket_uid' );
-		if ( $assignee_user && $assignee_user->user_email ) {
-			$assign_data = array(
-				'name'           => $assign_raw_name ? $assign_raw_name : 'Client',
-				'email'          => swh_get_string_meta( $post_id, '_ticket_email' ),
-				'ticket_id'      => $assign_ticket_id ? $assign_ticket_id : 'TKT-' . str_pad( (string) $post_id, 4, '0', STR_PAD_LEFT ),
-				'title'          => $post->post_title,
-				'status'         => $new_status,
-				'priority'       => $new_priority,
-				'ticket_url'     => swh_get_secure_ticket_link( $post_id ),
-				'admin_url'      => swh_admin_ticket_url( $post_id ),
-				'message'        => '',
-				'autoclose_days' => swh_get_int_option( 'swh_autoclose_days', 3 ),
-			);
-			swh_send_email( $assignee_user->user_email, 'swh_em_assigned_sub', 'swh_em_assigned_body', $assign_data );
-		}
-	}
+	// Assignment email is dispatched via the swh_ticket_assigned action listener
+	// (swh_send_assignment_email in class-email.php), fired by the do_action
+	// call above. Before v4.0.2 it was inlined here, which meant drawer +
+	// bulk assignments never sent the email — see #434/#435 RC follow-up.
 
 	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
 	if ( $resolved_status === $new_status && $old_status !== $new_status ) {
