@@ -174,8 +174,22 @@ class BulkController extends WP_REST_Controller {
 			case 'assign':
 				$raw_assignee = isset( $params['assignee'] ) ? $params['assignee'] : 0;
 				$assignee     = is_scalar( $raw_assignee ) ? (int) $raw_assignee : 0;
-				update_post_meta( $id, '_ticket_assigned', $assignee > 0 ? $assignee : '' );
+				$old_assigned = swh_get_int_meta( $id, '_ticket_assigned_to' );
+				update_post_meta( $id, '_ticket_assigned_to', $assignee > 0 ? $assignee : '' );
 				TicketVersion::bump( $id );
+				if ( $old_assigned !== $assignee ) {
+					/**
+					 * Fires when bulk-assign changes a ticket's assignee.
+					 *
+					 * Same hook + arg shape as `swh_apply_assignment_rules()`
+					 * — see `swh_ticket_assigned` docblock in helpers.php.
+					 *
+					 * @param int $id           Ticket post ID.
+					 * @param int $old_assigned Previous assignee user ID (0 if unassigned).
+					 * @param int $assignee     New assignee user ID (0 if unassigned).
+					 */
+					do_action( 'swh_ticket_assigned', $id, $old_assigned, $assignee );
+				}
 				return;
 			case 'priority':
 				if ( isset( $params['priority'] ) && is_string( $params['priority'] ) ) {

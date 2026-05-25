@@ -144,6 +144,38 @@ function swh_run_upgrade_routine() {
 		}
 	}
 
+	// v4.0.2 (#434 / #435) — consolidate the two assignee meta keys.
+	// v4.0.0 REST controllers wrote `_ticket_assigned`, but the rest of the
+	// plugin (email triggers, lifecycle hook, legacy editor, admin list) reads
+	// `_ticket_assigned_to`. Copy any orphaned values to the canonical key,
+	// then delete the orphan rows. Idempotent — guarded by the version compare
+	// above and the empty-target check inside the loop.
+	if ( version_compare( $db_version, '4.0.2', '<' ) ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$orphan_rows = $wpdb->get_results(
+			"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_ticket_assigned' AND meta_value <> ''"
+		);
+		if ( is_array( $orphan_rows ) ) {
+			foreach ( $orphan_rows as $row ) {
+				if ( ! is_object( $row ) || ! isset( $row->post_id, $row->meta_value ) ) {
+					continue;
+				}
+				$pid = is_scalar( $row->post_id ) ? (int) $row->post_id : 0;
+				$val = is_scalar( $row->meta_value ) ? (int) $row->meta_value : 0;
+				if ( $pid <= 0 || $val <= 0 ) {
+					continue;
+				}
+				$existing = swh_get_int_meta( $pid, '_ticket_assigned_to' );
+				if ( 0 === $existing ) {
+					update_post_meta( $pid, '_ticket_assigned_to', $val );
+				}
+			}
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key = '_ticket_assigned'" );
+	}
+
 	update_option( 'swh_db_version', SWH_VERSION );
 }
 

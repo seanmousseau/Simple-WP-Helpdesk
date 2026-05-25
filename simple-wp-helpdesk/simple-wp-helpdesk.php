@@ -48,6 +48,7 @@ require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/PaletteController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/TechniciansController.php';
 require_once SWH_PLUGIN_DIR . 'src/Views/ViewsRepository.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
 

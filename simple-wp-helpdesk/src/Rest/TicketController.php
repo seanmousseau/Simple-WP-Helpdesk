@@ -184,7 +184,7 @@ class TicketController extends WP_REST_Controller {
 				'created'     => $post->post_date_gmt,
 				'status'      => $this->meta_string( $id, '_ticket_status' ),
 				'priority'    => $this->meta_string( $id, '_ticket_priority' ),
-				'assignee'    => $this->meta_int( $id, '_ticket_assigned' ),
+				'assignee'    => $this->meta_int( $id, '_ticket_assigned_to' ),
 				'email'       => $this->meta_string( $id, '_ticket_email' ),
 				'meta'        => array( 'tags' => $this->prepare_tags( $id ) ),
 				'thread'      => $this->prepare_thread( $id ),
@@ -227,9 +227,14 @@ class TicketController extends WP_REST_Controller {
 			swh_set_ticket_status( $id, $patch['status'] );  // bumps via B2.
 		}
 		if ( array_key_exists( 'assignee', $patch ) ) {
-			$assignee = (int) $patch['assignee'];
-			update_post_meta( $id, '_ticket_assigned', $assignee > 0 ? $assignee : '' );
+			$assignee     = (int) $patch['assignee'];
+			$old_assigned = swh_get_int_meta( $id, '_ticket_assigned_to' );
+			update_post_meta( $id, '_ticket_assigned_to', $assignee > 0 ? $assignee : '' );
 			TicketVersion::bump( $id );
+			if ( $old_assigned !== $assignee ) {
+				/** Fires the lifecycle action so assignee emails dispatch (see swh_apply_assignment_rules). */
+				do_action( 'swh_ticket_assigned', $id, $old_assigned, $assignee );
+			}
 		}
 		if ( isset( $patch['priority'] ) && is_string( $patch['priority'] ) ) {
 			update_post_meta( $id, '_ticket_priority', sanitize_key( $patch['priority'] ) );

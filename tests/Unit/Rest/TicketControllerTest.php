@@ -33,7 +33,7 @@ final class TicketControllerTest extends TestCase {
 		] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_status', true ],   'return' => 'in_progress' ] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_priority', true ], 'return' => 'high' ] );
-		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_assigned', true ], 'return' => '3' ] );
+		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_assigned_to', true ], 'return' => '3' ] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_email', true ],    'return' => 'bob@example.com' ] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_swh_version', true ],     'return' => '4' ] );
 		WP_Mock::userFunction( 'get_post_meta', [ 'args' => [ 42, '_ticket_attachments', true ], 'return' => array() ] );
