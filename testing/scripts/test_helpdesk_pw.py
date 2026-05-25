@@ -4637,10 +4637,14 @@ def test_28_cleanup(page: Page):
             check(f"cleanup: {label} located via wp-cli", False,
                   f"no published ticket matched title={title!r}")
             return
+        # Use --force so the post leaves the inbox immediately. The React
+        # inbox queries tickets by meta and does not filter post_status=trash,
+        # so plain `wp post delete` leaves them visible and breaks the
+        # "no longer in active list" assertion below.
         for tid in ids:
-            wpcli(f"post delete {tid}")  # without --force = trash
-        check(f"cleanup: {label} moved to trash", True,
-              f"trashed {len(ids)} ticket(s)")
+            wpcli(f"post delete {tid} --force")
+        check(f"cleanup: {label} deleted", True,
+              f"deleted {len(ids)} ticket(s)")
 
     _trash_by_title(TEST_TICKET_TITLE, "ticket1")
     _trash_by_title(TEST_TICKET2_TITLE, "ticket2")
