@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.0
+Stable tag: 4.0.1
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.1 =
+* Fixed: default email subject templates now wrap `[{ticket_id}]` so client replies to notification emails are parsed by the inbound webhook (#433). Previously 14 of 15 default subject templates shipped without the literal `[ ]` brackets the webhook regex requires; the webhook returned `no_ticket_id` and the reply was silently dropped. Existing installs with customised subjects are not affected.
 
 = 4.0.0 =
 * Added: Workflow-First Admin Inbox — React/Redux inbox shell with left-rail view switching, optimistic updates, and ⌘K command palette (#349–#353).
@@ -321,6 +324,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.1 =
+Bug-fix patch: default email subjects now include `[{ticket_id}]` so client replies actually reach the inbound webhook. Safe to install; existing customised subjects are preserved.
 
 = 4.0.0 =
 Major release: PHP 8.0+ and WordPress 6.0+ now required. Includes a new workflow-first inbox, portal v2, settings migration, and optimistic-concurrency version guard. Read the changelog before upgrading. Back up your database first.
