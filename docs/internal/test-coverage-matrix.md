@@ -284,9 +284,26 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 
 **Still queued for follow-up:** `make test-feature FEATURE=<slug>` (filter by feature row) and the pre-push hook integration — both are convenience layers, not enforcement gaps.
 
-### PR 7 — `wp-phpunit` integration harness (3–5 days)
+### PR 7 — `wp-phpunit` integration harness (foundation shipped; sweeps queued)
 
-PR 2 shipped REST contract assertions at the mocked-WP layer (controller methods called directly, WordPress functions stubbed via WP-Mock). That catches the v4.0.0-class envelope regressions cheaply but leaves six gaps that only a real WordPress test installation can close. This PR adds the integration harness and lifts the existing contract tests into it.
+**Foundation shipped (this PR):**
+- `composer.json` adds `wp-phpunit/wp-phpunit ^6.0` + `yoast/phpunit-polyfills ^2.0` dev deps.
+- `bin/install-wp-tests.sh` — installer that provisions a throwaway test DB and writes the generated `wp-tests-config.php` (gitignored).
+- `tests/Integration/bootstrap.php` — wp-phpunit framework loader; activates the plugin via `tests_add_filter('muplugins_loaded', ...)`.
+- `phpunit-integration.xml` — config; only runs files under `tests/Integration/` and the `integration` group.
+- `tests/Integration/Rest/PermissionCallbackTest.php` — proof-of-pattern: 4 tests exercising the real WP REST server + real auth state. Covers anonymous-rejection, admin-pass, subscriber-rejection, and the load-bearing restricted-to-assigned per-ticket gate that the mocked Contract tests structurally can't reach.
+- `make test-integration` target with clear pre-flight diagnostics when DB or config missing.
+- `tests/Integration/README.md` — full operator setup + writing-tests guide.
+
+**Sweeps queued (PR 7.1+):**
+- 7.1 — Lift the existing `tests/Unit/Rest/Contracts/` tests into `tests/Integration/Rest/`. KEEP the mocked versions for fast-feedback; integration versions add real `permission_callback`, real auth, real DB joins.
+- 7.2 — Add the 5 remaining gap categories from the mocked layer:
+    - Route registration & dispatch (404 / wrong-method)
+    - Cookie + nonce + application-password auth flows
+    - `rest_*` filters wrapping responses
+    - Concurrent writes against `TicketVersion::check` (real 409 race)
+    - Meta_query joins for the inbox filter (v4.0.0 default-view regression class)
+- 7.3 — Wire `make test-integration` into a new CI job with a MySQL service container.
 
 **What the mocked layer cannot test (the trigger for this PR):**
 

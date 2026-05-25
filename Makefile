@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help lint phpcs phpstan phpunit test-invariants matrix-lint visual visual-update semgrep test test-docker e2e e2e-docker coverage test-all js-build bench test-extended test-extended-cleanup test-extended-verify
+.PHONY: help lint phpcs phpstan phpunit test-invariants test-integration matrix-lint visual visual-update semgrep test test-docker e2e e2e-docker coverage test-all js-build bench test-extended test-extended-cleanup test-extended-verify
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -39,6 +39,19 @@ test-invariants: ## L1 invariant tests (source-pattern checks; see docs/internal
 	@echo "→ Invariants..."
 	@vendor/bin/phpunit --testsuite Invariants
 	@echo "✓ Invariants passed"
+
+test-integration: ## wp-phpunit integration tests (requires MySQL test DB; see tests/Integration/README.md)
+	@if [ ! -f tests/Integration/wp-tests-config.php ]; then \
+	  echo "  ✗ tests/Integration/wp-tests-config.php missing — run bin/install-wp-tests.sh first."; \
+	  echo "    Example: bin/install-wp-tests.sh swh_phpunit_test root '' 127.0.0.1:3306"; \
+	  exit 2; \
+	fi
+	@if [ ! -d vendor/wp-phpunit/wp-phpunit ]; then \
+	  echo "  ✗ wp-phpunit framework missing — run: composer install --dev"; \
+	  exit 2; \
+	fi
+	@echo "→ Integration tests (real WP REST server, real DB)..."
+	@vendor/bin/phpunit --configuration phpunit-integration.xml
 
 matrix-lint: ## Summarise test coverage matrix (docs/internal/test-coverage-matrix.md)
 	@php bin/matrix-lint.php

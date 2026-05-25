@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    bootstrap="tests/Integration/bootstrap.php"
+    colors="true"
+    verbose="true"
+    convertWarningsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertErrorsToExceptions="true"
+>
+    <testsuites>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <groups>
+        <include>
+            <group>integration</group>
+        </include>
+    </groups>
+
+    <coverage>
+        <include>
+            <directory suffix=".php">simple-wp-helpdesk/includes</directory>
+            <directory suffix=".php">simple-wp-helpdesk/admin</directory>
+            <directory suffix=".php">simple-wp-helpdesk/frontend</directory>
+            <directory suffix=".php">simple-wp-helpdesk/src</directory>
+        </include>
+    </coverage>
+</phpunit>
