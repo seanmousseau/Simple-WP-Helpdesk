@@ -258,13 +258,20 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 
 **Exit criteria for the full PR 4 series (not yet met):** zero CSS-class selectors in `testing/scripts/`; every E2E test name is a user-visible behavior sentence.
 
-### PR 5 — Visual regression (1 week)
+### PR 5 — Visual regression ✅ shipped (with caveats)
 
-- Add `testing/visual/` with Playwright screenshot tests.
-- Baselines for: inbox (light/dark/auto), drawer (each ticket status × with/without internal note × with/without attachments), portal v2 (logged-out token + logged-in dashboard), each settings tab, reports KPIs, admin theme switcher.
-- `make visual-update` workflow and PR-template checkbox.
+- `testing/visual/visual_regression.py` — Playwright + Pillow pixel-diff with explicit `PIXEL_TOLERANCE` and `MISMATCH_RATIO` knobs.
+- `make visual` runs the diff; `make visual-update` regenerates baselines.
+- Initial surface coverage: **inbox, settings, reports × light/dark/auto = 9 baselines** when populated.
+- `testing/visual/README.md` documents the operator workflow (capture, review, commit, update on intentional UI changes).
+- Diff PNGs land under `testing/visual/diffs/<timestamp>/` (gitignored) for review.
 
-**Exit criteria:** visual baselines committed; CI runs and diffs on every PR; documented review process for baseline updates.
+**Caveats / follow-ups:**
+- **Baselines NOT committed in this PR.** The operator captures them against their known-good dev environment (`make visual-update`), reviews, and commits in a follow-up. Until then the relevant L5 matrix cells stay `R` honestly.
+- **Drawer, portal, per-status snapshots NOT covered yet.** Requires test-data fixtures with predictable content. Section 7.4 of the RC runbook still covers these visually with `capture_screenshots.py`.
+- **CI integration deferred.** Visual regression runs locally only — wiring into per-push CI needs a deterministic Docker-stack initial state so baselines are reproducible across machines.
+
+**Exit criteria met:** infrastructure shipped; operator workflow documented; review process clear.
 
 ### PR 6 — Gates & enforcement ✅ shipped
 

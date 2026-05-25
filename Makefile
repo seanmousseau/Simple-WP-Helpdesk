@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help lint phpcs phpstan phpunit test-invariants matrix-lint semgrep test test-docker e2e e2e-docker coverage test-all js-build bench test-extended test-extended-cleanup test-extended-verify
+.PHONY: help lint phpcs phpstan phpunit test-invariants matrix-lint visual visual-update semgrep test test-docker e2e e2e-docker coverage test-all js-build bench test-extended test-extended-cleanup test-extended-verify
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -55,6 +55,22 @@ matrix-lint-diff: ## Compare matrix vs base ref (default origin/main); fail if a
 	   exit 2; \
 	 }; \
 	 php bin/matrix-lint.php --diff
+
+visual: ## Visual regression — diff admin surfaces against committed baselines
+	@if [ -z "$${WP_TESTING_URL:-}" ]; then \
+	  echo "  ✗ Source ~/.claude/dev-secrets.env first: set -a; source ~/.claude/dev-secrets.env; set +a"; \
+	  exit 2; \
+	fi
+	@python3 testing/visual/visual_regression.py
+
+visual-update: ## Regenerate visual-regression baselines (run after intentional UI changes)
+	@if [ -z "$${WP_TESTING_URL:-}" ]; then \
+	  echo "  ✗ Source ~/.claude/dev-secrets.env first."; \
+	  exit 2; \
+	fi
+	@python3 testing/visual/visual_regression.py --mode update
+	@echo ""
+	@echo "Review testing/visual/baselines/, then: git add testing/visual/baselines/ && git commit"
 
 semgrep: ## SAST security scan
 	@echo "→ Semgrep..."
