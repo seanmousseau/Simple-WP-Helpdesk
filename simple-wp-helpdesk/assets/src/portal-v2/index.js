@@ -14,6 +14,12 @@ import './style.scss';
 const createBubble = ( text, kind, timeLabel ) => {
 	const article = document.createElement( 'article' );
 	article.className = `swh-msg swh-msg-${ kind }`;
+	// Mirror the PHP template's data-message-author hook so E2E selectors
+	// match optimistically-appended bubbles (see _message.php).
+	article.setAttribute(
+		'data-message-author',
+		kind === 'staff' ? 'staff' : 'customer'
+	);
 	const bubble = document.createElement( 'div' );
 	bubble.className = 'swh-msg-bubble';
 	bubble.textContent = text;
