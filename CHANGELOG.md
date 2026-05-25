@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Docs
+
+- **v4.x roadmap — patch lane locked.** `docs/internal/release_v4.x.x_roadmap.md` now documents the agreed sequencing: v4.0.2 → v4.0.3 → v4.0.4 → comprehensive doc review (incl. GitHub Pages site) → finish deferred selector sweep (#458) → v4.1. Includes per-patch milestone links, scope hints, and rationale for the doc-review timing.
+
 ### Fixed
 
 - **v4.0.2 — Drawer assignment was non-functional and assignment-rule matches showed as "Unassigned"** (#434, #435). Root cause was a two-meta-key split: v4.0.0's REST controllers (`TicketController`, `BulkController`, `InboxController`) wrote and read `_ticket_assigned`, while the rest of the plugin (assignment-rule writer in `swh_apply_assignment_rules()`, lifecycle action `swh_ticket_assigned`, assignee email dispatcher, legacy editor + list-table, admin list filters) used the canonical `_ticket_assigned_to`. Result: every drawer/inbox/bulk assignment write went to a key nobody else read, and every rule-driven assignment write went to a key the drawer ignored — so the drawer always rendered "Unassigned" and PATCHes never fired the assignee email. Fix: standardise on `_ticket_assigned_to` across the three REST controllers, fire `swh_ticket_assigned` from both the drawer PATCH and bulk-assign paths so the email + integrators trigger, and ship a one-shot upgrade migration (`class-installer.php`) that copies orphaned `_ticket_assigned` values to `_ticket_assigned_to` (only when the canonical key is empty, so manual reassignments aren't clobbered) and deletes the orphan rows. Also adds the missing UI: drawer's MetaRow now exposes a labelled Assignee SelectControl (was a read-only `#<id>` span) backed by a new `GET /swh/v1/technicians` endpoint that returns the assignable users (administrators + `swh_technician` role) scoped to `edit_posts`. RC-verifiable via `email_delivery_check.py` after a drawer assignment change. Adds L2 contract test `test_update_item_assignee_writes_canonical_meta_and_fires_action` regression-pinning the canonical write + lifecycle hook.
