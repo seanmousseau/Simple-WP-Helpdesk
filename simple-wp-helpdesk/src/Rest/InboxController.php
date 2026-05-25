@@ -227,17 +227,17 @@ class InboxController extends WP_REST_Controller {
 						'value'   => array( 'open', 'in_progress' ),
 						'compare' => 'IN',
 					),
-					// Match tickets where _ticket_assigned is empty OR missing
+					// Match tickets where _ticket_assigned_to is empty OR missing
 					// entirely — new tickets may not have the meta key set.
 					array(
 						'relation' => 'OR',
 						array(
-							'key'     => '_ticket_assigned',
+							'key'     => '_ticket_assigned_to',
 							'value'   => '',
 							'compare' => '=',
 						),
 						array(
-							'key'     => '_ticket_assigned',
+							'key'     => '_ticket_assigned_to',
 							'compare' => 'NOT EXISTS',
 						),
 					),
@@ -251,7 +251,7 @@ class InboxController extends WP_REST_Controller {
 						'compare' => 'IN',
 					),
 					array(
-						'key'   => '_ticket_assigned',
+						'key'   => '_ticket_assigned_to',
 						'value' => (string) get_current_user_id(),
 					),
 				);
@@ -322,7 +322,7 @@ class InboxController extends WP_REST_Controller {
 			'title'         => $post->post_title,
 			'status'        => swh_get_string_meta( $id, '_ticket_status' ),
 			'priority'      => swh_get_string_meta( $id, '_ticket_priority' ),
-			'assignee'      => swh_get_int_meta( $id, '_ticket_assigned' ),
+			'assignee'      => swh_get_int_meta( $id, '_ticket_assigned_to' ),
 			'email'         => swh_get_string_meta( $id, '_ticket_email' ),
 			'last_activity' => swh_get_int_meta( $id, '_swh_last_activity_at' ),
 			'version'       => TicketVersion::current( $id ),

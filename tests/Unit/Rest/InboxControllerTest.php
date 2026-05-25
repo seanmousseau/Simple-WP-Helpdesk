@@ -126,7 +126,7 @@ final class InboxControllerTest extends TestCase {
 			WP_Mock::userFunction(
 				'swh_get_int_meta',
 				array(
-					'args'   => array( $id, '_ticket_assigned' ),
+					'args'   => array( $id, '_ticket_assigned_to' ),
 					'return' => 0,
 				)
 			);
@@ -162,7 +162,7 @@ final class InboxControllerTest extends TestCase {
 			WP_Mock::userFunction(
 				'get_post_meta',
 				array(
-					'args'   => array( $id, '_ticket_assigned', true ),
+					'args'   => array( $id, '_ticket_assigned_to', true ),
 					'return' => '0',
 				)
 			);
@@ -241,7 +241,7 @@ final class InboxControllerTest extends TestCase {
 		WP_Mock::userFunction(
 			'swh_get_int_meta',
 			array(
-				'args'   => array( $id, '_ticket_assigned' ),
+				'args'   => array( $id, '_ticket_assigned_to' ),
 				'return' => 0,
 			)
 		);
@@ -279,7 +279,7 @@ final class InboxControllerTest extends TestCase {
 		WP_Mock::userFunction(
 			'get_post_meta',
 			array(
-				'args'   => array( $id, '_ticket_assigned', true ),
+				'args'   => array( $id, '_ticket_assigned_to', true ),
 				'return' => '0',
 			)
 		);

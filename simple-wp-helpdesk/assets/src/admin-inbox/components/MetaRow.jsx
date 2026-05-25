@@ -1,5 +1,7 @@
 // components/MetaRow.jsx
 import { useDispatch } from '@wordpress/data';
+import { useEffect, useState } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import { SelectControl } from '@wordpress/components';
 import { SWH_DRAWER_STORE } from '../store/drawer';
@@ -17,8 +19,33 @@ const getPriorityOptions = () => [
 	{ value: 'urgent', label: __( 'Urgent', 'simple-wp-helpdesk' ) },
 ];
 
+// Module-level cache so opening different tickets in the same session
+// reuses one fetch.
+let cachedTechnicians = null;
+
 export const MetaRow = ( { ticket } ) => {
 	const { patchMeta } = useDispatch( SWH_DRAWER_STORE );
+	const [ technicians, setTechnicians ] = useState( cachedTechnicians || [] );
+
+	useEffect( () => {
+		if ( cachedTechnicians ) {
+			return;
+		}
+		apiFetch( { path: '/swh/v1/technicians' } ).then( ( res ) => {
+			const list = Array.isArray( res?.users ) ? res.users : [];
+			cachedTechnicians = list;
+			setTechnicians( list );
+		} );
+	}, [] );
+
+	const assigneeOptions = [
+		{ value: '0', label: __( 'Unassigned', 'simple-wp-helpdesk' ) },
+		...technicians.map( ( u ) => ( {
+			value: String( u.id ),
+			label: u.name,
+		} ) ),
+	];
+
 	return (
 		<div className="swh-drawer-meta-row">
 			<SelectControl
@@ -37,12 +64,14 @@ export const MetaRow = ( { ticket } ) => {
 				onChange={ ( v ) => patchMeta( { priority: v } ) }
 				__nextHasNoMarginBottom
 			/>
-			<span className="swh-drawer-meta-pill">
-				{ __( 'Assignee:', 'simple-wp-helpdesk' ) }{ ' ' }
-				{ ticket.assignee > 0
-					? `#${ ticket.assignee }`
-					: __( 'unassigned', 'simple-wp-helpdesk' ) }
-			</span>
+			<SelectControl
+				hideLabelFromVision
+				label={ __( 'Assignee', 'simple-wp-helpdesk' ) }
+				value={ String( ticket.assignee || 0 ) }
+				options={ assigneeOptions }
+				onChange={ ( v ) => patchMeta( { assignee: parseInt( v, 10 ) || 0 } ) }
+				__nextHasNoMarginBottom
+			/>
 			<span className="swh-drawer-meta-pill">
 				{ ( ticket.meta?.tags || [] ).join( ', ' ) ||
 					__( 'no tags', 'simple-wp-helpdesk' ) }
