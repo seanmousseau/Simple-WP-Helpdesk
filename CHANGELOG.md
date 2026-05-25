@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Fixed
+
+- **v4.0.1 — default email subject templates missing `[ ]` around `{ticket_id}` broke inbound webhook reply parsing** (#433). The inbound-email webhook (`swh_handle_inbound_email`) parses the target ticket UID via `/\[(TKT-\d+)\]/i` — it requires literal square brackets around the ticket id. 14 of 15 default subject templates in `swh_get_defaults()` shipped without those brackets (or with the id absent entirely), so when a client clicked "reply" on a notification email, the resulting inbound message had no parseable UID, the webhook returned `{"success": false, "error": "no_ticket_id"}`, and the reply silently never landed on the ticket. Defaults are now updated to wrap `[{ticket_id}]` in every transactional subject (client + tech templates, including the merged-ticket notification). Existing installs are NOT affected — the option-seeding pattern only seeds defaults if the option is absent. Surfaced end-to-end while building the RC extended-test suite.
+
 ### Added
 
 - **Testing — E2E selector conversions, batch 5 (toast)** (PR 4.5 of the testing overhaul). Converts `test_57_toast_notifications` onto the semantic-selector helper library. The toast element already exposed `role="status"` + `aria-live="polite"` and the dismiss button already had `aria-label="Dismiss"` — pure test-side refactor with zero JSX changes. Tests now locate the toast via `get_by_role("status")` and dismiss via `get_by_role("button", name="Dismiss")` instead of `.swh-toast.swh-toast--visible` / `.swh-toast__dismiss` class selectors. The `--visible` modifier class is implicitly handled by Playwright's `wait_for(state="visible")` against the same locator. Remaining class-coupled tests (settings, canned responses, templates, dark-mode wrapper, a11y skip-links, SLA badge, alert banners) are queued for follow-up — most are pre-React PHP surfaces that need their own a11y companion patches and are lower-traffic than the inbox/drawer/portal flows already covered.
