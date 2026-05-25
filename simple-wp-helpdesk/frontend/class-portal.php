@@ -366,7 +366,7 @@ function swh_render_client_portal() {
 
 	swh_portal_v2_enqueue_assets();
 
-	echo '<div class="swh-portal-v2 swh-helpdesk-wrapper">';
+	echo '<div id="swh-portal-app" class="swh-portal-v2 swh-helpdesk-wrapper">';
 	// @phpstan-ignore-next-line include.fileNotFound
 	include SWH_PLUGIN_DIR . 'frontend/templates/portal-v2/header.php';
 	// @phpstan-ignore-next-line include.fileNotFound

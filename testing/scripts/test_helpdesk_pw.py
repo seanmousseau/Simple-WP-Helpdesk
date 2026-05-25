@@ -45,6 +45,13 @@ from playwright.sync_api import sync_playwright, Page, TimeoutError as Playwrigh
 from _selectors import (
     bulk_bar,
     inbox_root,
+    portal_close_button,
+    portal_menu_trigger,
+    portal_message,
+    portal_reopen_button,
+    portal_reply_box,
+    portal_root,
+    portal_send_button,
     ticket_row,
 )
 
@@ -639,35 +646,36 @@ def test_08_client_portal(page: Page):
     check("portal: tech reply visible to client", TEST_TECH_REPLY in body_text)
     check("portal: internal note NOT visible to client",
           TEST_INTERNAL_NOTE not in body_text, "internal note leaked to client portal!")
-    # Portal v2: textarea is inside .swh-portal-v2-composer
-    reply_ta = page.locator('.swh-portal-v2-composer textarea[name="reply_body"]')
-    check("portal: reply form present (v2 composer)",
-          reply_ta.count() > 0)
+    # Reply textarea is anchored by aria-label="Reply".
+    reply_ta = portal_reply_box(page)
+    check("portal: reply form present (v2 composer)", reply_ta.count() > 0)
     screenshot(page, "10_client_portal")
 
     if reply_ta.count() == 0:
-        skip("portal: v2 reply submit", ".swh-portal-v2-composer textarea not found")
+        skip("portal: v2 reply submit", "portal reply textarea not found")
         return
 
     mailhog_clear()
     reply_ta.fill(TEST_CLIENT_REPLY)
     # Portal v2 JS intercepts submit via fetch (optimistic). After the fetch
-    # completes, the message bubble gets .swh-msg-sent (success) or
+    # resolves the message bubble flips to .swh-msg-sent (success) or
     # .swh-msg-failed (network error). The admin-post handler redirects back
     # to the portal page for the HTML fallback path — either way the reply
     # text is visible in the thread.
-    page.locator('.swh-portal-v2-send').click()
-    # Wait for either the optimistic bubble to appear or a page reload.
-    sent_bubble = None
+    portal_send_button(page).click()
+    # Wait for the optimistic customer bubble.
+    sent_bubble = False
     with suppress(PlaywrightTimeoutError):
-        page.locator('.swh-msg.swh-msg-customer').last.wait_for(timeout=5000)
+        portal_message(page, "customer").last.wait_for(timeout=5000)
         sent_bubble = True
-    check("portal: client reply bubble appears in thread", sent_bubble is True,
+    check("portal: client reply bubble appears in thread", sent_bubble,
           "optimistic reply bubble not found")
     screenshot(page, "11_client_replied")
-    # Allow fetch to resolve so .swh-msg-sent class is applied
+    # Allow fetch to resolve so .swh-msg-sent class is applied. The .swh-msg-sent
+    # class is documented as a stable success-state hook in component-inventory.md
+    # — there is no a11y equivalent for an optimistic-send-confirmed state.
     page.wait_for_timeout(1500)
-    sent_class = page.locator('.swh-msg-sent').count() > 0
+    sent_class = portal_root(page).locator(".swh-msg-sent").count() > 0
     check("portal: reply bubble shows .swh-msg-sent (fetch success)", sent_class,
           "bubble did not receive .swh-msg-sent — admin-post handler may be missing")
     if sent_class:
@@ -714,77 +722,76 @@ def test_10_portal_close_reopen(page: Page):
 
     page.goto(state['portal_url'])
     page.wait_for_load_state("load")
-    # Portal v2: close action lives in the ⋮ menu (.swh-portal-v2-menu-trigger)
-    menu_trigger = page.locator('.swh-portal-v2-menu-trigger')
-    check("portal resolved: ⋮ menu trigger present (v2)", menu_trigger.count() > 0)
+    trigger = portal_menu_trigger(page)
+    check("portal resolved: ⋮ menu trigger present (v2)", trigger.count() > 0)
     screenshot(page, "13_portal_resolved_state")
 
-    if menu_trigger.count() == 0:
+    if trigger.count() == 0:
         check("portal resolved: close button present", False,
-              "v2 menu trigger not found — cannot close ticket")
+              "menu trigger not found — cannot close ticket")
         return
 
     # Open the ⋮ menu, then click Close ticket.
-    menu_trigger.click()
+    trigger.click()
+    close_btn = portal_close_button(page)
     with suppress(PlaywrightTimeoutError):
-        page.locator('.swh-portal-v2-menu button[data-action="close"]').wait_for(timeout=3000)
-    close_menu_btn = page.locator('.swh-portal-v2-menu button[data-action="close"]')
-    check("portal resolved: Close ticket menu item present", close_menu_btn.count() > 0)
+        close_btn.wait_for(timeout=3000)
+    check("portal resolved: Close ticket menu item present", close_btn.count() > 0)
 
-    if close_menu_btn.count() > 0:
-        mailhog_clear()
-        # The menu action JS shows a window.confirm dialog before submitting.
-        page.on("dialog", lambda d: d.accept())
-        close_menu_btn.click()
-        # The v2 close handler (admin-post.php) does a redirect back to the
-        # portal URL, so wait for navigation to complete.
-        with suppress(PlaywrightTimeoutError):
-            page.wait_for_load_state("load", timeout=8000)
-        page.wait_for_timeout(500)
-        screenshot(page, "14_ticket_closed_portal")
-        # Verify the ticket is now closed via the re-opened menu state.
-        # After close the ⋮ menu should show "Reopen ticket" instead of "Close ticket".
-        reopen_trigger = page.locator('.swh-portal-v2-menu-trigger')
-        if reopen_trigger.count() > 0:
-            reopen_trigger.click()
-            with suppress(PlaywrightTimeoutError):
-                page.locator('.swh-portal-v2-menu button[data-action="reopen"]').wait_for(timeout=3000)
-            has_reopen = page.locator('.swh-portal-v2-menu button[data-action="reopen"]').count() > 0
-            check("portal: after close, menu shows Reopen action", has_reopen)
-            # Close the menu before proceeding.
-            page.keyboard.press("Escape")
-        expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client", clear_after=False)
-        expect_email(TECH1_EMAIL, "ticket closed notification to assigned technician (tech1)")
-
-        # Re-open via the ⋮ menu.
-        fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({pid});"')
-        if fresh_url and "swh_ticket=" in fresh_url:
-            state['portal_url'] = fresh_url
-        page.goto(state['portal_url'])
-        page.wait_for_load_state("load")
-        reopen_trigger2 = page.locator('.swh-portal-v2-menu-trigger')
-        if reopen_trigger2.count() > 0:
-            reopen_trigger2.click()
-            with suppress(PlaywrightTimeoutError):
-                page.locator('.swh-portal-v2-menu button[data-action="reopen"]').wait_for(timeout=3000)
-            reopen_btn = page.locator('.swh-portal-v2-menu button[data-action="reopen"]')
-            if reopen_btn.count() > 0:
-                mailhog_clear()
-                reopen_btn.click()
-                with suppress(PlaywrightTimeoutError):
-                    page.wait_for_load_state("load", timeout=8000)
-                page.wait_for_timeout(500)
-                check("portal: reopen redirects back to portal",
-                      "swh-portal-v2" in page.content())
-                screenshot(page, "15_ticket_reopened_portal")
-                expect_email(TECH1_EMAIL, "ticket re-opened notification to assigned technician (tech1)")
-            else:
-                skip("portal: v2 reopen", "Reopen button not found in menu after navigation")
-        else:
-            skip("portal: v2 reopen", "menu trigger not found after navigation")
-    else:
+    if close_btn.count() == 0:
         check("portal resolved: close button present", False,
               "close button not found in v2 menu — check ticket status is Resolved")
+        return
+
+    mailhog_clear()
+    # The menu action JS shows a window.confirm dialog before submitting.
+    page.on("dialog", lambda d: d.accept())
+    close_btn.click()
+    # The v2 close handler (admin-post.php) does a redirect back to the
+    # portal URL, so wait for navigation to complete.
+    with suppress(PlaywrightTimeoutError):
+        page.wait_for_load_state("load", timeout=8000)
+    page.wait_for_timeout(500)
+    screenshot(page, "14_ticket_closed_portal")
+    # After close the ⋮ menu should show "Reopen ticket" instead of "Close ticket".
+    trigger_after = portal_menu_trigger(page)
+    if trigger_after.count() > 0:
+        trigger_after.click()
+        reopen_after_close = portal_reopen_button(page)
+        with suppress(PlaywrightTimeoutError):
+            reopen_after_close.wait_for(timeout=3000)
+        check("portal: after close, menu shows Reopen action",
+              reopen_after_close.count() > 0)
+        page.keyboard.press("Escape")
+    expect_email(CLIENT1_EMAIL, "ticket closed confirmation to client", clear_after=False)
+    expect_email(TECH1_EMAIL, "ticket closed notification to assigned technician (tech1)")
+
+    # Re-open via the ⋮ menu.
+    fresh_url = wpcli(f'eval "echo swh_get_secure_ticket_link({pid});"')
+    if fresh_url and "swh_ticket=" in fresh_url:
+        state['portal_url'] = fresh_url
+    page.goto(state['portal_url'])
+    page.wait_for_load_state("load")
+    trigger_reopen = portal_menu_trigger(page)
+    if trigger_reopen.count() == 0:
+        skip("portal: v2 reopen", "menu trigger not found after navigation")
+        return
+    trigger_reopen.click()
+    reopen_btn = portal_reopen_button(page)
+    with suppress(PlaywrightTimeoutError):
+        reopen_btn.wait_for(timeout=3000)
+    if reopen_btn.count() == 0:
+        skip("portal: v2 reopen", "Reopen button not found in menu after navigation")
+        return
+    mailhog_clear()
+    reopen_btn.click()
+    with suppress(PlaywrightTimeoutError):
+        page.wait_for_load_state("load", timeout=8000)
+    page.wait_for_timeout(500)
+    check("portal: reopen redirects back to portal",
+          portal_root(page).count() > 0)
+    screenshot(page, "15_ticket_reopened_portal")
+    expect_email(TECH1_EMAIL, "ticket re-opened notification to assigned technician (tech1)")
 
 
 def test_11_access_control(page: Page):

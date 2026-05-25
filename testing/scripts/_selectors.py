@@ -170,8 +170,24 @@ def settings_save_button(page: Page) -> Locator:
 # ---------- Portal v2 ----------
 
 def portal_root(page: Page) -> Locator:
-    """Portal v2 React mount point."""
+    """Portal v2 wrapper. `id="swh-portal-app"` is the documented hook."""
     return page.locator("#swh-portal-app")
+
+
+def portal_thread(page: Page) -> Locator:
+    """The conversation log. Has role='log' aria-label='Conversation thread'."""
+    return portal_root(page).get_by_role("log")
+
+
+def portal_message(page: Page, author: str = "") -> Locator:
+    """
+    Message bubbles in the thread. `data-message-author` is added by the
+    PHP template specifically as an E2E-stable hook (values: 'customer' or
+    'staff'). Pass author="" to match any message.
+    """
+    if author:
+        return portal_thread(page).locator(f'[data-message-author="{author}"]')
+    return portal_thread(page).locator("[data-message-author]")
 
 
 def portal_reply_box(page: Page) -> Locator:
@@ -179,7 +195,12 @@ def portal_reply_box(page: Page) -> Locator:
 
 
 def portal_send_button(page: Page) -> Locator:
-    return portal_root(page).get_by_role("button", name="Send")
+    return portal_root(page).get_by_role("button", name="Send reply")
+
+
+def portal_menu_trigger(page: Page) -> Locator:
+    """The ⋮ ticket-actions menu trigger."""
+    return portal_root(page).get_by_role("button", name="Ticket actions")
 
 
 def portal_close_button(page: Page) -> Locator:
