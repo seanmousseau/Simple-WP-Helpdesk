@@ -1,0 +1,2 @@
+# Generated per-operator by bin/install-wp-tests.sh; contains DB credentials.
+wp-tests-config.php

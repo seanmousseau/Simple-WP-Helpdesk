@@ -20,7 +20,9 @@
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
         "phpunit/phpunit": "^9.6",
         "10up/wp_mock": "^1.0",
-        "doctrine/instantiator": "^1.5"
+        "doctrine/instantiator": "^1.5",
+        "yoast/phpunit-polyfills": "^2.0",
+        "wp-phpunit/wp-phpunit": "^6.0"
     },
     "config": {
         "allow-plugins": {
