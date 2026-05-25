@@ -11,6 +11,7 @@ use WP_REST_Server;
 
 use function add_action;
 use function current_user_can;
+use function delete_post_meta;
 use function get_comment_meta;
 use function get_comments;
 use function get_post;
@@ -186,6 +187,7 @@ class TicketController extends WP_REST_Controller {
 				'priority'    => $this->meta_string( $id, '_ticket_priority' ),
 				'assignee'    => $this->meta_int( $id, '_ticket_assigned_to' ),
 				'email'       => $this->meta_string( $id, '_ticket_email' ),
+				'unread'      => '1' === $this->meta_string( $id, '_swh_unread' ),
 				'meta'        => array( 'tags' => $this->prepare_tags( $id ) ),
 				'thread'      => $this->prepare_thread( $id ),
 			),
@@ -239,6 +241,13 @@ class TicketController extends WP_REST_Controller {
 		if ( isset( $patch['priority'] ) && is_string( $patch['priority'] ) ) {
 			update_post_meta( $id, '_ticket_priority', sanitize_key( $patch['priority'] ) );
 			TicketVersion::bump( $id );
+		}
+		if ( ! empty( $patch['mark_read'] ) ) {
+			// Drawer dispatches this after rendering the unread indicator so the
+			// operator gets a brief visual cue before the badge clears. No
+			// version bump — clearing the read-state is not a content change
+			// that other clients need to reconcile against.
+			delete_post_meta( $id, '_swh_unread' );
 		}
 		if ( isset( $patch['tags'] ) && is_array( $patch['tags'] ) ) {
 			$tags = array_map(
