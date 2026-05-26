@@ -125,7 +125,7 @@ After capturing every screenshot:
 2. Diff each screenshot visually. A diff that wasn't called out in the release plan is a regression — **file an issue against the current milestone before merging**.
 3. Paste the following block into the `dev → main` PR description, replacing the placeholders:
 
-```
+```text
 ## Visual regression sign-off (vX.Y.Z)
 
 - Captured: <date>

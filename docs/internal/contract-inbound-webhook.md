@@ -20,7 +20,7 @@ End-user setup, provider configuration (Mailgun / SendGrid / Postmark), and trou
 
 ## Authentication
 
-```
+```text
 Authorization: Bearer <swh_inbound_secret>
 ```
 

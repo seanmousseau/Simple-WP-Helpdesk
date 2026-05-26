@@ -110,7 +110,7 @@ The plan lives under `docs/internal/` for the duration of the release cycle. Aft
 
 ## Branching & PR methodology
 
-```
+```text
 Feature/Step Branch 1 ─┐
 Feature/Step Branch 2 ─┤── PRs to ──► Release Branch (release/vX.Y.Z)
 Feature/Step Branch 3 ─┤
@@ -206,11 +206,11 @@ These are bright lines. They apply at every stage above.
 - **The release gate is not optional.**
 - **Documentation and test-suite updates accompany all changes.**
 - **PR and branch methodology must be followed.**
-- **Use `ui-ux-pro-max` for UI/UX design and implementation wherever applicable.**
-- **Use `superpowers:writing-plans` to write plans.**
-- **Use the documentation skill** to assist with doc creation and updates.
-- **Leverage other skills, LSPs, MCPs, claude-mem, and the Memory MCP** wherever they reduce work.
-- **Keep the Memory MCP current at every step.**
+- **Reach for `ui-ux-pro-max` on every UI/UX design and implementation task.**
+- **Plans go through `superpowers:writing-plans`** — that's the supported planning surface.
+- **The documentation skill** should assist with doc creation and updates wherever it helps.
+- **Other skills, LSPs, MCPs, `claude-mem`, and the Memory MCP** are first-class tools — lean on them wherever they reduce work.
+- **The Memory MCP graph must stay current at every step** (see global `~/.claude/CLAUDE.md` for entity conventions).
 - **Keep all documentation updated**, including:
   - End-user documentation (`docs/`)
   - Internal documentation (`docs/internal/`)
@@ -224,6 +224,7 @@ These are bright lines. They apply at every stage above.
 | You are about to … | Read first |
 |---|---|
 | Kick off a release | This document, the relevant `archive/release_vX.x.x_roadmap.md` (predecessor) and the current per-version roadmap, `roadmap.md` |
+| Brainstorm a new feature | `new_features_discussion.md` (get user approval before promoting to `roadmap.md` or any milestone) |
 | Write a plan | `superpowers:writing-plans` + this document's [planning](#feature--milestone-planning) section |
 | Touch a major functional area | The matching contract doc in `docs/internal/contract-*.md` |
 | Add a setting / option | `config-reference.md`, `data-dictionary.md` |

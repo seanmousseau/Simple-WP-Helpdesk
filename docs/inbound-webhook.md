@@ -44,7 +44,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 The endpoint URL is shown on the same page:
 
-```
+```text
 https://yoursite.com/wp-json/swh/v1/inbound-email
 ```
 
@@ -66,7 +66,7 @@ The secret is compared in constant time using `hash_equals()` — there is no ti
 
 For replies to thread correctly, your outbound notification emails **must** include `[TKT-XXXX]` in the subject line. The default `swh_em_ticket_replied_sub` template already does this:
 
-```
+```text
 Re: {site_name} Support — [TKT-{ticket_id}] {subject}
 ```
 
@@ -90,7 +90,7 @@ The `sender` / `from` field may be a bare address or `Name <email@example.com>` 
 
 Mailgun Routes already send `subject`, `body-plain`, and `sender` as form-encoded fields. No transform needed:
 
-```
+```http
 POST /wp-json/swh/v1/inbound-email
 Authorization: Bearer your-secret-here
 Content-Type: application/x-www-form-urlencoded
@@ -102,7 +102,7 @@ subject=Re%3A+Support+%5BTKT-1234%5D&body-plain=Thanks%2C+that+fixed+it.&sender=
 
 SendGrid posts `subject`, `text`, and `from` — all supported. Configure the parse URL to:
 
-```
+```text
 https://yoursite.com/wp-json/swh/v1/inbound-email
 ```
 

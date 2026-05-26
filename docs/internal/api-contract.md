@@ -60,8 +60,8 @@ Listed in `docs/hooks.md`. Enumerated for reference:
 | `swh_ticket_reopened` | `(int $ticket_id, string $previous_status)` | 3.7.0 |
 | `swh_ticket_replied` | `(int $ticket_id, int $comment_id, bool $is_staff_reply)` | 3.7.0 |
 | `swh_ticket_assigned` | `(int $ticket_id, int $old_user_id, int $new_user_id)` | 3.7.0 |
-| `swh_csat_submitted` | `(int $ticket_id, int $rating)` | 3.0.0 |
-| `swh_sla_breached` | `(int $ticket_id, int $minutes_over)` | 3.0.0 |
+| `swh_csat_submitted` | `(int $ticket_id, int $rating)` | 3.7.0 |
+| `swh_sla_breached` | `(int $ticket_id, int $minutes_over)` | 3.7.0 |
 
 See `docs/hooks.md` for usage examples and full documentation.
 

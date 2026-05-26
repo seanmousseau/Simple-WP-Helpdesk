@@ -23,7 +23,7 @@ The page where one of these shortcodes lives is registered as the **Helpdesk Pag
 
 ## URL shape
 
-```
+```text
 https://yoursite.com/<helpdesk-page>/?swh_ticket=<ticket_id>&token=<20-char-token>
 ```
 

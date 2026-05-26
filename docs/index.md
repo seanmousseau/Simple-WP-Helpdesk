@@ -101,8 +101,8 @@ See the [Installation Guide](installation) for full details and the [Configurati
 
 | | Minimum |
 |-|---------|
-| WordPress | 6.0 |
-| PHP | 8.0 |
+| WordPress | 6.0+ |
+| PHP | 8.0+ |
 
 ---
 

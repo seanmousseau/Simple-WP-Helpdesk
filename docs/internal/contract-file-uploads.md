@@ -78,7 +78,7 @@ Validation sequence:
 
 The handler is wired through a rewrite rule so download URLs look like:
 
-```
+```text
 https://yoursite.com/wp-json/swh/v1/file/<attachment_id>?swh_ticket=<id>&token=<token>
 ```
 
