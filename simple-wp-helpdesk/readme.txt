@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.4
+Stable tag: 4.0.5
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,15 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.5 =
+* Fixed: Settings page tab bar — with 10 tabs, the bar wrapped to a second row at typical admin viewports and the wrapper border drew between rows, leaving any tab on the last row visually detached. Switched to flex-wrap with per-tab bottom borders so every row gets its own underline; active tab uses a 2px primary-color underline. (#479)
+* Fixed: Anti-Spam settings — Turnstile Site/Secret Key rows now hide when Spam Prevention isn't "Turnstile" (matches the existing reCAPTCHA pattern). (#481)
+* Changed: Settings — consistent group headings across all tabs. Assignment & Routing splits into Routing / SLA Breach Alerts / Auto-Assignment Rules; Messages splits into Success / Error; Anti-Spam wraps the table in a Spam Detection group. (#482)
+* Changed: Settings — removed duplicate Frontend Portal Theme + Admin Theme rows from the Assignment & Routing tab (v4.0.3 moved them to Portal but left the legacy copies). Same option keys; pure UI cleanup. (#480)
+* Documentation: Internal docs refresh capturing five RC-build lessons — helpdesk_ticket CPT is not in core REST; /swh/v1 endpoints reject HTTP Basic Auth with regular passwords (use application passwords); `comments_clauses` short-circuit only honors `--post_id` (singular); SMTP relay 5.7.1 sender restriction; env-file `$`-must-be-single-quoted convention. (#441–#445)
+* Tooling: RC extended-test scripts now use paramiko for SSH (closes the recurring Semgrep OSS subprocess-shell-injection alert). `paramiko==3.5.1` added to testing requirements. (#447)
+* Security (build only): `qs` 6.15.1 → 6.15.2 closes Dependabot alert #14. `npm audit --omit=dev` is still 0 vulnerabilities; remaining alerts are all transitive devDependencies of `@wordpress/scripts` pinned behind upstream. (#453)
 
 = 4.0.4 =
 * Fixed: portal v2 now renders the CSAT widget after a client closes a ticket. Previously the v4.0.3 `portal.csat_enabled` toggle was a no-op on portal v2 because the post-close redirect skipped the legacy inline-render branch. The widget now appears on any closed-ticket view until the client rates or the rating meta is set. (#477)
@@ -342,6 +351,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.5 =
+Settings page polish + RC tooling. Tab bar now wraps cleanly instead of leaving orphan rows visually detached; section headings are consistent across all tabs; duplicate Theme controls removed; Anti-Spam Turnstile fields hide when not in use. Internal docs refresh from RC-build lessons. Extended-test scripts now use paramiko for SSH. `qs` build-dep auto-bumped. No data-shape changes; safe drop-in upgrade.
 
 = 4.0.4 =
 Bug-fix patch: portal v2 now renders the CSAT widget after a client closes a ticket (the v4.0.3 toggle was a no-op on portal v2); frontend submissions with `swh_default_assignee` set via wp-cli no longer skip the assignee email; Email Templates tab gains consistent `(Subject)` labels and groups "Ticket Merged" under the Client section. Safe drop-in upgrade.
