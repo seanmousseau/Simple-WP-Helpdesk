@@ -1327,9 +1327,13 @@ def test_23_file_attachments(page: Page):
         # With a file attached the XHR path is used: PHP processes the POST and
         # the response HTML is injected into .swh-helpdesk-wrapper in-place
         # (no navigation event).  Wait for either alert then assert success.
-        page.wait_for_selector('.swh-alert-success, .swh-alert-error', timeout=30000)
+        # role="status" / role="alert" are emitted alongside the class names on
+        # every alert div (see swh_render_*). Use the role+class combination so
+        # this test fails if either the visual class or the a11y semantic is
+        # dropped — both are part of the contract.
+        page.wait_for_selector('[role="status"].swh-alert-success, [role="alert"].swh-alert-error', timeout=30000)
         check("attachment: upload completed without error alert",
-              page.locator('.swh-alert-success').count() > 0,
+              page.locator('[role="status"].swh-alert-success').count() > 0,
               "error alert shown after upload — ticket may not have been created")
         page.wait_for_load_state("load", timeout=10000)
 

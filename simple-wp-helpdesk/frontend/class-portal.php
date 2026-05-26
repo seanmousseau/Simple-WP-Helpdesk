@@ -217,7 +217,7 @@ function swh_render_client_portal() {
 			$csat_prompt = swh_get_string_option( 'swh_csat_prompt', is_string( $defs['swh_csat_prompt'] ) ? $defs['swh_csat_prompt'] : '' );
 			$csat_thanks = swh_get_string_option( 'swh_csat_thanks', is_string( $defs['swh_csat_thanks'] ) ? $defs['swh_csat_thanks'] : '' );
 			$csat_skip   = swh_get_string_option( 'swh_csat_skip_label', is_string( $defs['swh_csat_skip_label'] ) ? $defs['swh_csat_skip_label'] : '' );
-			echo '<div id="swh-csat" class="swh-alert swh-alert-info" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '" data-success="' . esc_attr( $close_msg ) . '">';
+			echo '<div id="swh-csat" class="swh-alert swh-alert-info" role="status" aria-label="' . esc_attr__( 'Customer satisfaction rating', 'simple-wp-helpdesk' ) . '" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '" data-success="' . esc_attr( $close_msg ) . '">';
 			echo '<p style="margin:0 0 10px 0;"><strong>' . esc_html( $csat_prompt ) . '</strong></p>';
 			echo '<div class="swh-csat-stars">';
 			for ( $i = 1; $i <= 5; $i++ ) {
@@ -389,7 +389,7 @@ function swh_render_client_portal() {
 		$csat_prompt = swh_get_string_option( 'swh_csat_prompt', is_string( $defs['swh_csat_prompt'] ) ? $defs['swh_csat_prompt'] : '' );
 		$csat_thanks = swh_get_string_option( 'swh_csat_thanks', is_string( $defs['swh_csat_thanks'] ) ? $defs['swh_csat_thanks'] : '' );
 		$csat_skip   = swh_get_string_option( 'swh_csat_skip_label', is_string( $defs['swh_csat_skip_label'] ) ? $defs['swh_csat_skip_label'] : '' );
-		echo '<div id="swh-csat" class="swh-alert swh-alert-info" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '">';
+		echo '<div id="swh-csat" class="swh-alert swh-alert-info" role="status" aria-label="' . esc_attr__( 'Customer satisfaction rating', 'simple-wp-helpdesk' ) . '" data-ticket="' . esc_attr( (string) $ticket_id ) . '" data-nonce="' . esc_attr( $csat_nonce ) . '" data-ajaxurl="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '">';
 		echo '<p style="margin:0 0 10px 0;"><strong>' . esc_html( $csat_prompt ) . '</strong></p>';
 		echo '<div class="swh-csat-stars">';
 		for ( $i = 1; $i <= 5; $i++ ) {
