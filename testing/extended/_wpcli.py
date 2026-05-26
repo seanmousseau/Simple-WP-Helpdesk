@@ -19,10 +19,10 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
-import subprocess
 import sys
 from typing import Optional
+
+from _ssh import ssh_run
 
 
 def env(name: str, default: Optional[str] = None) -> str:
@@ -41,12 +41,17 @@ def wpcli(args: list[str], capture: bool = True, check: bool = True) -> str:
     Returns stdout (decoded) on success. Raises CalledProcessError on
     nonzero exit unless check=False.
 
-    Why subprocess + shlex.join rather than ssh.client (paramiko etc.):
-        - Zero external dependencies beyond Python stdlib
-        - Inherits the operator's existing SSH agent / known_hosts
-        - Same auth path the operator uses interactively
+    Uses paramiko via `_ssh.ssh_run()` — no local subprocess, so Semgrep
+    OSS's `dangerous-subprocess-use-tainted-env-args` rule no longer
+    re-flags this file on every edit. Closes #447. The remote command is
+    still shell-quoted via `shlex.join()` inside `ssh_run()` before sshd
+    transmits it.
+
+    The `capture` parameter is retained for call-site compatibility but is
+    now a no-op: paramiko always captures stdout/stderr separately.
     """
-    ssh_target = env("SSH_TARGET")
+    _ = capture  # kept for signature compatibility; paramiko always captures
+    env("SSH_TARGET")  # validate
     container = env("WP_CONTAINER")
     wp_path = env("WP_PATH")
 
@@ -56,47 +61,37 @@ def wpcli(args: list[str], capture: bool = True, check: bool = True) -> str:
     wp_cmd.extend([f"--path={wp_path}"])
     wp_cmd.extend(args)
 
-    # docker exec needs the wp command as a single shell command for the
-    # inner container shell — shlex.join produces a safely-quoted string.
-    # Prepend an env override to silence PHP "Deprecated:" noise that the
-    # wp-cli phar emits on every invocation (React/Promise uses deprecated
-    # case-with-semicolon syntax that PHP 8.3+ flags). E_ALL & ~E_DEPRECATED
-    # leaves real errors visible while killing the deprecations.
-    docker_inner = shlex.join(
-        ["docker", "exec", "-i", "-e", "WP_CLI_PHP_ARGS=-d error_reporting=E_ALL&~E_DEPRECATED",
-         container] + wp_cmd
-    )
-    full = ["ssh", "-o", "BatchMode=yes", ssh_target, docker_inner]
+    # docker exec runs inside the container; prepend an env override that
+    # silences PHP "Deprecated:" noise from the wp-cli phar (React/Promise
+    # uses deprecated case-with-semicolon syntax under PHP 8.3+).
+    # `E_ALL & ~E_DEPRECATED` leaves real errors visible while killing the
+    # deprecations.
+    remote_argv = [
+        "docker", "exec", "-i",
+        "-e", "WP_CLI_PHP_ARGS=-d error_reporting=E_ALL&~E_DEPRECATED",
+        container,
+    ] + wp_cmd
+    result = ssh_run(remote_argv)
 
-    # Same trust model + mitigation as verify_env.py:check_ssh_wpcli — all
-    # env-derived inputs flow through shlex.join, so the SSH remote shell
-    # gets safely-quoted command components. See that docstring for the full
-    # rationale. Semgrep OSS requires the nosemgrep directive on the SAME
-    # line as the subprocess call (not the preceding line).
-    result = subprocess.run(full, capture_output=capture, text=True, check=False)  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
-    # When capture=False, result.stdout / result.stderr are None (subprocess
-    # streamed them to the parent's stdout/stderr instead of buffering them).
-    # Coerce to empty strings so the return type stays str and the failure
-    # message below doesn't NoneType-error.
-    stdout_text = result.stdout if result.stdout is not None else ""
-    stderr_text = result.stderr if result.stderr is not None else ""
     if check and result.returncode != 0:
         msg = (
             f"wp-cli command failed (exit {result.returncode}):\n"
             f"  cmd: {' '.join(wp_cmd)}\n"
-            f"  stderr: {stderr_text.strip()[:500]}"
+            f"  stderr: {result.stderr.strip()[:500]}"
         )
         raise RuntimeError(msg)
-    return stdout_text
+    return result.stdout
 
 
 def wpcli_json(args: list[str]) -> object:
     """
     Convenience: wpcli() with --format=json appended, parsed.
 
-    The wp-cli phar on the dev host emits a PHP "Deprecated:" line to stdout
-    on every invocation (React Promise lib uses deprecated case-with-
-    semicolon syntax). Strip any prefix lines before the first JSON-shaped
+    The wp-cli phar emits a PHP "Deprecated:" line to stdout on every
+    invocation (React/Promise's case-with-semicolon syntax under PHP 8.3+).
+    `WP_CLI_PHP_ARGS=-d error_reporting=...` doesn't help because the
+    deprecation fires during the phar's own bootstrap, BEFORE PHP applies
+    the env override. Strip any prefix lines before the first JSON-shaped
     character so the parse succeeds.
     """
     out = wpcli(args + ["--format=json"])
@@ -155,7 +150,7 @@ def create_test_ticket(title: str, requester_email: str, content: str = "") -> i
         f"--post_content={content or 'Created by webhook_roundtrip.py'}",
         "--porcelain",  # outputs the post ID only
     ])
-    # Strip the PHP deprecation prefix (see wpcli_json for full explanation).
+    # Strip the PHP deprecation prefix (see wpcli_json() docstring).
     digits = ""
     for line in raw.strip().splitlines():
         stripped = line.strip()

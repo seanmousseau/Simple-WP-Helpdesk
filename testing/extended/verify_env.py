@@ -29,13 +29,15 @@ from __future__ import annotations
 import imaplib
 import os
 import re
-import shlex
 import smtplib
 import socket
-import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
+
+import paramiko
+
+from _ssh import ssh_run
 
 # All variables the extended-test scripts read from the environment.
 REQUIRED_VARS = [
@@ -161,38 +163,25 @@ def check_ssh_wpcli() -> Optional[str]:
     if not (ssh_target and container and wp_path):
         return "SSH_TARGET / WP_CONTAINER / WP_PATH are required for wp-cli."
 
-    # Defense in depth: env values come from a trusted secrets file in this
-    # workflow, but build the remote shell command via shlex.join so an
-    # adversarial WP_CONTAINER / WP_PATH (e.g. `foo;rm -rf /`) can't escape
-    # into shell metacharacters. SSH itself passes the command string to the
-    # remote login shell, so quoting at this layer is what matters.
-    remote_cmd = shlex.join([
+    # Use paramiko-backed ssh_run() — no local subprocess, so Semgrep OSS's
+    # `dangerous-subprocess-use-tainted-env-args` rule no longer re-flags
+    # this call on every edit. Closes #447. The remote argv is still
+    # shell-quoted via shlex.join() inside ssh_run() before sshd transmits.
+    remote_argv = [
         "docker", "exec", "-i", container,
         "wp", "--allow-root", f"--path={wp_path}", "core", "version",
-    ])
-    cmd = [
-        "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-        ssh_target,
-        remote_cmd,
     ]
     try:
-        # subprocess.run with a list avoids host-side shell interpretation.
-        # The remote_cmd argument is shlex-quoted above, so the SSH remote
-        # shell receives a safe command string. We accept env-derived inputs
-        # here only because (a) this is a developer-only test tool that
-        # reads ~/.claude/dev-secrets.env (operator-owned, not network-
-        # sourced), (b) every interpolated value is shlex-joined, and (c) a
-        # malicious env file is already game-over for the operator. The
-        # nosemgrep directive must be on the SAME line as the call — Semgrep
-        # OSS does NOT honor the comment-on-preceding-line form.
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20, check=False)  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
-    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        r = ssh_run(remote_argv, timeout=20.0, target=ssh_target)
+    except paramiko.SSHException as e:
         return f"SSH or docker invocation failed: {e}"
+    except OSError as e:
+        return f"SSH transport failed: {e}"
     if r.returncode != 0:
         return f"wp-cli returned exit {r.returncode}. stderr: {r.stderr.strip()[:200]}"
     # WP core version output may contain wp-cli's "Deprecated:" noise. Find a
     # plausible version on any line.
-    for line in (r.stdout or "").splitlines():
+    for line in r.stdout.splitlines():
         if re.match(r"^\s*\d+\.\d+", line.strip()):
             return None
     return f"wp-cli reachable but core version output looked unexpected: {r.stdout[:200]!r}"
