@@ -13,6 +13,7 @@ starting from the next release after 1.8.
 ### Accessibility
 
 - **Settings — list semantics for canned responses and ticket templates** (#458). Both list-of-rows sections were marked up as non-semantic `<div>` containers. They're now `<ul role="list" aria-label="…">` with `<li role="listitem">` rows, so screen readers announce row count + position when navigating either list. Visual rendering unchanged via a new `.swh-settings-list` CSS reset. E2E selectors converted from `.swh-{canned,tmpl}-item` parent-class scoping to `#swh-{canned,tmpl}-list > li`. Closes 2 of 10 #458 sub-items.
+- **Settings — auto-assignment rules table** (#458). The rules `<table>` gains an `aria-label`, each `<th>` is `scope="col"`, the empty actions column header carries `screen-reader-text` instructional copy, and every category select / assignee select / Remove button gets a per-row `aria-label` ("Rule 1 — category", "Remove Rule 1", etc.). Dynamic new-row insertions compute the next 1-indexed label by counting existing rows. test_45 selectors converted from `.swh-rule-item` to `#swh-rules-body > tr.swh-rule-item` (id-scoped). Closes 1 of 10 #458 sub-items.
 
 ### Changed
 

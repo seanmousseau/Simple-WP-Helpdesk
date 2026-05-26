@@ -571,11 +571,11 @@ function swh_render_settings_page() {
 				);
 				$categories       = is_array( $categories ) ? $categories : array();
 				?>
-				<table class="widefat" id="swh-rules-table" style="margin-bottom:10px;">
+				<table class="widefat" id="swh-rules-table" style="margin-bottom:10px;" aria-label="<?php esc_attr_e( 'Auto-assignment rules', 'simple-wp-helpdesk' ); ?>">
 					<thead><tr>
-						<th><?php esc_html_e( 'Category', 'simple-wp-helpdesk' ); ?></th>
-						<th><?php esc_html_e( 'Assign To', 'simple-wp-helpdesk' ); ?></th>
-						<th></th>
+						<th scope="col"><?php esc_html_e( 'Category', 'simple-wp-helpdesk' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Assign To', 'simple-wp-helpdesk' ); ?></th>
+						<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'simple-wp-helpdesk' ); ?></span></th>
 					</tr></thead>
 					<tbody id="swh-rules-body">
 					<?php if ( empty( $assignment_rules ) ) : ?>
@@ -587,15 +587,17 @@ function swh_render_settings_page() {
 							</div>
 						</td></tr>
 					<?php endif; ?>
-					<?php foreach ( $assignment_rules as $rule ) : ?>
+					<?php foreach ( $assignment_rules as $rule_index => $rule ) : ?>
 						<?php
 						$rule      = is_array( $rule ) ? $rule : array();
 						$rule_cat  = isset( $rule['category_term_id'] ) && is_scalar( $rule['category_term_id'] ) ? intval( $rule['category_term_id'] ) : 0;
 						$rule_user = isset( $rule['assignee_user_id'] ) && is_scalar( $rule['assignee_user_id'] ) ? intval( $rule['assignee_user_id'] ) : 0;
+						/* translators: %d: 1-indexed rule number */
+						$rule_label = sprintf( __( 'Rule %d', 'simple-wp-helpdesk' ), $rule_index + 1 );
 						?>
 						<tr class="swh-rule-item">
 							<td>
-								<select name="swh_rule_category[]">
+								<select name="swh_rule_category[]" aria-label="<?php echo esc_attr( $rule_label . ' — ' . __( 'category', 'simple-wp-helpdesk' ) ); ?>">
 									<option value=""><?php esc_html_e( '— Select category —', 'simple-wp-helpdesk' ); ?></option>
 									<?php foreach ( $categories as $cat ) : ?>
 										<option value="<?php echo esc_attr( (string) $cat->term_id ); ?>" <?php selected( $rule_cat, $cat->term_id ); ?>><?php echo esc_html( $cat->name ); ?></option>
@@ -603,14 +605,14 @@ function swh_render_settings_page() {
 								</select>
 							</td>
 							<td>
-								<select name="swh_rule_assignee[]">
+								<select name="swh_rule_assignee[]" aria-label="<?php echo esc_attr( $rule_label . ' — ' . __( 'assignee', 'simple-wp-helpdesk' ) ); ?>">
 									<option value=""><?php esc_html_e( '— Select technician —', 'simple-wp-helpdesk' ); ?></option>
 									<?php foreach ( $techs as $t ) : ?>
 										<option value="<?php echo esc_attr( (string) $t->ID ); ?>" <?php selected( $rule_user, $t->ID ); ?>><?php echo esc_html( $t->display_name ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
-							<td><button type="button" class="button swh-remove-rule"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button></td>
+							<td><button type="button" class="button swh-remove-rule" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: rule number, e.g. 'Rule 1' */ __( 'Remove %s', 'simple-wp-helpdesk' ), $rule_label ) ); ?>"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button></td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
@@ -650,11 +652,15 @@ function swh_render_settings_page() {
 										;
 					document.getElementById( 'swh-add-rule' ).addEventListener( 'click', function() {
 						var tbody = document.getElementById( 'swh-rules-body' );
+						// 1-indexed row label for aria-label — count existing rule rows.
+						var ruleNum = tbody.querySelectorAll( 'tr.swh-rule-item' ).length + 1;
+						var ruleLabel = '<?php echo esc_js( __( 'Rule', 'simple-wp-helpdesk' ) ); ?>' + ' ' + ruleNum;
 						var tr = document.createElement( 'tr' );
 						tr.className = 'swh-rule-item';
 						var tdCat = document.createElement( 'td' );
 						var selCat = document.createElement( 'select' );
 						selCat.name = 'swh_rule_category[]';
+						selCat.setAttribute( 'aria-label', ruleLabel + ' — ' + '<?php echo esc_js( __( 'category', 'simple-wp-helpdesk' ) ); ?>' );
 						var optBlank = document.createElement( 'option' );
 						optBlank.value = '';
 						optBlank.textContent = '<?php echo esc_js( __( '— Select category —', 'simple-wp-helpdesk' ) ); ?>';
@@ -669,6 +675,7 @@ function swh_render_settings_page() {
 						var tdUser = document.createElement( 'td' );
 						var selUser = document.createElement( 'select' );
 						selUser.name = 'swh_rule_assignee[]';
+						selUser.setAttribute( 'aria-label', ruleLabel + ' — ' + '<?php echo esc_js( __( 'assignee', 'simple-wp-helpdesk' ) ); ?>' );
 						var optBlankU = document.createElement( 'option' );
 						optBlankU.value = '';
 						optBlankU.textContent = '<?php echo esc_js( __( '— Select technician —', 'simple-wp-helpdesk' ) ); ?>';
@@ -684,6 +691,7 @@ function swh_render_settings_page() {
 						var btn = document.createElement( 'button' );
 						btn.type = 'button';
 						btn.className = 'button swh-remove-rule';
+						btn.setAttribute( 'aria-label', '<?php echo esc_js( __( 'Remove', 'simple-wp-helpdesk' ) ); ?>' + ' ' + ruleLabel );
 						btn.textContent = '<?php echo esc_js( __( 'Remove', 'simple-wp-helpdesk' ) ); ?>';
 						tdBtn.appendChild( btn );
 						tr.appendChild( tdCat );
