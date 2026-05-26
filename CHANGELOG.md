@@ -10,6 +10,8 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.6] — 2026-05-26
+
 ### Accessibility
 
 - **Settings — list semantics for canned responses and ticket templates** (#458). Both list-of-rows sections were marked up as non-semantic `<div>` containers. They're now `<ul role="list" aria-label="…">` with `<li role="listitem">` rows, so screen readers announce row count + position when navigating either list. Visual rendering unchanged via a new `.swh-settings-list` CSS reset. E2E selectors converted from `.swh-{canned,tmpl}-item` parent-class scoping to `#swh-{canned,tmpl}-list > li`. Closes 2 of 10 #458 sub-items.
@@ -765,7 +767,8 @@ Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — 
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.5...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.6...HEAD
+[4.0.6]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.5...v4.0.6
 [4.0.5]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.4...v4.0.5
 [4.0.4]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.3...v4.0.4
 [4.0.3]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.2...v4.0.3
