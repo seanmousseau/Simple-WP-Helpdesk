@@ -566,7 +566,7 @@ body.swh-helpdesk-admin.swh-admin-theme-dark .swh-rule-row {
 	border-color: var( --swh-color-border );
 	color: var( --swh-color-text );
 }
-body.swh-helpdesk-admin.swh-admin-theme-dark .swh-tab-button {
+body.swh-helpdesk-admin.swh-admin-theme-dark #swh-tabs [role="tab"] {
 	color: var( --swh-color-text );
 }
 body.swh-helpdesk-admin.swh-admin-theme-dark .swh-empty-state-title {
