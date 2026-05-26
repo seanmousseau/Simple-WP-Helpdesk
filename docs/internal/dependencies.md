@@ -134,6 +134,7 @@ Adding a runtime dependency requires explicit user approval before the PR opens.
 ## Dependency hygiene
 
 - **Dependabot is enabled.** Open Dependabot PRs are triaged at the start of every release cycle. Security advisories are merged inside the current cycle, not deferred.
+- **npm `overrides` for vulnerable transitives.** When `@wordpress/scripts` ships a vulnerable transitive that upstream hasn't bumped yet, we use the `overrides` block in `package.json` to force a patched version. As of v4.0.7 the override list is `serialize-javascript ^7.0.5`, `minimatch ^10.2.5`, `webpack-dev-server ^5.2.4`, `uuid ^11.1.1`. **Always verify the production build (`npm run build`) succeeds after adding an override** — these are dev tools so they don't ship, but they can break the build if the major bump is incompatible with how `@wordpress/scripts` invokes them. Drop an override once the upstream catches up.
 - **Lock file commits.** `composer.lock` and `package-lock.json` are committed. The plugin's bundled `vendor/` is committed (we ship from `main`; we don't `composer install` at runtime).
 - **Audit before release.** As part of the `release → dev` documentation review (Gate 2), spot-check that this doc still matches reality. New deps must be added here in the same PR.
 
