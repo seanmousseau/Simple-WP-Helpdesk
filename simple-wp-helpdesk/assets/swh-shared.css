@@ -206,12 +206,12 @@
 .swh-helpdesk-wrapper :is(button, a, select, textarea, input, [role="tab"], [role="radio"], .swh-badge):focus:not(:focus-visible) {
 	outline: none;
 }
-body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .swh-badge, .swh-empty-state a, .swh-toast button):focus {
+body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, [role="tab"], .swh-badge, .swh-empty-state a, .swh-toast button):focus {
 	outline: 2px solid var( --swh-color-focus );
 	outline-offset: 2px;
 	border-radius: var( --swh-radius-sm );
 }
-body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, .swh-tab-button, .swh-badge, .swh-empty-state a, .swh-toast button):focus:not(:focus-visible) {
+body.swh-helpdesk-admin :is(.swh-canned-item, .swh-rule-row, [role="tab"], .swh-badge, .swh-empty-state a, .swh-toast button):focus:not(:focus-visible) {
 	outline: none;
 }
 
