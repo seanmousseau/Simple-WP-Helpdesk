@@ -12,7 +12,12 @@ starting from the next release after 1.8.
 
 ### Fixed
 
+- **Settings: tab bar spillover creates orphan row + visually detached active state** (#479). With 10 tabs, the bar wrapped to a second row at typical WP admin viewports and the wrapper's bottom border drew between rows, leaving any tab on the last row visually detached. `#swh-tabs` is now `display: flex; flex-wrap: wrap` with per-tab bottom borders so every row gets its own continuous underline. Active state uses a 2px primary-color underline that sits on the row's separator regardless of wrap depth.
 - **RC tooling — `email_delivery_check.py` now decodes MIME-Q-encoded Subject headers before substring matching.** Long outbound subjects ride in `=?us-ascii?Q?...?=` segments (spaces become `_`); the previous `--subject-contains` match ran against the raw encoded header and silently missed delivered messages during v4.0.2 RC verification of the assignee-email listener. Falls back to the raw value if decoding throws.
+
+### Changed
+
+- **Settings: consistent group headings across tabs** (#482). General, Portal, and Integrations already used `<fieldset class="swh-settings-group"><legend>` sections; Assignment & Routing, Messages, and Anti-Spam rendered flat row lists. Wrapped them to match — Assignment & Routing now has Routing / SLA Breach Alerts / Auto-Assignment Rules groups; Messages splits into Success Messages / Error Messages; Anti-Spam wraps the table in a Spam Detection group.
 
 ## [4.0.4] — 2026-05-25
 
