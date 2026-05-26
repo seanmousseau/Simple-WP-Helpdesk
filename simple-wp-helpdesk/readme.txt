@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.5
+Stable tag: 4.0.6
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,13 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.6 =
+* Accessibility: Canned-response and ticket-template settings sections converted from non-semantic `<div>` containers to `<ul role="list">` with `<li role="listitem">` rows so screen readers announce row count + position. Visual rendering unchanged. (#458)
+* Accessibility: Auto-assignment rules table gains an `aria-label`, `scope="col"` on every `<th>`, and per-row `aria-label` ("Rule N — category" / "Rule N — assignee" / "Remove Rule N") on selects and Remove buttons. Dynamic new-row insertion computes the index by counting siblings. (#458)
+* Accessibility: Portal v2 CSAT widget now emits `role="status"` + `aria-label="Customer satisfaction rating"` on the `.swh-alert-info` container so screen readers announce the rating prompt after ticket close. (#458)
+* Accessibility: Settings tab buttons' `:focus-visible` focus ring now actually applies — the prior `.swh-tab-button` CSS hook was never emitted into rendered markup (dead selector). Replaced with `[role="tab"]` across `swh-shared.css` and `swh-admin.css` so settings tabs get the documented 2px primary-color focus ring on keyboard navigation. (#458)
+* Testing: RC E2E selector sweep — converted all 10 deferred tests (test_18, 19, 23, 39, 45, 56, 58, 61, 62, 64) from styling-hook classes to load-bearing semantic selectors (`fieldset:has(> legend)`, `#…-list > li`, `#…-body > tr`, `[role="status"].swh-alert-success`, `a[href="#swh-main-content"]`, etc.). Each conversion was paired with a small a11y companion patch where the markup needed one. Closes #458.
 
 = 4.0.5 =
 * Fixed: Settings page tab bar — with 10 tabs, the bar wrapped to a second row at typical admin viewports and the wrapper border drew between rows, leaving any tab on the last row visually detached. Switched to flex-wrap with per-tab bottom borders so every row gets its own underline; active tab uses a 2px primary-color underline. (#479)
@@ -351,6 +358,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.6 =
+Accessibility patch. Settings page list-of-rows sections (canned responses, ticket templates) now use proper list semantics. Auto-assignment rules table gains per-row aria-labels. Portal v2 CSAT widget announces itself to screen readers. Settings tab buttons get the documented focus ring on keyboard navigation. Plus the v3.4.x RC tooling — paramiko-based SSH executor — landed earlier in the cycle. No data-shape changes; safe drop-in upgrade.
 
 = 4.0.5 =
 Settings page polish + RC tooling. Tab bar now wraps cleanly instead of leaving orphan rows visually detached; section headings are consistent across all tabs; duplicate Theme controls removed; Anti-Spam Turnstile fields hide when not in use. Internal docs refresh from RC-build lessons. Extended-test scripts now use paramiko for SSH. `qs` build-dep auto-bumped. No data-shape changes; safe drop-in upgrade.
