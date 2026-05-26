@@ -10,6 +10,8 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.5] — 2026-05-25
+
 ### Fixed
 
 - **Settings: tab bar spillover creates orphan row + visually detached active state** (#479). With 10 tabs, the bar wrapped to a second row at typical WP admin viewports and the wrapper's bottom border drew between rows, leaving any tab on the last row visually detached. `#swh-tabs` is now `display: flex; flex-wrap: wrap` with per-tab bottom borders so every row gets its own continuous underline. Active state uses a 2px primary-color underline that sits on the row's separator regardless of wrap depth.
@@ -750,7 +752,8 @@ Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — 
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.4...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.5...HEAD
+[4.0.5]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.4...v4.0.5
 [4.0.4]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.3...v4.0.4
 [4.0.3]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.2...v4.0.3
 [4.0.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.1...v4.0.2
