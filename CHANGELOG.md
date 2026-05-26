@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Fixed
+
+- **RC tooling — `email_delivery_check.py` now decodes MIME-Q-encoded Subject headers before substring matching.** Long outbound subjects ride in `=?us-ascii?Q?...?=` segments (spaces become `_`); the previous `--subject-contains` match ran against the raw encoded header and silently missed delivered messages during v4.0.2 RC verification of the assignee-email listener. Falls back to the raw value if decoding throws.
+
 ## [4.0.4] — 2026-05-25
 
 ### Fixed
