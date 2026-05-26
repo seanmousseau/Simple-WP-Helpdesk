@@ -192,6 +192,17 @@ The full list of WP/PHP code-level gotchas lives in `CLAUDE.md` → "Common Pitf
 **What bit us:** Cross-project graph collisions when names lacked a project prefix.
 **Lesson:** Project-scoped entities use `project:<slug>:...` prefix. Cross-project entities are bare (`user:sean`, `decision:onedrive-tcc-launchd`). See `~/.claude/CLAUDE.md` → "Memory MCP — agent session state".
 
+### `.env` values containing `$` must be **single-quoted** (#445)
+
+**What bit us (RC extended-test build, May 2026):** Three password values in `~/.claude/dev-secrets.env` were inside double quotes — and the `$` characters triggered shell variable expansion when the file was sourced via `set -a; source ~/.claude/dev-secrets.env; set +a`. Passwords arrived at running scripts with 3 characters silently chopped out (`$#` → empty, `$1jPX…` → `jPX…`, `$66im…` → `6im…`). IMAP/SMTP logins failed cryptically. Plus a duplicate `MAIL_SMTP_ADDRESS="587"` shadowed the actual host on a later line.
+
+**Root cause:** POSIX shell variable expansion inside double-quoted strings. `"abc$1xyz"` becomes `abcxyz` (the `$1` is the empty positional parameter when no script args are passed). Single quotes preserve `$` literally.
+
+**Lesson:**
+- **Single-quote all secret values in `.env` files**, even ones that don't currently contain `$`, backticks, or `!`. The cost of consistency is lower than the cost of debugging a silent N-character chop.
+- `testing/extended/verify_env.py` now cross-references **runtime password length** against the **literal length in the file** to flag this class of bug. Run it before any session that consumes secrets.
+- Cross-project — this lesson belongs in `~/.claude/CLAUDE.md` so it applies to every project's env files, not just SWH.
+
 ---
 
 ## How this doc stays current

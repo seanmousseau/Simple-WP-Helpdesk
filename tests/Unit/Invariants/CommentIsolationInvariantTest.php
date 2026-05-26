@@ -8,6 +8,11 @@
  *      query targets a specific helpdesk_ticket post (admin editor, cron, etc.)
  *      or (b) the caller explicitly requests `type=helpdesk_reply` (client portal).
  *
+ *      **`--post_id` vs `--post__in` gotcha (#443):** the short-circuit only
+ *      checks `query_vars['post_id']` (singular). Queries that target a ticket
+ *      via `post__in` (array) bypass the short-circuit and return empty. Use
+ *      the singular form for tooling. See `docs/internal/data-dictionary.md`.
+ *
  *   2. `comment_feed_where` -> `swh_exclude_helpdesk_from_feed` — strips helpdesk
  *      ticket comments from the site's comment RSS feed unconditionally.
  *

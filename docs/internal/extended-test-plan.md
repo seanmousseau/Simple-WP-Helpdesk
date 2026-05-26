@@ -144,6 +144,8 @@ This is the most-critical-and-most-likely-to-break surface. We have a dedicated 
 - **Expect:** `PASS — webhook correctly rejected sender_mismatch`.
 - **Verify:** Paste output.
 
+> **SMTP relay constraint (#444):** The `--sender-override` option cannot use an arbitrary external address (e.g. `nobody@example.invalid`). Credentialed SMTP relays — including cowmail.ca and most providers — reject such addresses at the MAIL FROM stage with `5.7.1 Sender address rejected: not owned by user`, so the script can't even deliver the message to test WP's rejection path. Use a different alias of the **same authenticated account** (e.g. `$WP_TESTING_CLIENT_EMAIL_2`) so the relay accepts the envelope and WP's `hash_equals` check on `_ticket_email` becomes the rejection point.
+
 ### 2.5 — No `[TKT-XXXX]` in subject is rejected
 
 - **Do:** `python3 testing/extended/webhook_roundtrip.py --expect-rejection no_ticket_id`.

@@ -21,6 +21,10 @@ starting from the next release after 1.8.
 - **Settings: removed duplicate Theme controls from Assignment & Routing** (#480). v4.0.3 (#471) moved the Frontend Portal Theme + Admin Theme controls to the new Portal tab but didn't remove the legacy copies. Both wrote to the same option keys (`swh_portal_theme`, `swh_admin_theme`), so this is pure UI cleanup — no data migration. Operators no longer see the same conceptual setting in two places.
 - **Settings: Anti-Spam Turnstile rows now hide when Spam Prevention isn't "Turnstile"** (#481). The existing JS toggle handled `.swh-recaptcha-row` visibility tied to the `swh_spam_method` dropdown but never touched the Turnstile rows. Added `.swh-turnstile-row` class to both Turnstile inputs and extended `swhUpdateSpamRows()` to mirror the reCAPTCHA pattern.
 
+### Documentation
+
+- **Internal docs refresh — five lessons captured during the v4.0.2/v4.0.3 RC extended-test sessions** (#441–#445). `api-contract.md` notes that the `helpdesk_ticket` CPT is intentionally not exposed via core REST and that `/swh/v1` endpoints reject HTTP Basic Auth with regular passwords (use application passwords). `security-model.md` adds a REST authentication subsection. `data-dictionary.md` documents the `comments_clauses` short-circuit gotcha (`--post_id` vs `--post__in`) with a cross-reference in the `CommentIsolationInvariantTest` docblock. `extended-test-plan.md` + `testing/extended/README.md` document the SMTP relay 5.7.1 sender restriction. `lessons-learned.md` records the env-file `$`-must-be-single-quoted convention.
+
 ## [4.0.4] — 2026-05-25
 
 ### Fixed
