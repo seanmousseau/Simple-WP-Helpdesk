@@ -10,6 +10,10 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+### Changed
+
+- **RC tooling — bumped `paramiko` 3.5.1 → 5.0.0** (Dependabot). Verified end-to-end on dev: `verify_env.py` PASS, `webhook_roundtrip.py` PASS (full ticket-create / SMTP / inbound-webhook / comment-poll path). The 2-major jump removes GSSAPI support and SHA1-based kex methods — neither of which we use; our dev sshd uses modern kex algorithms.
+
 ## [4.0.5] — 2026-05-25
 
 ### Fixed
