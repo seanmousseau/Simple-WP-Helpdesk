@@ -29,19 +29,22 @@ class TokenComparisonInvariantTest extends SourceScanTestCase {
 		$pattern = '/hash_equals\s*\(/';
 		// Allow-list — every legitimate constant-time comparison in the plugin:
 		//   class-portal.php:144 — portal page render
-		//   class-portal.php:502 — portal reply
-		//   class-portal.php:637 — portal close
-		//   class-portal.php:721 — portal reopen
-		//   class-portal.php:802 — portal lookup
+		//   class-portal.php:536 — portal reply
+		//   class-portal.php:671 — portal close
+		//   class-portal.php:755 — portal reopen
+		//   class-portal.php:836 — portal lookup
 		//   class-ticket.php:52  — file proxy token check
 		//   class-email.php:247  — inbound-email bearer auth
 		//   class-email.php:310  — inbound-email From-address match
+		// Lines 512/647/731/812 shifted to 536/671/755/836 in v4.0.4 (#477) when
+		// the portal v2 wrapper added an unconditional CSAT render block to close
+		// the gap that the v4.0.3 settings UI couldn't surface; no semantic change.
 		$allow = array(
 			'frontend/class-portal.php:144',
-			'frontend/class-portal.php:502',
-			'frontend/class-portal.php:637',
-			'frontend/class-portal.php:721',
-			'frontend/class-portal.php:802',
+			'frontend/class-portal.php:536',
+			'frontend/class-portal.php:671',
+			'frontend/class-portal.php:755',
+			'frontend/class-portal.php:836',
 			'includes/class-ticket.php:52',
 			'includes/class-email.php:247',
 			'includes/class-email.php:310',

@@ -29,10 +29,12 @@ class StatusMutatorInvariantTest extends SourceScanTestCase {
 		$pattern = '/(update_post_meta|add_post_meta)\s*\([^,]+,\s*[\'"]_ticket_status[\'"]/';
 		// Allow-list:
 		//   frontend/class-shortcode.php:239 — initial ticket creation (no prior status).
-		//   includes/helpers.php:281        — body of swh_set_ticket_status() itself.
+		//   includes/helpers.php:287        — body of swh_set_ticket_status() itself.
+		// Line shifted from 281 → 287 in v4.0.3 (#471) when 6 CSAT default keys were
+		// added to swh_get_defaults() above it; swh_set_ticket_status() body unchanged.
 		$allow = array(
 			'frontend/class-shortcode.php:239',
-			'includes/helpers.php:281',
+			'includes/helpers.php:287',
 		);
 		$this->assertSourceMatchesAllowList(
 			$allow,

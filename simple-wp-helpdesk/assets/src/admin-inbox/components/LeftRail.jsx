@@ -1,4 +1,4 @@
-import { useEffect } from '@wordpress/element';
+import { useEffect, useRef } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { SWH_INBOX_STORE } from '../store/inbox';
@@ -15,12 +15,37 @@ export const LeftRail = () => {
 		[]
 	);
 	const userViews = useSelect( ( s ) => s( SWH_VIEWS_STORE ).getViews(), [] );
+	const defaultView = useSelect(
+		( s ) => s( SWH_VIEWS_STORE ).getDefaultView(),
+		[]
+	);
+	const defaultLoaded = useSelect(
+		( s ) => s( SWH_VIEWS_STORE ).getDefaultLoaded(),
+		[]
+	);
 	const { setView, clearSyntheticView } = useDispatch( SWH_INBOX_STORE );
-	const { fetchViews } = useDispatch( SWH_VIEWS_STORE );
+	const { fetchViews, setDefaultView } = useDispatch( SWH_VIEWS_STORE );
 
 	useEffect( () => {
 		fetchViews();
 	}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Apply the user's saved default view exactly once on initial load (#437).
+	// We don't reapply when defaultView later changes because the user may
+	// have intentionally clicked away — that's a navigation, not a stale state.
+	const appliedDefaultRef = useRef( false );
+	useEffect( () => {
+		if ( appliedDefaultRef.current ) {
+			return;
+		}
+		if ( ! defaultLoaded ) {
+			return;
+		}
+		appliedDefaultRef.current = true;
+		if ( defaultView && defaultView !== activeView ) {
+			setView( defaultView );
+		}
+	}, [ defaultLoaded, defaultView, activeView, setView ] );
 
 	const personalViews = userViews.filter( ( v ) => v.scope === 'personal' );
 	const globalViews = userViews.filter( ( v ) => v.scope === 'global' );
@@ -29,6 +54,7 @@ export const LeftRail = () => {
 		const key = isDefault ? v.key : v.id;
 		const label = v.label || v.name;
 		const isActive = activeView === key;
+		const isDefault_ = defaultView === key;
 		return (
 			<li key={ key } className="swh-inbox-leftrail-item">
 				<button
@@ -40,6 +66,29 @@ export const LeftRail = () => {
 					onClick={ () => setView( key ) }
 				>
 					{ label }
+				</button>
+				<button
+					type="button"
+					className={ `swh-inbox-view-default-toggle${
+						isDefault_ ? ' is-default' : ''
+					}` }
+					onClick={ ( e ) => {
+						e.stopPropagation();
+						setDefaultView( isDefault_ ? null : key );
+					} }
+					aria-pressed={ isDefault_ }
+					aria-label={
+						isDefault_
+							? __( 'Clear default view', 'simple-wp-helpdesk' )
+							: __( 'Set as default view', 'simple-wp-helpdesk' )
+					}
+					title={
+						isDefault_
+							? __( 'Clear default view', 'simple-wp-helpdesk' )
+							: __( 'Set as default view', 'simple-wp-helpdesk' )
+					}
+				>
+					{ isDefault_ ? '★' : '☆' }
 				</button>
 				{ ! isDefault && <ViewRowMenu view={ v } /> }
 			</li>

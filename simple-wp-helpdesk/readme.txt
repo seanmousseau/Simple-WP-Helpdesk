@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.1
+Stable tag: 4.0.4
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,24 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.4 =
+* Fixed: portal v2 now renders the CSAT widget after a client closes a ticket. Previously the v4.0.3 `portal.csat_enabled` toggle was a no-op on portal v2 because the post-close redirect skipped the legacy inline-render branch. The widget now appears on any closed-ticket view until the client rates or the rating meta is set. (#477)
+* Fixed: frontend ticket submissions with `swh_default_assignee` set via wp-cli or pre-4.0 sites no longer skip the "Ticket Assigned to You" email. `swh_apply_assignment_rules()` now falls back to the legacy flat option when grouped storage hasn't been written through the settings UI. (#476)
+* Changed: Email-templates settings tab — every subject field is now labelled `(Subject)` (the abbreviated `(Sub)` variants are gone), and the "Ticket Merged" template moves into the Client section next to Auto-Closed. Eliminated the now-empty "Emails Sent to Client (System)" heading. UI-only; option keys unchanged. (#439, #440)
+
+= 4.0.3 =
+* Added: new **Portal** settings tab — surfaces frontend/admin theme picker and operator-configurable CSAT widget controls that were previously hardcoded (enable toggle, prompt text, thank-you message, skip-link label). (#471)
+* Added: new **Integrations** settings tab — surfaces the inbound webhook shared secret and previews REST API (v4.1), outbound webhooks (v4.2), and native Slack/Teams/Discord (v4.3). (#472)
+* Changed: closes the v4.0.0 storage-group ↔ admin-UI-tab gap (#356) — two storage groups (`swh_settings_portal`, `swh_settings_integrations`) finally have UI entry points. No schema changes; existing settings are unaffected.
+
+= 4.0.2 =
+* Fixed: drawer + bulk-action assignment was silently broken — REST controllers wrote `_ticket_assigned`, but the rest of the plugin (lifecycle hook, email dispatch, legacy editor, admin list) used `_ticket_assigned_to`. Consolidated to the canonical key across all surfaces; one-shot upgrade migration copies orphaned values. (#434, #435)
+* Fixed: drawer + bulk assignments now actually send the "Ticket Assigned to You" email — previously the email was inlined in the legacy editor save path so only the legacy editor triggered it. Refactored to a single `swh_send_assignment_email` listener hooked to `swh_ticket_assigned`. (RC follow-up to #434/#435)
+* Fixed: webhook-inserted reply comments now attribute to the actual sender (`comment_author` = parsed display name, `comment_author_email` = parsed address) instead of always using the ticket-level client name. (#438)
+* Added: drawer now shows an unread-reply indicator (red dot in the header) when a ticket has incoming activity since last view. Auto-clears 1.5s after the drawer opens. (#436)
+* Added: drawer Assignee dropdown — the read-only `#<id>` span is replaced with a labelled `SelectControl` backed by a new `GET /swh/v1/technicians` endpoint. (#434)
+* Added: per-user default inbox view — pin any built-in or saved view as your personal default via a ☆/★ toggle next to each view link; auto-selected on next inbox load. New `PUT /swh/v1/views/default` endpoint. (#437)
 
 = 4.0.1 =
 * Fixed: default email subject templates now wrap `[{ticket_id}]` so client replies to notification emails are parsed by the inbound webhook (#433). Previously 14 of 15 default subject templates shipped without the literal `[ ]` brackets the webhook regex requires; the webhook returned `no_ticket_id` and the reply was silently dropped. Existing installs with customised subjects are not affected.
@@ -324,6 +342,15 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.4 =
+Bug-fix patch: portal v2 now renders the CSAT widget after a client closes a ticket (the v4.0.3 toggle was a no-op on portal v2); frontend submissions with `swh_default_assignee` set via wp-cli no longer skip the assignee email; Email Templates tab gains consistent `(Subject)` labels and groups "Ticket Merged" under the Client section. Safe drop-in upgrade.
+
+= 4.0.3 =
+Settings UX patch: new **Portal** and **Integrations** tabs surface configuration for previously-hardcoded features (CSAT widget) and existing storage groups (inbound webhook secret). No schema changes; safe drop-in upgrade.
+
+= 4.0.2 =
+Bug-fix + small-feature patch: drawer assignment now works, assignee emails fire from drawer/bulk paths, webhook replies show per-message authors, drawer shows unread-reply indicator, and users can pin a default inbox view. Safe drop-in upgrade with a one-shot meta-key migration for any tickets assigned via the broken drawer flow.
 
 = 4.0.1 =
 Bug-fix patch: default email subjects now include `[{ticket_id}]` so client replies actually reach the inbound webhook. Safe to install; existing customised subjects are preserved.

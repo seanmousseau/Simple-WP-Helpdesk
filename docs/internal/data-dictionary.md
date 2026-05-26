@@ -107,7 +107,7 @@ Storage shape introduced by #356. Each group is a single top-level option holdin
 | `swh_settings_general` | array | Statuses, priorities, autoclose, upload limits, user-facing messages. |
 | `swh_settings_general.use_violet_theme` | bool | Opt-in for the v4.0 Violet theme. Default `false`. Toggled by site admins at Settings → General → Appearance. Introduced 4.0.0 (#355). |
 | `swh_settings_email` | array | Email format, logo URL, 14+ template subject/body pairs (user + admin). |
-| `swh_settings_portal` | array | `portal_theme` (auto/light). Other portal settings are scaffolded but unused as of 4.0.0. |
+| `swh_settings_portal` | array | `portal_theme` (auto/light/dark), `admin_theme` (light/dark/auto), `csat_enabled` (bool, default true), `csat_prompt`, `csat_thanks`, `csat_skip_label`. CSAT keys added 4.0.3 (#471) — see `config-reference.md` → Portal. |
 | `swh_settings_notifications` | array | NOT seeded by the 4.0.0 migration — no call sites or defaults today. Future work. |
 | `swh_settings_tools` | array | Spam method, reCAPTCHA/Turnstile keys, retention windows, delete-on-uninstall, canned responses, ticket templates, SLA thresholds. |
 | `swh_settings_routing` | array | Default assignee, fallback email, ticket page id, token TTL, restrict-to-assigned, assignment rules. |

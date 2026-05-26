@@ -10,8 +10,46 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.4] — 2026-05-25
+
 ### Fixed
 
+- **Portal v2 CSAT widget never rendered** (#477). After v4.0.3 added operator-configurable CSAT controls, RC verification surfaced that portal v2 didn't emit the widget at all — the `portal.csat_enabled` toggle was a functional no-op for portal v2 users. The widget was only emitted by the legacy shortcode close branch (POST-back), but portal v2's close path is an `admin-post.php` handler that ends in `wp_safe_redirect()`. The GET-back didn't re-enter the inline-render branch. `swh_render_client_portal()` now emits the CSAT widget inside `#swh-portal-app` whenever the ticket is closed, CSAT is enabled, and the client hasn't rated yet (`_ticket_csat` post meta absent) — Option C from the issue triage, friendliest for clients who don't rate immediately.
+- **Frontend submissions with `swh_default_assignee` set via wp-cli didn't send the assignee email** (#476). `swh_apply_assignment_rules()` reads from the v4.0 grouped key `routing.default_assignee`, but the legacy flat option `swh_default_assignee` is only mirrored to grouped storage when written through `swh_set_option()` (which the settings UI uses). Sites that set the option via `wp option update`, the test setup script, or pre-4.0 installs that never re-saved settings hit a silent gap: the assignment fired but the listener never saw an assignee. Added a legacy-flat fallback when grouped storage is empty.
+
+### Changed
+
+- **Email-templates settings tab — label consistency and grouping** (#439, #440). Every subject field is now labelled `(Subject)` (the abbreviated `(Sub)` variants in the Tech/Admin section are gone). The "Ticket Merged" template moves from the now-removed "Emails Sent to Client (System)" section into the main Client section next to Auto-Closed. UI-only — no option keys change, persistence is unaffected.
+
+## [4.0.3] — 2026-05-25
+
+### Added
+
+- **v4.0.3 — Portal settings tab** (#471). New admin tab surfacing the previously-unreachable `swh_settings_portal` storage group: portal/admin theme pickers plus operator-configurable CSAT widget controls (`csat_enabled` bool, `csat_prompt`, `csat_thanks`, `csat_skip_label`). Previously the CSAT widget rendered with hardcoded strings and no way to disable it. When `csat_enabled` is false, no DOM is emitted and no AJAX surface is exposed — the close-success message renders alone.
+- **v4.0.3 — Integrations settings tab** (#472). New admin tab surfacing the `swh_settings_integrations` storage group. Today: the inbound webhook shared secret (already in defaults, never had a UI). Placeholders preview what v4.1 (REST API keys), v4.2 (signed outbound webhooks), and v4.3 (Slack/Teams/Discord) will populate.
+
+### Changed
+
+- **v4.0.3 — Closes the v4.0.0 storage-group ↔ UI gap** (#470). v4.0.0 reorganized settings into 7 grouped options (#356) but the admin UI tabs were never updated to match — leaving two groups (`portal`, `integrations`) with no entry point. Net effect: features that the plugin advertised in docs had zero way to configure. v4.0.3 closes that gap. No data-shape changes; settings move from "implicit defaults" to "operator-tunable" without altering storage. Notifications tab remains deferred — that group is intentionally unseeded.
+
+### Decisions deferred
+
+- reCAPTCHA stays on the **Anti-Spam** tab. Moving it to **Integrations** was discussed but would have fragmented a cohesive panel (JS-driven row visibility tied to `spam_method`). Revisit in v4.1 alongside REST API key management, when a real "third-party credentials" pattern lands.
+
+### Renumbered milestones
+
+- v4.0.4 (was v4.0.3) — Milestone #25. Email-templates wording tweaks (#439, #440).
+- v4.0.5 (was v4.0.4) — Milestone #26. Docs + dev-experience cleanup.
+
+## [4.0.2] — 2026-05-25
+
+### Added
+
+- **v4.0.2 — Per-user default inbox view** (#437). Operator can pin any view (built-in `all` / `unassigned` / `my_open` / `high_priority` / `resolved_this_week`, or any personal/global saved view) as their personal default. On inbox load, the saved default is auto-selected before the first ticket fetch. UI: a small ☆/★ button appears next to each view link on hover; click toggles the default. Storage: per-user meta key `swh_default_view`. REST: new `PUT /swh/v1/views/default` endpoint, plus the existing `GET /swh/v1/views` response now carries `default` alongside `views`. Stale defaults (e.g. a deleted personal view) auto-resolve to null at read time so the system default takes over gracefully.
+
+### Fixed
+
+- **v4.0.2 — Drawer + bulk assignments did not send the assignee email** (RC follow-up to #434/#435). The assignee notification email was inlined in the legacy admin editor save path (`class-ticket-editor.php`), so although v4.0 surfaces correctly fired `do_action('swh_ticket_assigned', …)`, there was no listener — drawer and bulk reassignments were silent. Found while running the RC extended-test suite against the merged #463 fix. Fix: extract the email-dispatch into a new `swh_send_assignment_email( $ticket_id, $old, $new )` listener hooked to `swh_ticket_assigned`, and remove the inline send from the legacy editor (the existing `do_action` at the same site now routes through the same listener). Single dispatch path means every assignment trigger — legacy editor, drawer PATCH, bulk action, automatic assignment rule — sends the same email. RC-verified end-to-end: assigning ticket 901 to user 4 via `do_action('swh_ticket_assigned', …)` delivered `[TKT-0901] … Has Been Assigned to You` within 5 seconds.
 - **v4.0.2 — Drawer had no unread-reply indicator** (#436). The `_swh_unread` post-meta flag is set by the reply paths (portal, webhook), but the v4.0 drawer never read it. Fix: `TicketController::get_item` now includes `unread: bool`; `DrawerHeader` renders an aria-labelled red dot before the ticket title when set; a 1.5s `setTimeout` after open dispatches `patchMeta({ mark_read: true })` so the operator sees the badge briefly before it auto-clears. PATCH endpoint accepts `mark_read: true` and intentionally does NOT bump the version counter (clearing read-state is a per-viewer concern, not a content change other clients reconcile against). New L2 contract test pins the no-bump semantics. Inbox-row unread highlighting is a follow-up — the legacy admin list already does this via `helpers.php`'s `_swh_unread` meta_query; the React inbox doesn't yet.
 - **v4.0.2 — Webhook-inserted reply comments had no per-message author attribution** (#438). `swh_handle_inbound_email` already extracted the email address from `Name <email@example.com>` From headers, but discarded the display name and wrote the ticket-level `_ticket_name` + `_ticket_email` into `wp_insert_comment` as `comment_author` / `comment_author_email`. Visually fine for single-sender threads; broken for CC'd parties or forwarded mail, where every webhook-inserted message showed the same author. Fix: parse the display name alongside the address and use the parsed values (falling back to the bare address if no display name) when inserting the comment. Drawer's activity log now shows the actual reply author per message. The token-comparison invariant allow-list was updated to track the line-number shift caused by the parser change.
 
@@ -692,7 +730,11 @@ Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — 
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.4...HEAD
+[4.0.4]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.3...v4.0.4
+[4.0.3]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.2...v4.0.3
+[4.0.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.1...v4.0.2
+[4.0.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.7.0...v4.0.0
 [3.7.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...v3.6.0

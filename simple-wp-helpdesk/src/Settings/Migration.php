@@ -120,6 +120,11 @@ final class Migration {
 		// exists in swh_get_defaults() — seeded here so the bag is populated.
 		'swh_portal_theme'               => array( 'portal', 'portal_theme' ),
 		'swh_admin_theme'                => array( 'portal', 'admin_theme' ),
+		// CSAT settings (v4.0.3 #471) — operator controls for the post-close widget.
+		'swh_csat_enabled'               => array( 'portal', 'csat_enabled' ),
+		'swh_csat_prompt'                => array( 'portal', 'csat_prompt' ),
+		'swh_csat_thanks'                => array( 'portal', 'csat_thanks' ),
+		'swh_csat_skip_label'            => array( 'portal', 'csat_skip_label' ),
 
 		// Tools group.
 		'swh_spam_method'                => array( 'tools', 'spam_method' ),

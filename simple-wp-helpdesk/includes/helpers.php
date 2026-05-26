@@ -119,6 +119,12 @@ function swh_get_defaults() {
 			// Admin theme (v4.0.0): light (default — Violet dark is incomplete),
 			// dark (opt-in), auto (follow WP admin color scheme).
 			'swh_admin_theme'                => 'light',
+			// CSAT (Customer Satisfaction) — widget shown after a client closes a ticket.
+			// v4.0.3 #471: previously hardcoded; now operator-configurable.
+			'swh_csat_enabled'               => true,
+			'swh_csat_prompt'                => 'How was your support experience?',
+			'swh_csat_thanks'                => 'Thanks for your feedback!',
+			'swh_csat_skip_label'            => 'Skip',
 		);
 	}
 	return $defaults;
@@ -710,6 +716,12 @@ function swh_apply_assignment_rules( int $ticket_id ): void {
 	if ( ! $assigned ) {
 		$default  = swh_get_option( 'routing', 'default_assignee' );
 		$assigned = is_scalar( $default ) ? (int) $default : 0;
+		if ( ! $assigned ) {
+			// Back-compat: legacy flat key. Hit when grouped storage hasn't been
+			// written through the settings UI (wp-cli `option update`, fresh sites
+			// where the operator only touched the flat option, test fixtures).
+			$assigned = swh_get_int_option( 'swh_default_assignee' );
+		}
 	}
 
 	if ( $assigned > 0 ) {
