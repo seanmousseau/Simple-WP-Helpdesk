@@ -72,6 +72,16 @@ Last updated: 2026-05-13
 
 **When to revisit:** `npm view @wordpress/scripts time --json | tail -5` periodically. When a 32.2.x or 33.x lands, bump and re-audit.
 
+**Refresh — 2026-05-25 (v4.0.5, #453):** Alert count drifted from 5 to 8 over the v4.0.x lifecycle as new transitive CVEs landed:
+
+| New alert | Package | Cause |
+|---|---|---|
+| #14 | `qs` 6.11.1–6.15.1 | DoS via crafted `comma` arrays + `encodeValuesOnly`. Auto-resolved by `npm install` + `npm audit fix` (non-forcing) — `qs` bumped to 6.15.2. |
+| #12 | `uuid` <11.1.1 | Buffer bounds in v3/v5/v6 with `buf` arg. Grand-transitive: `sockjs → uuid`, `sockjs` itself a `webpack-dev-server` dep. No autofix path. Added to ignore list. |
+| #11 | `webpack-dev-server` ≤5.2.3 | New variant of the source-theft advisory. Same root cause as #4/#5, just an updated patched version (5.2.4). Existing `webpack-dev-server` ignore rule covers it. |
+
+Net effect on `package-lock.json`: `qs 6.15.1 → 6.15.2`, 3 lines diff. Net effect on `.github/dependabot.yml`: one new `uuid` ignore entry. `npm audit --omit=dev` still **0 vulnerabilities**; `@wordpress/scripts` bumped 32.1.0 → 32.2.0 in v4.0.3-ish but no further upstream patch available. Same conclusion as 2026-05-13: stuck behind upstream.
+
 ---
 
 ## WordPress / PHP code
