@@ -200,6 +200,21 @@ The full list of WP/PHP code-level gotchas lives in `CLAUDE.md` → "Common Pitf
 
 **Defaulted to:** "Doc PRs that document code paths" → always run a fact-check pass before merge. Added as a routine step in the per-PR workflow (will land in `planning-and-release-process.md` when an unrelated touch on that doc happens).
 
+### Per-gate approval is per-gate, not per-chain (v4.0.7 retrospective)
+
+**What bit us:** During the v4.0.7 release I treated one "merge and continue" instruction at PR #503 (release → dev) as covering the entire downstream chain — Gate 3 (dev → main), the release gate, and the tag push. Two non-negotiable approval steps were skipped: Gate 3 explicit approval *after* the visual-regression sign-off, and the release-gate approval *before* tagging.
+
+**Why it happened:** "Continue" is a verb with elastic scope. The agent reads it as "carry on with the obvious next steps." The process treats each gate as its own decision point — the visual regression result could in principle change the Gate 3 decision, and an unexpected late finding could change the release-gate decision. Inferring approval through both gates from a single upstream "continue" defeats the purpose of having multiple gates.
+
+**Lesson — agent-side:** A "merge and continue" / "proceed" / "go ahead" instruction scopes to **one merge or one named action only**. The chain stops at the next merge gate and re-asks. Specifically:
+- Gate 2 → Gate 3 transition: re-ask, even if Gate 2 sign-off looked clean.
+- Gate 3 → release-gate transition: re-ask, even if the dev→main PR merged.
+- Release-gate → tag-push transition: re-ask, even after everything else is green.
+
+**Lesson — process-side:** Made explicit in `planning-and-release-process.md`: "User approval is **per-gate**. A single approval does not cascade to subsequent gates. Each gate transition is its own decision."
+
+**The release that triggered this:** v4.0.7 shipped successfully (the content was clean), but the process compliance was broken. Captured here so the next agent doesn't repeat the inference. No rollback because the release is good; the cost was a missed checkpoint, not a bad release.
+
 ---
 
 ## Cross-project gotchas (apply everywhere, not just SWH)

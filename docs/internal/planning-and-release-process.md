@@ -189,6 +189,22 @@ Only then: tag `vX.Y.Z`, push the tag, let the release workflow build and publis
 
 ---
 
+## Approval scope (important)
+
+**Every "user approval" line in the gates above is its own decision.** A single approval — "merge", "ship it", "continue", "go ahead" — covers **one named action only**: the merge being asked about, or the tag push being asked about. It does **not** cascade to the next gate.
+
+Specifically:
+
+- Approval for `release → dev` merge does NOT imply approval for `dev → main`.
+- Approval for `dev → main` merge does NOT imply approval for the release tag push.
+- Approval to release does NOT imply approval to do anything else after the release.
+
+After every approval-gated action, **pause and re-ask** before the next gated action — even when the path forward looks obvious. The gates exist because a result at one step (a CI failure, a visual-regression anomaly, a late finding) can change the decision at the next step. Inferring approval through a chain defeats the purpose of having multiple gates.
+
+When in doubt, re-ask. Cost of an extra question is one line of text; cost of an inferred approval is a real process bug. See `lessons-learned.md` → "Per-gate approval is per-gate, not per-chain (v4.0.7 retrospective)" for the incident that codified this rule.
+
+---
+
 ## Non-negotiable rules
 
 These are bright lines. They apply at every stage above.
