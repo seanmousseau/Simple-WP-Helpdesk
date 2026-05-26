@@ -2696,7 +2696,7 @@ def test_45_assignment_rules(page: Page):
     page.wait_for_selector('#swh-add-rule')
 
     # Clear existing rules first by reading how many there are
-    existing_rules = page.locator('.swh-rule-item')
+    existing_rules = page.locator('#swh-rules-body > tr.swh-rule-item')
     rule_count_before = existing_rules.count()
 
     # Add a new rule
@@ -2704,9 +2704,9 @@ def test_45_assignment_rules(page: Page):
     page.wait_for_timeout(300)
 
     # The new rule row should have a category select and assignee select
-    last_rule = page.locator('.swh-rule-item').last
+    last_rule = page.locator('#swh-rules-body > tr.swh-rule-item').last
     check("assignment rules: rule row added after clicking + Add Rule",
-          last_rule.count() > 0, "no .swh-rule-item found after add")
+          last_rule.count() > 0, "no #swh-rules-body > tr.swh-rule-item found after add")
 
     if last_rule.count() > 0:
         cat_select   = last_rule.locator('select[name="swh_rule_category[]"]')
@@ -2722,7 +2722,7 @@ def test_45_assignment_rules(page: Page):
     _navigate_settings(page)
     page.locator('#swh-tab-routing').click()
     page.wait_for_selector('#swh-add-rule')
-    rule_count_after = page.locator('.swh-rule-item').count()
+    rule_count_after = page.locator('#swh-rules-body > tr.swh-rule-item').count()
     check("assignment rules: rule persists after save",
           rule_count_after > rule_count_before or rule_count_after >= 1,
           f"rule count before={rule_count_before} after={rule_count_after}")
@@ -2759,7 +2759,7 @@ def test_45_assignment_rules(page: Page):
     page.locator('#swh-tab-routing').click()
     page.wait_for_selector('#swh-add-rule')
     # Remove all rule items (simpler than finding the specific one)
-    for item in page.locator('.swh-rule-item').all():
+    for item in page.locator('#swh-rules-body > tr.swh-rule-item').all():
         btn = item.locator('.swh-remove-rule, button[class*="remove"]')
         if btn.count() > 0:
             btn.first.click()
