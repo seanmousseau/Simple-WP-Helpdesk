@@ -22,7 +22,7 @@ We do not use features beyond the PHP 8.0 baseline in shipped plugin code. Dev-t
 |---|---|---|
 | Global function | `swh_` snake_case | `swh_get_defaults()`, `swh_send_email()` |
 | Legacy class | `SWH_` PascalCase | (legacy; minimal usage) |
-| PSR-4 namespaced class (v3.7+) | `SWH\…` | `SWH\Foo\Bar` under `simple-wp-helpdesk/src/` |
+| PSR-4 namespaced class | `SWH\…` | `SWH\Foo\Bar` under `simple-wp-helpdesk/src/` |
 | Custom post type slug | snake_case literal | `helpdesk_ticket` |
 | Comment type | snake_case literal | `helpdesk_reply` |
 | Taxonomy slug | snake_case literal | `helpdesk_category` |

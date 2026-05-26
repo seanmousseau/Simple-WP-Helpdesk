@@ -63,7 +63,7 @@ Plugin-internal constants (defined in `simple-wp-helpdesk/simple-wp-helpdesk.php
 
 | Constant | Purpose |
 |---|---|
-| `SWH_VERSION` | Single source of truth for the version string (`3.7.0` at HEAD). |
+| `SWH_VERSION` | Single source of truth for the version string (`4.0.6` at HEAD). |
 | `SWH_PLUGIN_DIR` | `plugin_dir_path(__FILE__)` of the bootstrap. Module files use this, never `__FILE__`. |
 | `SWH_PLUGIN_URL` | `plugin_dir_url(__FILE__)`. |
 | `SWH_PLUGIN_FILE` | The bootstrap path. Passed to `register_*_hook()` and `plugin_basename()`. |
@@ -80,7 +80,7 @@ Plugin-internal constants (defined in `simple-wp-helpdesk/simple-wp-helpdesk.php
 | `includes/class-ticket.php` | File proxy `swh_serve_file()`, upload handling, ticket deletion (post + files), CSAT AJAX, comment list-table filters. |
 | `includes/class-cron.php` | Cron callbacks: auto-close, ticket retention, attachment retention, SLA check. Each guarded by a `swh_lock_*` transient. |
 | `includes/deprecations.php` | Soft-deprecation shims kept so old hook names still fire during a deprecation window. |
-| `admin/class-settings.php` | Tabbed settings page, render + save handler. Two distinct forms (main settings, Tools) with separate nonces. |
+| `admin/class-settings.php` | Tabbed settings page, render + save handler. Three distinct forms (main settings, Tools retention, Danger Zone) with separate nonces — see invariant 9 below. |
 | `admin/class-ticket-editor.php` | Meta boxes (status, priority, assignee), `save_post` handler, conversation rendering. |
 | `admin/class-ticket-list.php` | Admin list table customisation: columns, sorting, filters, badges. |
 | `admin/class-reporting.php` | `wp_ajax_swh_report_data` endpoint; caches via `swh_report_*` transients. |
@@ -104,7 +104,7 @@ If you violate one of these, something visible breaks. Cite line ranges before c
 | 7 | `swh_get_client_ip()` is the only correct way to read the client IP. It honours `HTTP_CF_CONNECTING_IP` then `HTTP_X_FORWARDED_FOR` then `REMOTE_ADDR`. Never read `$_SERVER['REMOTE_ADDR']` directly. | Rate limiting and anti-spam misattribute when sitting behind a CDN or reverse proxy. | `helpers.php:356-365`. | 2.1.0 |
 | 8 | Email always goes through `swh_send_email( $to, $subject_key, $body_key, $data, $attachments, $ticket_id )`. It runs template parsing (`{placeholder}` + `{if key}…{endif key}`), applies the HTML wrapper, and dispatches `swh_email_headers` filter. Never call `wp_mail()` directly from feature code. | Skips branding wrapper; skips conditional-block parsing; bypasses the `swh_email_headers` filter; site-wide template overrides do not apply. | `class-email.php:90-` (send wrapper). | 1.0 |
 | 8.1 | The HTML wrapper inlines all CSS. No `<link>` and no `<style>` blocks are sent — webmail clients strip them. Email-client dark mode is opted into via `<meta name="color-scheme" content="light dark">` + an inline `@media (prefers-color-scheme: dark)` block (only Apple Mail / iOS Mail honour it). | Webmail clients render unstyled HTML. | `class-email.php:145-` (`swh_wrap_html_email`). | 3.6.0 |
-| 9 | Two distinct settings forms render on the settings page: the main form, and the **Tools** form. They use different nonces. Tools exclusively owns `swh_retention_*` and `swh_delete_on_uninstall`. Mixing fields across forms either silently drops the value or invokes the wrong handler. | Settings save silently no-ops; or destructive Tools options fire from the main form without the Tools nonce. | `admin/class-settings.php` render + save handlers. | 2.2.0 |
+| 9 | **Three** distinct settings forms render on the settings page, each with its own nonce: (a) **main settings** — `swh_save_settings_action` / `swh_settings_nonce`; (b) **Tools retention** — `swh_save_tools_action` / `swh_tools_nonce`, owns `swh_retention_*` and `swh_delete_on_uninstall`; (c) **Danger Zone** — `swh_danger_action` / `swh_danger_nonce`, gates GDPR delete, ticket purge, and factory reset. Mixing fields across forms either silently drops the value or invokes the wrong handler. The danger-zone segregation is the strongest gate: a bug in the main save handler cannot trigger a purge. | Settings save silently no-ops; or destructive Tools options fire from the main form without the right nonce. | `admin/class-settings.php` render + save handlers. | 2.2.0, danger-zone formalized 4.0.0 |
 | 10 | `swh_save_ticket_data()` in `admin/class-ticket-editor.php` is the only place admin-side ticket edits flow through. It detects changes and dispatches emails. Adding a new ticket field means: (a) add the meta to `data-dictionary.md`, (b) wire save here, (c) handle the change detection if it triggers email. | New ticket fields silently fail to persist or fail to notify. | `admin/class-ticket-editor.php` (`swh_save_ticket_data`). | 1.0 |
 | 11 | New cron events use **unique scheduled offsets** so they do not all fire at the same second. Current offsets at activation: `swh_autoclose_event` = now, `swh_retention_tickets_event` = now + 1800, `swh_retention_attachments_event` = now + 3600, `swh_sla_check_event` = now + 5400. Each callback is guarded by a `swh_lock_*` transient. | Concurrent execution thrashes WP option locks; one cron event blocks the others. | `class-installer.php:42-53`; locks at `class-cron.php:56, 145, 280, 330`. | 2.0.0 / 3.0.0 |
 | 12 | `pre_get_posts` with a `meta_key` argument implicitly filters out posts lacking that meta. Setting `meta_key` to drive ordering or filtering on the ticket list will silently hide tickets without that meta. Use `meta_query` with `NOT EXISTS` if you need to include nulls. | Admin list silently shows a subset of tickets. | Multiple `pre_get_posts` callers in `admin/class-ticket-list.php`. | 1.0 |
@@ -143,9 +143,18 @@ Templates ship as 16 option pairs (`*_sub` / `*_body`), parsed with placeholder 
 
 v3.7.0 introduces a `src/` PSR-4 namespace (`SWH\…`) as a proof-of-concept while leaving the existing `require_once` calls intact. The autoloader (`vendor/autoload.php`) is required at bootstrap (`simple-wp-helpdesk.php:30-32`). Both styles coexist — new code can land in either form. Full migration is deferred to v4.x.
 
-### Two settings forms, two nonces
+### Three settings forms, three nonces
 
-The Tools tab houses the destructive options: data retention (which can delete tickets and attachments on a cron) and `delete_on_uninstall` (which permits full data nuke). Keeping these in a physically separate `<form>` with its own nonce prevents accidental save of one when the user thought they were saving the other, and gives PHPCS / Semgrep an easier time tracking the intent of each save handler.
+The Tools tab houses two categories of operation that must each be segregated from the main settings save:
+
+1. **Retention** — data retention (which can delete tickets and attachments on a cron) and `delete_on_uninstall`. Owns `swh_save_tools_action` / `swh_tools_nonce`.
+2. **Danger Zone** — GDPR delete, ticket purge, factory reset. Owns `swh_danger_action` / `swh_danger_nonce` (shared across all three actions; discriminated by the per-action POST flag `swh_gdpr_delete` / `swh_purge_tickets` / `swh_factory_reset`).
+
+Plus the **main settings** form which uses `swh_save_settings_action` / `swh_settings_nonce`.
+
+Three physically separate `<form>` elements, three nonces. This prevents accidental save of one when the user intended another, and structurally guarantees that a bug in the main save handler cannot trigger a purge.
+
+Recorded as [ADR-0004](adr/0004-two-form-save-on-settings.md) (which now describes the three-form evolution).
 
 ## Release engineering
 
