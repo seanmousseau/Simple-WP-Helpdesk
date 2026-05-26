@@ -1101,10 +1101,10 @@ def test_19_canned_responses(page: Page):
     page.locator('#swh-tab-canned').click()
     page.wait_for_selector('#swh-add-canned')
     page.locator('#swh-add-canned').click()
-    page.wait_for_selector('.swh-canned-item:last-child [name="swh_canned_titles[]"]')
+    page.wait_for_selector('#swh-canned-list > li:last-child [name="swh_canned_titles[]"]')
 
-    last_title = page.locator('.swh-canned-item [name="swh_canned_titles[]"]').last
-    last_body  = page.locator('.swh-canned-item [name="swh_canned_bodies[]"]').last
+    last_title = page.locator('#swh-canned-list > li [name="swh_canned_titles[]"]').last
+    last_body  = page.locator('#swh-canned-list > li [name="swh_canned_bodies[]"]').last
     last_title.fill(CANNED_TITLE)
     last_body.fill(CANNED_BODY)
     page.locator('[name="swh_save_settings"]').first.click()
@@ -1117,7 +1117,7 @@ def test_19_canned_responses(page: Page):
     page.wait_for_selector('#swh-canned-list')
     # input values are not part of innerText — check via DOM value property
     title_found = page.evaluate(
-        f"Array.from(document.querySelectorAll('.swh-canned-item [name=\"swh_canned_titles[]\"]'))"
+        f"Array.from(document.querySelectorAll('#swh-canned-list > li [name=\"swh_canned_titles[]\"]'))"
         f".some(el => el.value === {json.dumps(CANNED_TITLE)})"
     )
     check("canned responses: saved title persists in settings", title_found)
@@ -1150,7 +1150,7 @@ def test_19_canned_responses(page: Page):
     _navigate_settings(page)
     page.locator('#swh-tab-canned').click()
     page.wait_for_selector('#swh-canned-list')
-    for item in page.locator('.swh-canned-item').all():
+    for item in page.locator('#swh-canned-list > li').all():
         if CANNED_TITLE in item.inner_text():
             item.locator('.swh-remove-canned').click()
             break
@@ -2287,10 +2287,10 @@ def test_39_ticket_templates(page: Page):
     page.evaluate("document.getElementById('swh-tab-templates').click()")
     page.wait_for_selector('#swh-add-tmpl')
     page.locator('#swh-add-tmpl').click()
-    page.wait_for_selector('.swh-tmpl-item:last-child [name="swh_tmpl_labels[]"]')
+    page.wait_for_selector('#swh-tmpl-list > li:last-child [name="swh_tmpl_labels[]"]')
 
-    last_label = page.locator('.swh-tmpl-item [name="swh_tmpl_labels[]"]').last
-    last_body  = page.locator('.swh-tmpl-item [name="swh_tmpl_bodies[]"]').last
+    last_label = page.locator('#swh-tmpl-list > li [name="swh_tmpl_labels[]"]').last
+    last_body  = page.locator('#swh-tmpl-list > li [name="swh_tmpl_bodies[]"]').last
     last_label.fill(TPL_LABEL)
     last_body.fill(TPL_BODY)
     page.locator('[name="swh_save_settings"]').first.click()
@@ -2302,7 +2302,7 @@ def test_39_ticket_templates(page: Page):
     page.evaluate("document.getElementById('swh-tab-templates').click()")
     page.wait_for_selector('#swh-tmpl-list')
     label_found = page.evaluate(
-        f"Array.from(document.querySelectorAll('.swh-tmpl-item [name=\"swh_tmpl_labels[]\"]'))"
+        f"Array.from(document.querySelectorAll('#swh-tmpl-list > li [name=\"swh_tmpl_labels[]\"]'))"
         f".some(el => el.value === {json.dumps(TPL_LABEL)})"
     )
     check("ticket templates: saved label persists in settings", label_found)
@@ -2384,7 +2384,7 @@ def test_39_ticket_templates(page: Page):
     page.wait_for_selector('#swh-tab-templates')
     page.evaluate("document.getElementById('swh-tab-templates').click()")
     page.wait_for_selector('#swh-tmpl-list')
-    for item in page.locator('.swh-tmpl-item').all():
+    for item in page.locator('#swh-tmpl-list > li').all():
         if TPL_LABEL in item.inner_text():
             item.locator('.swh-remove-tmpl').click()
             break

@@ -971,7 +971,7 @@ function swh_render_settings_page() {
 			</div>
 			<div id="tab-canned" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-canned" tabindex="0" style="display:none;">
 				<p class="description"><?php esc_html_e( 'Pre-written reply templates. Select one in the ticket editor to insert it into the reply field.', 'simple-wp-helpdesk' ); ?></p>
-				<div id="swh-canned-list">
+				<ul id="swh-canned-list" class="swh-settings-list" role="list" aria-label="<?php esc_attr_e( 'Canned responses', 'simple-wp-helpdesk' ); ?>">
 				<?php
 				$canned_responses = swh_get_option( 'tools', 'canned_responses', array() );
 				if ( ! is_array( $canned_responses ) ) {
@@ -988,7 +988,7 @@ function swh_render_settings_page() {
 				endif;
 				foreach ( $canned_responses as $canned_item ) :
 					?>
-					<div class="swh-canned-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
+					<li class="swh-canned-item" role="listitem" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
 						<div style="flex:1;">
 							<input type="text" name="swh_canned_titles[]" value="<?php echo esc_attr( is_array( $canned_item ) && isset( $canned_item['title'] ) && is_string( $canned_item['title'] ) ? $canned_item['title'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Response title…', 'simple-wp-helpdesk' ); ?>" aria-label="<?php esc_attr_e( 'Canned response title', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">
 							<textarea name="swh_canned_bodies[]" rows="3" class="large-text" aria-label="<?php esc_attr_e( 'Canned response body', 'simple-wp-helpdesk' ); ?>" style="width:100%;"><?php echo esc_textarea( is_array( $canned_item ) && isset( $canned_item['body'] ) && is_string( $canned_item['body'] ) ? $canned_item['body'] : '' ); ?></textarea>
@@ -996,15 +996,15 @@ function swh_render_settings_page() {
 						<div>
 							<button type="button" class="button swh-remove-canned"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button>
 						</div>
-					</div>
+					</li>
 				<?php endforeach; ?>
-				</div>
+				</ul>
 				<p><button type="button" id="swh-add-canned" class="button"><?php esc_html_e( '+ Add Response', 'simple-wp-helpdesk' ); ?></button></p>
 			</div>
 
 			<div id="tab-templates" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-templates" tabindex="0" style="display:none;">
 				<p class="description"><?php esc_html_e( 'Pre-configured submission types that pre-fill the ticket description on the frontend form. Clients select a "Request Type" to load the matching template.', 'simple-wp-helpdesk' ); ?></p>
-				<div id="swh-tmpl-list">
+				<ul id="swh-tmpl-list" class="swh-settings-list" role="list" aria-label="<?php esc_attr_e( 'Ticket templates', 'simple-wp-helpdesk' ); ?>">
 				<?php
 				$ticket_templates = swh_get_option( 'tools', 'ticket_templates', array() );
 				if ( ! is_array( $ticket_templates ) ) {
@@ -1012,7 +1012,7 @@ function swh_render_settings_page() {
 				}
 				foreach ( $ticket_templates as $tmpl_item ) :
 					?>
-					<div class="swh-tmpl-item" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
+					<li class="swh-tmpl-item" role="listitem" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;">
 						<div style="flex:1;">
 							<input type="text" name="swh_tmpl_labels[]" value="<?php echo esc_attr( is_array( $tmpl_item ) && isset( $tmpl_item['label'] ) && is_string( $tmpl_item['label'] ) ? $tmpl_item['label'] : '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Request type label…', 'simple-wp-helpdesk' ); ?>" aria-label="<?php esc_attr_e( 'Template label', 'simple-wp-helpdesk' ); ?>" style="width:100%; margin-bottom:6px;">
 							<textarea name="swh_tmpl_bodies[]" rows="4" class="large-text" aria-label="<?php esc_attr_e( 'Template description', 'simple-wp-helpdesk' ); ?>" style="width:100%;" placeholder="<?php esc_attr_e( 'Description template text…', 'simple-wp-helpdesk' ); ?>"><?php echo esc_textarea( is_array( $tmpl_item ) && isset( $tmpl_item['body'] ) && is_string( $tmpl_item['body'] ) ? $tmpl_item['body'] : '' ); ?></textarea>
@@ -1020,9 +1020,9 @@ function swh_render_settings_page() {
 						<div>
 							<button type="button" class="button swh-remove-tmpl"><?php esc_html_e( 'Remove', 'simple-wp-helpdesk' ); ?></button>
 						</div>
-					</div>
+					</li>
 				<?php endforeach; ?>
-				</div>
+				</ul>
 				<p><button type="button" id="swh-add-tmpl" class="button"><?php esc_html_e( '+ Add Template', 'simple-wp-helpdesk' ); ?></button></p>
 				<script>
 				(function() {
@@ -1034,8 +1034,9 @@ function swh_render_settings_page() {
 						removeLabel:      <?php echo wp_json_encode( __( 'Remove', 'simple-wp-helpdesk' ) ); ?>,
 					};
 					function swhCreateTmplItem() {
-						var outer = document.createElement('div');
+						var outer = document.createElement('li');
 						outer.className = 'swh-tmpl-item';
+						outer.setAttribute('role', 'listitem');
 						outer.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;';
 						var inner = document.createElement('div');
 						inner.style.flex = '1';

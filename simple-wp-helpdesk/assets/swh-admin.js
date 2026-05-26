@@ -138,8 +138,9 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	function buildCannedRow() {
 		const i18n = ( window.swhAdmin && window.swhAdmin.i18n ) ? window.swhAdmin.i18n : {};
 
-		const row = document.createElement( 'div' );
+		const row = document.createElement( 'li' );
 		row.className     = 'swh-canned-item';
+		row.setAttribute( 'role', 'listitem' );
 		row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px;';
 
 		const fieldWrap          = document.createElement( 'div' );

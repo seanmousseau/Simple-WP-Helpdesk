@@ -264,6 +264,20 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 	color: var( --swh-color-primary );
 }
 
+/*
+ * Settings list rows (#458 / v4.0.6).
+ * Canned responses and ticket templates are list-of-rows sections. We mark
+ * them up as `<ul role="list">` with `<li role="listitem">` rows so screen
+ * readers announce row count + position; this reset removes the default
+ * disc bullets and inherited padding so the visual rendering is unchanged
+ * from the previous div-based version.
+ */
+.swh-settings-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
 /* Settings group fieldsets */
 .swh-settings-group {
 	border: none;
