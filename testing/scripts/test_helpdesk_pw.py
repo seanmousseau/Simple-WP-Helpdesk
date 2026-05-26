@@ -1078,9 +1078,13 @@ def test_18_settings_persistence(page: Page):
 
     # ── #323 Settings fieldset groups present ─────────────────────────────────
     _navigate_settings(page)
-    group_count = page.locator('.swh-settings-group').count()
-    check("settings: fieldset groups rendered (#323)",
-          group_count > 0, f"no .swh-settings-group found (count={group_count})")
+    # Use the HTML semantic (<fieldset><legend>…</legend>…</fieldset>) rather
+    # than the .swh-settings-group styling hook. After v4.0.5/#482 + #480 +
+    # v4.0.6 #458 work, fieldset/legend is the load-bearing contract for the
+    # admin's grouped sections — the class is just where the CSS hangs.
+    group_count = page.locator('fieldset:has(> legend)').count()
+    check("settings: fieldset+legend groups rendered (#323)",
+          group_count > 0, f"no <fieldset><legend>…</legend></fieldset> found (count={group_count})")
 
 
 def test_19_canned_responses(page: Page):
