@@ -8,7 +8,7 @@ If a primitive you need is not listed here, check the **v4.0 component
 gaps** section at the bottom: it may already be planned (with a tracking
 issue) and worth waiting on rather than re-implementing locally.
 
-Last refreshed: v3.7.0 (2026-05-13)
+Last refreshed: v4.0.6 (2026-05-26)
 
 ---
 
@@ -195,19 +195,22 @@ relying on colour alone.
   is *not* a heading — the surrounding meta box `<h2>` from WP already
   provides the structural heading.
 - Do **not** rename the `name` attributes of inputs inside the group
-  (`swh-status`, `swh-priority`, `swh-assigned-to` IDs in particular) —
-  the `save_post` handler matches on them.
+  (`ticket_status`, `ticket_priority`, `ticket_assigned_to` in
+  particular) — the `save_post` handler in
+  `admin/class-ticket-editor.php` reads them by `name`. The IDs
+  (`#swh-status`, `#swh-priority`, `#swh-assigned-to`) are JS/CSS
+  hooks only.
 
 **Required structure:**
 
 ```html
 <div class="swh-panel-group">
   <span class="swh-panel-group-label">Status</span>
-  <select id="swh-status" class="swh-select" name="swh_status">...</select>
+  <select id="swh-status" class="swh-select" name="ticket_status">...</select>
 </div>
 <div class="swh-panel-group">
   <span class="swh-panel-group-label">Priority</span>
-  <select id="swh-priority" class="swh-select" name="swh_priority">...</select>
+  <select id="swh-priority" class="swh-select" name="ticket_priority">...</select>
 </div>
 ```
 
@@ -296,9 +299,9 @@ relying on colour alone.
 **Required structure:**
 
 ```html
-<a class="swh-skip-link" href="#swh-main">Skip to content</a>
+<a class="swh-skip-link" href="#swh-main-content">Skip to content</a>
 ...
-<main id="swh-main" tabindex="-1">...</main>
+<main id="swh-main-content" tabindex="-1">...</main>
 ```
 
 ---
@@ -371,7 +374,7 @@ relying on colour alone.
 
 **Activation rules:**
 - **Frontend** — automatic via `prefers-color-scheme: dark`. Sites that force light mode set `swh_portal_theme = 'light'`, which adds `data-swh-theme="light"` to every `.swh-helpdesk-wrapper` and overrides the media query.
-- **Admin** — opt-in per-user. `swh_admin_color_is_dark()` returns true when the WP user's `admin_color` is `midnight`, `modern`, or `ectoplasm`. The settings / reports / ticket-list controllers then add the class `swh-admin-theme-dark` to `<body>` (alongside the always-present `swh-helpdesk-admin` class). The dual-class selector (`body.swh-helpdesk-admin.swh-admin-theme-dark`) is load-bearing — both classes must be present.
+- **Admin** — operator-selectable via the `swh_admin_theme` setting (Settings → Portal → Theme): `light` / `dark` / `auto`. In `auto` mode, `swh_admin_color_is_dark()` falls back to the user's WP `admin_color` (`midnight`, `modern`, or `ectoplasm` → dark). The settings / reports / ticket-list controllers add the class `swh-admin-theme-dark` to `<body>` (alongside the always-present `swh-helpdesk-admin` class). The dual-class selector (`body.swh-helpdesk-admin.swh-admin-theme-dark`) is load-bearing — both classes must be present.
 
 **Token surface remapped:** `--swh-color-bg`, `--swh-color-bg-subtle`,
 `--swh-color-surface`, `--swh-color-bg-highlight`, `--swh-color-border`,
