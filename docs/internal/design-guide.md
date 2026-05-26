@@ -22,7 +22,7 @@ If you came here looking for a class name or a token, you are in the wrong doc �
 
 ### Admin
 
-- **Opt-in dark mode.** Activated per-user via the WordPress admin colour scheme. `swh_admin_color_is_dark()` (`includes/helpers.php:839-850`) returns true for `midnight`, `modern`, `ectoplasm`. The selector `body.swh-helpdesk-admin.swh-admin-theme-dark` activates the token overrides in `swh-shared.css` and the component overrides in `swh-admin.css`.
+- **Operator-selectable dark mode.** As of v4.0 the `swh_admin_theme` setting (Settings → Portal → Theme → Admin theme) takes one of three values: `light`, `dark`, or `auto`. In `auto` mode, `swh_admin_color_is_dark()` falls back to the user's WP admin colour scheme — `midnight`, `modern`, `ectoplasm` are treated as dark. The selector `body.swh-helpdesk-admin.swh-admin-theme-dark` activates the token overrides in `swh-shared.css` and the component overrides in `swh-admin.css`. Frontend portal has the matching `swh_portal_theme` setting with the same three values; `auto` follows `prefers-color-scheme`.
 - **Admin lists are scannable.** Unread badges, priority colour chips, SLA warn/breach indicators surface at a glance without requiring the operator to open each row.
 - **Two settings forms.** Main vs Tools. Tools holds destructive options and uses its own nonce. Do not move fields across the boundary without considering invariant #9 in `design-document.md`.
 
@@ -77,7 +77,7 @@ See `js-architecture.md`. The short version: vanilla JS, `@wordpress/scripts` bu
 |---|---|---|---|
 | Frontend portal | `prefers-color-scheme: dark` (auto) | `@media (prefers-color-scheme: dark)` in `swh-shared.css` | `swh-shared.css` |
 | Frontend portal escape | `swh_portal_theme=light` setting | `.swh-helpdesk-wrapper[data-swh-theme="light"]` | `swh-shared.css` |
-| Admin pages | per-user WP admin colour (`midnight`, `modern`, `ectoplasm`) | `body.swh-helpdesk-admin.swh-admin-theme-dark` | `swh-shared.css` (tokens) and `swh-admin.css` (components) |
+| Admin pages | `swh_admin_theme` setting (Light / Dark / Auto). Auto falls back to per-user WP admin colour (midnight / modern / ectoplasm) | `body.swh-helpdesk-admin.swh-admin-theme-dark` | `swh-shared.css` (tokens) and `swh-admin.css` (components) |
 | Email | `<meta name="color-scheme">` + inline `@media (prefers-color-scheme: dark)` | inline in wrapper | `swh_wrap_html_email()` at `class-email.php:145` |
 
 ## Violet theme tokens (v4.0.0, opt-in)
