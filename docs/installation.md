@@ -9,8 +9,8 @@ nav_order: 2
 
 | Requirement | Minimum |
 |-------------|---------|
-| WordPress   | 5.3+    |
-| PHP         | 7.4+    |
+| WordPress   | 6.0+    |
+| PHP         | 8.0+    |
 
 ---
 

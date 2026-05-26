@@ -8,7 +8,7 @@ It replaces the implicit "we have some tests" answer with an auditable one. A PR
 
 ## Why this exists
 
-v4.0.0 shipped with 23+ bugs that the existing suite missed across portal, inbox, drawer, REST, email, settings, and reports. The post-mortem (`docs/internal/v3.7.0-discovery.md` and session notes) found three root causes:
+v4.0.0 shipped with 23+ bugs that the existing suite missed across portal, inbox, drawer, REST, email, settings, and reports. The post-mortem (`archive/v3.7.0-discovery.md` and session notes) found three root causes:
 
 1. **Selector-coupled E2E** — tests asserted DOM shape, so UI changes "fixed" the test instead of failing it (test_59, test_69, test_70, test_71 all updated reactively during v4.0.0).
 2. **No invariant guards** — the hot invariants in `design-document.md` (status mutator, mail dispatcher, `hash_equals` token compare, portal URL ordering, rate-limit key shape, comment isolation) had zero tests.

@@ -6,27 +6,49 @@ Working-memory for AI agents on Simple WP Helpdesk. Hot invariants, dev commands
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 3.7.0 | **WP:** 5.3+ | **PHP:** 7.4+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 4.0.6 | **WP:** 6.0+ | **PHP:** 8.0+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 - **Plugin lives in:** `simple-wp-helpdesk/` subdir. Repo root holds dev tooling only.
+
+## Session start — read these every session
+
+These two docs set the rails for everything else. Re-skim at the start of every fresh session:
+
+1. **`docs/internal/planning-and-release-process.md`** — the non-negotiable planning, PR-gating, and release process. Applies to every cycle.
+2. **`docs/internal/README.md`** — table of contents + routing table for every other internal doc.
 
 ## Where to read
 
-Before working on anything non-trivial, route via `docs/internal/README.md`. Common intents:
+Route via `docs/internal/README.md`. Common intents:
 
 | Intent | Read |
 |---|---|
-| Architecture / "why is the code shaped this way?" | `docs/internal/design-document.md` |
-| Load-bearing invariants (BEFORE changing anything) | `docs/internal/design-document.md` — invariant table |
-| Conventions, naming, security hot list | `docs/internal/coding-guide.md` |
-| Testing — when to add what, commands, gotchas | `docs/internal/testing-guide.md` |
-| Threat model, capability matrix, attack surfaces | `docs/internal/security-model.md` |
-| Hooks, REST, AJAX, shortcodes — the public API | `docs/internal/api-contract.md` |
-| Post meta / comment meta / transients / options layout | `docs/internal/data-dictionary.md` |
-| Operator-tunable settings (the 7-group taxonomy) | `docs/internal/config-reference.md` |
-| UI/UX patterns, dark mode wiring | `docs/internal/design-guide.md` + `docs/internal/component-inventory.md` |
-| JS build, `@wordpress/scripts`, bundle budget | `docs/internal/js-architecture.md` |
-| Perf numbers + `make bench` | `docs/internal/performance-baseline.md` |
-| Release roadmaps | `docs/internal/release_v3.x.x_roadmap.md`, `docs/internal/release_v4.x.x_roadmap.md` |
+| **Planning / release process** | `planning-and-release-process.md` |
+| **Living roadmap (north-star)** | `roadmap.md` |
+| Architecture / "why is the code shaped this way?" | `design-document.md` |
+| Load-bearing invariants (BEFORE changing anything) | `design-document.md` — invariant table |
+| Conventions, naming, security hot list | `coding-guide.md` |
+| **Testing — top-level map** | `testing-overview.md` → per-suite docs |
+| Per-suite: PHP / E2E | `testing-guide.md` |
+| Per-suite: extended (RC sign-off) | `extended-test-plan.md` |
+| Per-suite: manual visual regression | `visual-regression-suite.md` |
+| Threat model, capability matrix, attack surfaces | `security-model.md` |
+| Hooks, REST, AJAX, shortcodes — public surface | `api-contract.md` + end-user `docs/hooks.md` |
+| **Per-area contracts** | `contract-ticket-lifecycle.md`, `contract-portal.md`, `contract-email-templates.md`, `contract-inbound-webhook.md`, `contract-anti-spam.md`, `contract-reporting.md`, `contract-file-uploads.md`, `contract-settings.md`, `contract-cron.md` |
+| **Locked architectural decisions (ADRs)** | `adr/` (no custom tables, comments-as-replies, GitHub updates, two-form save, bearer auth on webhook, token-only portal) |
+| **Glossary** | `glossary.md` — locked terminology |
+| **Doc style** | `doc-style-guide.md` — voice, structure, formatting |
+| Post meta / comment meta / transients / options layout | `data-dictionary.md` |
+| Operator-tunable settings | `config-reference.md` |
+| UI/UX patterns, dark mode wiring | `design-guide.md` + `component-inventory.md` |
+| **Accessibility (WCAG 2.2 AA)** | `accessibility.md` |
+| **Internationalization (text domain, .pot, RTL)** | `i18n.md` |
+| **Dependencies — what we depend on and rules for adding more** | `dependencies.md` |
+| JS build, `@wordpress/scripts`, bundle budget | `js-architecture.md` |
+| Perf numbers + `make bench` | `performance-baseline.md` |
+| Roadmap (per-version execution) | `release_v4.x.x_roadmap.md` (current), `archive/release_v3.x.x_roadmap.md` (shipped) |
+| Lessons learned / retrospectives | `lessons-learned.md` |
+| Parked / indefinitely deferred features | `parked_features.md` |
+| Open design questions (not yet approved) | `new_features_discussion.md` |
 | Operator / end-user docs | `docs/index.md` and the rest of `docs/*.md` (NOT `docs/internal/`) |
 
 ## Hot invariants (must hold in working memory)
@@ -62,11 +84,29 @@ If your PR touches any of these, update the corresponding internal doc:
 | Touching… | Update |
 |---|---|
 | Schema-ish state (options, post meta, comment meta, transients, CPT, capabilities) | `data-dictionary.md` |
-| A setting (add/change/remove) | `config-reference.md` |
-| A hook, REST endpoint, AJAX, or shortcode attribute | `api-contract.md` |
+| A setting (add/change/remove) | `config-reference.md` + `contract-settings.md` |
+| A hook, REST endpoint, AJAX, or shortcode attribute | `api-contract.md` + end-user `docs/hooks.md` |
 | Untrusted-input handling, auth, files, tokens | `security-model.md` |
+| Inbound webhook | `contract-inbound-webhook.md` + end-user `docs/inbound-webhook.md` |
+| Ticket lifecycle / status / merge | `contract-ticket-lifecycle.md` |
+| Portal forms / token auth / rate limiting | `contract-portal.md` |
+| Email events / templates / wrapper | `contract-email-templates.md` |
+| Anti-spam methods | `contract-anti-spam.md` |
+| Reports / KPIs / charts | `contract-reporting.md` |
+| File uploads / serving / retention | `contract-file-uploads.md` |
+| Settings page UI / save handler | `contract-settings.md` |
+| Cron / scheduled work (auto-close, retention, SLA check) | `contract-cron.md` |
+| Architectural decision worth recording | new ADR under `adr/` + this README |
+| Any new term that appears in 2+ docs | `glossary.md` |
+| Writing or editing any doc | follow `doc-style-guide.md` |
 | A shared CSS/JS primitive or design token | `component-inventory.md` |
-| User-facing feature or bug-fix | A new or extended Playwright section (see `testing-guide.md`) |
+| Anything user-visible | `accessibility.md` checklist |
+| Any user-facing string | `i18n.md` checklist |
+| Add a runtime or dev dependency | `dependencies.md` (and get user approval first) |
+| User-facing feature or bug-fix | A new or extended Playwright section (see `testing-overview.md`) |
+| Anything that changes how a release ships | `planning-and-release-process.md` |
+
+**Release-time** documentation review covers, at minimum: end-user `docs/`, all touched internal docs, `CLAUDE.md`, `README.md`, `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`. See `planning-and-release-process.md` Gate 2.
 
 ## Dev environment
 

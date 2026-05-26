@@ -1,6 +1,6 @@
 ---
 title: Security
-nav_order: 6
+nav_order: 7
 ---
 
 # Security
@@ -33,6 +33,7 @@ Three methods are available (configured in **Settings → Anti-Spam**):
 |--------|-------------|
 | **Honeypot** | A hidden form field invisible to real users; bots that fill it are silently rejected |
 | **Google reCAPTCHA v2** | Server-side verification with Google's API before ticket submission is accepted |
+| **Google reCAPTCHA Enterprise** | Score-based detection with a configurable threshold (0.0–1.0) |
 | **Cloudflare Turnstile** | Privacy-friendly challenge verified server-side before processing |
 
 Protection applies to the submission form, ticket lookup form, and portal reply/close/reopen forms.
@@ -110,6 +111,8 @@ The reply-by-email endpoint (`POST /wp-json/swh/v1/inbound-email`) requires:
 2. The sender email address must match the `_ticket_email` meta on the target ticket (verified via `hash_equals()`).
 
 This prevents unauthorized parties from injecting replies into tickets.
+
+See [Inbound Email Webhook](inbound-webhook) for full payload format, rejection reasons, and provider configuration.
 
 ---
 

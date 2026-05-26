@@ -31,3 +31,11 @@ gh_edit_view_mode: "edit"
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
+
+# Exclude internal/dev-only content from the published site.
+# These directories live in the repo for contributors but are not for end users.
+exclude:
+  - internal/
+  - superpowers/
+  - "**/*.tmp"
+  - "**/*.bak"
