@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.6
+Stable tag: 4.0.7
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,13 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.7 =
+* Security: Cleared 7 Dependabot alerts (2 high, 5 medium). All were build-time transitive devDeps from @wordpress/scripts (serialize-javascript RCE, minimatch ReDoS, webpack-dev-server, uuid). Resolved via npm overrides. None ship in the plugin. (#501)
+* Documentation: New REST API endpoint reference page covering the stable inbound-email webhook and previewing the v4.1.0 REST surface. (#500)
+* Documentation: Multi-agent fact-check audit of internal docs caught factual errors across design-document, data-dictionary, api-contract, config-reference, js-architecture, design-guide, component-inventory, and coding-guide. Added a style-guide rule against numeric source-line citations. (#502)
+* Documentation: v4.0.6 retrospective added to lessons-learned. Documents the contract-docs-from-memory finding and the "fact-check pass" default for future doc PRs. (#498)
+* CI: CHANGELOG check auto-skips on docs-only PRs via path-based detection. No more manual labeling required. (#499)
 
 = 4.0.6 =
 * Accessibility: Canned-response and ticket-template settings sections converted from non-semantic `<div>` containers to `<ul role="list">` with `<li role="listitem">` rows so screen readers announce row count + position. Visual rendering unchanged. (#458)
@@ -358,6 +365,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.7 =
+Security + documentation maintenance release. Cleared 7 Dependabot alerts on build-time devDeps (none ship in the plugin). REST API docs scaffolded ahead of v4.1.0. Multi-agent fact-check audit of internal docs caught and fixed factual errors. CHANGELOG CI gate now auto-skips docs-only PRs. No data-shape changes; safe drop-in upgrade.
 
 = 4.0.6 =
 Accessibility patch. Settings page list-of-rows sections (canned responses, ticket templates) now use proper list semantics. Auto-assignment rules table gains per-row aria-labels. Portal v2 CSAT widget announces itself to screen readers. Settings tab buttons get the documented focus ring on keyboard navigation. Plus the v3.4.x RC tooling — paramiko-based SSH executor — landed earlier in the cycle. No data-shape changes; safe drop-in upgrade.
