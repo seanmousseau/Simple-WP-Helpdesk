@@ -19,6 +19,10 @@ starting from the next release after 1.8.
 
 - **Settings: consistent group headings across tabs** (#482). General, Portal, and Integrations already used `<fieldset class="swh-settings-group"><legend>` sections; Assignment & Routing, Messages, and Anti-Spam rendered flat row lists. Wrapped them to match — Assignment & Routing now has Routing / SLA Breach Alerts / Auto-Assignment Rules groups; Messages splits into Success Messages / Error Messages; Anti-Spam wraps the table in a Spam Detection group.
 
+### Documentation
+
+- **Internal docs refresh — five lessons captured during the v4.0.2/v4.0.3 RC extended-test sessions** (#441–#445). `api-contract.md` notes that the `helpdesk_ticket` CPT is intentionally not exposed via core REST and that `/swh/v1` endpoints reject HTTP Basic Auth with regular passwords (use application passwords). `security-model.md` adds a REST authentication subsection. `data-dictionary.md` documents the `comments_clauses` short-circuit gotcha (`--post_id` vs `--post__in`) with a cross-reference in the `CommentIsolationInvariantTest` docblock. `extended-test-plan.md` + `testing/extended/README.md` document the SMTP relay 5.7.1 sender restriction. `lessons-learned.md` records the env-file `$`-must-be-single-quoted convention.
+
 ## [4.0.4] — 2026-05-25
 
 ### Fixed
