@@ -63,6 +63,27 @@ Comments carry these meta when `comment_type='helpdesk_reply'`:
 | `_swh_reply_orignames` | array<string,string> | optional | Per-comment map of attachment URL → original filename for replies and reopens. Falls back to `basename($url)` if missing. | 2.3.0 |
 | `_attachments` | string[] (URLs) | optional | Attachment URLs on the reply comment. | 1.0 |
 
+### Comment isolation — `--post_id` vs `--post__in` gotcha (#443)
+
+`swh_exclude_helpdesk_comments` (in `includes/class-ticket.php`, hooked to `comments_clauses`) hides `helpdesk_reply` rows from generic comment queries so widgets like "Recent Comments" or "comment moderation" never surface ticket activity. The filter short-circuits when the query targets a single helpdesk_ticket — but it only checks **one** query var:
+
+```php
+$post_id = isset( $query->query_vars['post_id'] ) ? (int) $query->query_vars['post_id'] : 0;
+if ( $post_id && 'helpdesk_ticket' === get_post_type( $post_id ) ) {
+    return $clauses; // skip the filter
+}
+```
+
+It reads `query_vars['post_id']` (singular). It does **NOT** honor `post__in` (array), `post_author`, or any other targeting parameter. This is intentional — defense-in-depth against generic widgets that use array-form targeting — but it's a sharp edge for tooling:
+
+| WP-CLI invocation | Behavior |
+|---|---|
+| `wp comment list --post_id=N` | ✅ Returns ticket replies (short-circuit fires) |
+| `wp comment list --post__in=N` | ❌ Returns empty (filter strips `helpdesk_reply` rows) |
+| `wp comment list --post__in=N,M` | ❌ Returns empty |
+
+Same applies to any `WP_Comment_Query` from custom code. Use `'post_id' => $ticket_id` (singular), not `'post__in' => [ $ticket_id ]`, when querying ticket replies. The `CommentIsolationInvariantTest` test class locks this contract.
+
 ## User meta keys
 
 Per-user data stored in `wp_usermeta`.

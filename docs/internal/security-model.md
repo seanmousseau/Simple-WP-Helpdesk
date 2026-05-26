@@ -80,6 +80,16 @@ Everything to the left of the box is untrusted. The bullet to the right of the b
 | Save Tools / destructive options | `manage_options` | nonce (Tools — distinct from main) |
 | Read reporting | `manage_options` | nonce on AJAX |
 
+## REST authentication
+
+All `swh/v1` endpoints authenticate via standard WP REST `permission_callback` (except `inbound-email`, which uses a `Bearer` token in the header — see #441 / #442 callouts in `api-contract.md`). This means:
+
+- **Cookie auth** — works for browser-based requests (admin UI calls).
+- **Application passwords** — work for programmatic / integration access. Operators create one at *Users → Profile → Application Passwords* and pass it as the Basic Auth password.
+- **Raw HTTP Basic Auth with a regular WP password** — does **not** work. The `wp_authenticate()` flow only accepts the user password for the login form, not for REST. A curl invocation using a regular admin password returns `401 rest_forbidden` even when the user has full admin capabilities.
+
+Operators integrating with the REST API (Zapier, Make, custom scripts) MUST use application passwords. The `testing/extended/` runbook scripts use WP-CLI over SSH for this reason — they skip the REST surface entirely to avoid the Basic Auth confusion. (#442)
+
 ## Explicit non-threats
 
 The plugin does **not** defend against:

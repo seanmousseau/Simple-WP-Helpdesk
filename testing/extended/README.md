@@ -85,6 +85,11 @@ runbook.
 python3 webhook_roundtrip.py
 
 # Negative case — sender mismatch (auto-uses $WP_TESTING_CLIENT_EMAIL_2):
+# NOTE: do NOT pass an arbitrary external address via --sender-override (e.g.
+# nobody@example.invalid). Credentialed SMTP relays reject MAIL FROM addresses
+# they don't own with 5.7.1, so the message never reaches WP. Always use an
+# alias of the same authenticated SMTP account so the relay accepts the
+# envelope and WP's hash_equals check on _ticket_email is what rejects. (#444)
 python3 webhook_roundtrip.py --expect-rejection sender_mismatch
 
 # Negative case — subject missing [TKT-XXXX]:

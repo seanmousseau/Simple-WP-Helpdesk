@@ -102,6 +102,15 @@ Error envelopes have exactly the keys named above — no extras unless documente
 
 ## REST endpoints
 
+> **The `helpdesk_ticket` CPT is intentionally NOT registered with `show_in_rest = true`.** The standard `/wp-json/wp/v2/helpdesk_ticket` routes do **not** exist for this post type — any request to them returns `404 rest_no_route`. Read/write access is via the plugin's custom `/swh/v1/...` endpoints (below) or via WP-CLI / direct DB access. This is by design — exposing the CPT through the default REST surface would bypass the plugin's `permission_callback` per-ticket gates. (#441)
+
+> **All `swh/v1` endpoints authenticate via cookie OR application password — not raw HTTP Basic Auth with a regular WP password.** A curl invocation using a regular admin password as the Basic Auth secret will return `401 rest_forbidden` even when the user has full admin capabilities. For programmatic / integration access, operators MUST create an [application password](https://wordpress.org/documentation/article/application-passwords/) (Users → Profile → Application Passwords) and use that as the Basic Auth password. Example:
+> ```bash
+> curl -u "admin:xxxx xxxx xxxx xxxx xxxx xxxx" \
+>      https://example.com/wp-json/swh/v1/palette/suggest?q=test
+> ```
+> (#442)
+
 | Method | Path | Auth | Body | Response |
 |---|---|---|---|---|
 | `POST` | `/wp-json/swh/v1/inbound-email` | `Authorization: Bearer <swh_inbound_secret>` header. `permission_callback` is `__return_true` (auth enforced inside the handler). | Parsed-email JSON; the handler reads `from`, `subject`, `body`. Subject must contain `[TKT-XXXX]`. Sender email is compared to `_ticket_email` of the matched ticket via `hash_equals`. | `200` on accepted reply; `4xx` on auth / parse / match failure. |
