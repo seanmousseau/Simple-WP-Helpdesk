@@ -473,6 +473,8 @@ function swh_render_settings_page() {
 			</div>
 
 			<div id="tab-routing" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-routing" tabindex="0" style="display:none;">
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'Routing', 'simple-wp-helpdesk' ); ?></legend>
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Default Assignee', 'simple-wp-helpdesk' ); ?></th>
 						<td><select name="swh_default_assignee"><option value=""><?php echo '-- ' . esc_html__( 'Unassigned', 'simple-wp-helpdesk' ) . ' --'; ?></option>
@@ -550,7 +552,9 @@ function swh_render_settings_page() {
 					</td>
 				</tr>
 				</table>
-				<h2><?php esc_html_e( 'SLA Breach Alerts', 'simple-wp-helpdesk' ); ?></h2>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+				<legend><?php esc_html_e( 'SLA Breach Alerts', 'simple-wp-helpdesk' ); ?></legend>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Warning Threshold', 'simple-wp-helpdesk' ); ?></th>
@@ -576,7 +580,9 @@ function swh_render_settings_page() {
 						</td>
 					</tr>
 				</table>
-				<h2><?php esc_html_e( 'Auto-Assignment Rules', 'simple-wp-helpdesk' ); ?></h2>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+				<legend><?php esc_html_e( 'Auto-Assignment Rules', 'simple-wp-helpdesk' ); ?></legend>
 				<p class="description"><?php esc_html_e( 'When a new ticket is submitted with a matching category, it is automatically assigned to the specified technician. Rules are evaluated in order; the first match wins.', 'simple-wp-helpdesk' ); ?></p>
 				<?php
 				$assignment_rules = swh_get_option( 'routing', 'assignment_rules', array() );
@@ -716,6 +722,7 @@ function swh_render_settings_page() {
 					} );
 				}());
 				</script>
+				</fieldset>
 			</div>
 
 			<div id="tab-portal" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-portal" tabindex="0" style="display:none;">
@@ -849,17 +856,25 @@ function swh_render_settings_page() {
 			</div>
 
 			<div id="tab-messages" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-messages" tabindex="0" style="display:none;">
+				<fieldset class="swh-settings-group">
+				<legend><?php esc_html_e( 'Success Messages', 'simple-wp-helpdesk' ); ?></legend>
 				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Success: Ticket Created', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_new', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Success: Reply Added', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_reply', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Success: Ticket Re-opened', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_reopen', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Success: Ticket Closed', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_closed', $defs ); ?></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Success: Ticket Links Sent', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_lookup', $defs ); ?></td></tr>
+				</table>
+				</fieldset>
+				<fieldset class="swh-settings-group">
+				<legend><?php esc_html_e( 'Error Messages', 'simple-wp-helpdesk' ); ?></legend>
+				<table class="form-table">
 					<tr><th scope="row"><?php esc_html_e( 'Error: Anti-Spam Failed', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_err_spam', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Error: Missing Fields', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_err_missing', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Error: Invalid Link', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_err_invalid', $defs ); ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Error: Expired Link', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_err_expired', $defs ); ?></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Success: Ticket Links Sent', 'simple-wp-helpdesk' ); ?></th><td><?php swh_field( 'swh_msg_success_lookup', $defs ); ?></td></tr>
 				</table>
+				</fieldset>
 			</div>
 
 			<div id="tab-spam" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-spam" tabindex="0" style="display:none;">
@@ -868,6 +883,8 @@ function swh_render_settings_page() {
 				$recaptcha_type = swh_get_option( 'tools', 'recaptcha_type', 'v2' );
 				$is_enterprise  = ( 'enterprise' === $recaptcha_type );
 				?>
+				<fieldset class="swh-settings-group">
+				<legend><?php esc_html_e( 'Spam Detection', 'simple-wp-helpdesk' ); ?></legend>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Spam Prevention', 'simple-wp-helpdesk' ); ?></th>
@@ -941,6 +958,7 @@ function swh_render_settings_page() {
 					swhUpdateSpamRows();
 				})();
 				</script>
+				</fieldset>
 			</div>
 			<div id="tab-integrations" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-integrations" tabindex="0" style="display:none;">
 				<p class="description"><?php esc_html_e( 'Third-party integrations and inbound channels. The webhook signing, REST API key management, and native Slack/Teams/Discord integrations land in future releases — placeholders below indicate what is coming.', 'simple-wp-helpdesk' ); ?></p>

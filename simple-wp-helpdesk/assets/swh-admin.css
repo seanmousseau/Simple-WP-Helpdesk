@@ -223,6 +223,30 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 
 /* ── Settings page visual hierarchy (#323) ───────────────────────────────── */
 
+/*
+ * Tab bar wrapping (#479).
+ * WP core's `.nav-tab-wrapper` is `display: block` with floated tabs and a
+ * single bottom border on the wrapper. Once we have 10+ tabs the bar wraps to
+ * a second row — and the wrapper's bottom border draws between rows, leaving
+ * any tab on the last row visually detached from the rest of the bar.
+ * Switch to flex-wrap and give each tab its own bottom border so every row
+ * gets a clean underline regardless of how the bar wraps. Drop the wrapper
+ * border to avoid the inter-row line.
+ */
+#swh-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	row-gap: 0;
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+#swh-tabs .nav-tab {
+	float: none;
+	margin: 0 4px -1px 0;
+	border-bottom: 1px solid #c3c4c7;
+}
+
 /* Dashicon alignment in plugin settings tabs only */
 #swh-tabs .dashicons {
 	font-size: 16px;
@@ -234,7 +258,8 @@ th[aria-sort="descending"] .sorting-indicator::after { content: " ▼"; font-siz
 
 /* Active tab accent — scoped to plugin settings tabs only */
 #swh-tabs .nav-tab-active {
-	border-bottom-color: var( --swh-color-primary ) !important;
+	border-bottom: 2px solid var( --swh-color-primary ) !important;
+	margin-bottom: -2px;
 	font-weight: 600;
 	color: var( --swh-color-primary );
 }
