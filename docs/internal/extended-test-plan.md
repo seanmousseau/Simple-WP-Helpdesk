@@ -148,8 +148,8 @@ This is the most-critical-and-most-likely-to-break surface. We have a dedicated 
 
 ### 2.5 — No `[TKT-XXXX]` in subject is rejected
 
-- **Do:** `python3 testing/extended/webhook_roundtrip.py --expect-rejection no_ticket_id`.
-- **Expect:** `PASS — webhook correctly rejected no_ticket_id`.
+- **Do:** `python3 testing/extended/webhook_roundtrip.py --subject-override "Plain subject no tag" --expect-rejection no_ticket_id`. **The `--subject-override` is required for this test** — without it the script falls back to `Re: [TKT-NNNN] roundtrip` and the webhook (correctly) accepts the message. Unlike `ticket_not_found` (which auto-crafts a `[TKT-999999]` subject), `no_ticket_id` requires the caller to supply a subject that genuinely lacks the tag.
+- **Expect:** `PASS — webhook correctly rejected no_ticket_id (no comment appeared within 60s).`
 - **Verify:** Paste output.
 
 ### 2.6 — Subject references a non-existent ticket UID

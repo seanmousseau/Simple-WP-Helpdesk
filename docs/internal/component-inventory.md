@@ -212,6 +212,10 @@ relying on colour alone.
   <span class="swh-panel-group-label">Priority</span>
   <select id="swh-priority" class="swh-select" name="ticket_priority">...</select>
 </div>
+<div class="swh-panel-group">
+  <span class="swh-panel-group-label">Assigned to</span>
+  <select id="swh-assigned-to" class="swh-select" name="ticket_assigned_to">...</select>
+</div>
 ```
 
 ---
@@ -301,7 +305,7 @@ relying on colour alone.
 ```html
 <a class="swh-skip-link" href="#swh-main-content">Skip to content</a>
 ...
-<main id="swh-main-content" tabindex="-1">...</main>
+<div id="swh-main-content" tabindex="-1">...</div>
 ```
 
 ---
