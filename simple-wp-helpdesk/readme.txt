@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.3
+Stable tag: 4.0.4
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,11 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.0.4 =
+* Fixed: portal v2 now renders the CSAT widget after a client closes a ticket. Previously the v4.0.3 `portal.csat_enabled` toggle was a no-op on portal v2 because the post-close redirect skipped the legacy inline-render branch. The widget now appears on any closed-ticket view until the client rates or the rating meta is set. (#477)
+* Fixed: frontend ticket submissions with `swh_default_assignee` set via wp-cli or pre-4.0 sites no longer skip the "Ticket Assigned to You" email. `swh_apply_assignment_rules()` now falls back to the legacy flat option when grouped storage hasn't been written through the settings UI. (#476)
+* Changed: Email-templates settings tab — every subject field is now labelled `(Subject)` (the abbreviated `(Sub)` variants are gone), and the "Ticket Merged" template moves into the Client section next to Auto-Closed. Eliminated the now-empty "Emails Sent to Client (System)" heading. UI-only; option keys unchanged. (#439, #440)
 
 = 4.0.3 =
 * Added: new **Portal** settings tab — surfaces frontend/admin theme picker and operator-configurable CSAT widget controls that were previously hardcoded (enable toggle, prompt text, thank-you message, skip-link label). (#471)
@@ -337,6 +342,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 * Added: Internationalization (i18n) support
 
 == Upgrade Notice ==
+
+= 4.0.4 =
+Bug-fix patch: portal v2 now renders the CSAT widget after a client closes a ticket (the v4.0.3 toggle was a no-op on portal v2); frontend submissions with `swh_default_assignee` set via wp-cli no longer skip the assignee email; Email Templates tab gains consistent `(Subject)` labels and groups "Ticket Merged" under the Client section. Safe drop-in upgrade.
 
 = 4.0.3 =
 Settings UX patch: new **Portal** and **Integrations** tabs surface configuration for previously-hardcoded features (CSAT widget) and existing storage groups (inbound webhook secret). No schema changes; safe drop-in upgrade.

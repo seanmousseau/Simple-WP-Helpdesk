@@ -716,6 +716,12 @@ function swh_apply_assignment_rules( int $ticket_id ): void {
 	if ( ! $assigned ) {
 		$default  = swh_get_option( 'routing', 'default_assignee' );
 		$assigned = is_scalar( $default ) ? (int) $default : 0;
+		if ( ! $assigned ) {
+			// Back-compat: legacy flat key. Hit when grouped storage hasn't been
+			// written through the settings UI (wp-cli `option update`, fresh sites
+			// where the operator only touched the flat option, test fixtures).
+			$assigned = swh_get_int_option( 'swh_default_assignee' );
+		}
 	}
 
 	if ( $assigned > 0 ) {

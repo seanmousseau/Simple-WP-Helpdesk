@@ -752,7 +752,7 @@ def test_10_portal_close_reopen(page: Page):
 
     mailhog_clear()
     # The menu action JS shows a window.confirm dialog before submitting.
-    page.on("dialog", lambda d: d.accept())
+    page.once("dialog", lambda d: d.accept())
     close_btn.click()
     # The v2 close handler (admin-post.php) does a redirect back to the
     # portal URL, so wait for navigation to complete.
@@ -1809,7 +1809,7 @@ def test_33_csat_prompt(page: Page):
         skip("CSAT prompt", "Close ticket menu item not found — ticket may not be in Resolved state")
         return
 
-    page.on("dialog", lambda d: d.accept())
+    page.once("dialog", lambda d: d.accept())
     close_btn.click()
     # v2 close → admin-post.php handler → wp_safe_redirect back to portal.
     with suppress(PlaywrightTimeoutError):
@@ -1829,8 +1829,13 @@ def test_33_csat_prompt(page: Page):
 
         page.locator('#swh-csat-skip').click()
         page.wait_for_timeout(500)
-        close_success_visible = page.locator('#swh-close-success').is_visible()
-        check("CSAT: skip shows #swh-close-success", close_success_visible)
+        # #swh-close-success is only emitted by the legacy POST-back render branch.
+        # The portal v2 render path (v4.0.4 #477) does not include it because the
+        # widget is rendered on every revisit of a closed ticket, not as a one-shot
+        # post-close confirmation. Skip-link still hides #swh-csat; that's what we
+        # actually care about.
+        csat_hidden_after_skip = not page.locator('#swh-csat').is_visible()
+        check("CSAT: skip hides #swh-csat widget", csat_hidden_after_skip)
         screenshot(page, "42b_csat_skipped")
     else:
         skip("CSAT widget inline render", "portal v2 does not auto-render #swh-csat after close redirect — AJAX rating path still tested below")
@@ -1855,6 +1860,7 @@ def test_33_csat_prompt(page: Page):
         with suppress(PlaywrightTimeoutError):
             close_btn2.wait_for(timeout=3000)
         if close_btn2.count() > 0:
+            page.once("dialog", lambda d: d.accept())
             close_btn2.click()
             with suppress(PlaywrightTimeoutError):
                 page.wait_for_load_state("load", timeout=8000)
@@ -3950,7 +3956,7 @@ def test_63_csat_focus_management(page: Page):
     if close_btn.count() == 0:
         skip("CSAT focus #342", "close button not present in v2 portal menu")
         return
-    page.on("dialog", lambda d: d.accept())
+    page.once("dialog", lambda d: d.accept())
     close_btn.click()
     with suppress(PlaywrightTimeoutError):
         page.wait_for_load_state("load", timeout=8000)
