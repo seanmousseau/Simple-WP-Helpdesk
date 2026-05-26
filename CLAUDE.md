@@ -33,7 +33,10 @@ Route via `docs/internal/README.md`. Common intents:
 | Per-suite: manual visual regression | `visual-regression-suite.md` |
 | Threat model, capability matrix, attack surfaces | `security-model.md` |
 | Hooks, REST, AJAX, shortcodes — public surface | `api-contract.md` + end-user `docs/hooks.md` |
-| **Per-area contracts** | `contract-ticket-lifecycle.md`, `contract-portal.md`, `contract-email-templates.md`, `contract-inbound-webhook.md`, `contract-anti-spam.md`, `contract-reporting.md`, `contract-file-uploads.md`, `contract-settings.md` |
+| **Per-area contracts** | `contract-ticket-lifecycle.md`, `contract-portal.md`, `contract-email-templates.md`, `contract-inbound-webhook.md`, `contract-anti-spam.md`, `contract-reporting.md`, `contract-file-uploads.md`, `contract-settings.md`, `contract-cron.md` |
+| **Locked architectural decisions (ADRs)** | `adr/` (no custom tables, comments-as-replies, GitHub updates, two-form save, bearer auth on webhook, token-only portal) |
+| **Glossary** | `glossary.md` — locked terminology |
+| **Doc style** | `doc-style-guide.md` — voice, structure, formatting |
 | Post meta / comment meta / transients / options layout | `data-dictionary.md` |
 | Operator-tunable settings | `config-reference.md` |
 | UI/UX patterns, dark mode wiring | `design-guide.md` + `component-inventory.md` |
@@ -92,6 +95,10 @@ If your PR touches any of these, update the corresponding internal doc:
 | Reports / KPIs / charts | `contract-reporting.md` |
 | File uploads / serving / retention | `contract-file-uploads.md` |
 | Settings page UI / save handler | `contract-settings.md` |
+| Cron / scheduled work (auto-close, retention, SLA check) | `contract-cron.md` |
+| Architectural decision worth recording | new ADR under `adr/` + this README |
+| Any new term that appears in 2+ docs | `glossary.md` |
+| Writing or editing any doc | follow `doc-style-guide.md` |
 | A shared CSS/JS primitive or design token | `component-inventory.md` |
 | Anything user-visible | `accessibility.md` checklist |
 | Any user-facing string | `i18n.md` checklist |

@@ -71,18 +71,21 @@ See the [Installation Guide](installation) for full details and the [Configurati
 | [Configuration](configuration) | All ten settings tabs explained |
 | [Shortcode Reference](shortcodes) | `[submit_ticket]`, `[helpdesk_portal]`, attributes |
 
-### Integrations
+### Integrations & email
 
 | Guide | Description |
 |-------|-------------|
 | [Inbound Email Webhook](inbound-webhook) | Accept ticket replies from Mailgun / SendGrid / Postmark / any provider |
+| [Email Setup](email-setup) | Outbound deliverability — WP Mail SMTP, SPF / DKIM / DMARC, providers |
 
 ### Reference
 
 | Guide | Description |
 |-------|-------------|
+| [Categories](categories) | Hierarchical departments + auto-assignment rules |
 | [Security](security) | Token auth, anti-spam, nonces, input handling |
-| [Troubleshooting](troubleshooting) | Common issues and FAQ |
+| [FAQ](faq) | Frequently asked questions |
+| [Troubleshooting](troubleshooting) | Common issues |
 
 ### Developer
 

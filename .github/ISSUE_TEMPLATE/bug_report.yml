@@ -1,0 +1,103 @@
+name: Bug report
+description: Something works incorrectly or breaks in Simple WP Helpdesk.
+title: "[Bug] "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill out the sections below so we can reproduce and fix it quickly.
+
+        **Security vulnerability?** Stop and use [GitHub Security Advisories](https://github.com/seanmousseau/Simple-WP-Helpdesk/security/advisories/new) instead. See [SECURITY.md](https://github.com/seanmousseau/Simple-WP-Helpdesk/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One-sentence description of the bug.
+      placeholder: e.g. Portal reply form does not show after closing a Resolved ticket
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps. Include any settings that matter.
+      placeholder: |
+        1. Open ticket TKT-123 as the client.
+        2. Click "Close ticket".
+        3. Try to reply — the form is missing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      placeholder: e.g. 4.0.6
+    validations:
+      required: true
+
+  - type: input
+    id: wp-version
+    attributes:
+      label: WordPress version
+      placeholder: e.g. 6.7.2
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: e.g. 8.2.10
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment details
+      description: Hosting type, page builder, caching plugin, anti-spam method, anything that might be relevant.
+      placeholder: |
+        - Host: WP Engine
+        - Page builder: Elementor
+        - Cache plugin: WP Rocket
+        - Anti-spam: Turnstile
+        - Other active plugins: Yoast SEO, WP Mail SMTP
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Anything in `debug.log`, browser console, network tab, or screenshots that help.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I've searched existing issues and this isn't a duplicate.
+          required: true
+        - label: I've reproduced this on a fresh test site with no other plugins active (or noted otherwise above).
+          required: false
+        - label: This isn't a security vulnerability (those go through Security Advisories).
+          required: true

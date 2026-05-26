@@ -48,6 +48,7 @@ These are **the** authoritative description of each major functional area. Read 
 | Reporting (KPIs, charts, caching) | [contract-reporting.md](contract-reporting.md) |
 | File uploads, storage, serving, retention | [contract-file-uploads.md](contract-file-uploads.md) |
 | Settings page (10 tabs, two-form save) | [contract-settings.md](contract-settings.md) |
+| Scheduled work (auto-close, retention, SLA check) | [contract-cron.md](contract-cron.md) |
 
 ## Routing — when in doubt
 
@@ -82,6 +83,9 @@ These are **the** authoritative description of each major functional area. Read 
 
 - `README.md` (this file) — index + routing.
 - `planning-and-release-process.md` — planning, kickoff, implementation, PR gates, release gate, non-negotiables.
+- `doc-style-guide.md` — voice, structure, formatting rules for every doc in this repo.
+- `glossary.md` — locked terminology used across docs and code.
+- `adr/` — Architectural Decision Records (the small set of decisions everything else hangs from).
 
 ### Architecture, design, conventions
 
@@ -102,6 +106,7 @@ These are **the** authoritative description of each major functional area. Read 
 - `contract-reporting.md`
 - `contract-file-uploads.md`
 - `contract-settings.md`
+- `contract-cron.md`
 
 ### Data, config, public surface
 
