@@ -40,20 +40,24 @@ swh_send_email(
 
 Default templates live in `swh_get_defaults()` (`includes/helpers.php`).
 
-### Events (14 total)
+### Events (16 total)
 
-**Client-facing (8):**
+Source of truth: `swh_get_defaults()` in `simple-wp-helpdesk/includes/helpers.php`. Each `_sub` key has a matching `_body` key.
+
+**Client-facing (10):**
 
 | Event | Subject key |
 |---|---|
-| New ticket received | `swh_em_new_ticket_sub` |
-| Technician replied | `swh_em_ticket_replied_sub` |
-| Status changed (no reply) | `swh_em_status_change_sub` |
-| Reply + status changed (combined) | `swh_em_combined_sub` |
-| Ticket resolved | `swh_em_ticket_resolved_sub` |
-| Ticket re-opened | `swh_em_ticket_reopened_sub` |
-| Ticket auto-closed | `swh_em_autoclose_sub` |
-| Ticket closed by client | `swh_em_closed_by_client_sub` |
+| New ticket received | `swh_em_user_new_sub` |
+| Technician replied | `swh_em_user_reply_sub` |
+| Status changed (no reply) | `swh_em_user_status_sub` |
+| Reply + status changed (combined) | `swh_em_user_reply_status_sub` |
+| Ticket resolved | `swh_em_user_resolved_sub` |
+| Ticket re-opened | `swh_em_user_reopen_sub` |
+| Ticket auto-closed | `swh_em_user_autoclose_sub` |
+| Ticket closed by client | `swh_em_user_closed_sub` |
+| Lookup ("Your open tickets") | `swh_em_user_lookup_sub` |
+| Ticket merged | `swh_em_user_merged_sub` |
 
 **Admin-facing (6):**
 
@@ -62,11 +66,11 @@ Default templates live in `swh_get_defaults()` (`includes/helpers.php`).
 | New ticket submitted | `swh_em_admin_new_sub` |
 | Client replied | `swh_em_admin_reply_sub` |
 | Client re-opened | `swh_em_admin_reopen_sub` |
-| Client closed | `swh_em_admin_close_sub` |
-| Assigned to technician | `swh_em_admin_assigned_sub` |
-| Ticket auto-closed (admin) | `swh_em_admin_autoclose_sub` |
+| Client closed | `swh_em_admin_closed_sub` |
+| Assigned to technician | `swh_em_assigned_sub` |
+| SLA breach digest (daily roll-up) | `swh_em_admin_sla_breach_sub` |
 
-Each has a matching `…_body` key.
+There is **no** admin auto-close template — admins receive the `swh_ticket_closed` action signal when auto-close fires, not a dedicated email.
 
 ### Placeholders
 

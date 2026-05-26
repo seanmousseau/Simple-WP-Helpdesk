@@ -12,6 +12,8 @@ Simple WP Helpdesk exposes the following WordPress filters and actions for custo
 
 ## Filters
 
+> ⚠️ **All filters on this page are deprecated as of v4.0** and continue to fire only for back-compatibility (they emit `_doing_it_wrong` notices under `WP_DEBUG`). Earliest scheduled removal: **v4.2**, per the two-minor-release deprecation window. New integrations should subscribe to **action hooks** (next section) and watch the [Deprecation Policy](developer/deprecations) for replacements as v4.1 / v4.2 land. If you're already hooked into one of these filters, please open a feature request describing your use case so we can shape the right replacement before removal.
+
 ### `swh_ticket_statuses`
 
 Modify the array of available ticket statuses.

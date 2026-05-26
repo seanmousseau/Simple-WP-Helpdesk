@@ -12,10 +12,10 @@ All four jobs are registered in `swh_activate()` (`simple-wp-helpdesk/includes/c
 
 | Hook | First-fire offset | Handler | Purpose |
 |---|---|---|---|
-| `swh_autoclose_event` | `time()` (immediate) | `swh_run_autoclose()` | Closes `Resolved` tickets after N days of inactivity |
-| `swh_retention_tickets_event` | `time() + 1800` (+30 min) | `swh_run_retention_tickets()` | Deletes tickets inactive for N days |
-| `swh_retention_attachments_event` | `time() + 3600` (+60 min) | `swh_run_retention_attachments()` | Deletes physical files older than N days |
-| `swh_sla_check_event` | `time() + 5400` (+90 min) | `swh_run_sla_check()` | Flags tickets exceeding SLA warn / breach thresholds |
+| `swh_autoclose_event` | `time()` (immediate) | `swh_process_autoclose()` | Closes `Resolved` tickets after N days of inactivity |
+| `swh_retention_tickets_event` | `time() + 1800` (+30 min) | `swh_process_retention_tickets()` | Deletes tickets inactive for N days |
+| `swh_retention_attachments_event` | `time() + 3600` (+60 min) | `swh_process_retention_attachments()` | Deletes physical files older than N days |
+| `swh_sla_check_event` | `time() + 5400` (+90 min) | `swh_process_sla_check()` | Flags tickets exceeding SLA warn / breach thresholds |
 
 The staggered offsets are deliberate. Don't change them without recomputing collisions.
 
@@ -31,12 +31,11 @@ The staggered offsets are deliberate. Don't change them without recomputing coll
 
 **Behavior:**
 1. If `swh_autoclose_days <= 0`, exit.
-2. Query `helpdesk_ticket` posts with `_ticket_status = swh_resolved_status` and `post_modified <` (now − N days).
+2. Query `helpdesk_ticket` posts with `_ticket_status = swh_resolved_status` AND `_resolved_timestamp <= now − N × 86400`. Tickets without a `_resolved_timestamp` (legacy) are not auto-closed.
 3. For each match: `swh_set_ticket_status( $ticket_id, $closed_status )`.
-4. Send admin auto-close notification via `swh_send_email( …, 'swh_em_admin_autoclose_*', … )`.
-5. Send client auto-close notification.
+4. Send the client auto-close notification (`swh_em_user_autoclose_*`). **There is no separate admin auto-close template** — admins receive the standard `swh_ticket_closed` action signal instead.
 
-**Batching:** capped at 50 tickets per tick to avoid timeouts on large sites. Remaining tickets caught on the next hour.
+**Batching:** capped at **2 tickets per tick** (intentionally conservative). Remaining tickets caught on subsequent hours.
 
 **Hooks fired:** `swh_ticket_status_changed`, `swh_ticket_closed` (via `swh_set_ticket_status`).
 
@@ -56,11 +55,11 @@ The staggered offsets are deliberate. Don't change them without recomputing coll
 
 **Behavior:**
 1. If `days <= 0`, exit.
-2. Query tickets where `post_modified <` (now − N days) AND status not in `[swh_default_status, in-progress, …]` — i.e. anything that has progressed.
-3. For each match: delete ticket + all `helpdesk_reply` comments + all attached files (`swh_delete_ticket_files`).
+2. Query **any** `helpdesk_ticket` where `post_modified <` (now − N days). **No status filter is applied** — open tickets that have been inactive long enough will also be deleted. Operators must set `swh_retention_tickets_days` to a value high enough that this matches their policy.
+3. For each match: delete ticket + all `helpdesk_reply` comments + all attached files.
 4. Bypass trash (force delete).
 
-**Batching:** 25 tickets per tick. Lower than auto-close because each deletion involves several filesystem ops.
+**Batching:** **1 ticket per tick.** Intentionally conservative — each deletion involves several filesystem ops and a deep WP cleanup.
 
 **Hooks fired:** standard WP `deleted_post`, `delete_attachment`. No SWH-specific delete hook today (potential roadmap item).
 
@@ -79,11 +78,11 @@ The staggered offsets are deliberate. Don't change them without recomputing coll
 
 **Behavior:**
 1. If `days <= 0`, exit.
-2. Find attachments under `wp-content/uploads/swh-helpdesk/` older than N days.
-3. Delete the **file only** — the attachment post stays so the conversation history reads "[file deleted]" rather than disappearing.
-4. Update the attachment post's `_wp_attached_file` meta to flag deletion (or remove the meta, depending on implementation).
+2. Walk **one ticket per tick**, scanning its root-level attachments (`_ticket_attachments` meta) and reply-level attachments (`_reply_attachments` comment meta) for files older than N days.
+3. Delete each old file via URL (`swh_delete_file_by_url`), clear the matching meta keys, and force-delete any standalone attachment posts that hung off the ticket.
+4. Append a single "System Maintenance" internal-note comment to the ticket summarising what was purged, so the conversation history remains readable.
 
-**Batching:** 100 files per tick.
+**Batching:** **1 ticket and 1 comment per tick.** The job walks the dataset slowly to avoid timeouts; a backlog catches up over many ticks.
 
 **Safety:** every delete path goes through `realpath()` check.
 
@@ -98,25 +97,25 @@ The staggered offsets are deliberate. Don't change them without recomputing coll
 **Inputs:**
 - `swh_sla_warn_hours` setting (0 = disabled).
 - `swh_sla_breach_hours` setting (0 = disabled).
-- `swh_sla_open_statuses` filter (default: every status except resolved / closed).
+- `swh_sla_open_statuses` filter — default is the literal list `['Open', 'In Progress', 'Pending']`. **Custom statuses are not included unless the operator (or an integrator) extends this list via the filter.**
 
 **Behavior:**
 1. If both warn and breach are 0, exit.
 2. Query open tickets (status in `swh_sla_open_statuses`).
 3. For each ticket, compute age = now − `post_date`.
-4. Compare age against thresholds; update `_swh_sla_state` meta:
-   - `none` (under warn threshold)
+4. Compare age against thresholds; update `_ticket_sla_status` meta:
+   - **absent** (under warn threshold — no meta is written)
    - `warn` (between warn and breach)
    - `breach` (above breach threshold)
 5. On first transition into `breach`, fire `swh_sla_breached( $ticket_id, $minutes_over )`. Subsequent ticks for the same ticket do not re-fire.
-6. Aggregate a digest of breached tickets and send to the fallback alert address via `swh_send_email( …, 'swh_em_sla_breach_*', … )`.
+6. Aggregate a digest of breached tickets and send to the fallback alert address.
 
-**Batching:** none today — the SLA check is computationally cheap (a meta read + diff per ticket). May need batching if open-ticket counts grow beyond ~10k.
+**Batching:** capped at **20 tickets per tick**.
 
 **Hooks fired:** `swh_sla_breached` (first transition only).
 
 **UI side effects:**
-- Status badge classes (`.swh-badge-sla-warn`, `.swh-badge-sla-breach`) rendered based on `_swh_sla_state` meta.
+- Status badge classes (`.swh-badge-sla-warn`, `.swh-badge-sla-breach`) rendered based on `_ticket_sla_status` meta.
 - Polite ARIA-live announcement on the badge when it transitions.
 
 ---
@@ -173,7 +172,7 @@ Five steps:
 1. **Pick a unique offset** that doesn't collide with the existing four. Current free slots within the first hour: +15 min, +45 min. Don't reuse 0 / +30 / +60 / +90.
 2. **Register in `swh_activate()`**: `wp_schedule_event( time() + OFFSET, 'hourly', 'swh_<event>' );`.
 3. **Clear in `swh_deactivate()`**: `wp_clear_scheduled_hook( 'swh_<event>' );`.
-4. **Hook the handler**: `add_action( 'swh_<event>', 'swh_run_<event>' );`.
+4. **Hook the handler**: `add_action( 'swh_<event>', 'swh_process_<event>' );`.
 5. **Add a unit test** in `tests/Unit/Cron/` covering disabled / happy-path / batch-cap.
 
 Update this doc with the new job in the inventory table.

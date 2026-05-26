@@ -29,7 +29,7 @@ https://yoursite.com/<helpdesk-page>/?swh_ticket=<ticket_id>&token=<20-char-toke
 
 - `swh_ticket` is the **post ID**, not the UID. Internal to the URL contract.
 - `token` is the `_ticket_token` meta value — 20 alphanumeric chars from `wp_generate_password(20, false)`.
-- Token expiry is the `_ticket_token_exp` meta — Unix timestamp, default 90 days.
+- Token generation time is stored in `_ticket_token_created` (Unix timestamp). Expiry = creation + `swh_token_expiration_days` × 86400 (default 90 days; 0 disables expiry). Tickets created before v1.9.0 have no `_ticket_token_created` and are grandfathered.
 
 The shortcode detects these params, validates them, and renders the portal view. Without them, it renders the submission form (logged-out) or My Tickets dashboard (logged-in clients).
 
@@ -48,7 +48,7 @@ For every portal request:
 3. Post exists and is `helpdesk_ticket`.
 4. `_ticket_token` meta is set and non-empty (empty-token guard — `hash_equals('', '')` would otherwise pass).
 5. `hash_equals( $stored_token, $supplied_token ) === true`.
-6. `_ticket_token_exp` is in the future (or absent — older tickets pre-dating expiry don't fail).
+6. `_ticket_token_created` + (`swh_token_expiration_days` × 86400) is in the future. Absent `_ticket_token_created` is grandfathered (pre-v1.9.0). `swh_token_expiration_days = 0` disables expiry entirely.
 
 Any failure → render the lookup form with the focus moved to the email field. Never leak which step failed — the messages are deliberately generic.
 
@@ -88,7 +88,7 @@ The presence of distinct per-action rate-limit keys is a hard invariant — see 
 
 ### Reopen
 
-- Status → `swh_reopen_status` (default `Open`) via `swh_set_ticket_status()`.
+- Status → `swh_reopened_status` (default `Open`) via `swh_set_ticket_status()`.
 - Triggers `swh_ticket_reopened`.
 - Optional `reason` text becomes the body of a new `helpdesk_reply` comment.
 - Sends admin notification.

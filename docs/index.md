@@ -40,7 +40,7 @@ See the [Installation Guide](installation) for full details and the [Configurati
 | **Frontend forms** | `[submit_ticket]` shortcode handles submission, portal, and ticket lookup in one page |
 | **Secure client portal** | Token-based access — clients view history, reply, upload files, close and reopen |
 | **10-tab settings panel** | General · Assignment & Routing · Portal · Email Templates · Messages · Anti-Spam · Integrations · Canned Responses · Templates · Tools |
-| **14 email templates** | Fully customizable HTML + plain-text, dynamic placeholders, conditional `{if}` blocks |
+| **16 email templates** | Fully customizable HTML + plain-text, dynamic placeholders, conditional `{if}` blocks |
 | **Inbound email webhook** | Accept replies from Mailgun, SendGrid, Postmark or any provider via `POST /wp-json/swh/v1/inbound-email` with HMAC bearer auth |
 | **Anti-spam** | Honeypot, Google reCAPTCHA v2, Cloudflare Turnstile |
 | **Rate limiting** | CDN/proxy-aware, persistent, per-action keys, survives cache flushes |

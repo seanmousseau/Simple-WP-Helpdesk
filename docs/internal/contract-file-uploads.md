@@ -14,7 +14,7 @@ Attachments on tickets and replies. End-to-end: client upload → MIME validatio
 | Protection | `.htaccess` with `Deny from all` (Apache) — direct URL access returns 403 |
 | Filenames | Original filename preserved, deduplicated by WP's `wp_unique_filename` |
 | Attachment posts | Standard WP attachment CPT (`attachment` post type, `post_parent` = ticket ID) |
-| Per-ticket meta | `_ticket_attachments` on the ticket — serialized array of attachment post IDs |
+| Per-ticket meta | `_ticket_attachments` on the ticket — array of file URLs (root-level attachments). See `data-dictionary.md` for the canonical shape. |
 
 Files are never served by direct URL. All downloads go through the proxy described below.
 
@@ -34,10 +34,10 @@ Both extension and MIME are validated by WP's `wp_handle_upload` flow. Custom co
 
 | Limit | Source | Default |
 |---|---|---|
-| Per-file | `swh_max_upload_mb` setting | 5 MB |
-| Per-submission count | `swh_max_files` setting | 5 (0 = unlimited) |
-| PHP `upload_max_filesize` | server | must be ≥ `swh_max_upload_mb` |
-| PHP `post_max_size` | server | must be ≥ `swh_max_upload_mb` × `swh_max_files` |
+| Per-file | `swh_max_upload_size` setting | 5 MB |
+| Per-submission count | `swh_max_upload_count` setting | 5 (0 = unlimited) |
+| PHP `upload_max_filesize` | server | must be ≥ `swh_max_upload_size` |
+| PHP `post_max_size` | server | must be ≥ `swh_max_upload_size` × `swh_max_upload_count` |
 
 Enforced client-side in JS (XHR progress; pre-upload size check) **and** server-side in the upload handler. Server-side is authoritative.
 
@@ -65,24 +65,26 @@ Staff can upload attachments via the standard WP media uploader; they're attache
 
 ## Serving
 
-`swh_serve_file( int $attachment_id )` — defined in `includes/class-ticket.php`. Handles every download request.
+`swh_serve_file()` — defined in `includes/class-ticket.php`, registered on `init` priority 1. Takes no arguments; reads `$_GET['swh_file']`, `$_GET['swh_ticket']`, and `$_GET['token']` directly.
 
 Validation sequence:
 
-1. Confirm attachment exists and `post_parent` is a `helpdesk_ticket`.
-2. Confirm caller authority:
-   - Logged-in staff with `edit_post` cap → allowed.
-   - Anonymous → require `swh_ticket` + `token` query params; verify against the ticket's `_ticket_token` with `hash_equals()`.
-3. `realpath()` the resolved file path; confirm it's under the protected upload directory. Anything outside → 403.
-4. Stream via `readfile()` with correct `Content-Type` and `Content-Disposition: attachment`.
+1. All three query params (`swh_file`, `swh_ticket`, `token`) must be present and non-empty.
+2. Sanitize filename via `sanitize_file_name()`.
+3. Confirm ticket exists and is `helpdesk_ticket`.
+4. Confirm caller authority:
+   - Logged-in staff with the `edit_posts` capability → allowed.
+   - Anonymous → verify `token` against the ticket's `_ticket_token` meta with `hash_equals()`.
+5. `realpath()` the resolved file path; confirm it's under the protected upload directory. Anything outside → 403.
+6. Stream via `readfile()` with correct `Content-Type` and `Content-Disposition: attachment`.
 
-The handler is wired through a rewrite rule so download URLs look like:
+Download URLs use plain query args, not a REST route:
 
 ```text
-https://yoursite.com/wp-json/swh/v1/file/<attachment_id>?swh_ticket=<id>&token=<token>
+https://yoursite.com/?swh_file=<filename>&swh_ticket=<id>&token=<token>
 ```
 
-(REST-style URLs were adopted in v4.0; older ?action=swh_file URLs remain supported.)
+A REST-style `/wp-json/swh/v1/file/…` endpoint is on the roadmap (see `roadmap.md`) but **not implemented today**.
 
 ---
 
@@ -122,7 +124,7 @@ The single most-attacked surface in any file-serving plugin. Hard rules:
 1. **MIME + extension are both checked** before storage.
 2. **All serving goes through `swh_serve_file()`**; no direct `wp-content/uploads/swh-helpdesk/` URLs are valid.
 3. **Anonymous access requires a valid portal token** (constant-time compared).
-4. **Staff access requires `edit_post` on the parent ticket** — not just `read_post`.
+4. **Staff access requires `edit_posts` on the parent ticket** — not just `read_post`.
 5. **Delete paths are `realpath`-validated.**
 6. **Retention runs in micro-batches** (no whole-table scans inside a single cron tick).
 
@@ -150,7 +152,7 @@ The single most-attacked surface in any file-serving plugin. Hard rules:
 
 ## What integrators may NOT rely on
 
-- The exact `_ticket_attachments` storage shape (it's PHP-serialized today; might become JSON).
+- The exact `_ticket_attachments` storage shape (URL list today; might change).
 - Internal helper names not exposed in `docs/hooks.md`.
 
 ---

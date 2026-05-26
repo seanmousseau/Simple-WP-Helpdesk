@@ -55,6 +55,10 @@ These are restated in `contract-settings.md`:
 - The Tools form's nonce action is `swh_save_tools_action`. Don't reuse the main action name.
 - Both handlers verify `current_user_can( 'manage_options' )` separately.
 
+## Evolution
+
+The pattern has since extended to **three** form-submission paths: the original Main + Tools split is still in place, and the Tools tab additionally has a separate **danger-zone** form (`swh_danger_action` nonce) for Purge / GDPR / Factory Reset. The split rationale is unchanged — the danger-zone form just makes the segregation more explicit. See `contract-settings.md` for the current shape.
+
 ## See also
 
 - `contract-settings.md` — full settings contract.

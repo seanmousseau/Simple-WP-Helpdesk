@@ -17,7 +17,7 @@ The lifecycle of a ticket from submission through resolution, closure, reopening
 | Client email | `wp_postmeta._ticket_email` | Sanitized email |
 | Unique ID | `wp_postmeta._ticket_uid` | `TKT-<numeric>` format. Used by inbound webhook + URLs |
 | Portal token | `wp_postmeta._ticket_token` | 20-char alphanumeric (`wp_generate_password`). Rotates on lookup |
-| Token expiry | `wp_postmeta._ticket_token_exp` | Unix timestamp; default 90-day TTL |
+| Token created-at | `wp_postmeta._ticket_token_created` | Unix timestamp; expiry computed against `swh_token_expiration_days` (default 90; 0 disables). Pre-v1.9.0 tickets without this meta are grandfathered and never expire. |
 | Assignee | `wp_postmeta._ticket_assigned_to` | WP user ID (0 = unassigned) |
 | CSAT rating | `wp_postmeta._ticket_csat` | Int 1–5, or absent |
 | Replies (public) | `wp_comments` with `comment_type = helpdesk_reply` | Includes client, technician, and inbound-email replies |
@@ -47,7 +47,7 @@ The "Resolved" and "Closed" labels are tracked in `swh_resolved_status` and `swh
 - Any → any is allowed structurally. Status validation is by **label match**, not by graph.
 - Initial creation: status = `swh_default_status` (default `Open`).
 - Client `Close` action on a Resolved ticket: status → `swh_closed_status`.
-- Client `Reopen` action on a Closed ticket: status → `swh_reopen_status` (default `Open`).
+- Client `Reopen` action on a Closed ticket: status → `swh_reopened_status` (default `Open`).
 - Inbound email reply on Resolved/Closed: status → first label in `swh_get_statuses()` (default `Open`).
 - Auto-close cron: Resolved → Closed after `swh_autoclose_days` days of inactivity (0 disables).
 
@@ -61,7 +61,7 @@ The "Resolved" and "Closed" labels are tracked in `swh_resolved_status` and `swh
 
 2. **`swh_send_email( $to, $subject_key, $body_key, $data, $attachments=array(), $ticket_id=0 ): bool`** is the ONLY correct mail dispatcher for ticket-related mail. Direct `wp_mail()` calls skip the template parser, conditional `{if}` blocks, the HTML wrapper, and the watcher-CC injection.
 
-3. **Portal URL ordering:** when creating or re-creating a portal URL, store `_ticket_token` (and `_ticket_token_exp`) **before** calling `swh_get_secure_ticket_link( $ticket_id )`. Otherwise the helper returns `false` and the email falls back to a wrong URL.
+3. **Portal URL ordering:** when creating or re-creating a portal URL, store `_ticket_token` (and `_ticket_token_created`) **before** calling `swh_get_secure_ticket_link( $ticket_id )`. Otherwise the helper returns `false` and the email falls back to a wrong URL.
 
 4. **Token comparison uses `hash_equals()`**, never `==`.
 

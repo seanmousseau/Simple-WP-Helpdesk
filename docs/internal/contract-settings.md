@@ -41,16 +41,17 @@ The Canned/Templates/Tools group key collision is historical and documented in `
 
 ---
 
-## Two-form pattern
+## Multi-form save pattern
 
-There are **two** independent forms on the page, each with its own nonce. This is a hard invariant — moving settings between them silently resets the moved ones.
+The settings page has **three** independent form-submission paths, each with its own nonce. This is a hard invariant — moving fields between paths silently resets them on save.
 
 | Form | Nonce action | Nonce field | Owns |
 |---|---|---|---|
 | Main settings | `swh_save_settings_action` | `swh_settings_nonce` | All tabs except the Tools tab |
-| Tools form | `swh_save_tools_action` | `swh_tools_nonce` | `swh_retention_*`, `swh_delete_on_uninstall`, factory reset, GDPR purge |
+| Tools — retention | `swh_save_tools_action` | `swh_tools_nonce` | `swh_retention_*`, `swh_delete_on_uninstall` |
+| Tools — danger zone | `swh_danger_action` | `swh_danger_nonce` | Purge All Tickets, GDPR Email Purge, Factory Reset (one shared nonce; each action discriminates on its own POST flag) |
 
-Why separate: the Tools form handles **dangerous** operations (purge, reset) and is intentionally segregated to make it harder for unrelated save handlers to trigger them.
+Why separate: the Tools tab handles **dangerous** operations (purge, reset). They are intentionally segregated from the main save handler so that an unrelated save can't trigger them, and the danger-zone actions share a single dedicated nonce to keep destructive operations behind a clearly-named action key.
 
 ---
 
@@ -130,7 +131,7 @@ Auto-dismisses, dismissable via the × button, slides in from bottom-right. Used
 
 ## Tools tab — the danger zone
 
-Three actions, each behind a confirmation dialog and its own nonce:
+Three actions, each behind a confirmation dialog, all sharing the `swh_danger_action` nonce (discriminated by the per-action POST flag — `swh_purge_tickets`, `swh_gdpr_delete`, `swh_factory_reset`):
 
 | Action | Effect |
 |---|---|

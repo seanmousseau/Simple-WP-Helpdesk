@@ -133,9 +133,9 @@ Unreplaced placeholders are automatically removed from the final output.
 
 The reply-by-email webhook extracts the ticket ID by matching `[TKT-XXXX]` in the inbound subject. **Keep the `[TKT-{ticket_id}]` token in every outbound subject template** or replies cannot be threaded back to the ticket. See [Inbound Email Webhook](inbound-webhook).
 
-### Email events (14 templates)
+### Email events (16 templates)
 
-**Sent to client:**
+**Sent to client (10):**
 
 - New ticket received (confirmation)
 - Technician replied
@@ -145,15 +145,17 @@ The reply-by-email webhook extracts the ticket ID by matching `[TKT-XXXX]` in th
 - Ticket re-opened
 - Ticket auto-closed
 - Ticket closed by client (confirmation)
+- Lookup — "Your open tickets" (sent by the lookup form)
+- Ticket merged (when an admin merges a duplicate)
 
-**Sent to technician/admin:**
+**Sent to technician/admin (6):**
 
 - New ticket submitted
 - Client replied
 - Client re-opened ticket
 - Client closed ticket
 - Ticket assigned to technician
-- Ticket auto-closed (admin copy)
+- SLA breach digest (daily roll-up)
 
 ### Branding
 

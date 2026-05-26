@@ -50,7 +50,7 @@ Skipping anti-spam on any of these is a regression. The portal actions inherit i
 | `swh_turnstile_site_key` | Turnstile |
 | `swh_turnstile_secret_key` | Turnstile |
 
-Defaults all blank — `none` is the safe fallback if keys aren't configured.
+Default `swh_spam_method` is **`honeypot`** — zero-friction protection out of the box, no keys required. The other options (reCAPTCHA, Turnstile) are opt-in once the operator saves their keys. Selecting a method without saving keys results in the form rejecting submissions (fail-closed).
 
 ---
 
@@ -58,7 +58,7 @@ Defaults all blank — `none` is the safe fallback if keys aren't configured.
 
 Hidden field named like a real field but invisible to humans. Bots that auto-fill every field get caught. Zero user friction; no third-party network call.
 
-- Field: `swh_hp_email` (intentionally plausible-looking).
+- Field: `swh_website_url_hp` (intentionally plausible-looking).
 - Rendered with inline CSS `position:absolute;left:-9999px;height:0;width:0;` plus `tabindex="-1"`.
 - Submission with the field populated → reject with the configured "Spam Check Failed" message.
 

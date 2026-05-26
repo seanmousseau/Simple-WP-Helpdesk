@@ -8,13 +8,13 @@ This is the project's coding-conventions reference. Style is enforced by automat
 
 | Layer | Version floor | Source |
 |---|---|---|
-| PHP | 7.4 | `Requires PHP:` header in `simple-wp-helpdesk/simple-wp-helpdesk.php:7`. |
-| WordPress | 5.3 | `Requires at least:` in the same header. |
+| PHP | 8.0 | `Requires PHP:` header in `simple-wp-helpdesk/simple-wp-helpdesk.php`. |
+| WordPress | 6.0 | `Requires at least:` in the same header. |
 | PHPStan | level 9 | `phpstan.neon`. Requires PHP 8.1+ to run (dev-time). |
 | PHPCS ruleset | WordPress Coding Standards | `.phpcs.xml`. Zero errors and zero warnings required. |
 | JS build | `@wordpress/scripts` | `package.json`. Output to `simple-wp-helpdesk/assets/dist/`. Vanilla JS — no JSX in the current PoC. |
 
-We do not use features beyond the PHP 7.4 baseline in shipped plugin code. Dev-time tooling (PHPStan, PHPUnit) may require newer PHP.
+We do not use features beyond the PHP 8.0 baseline in shipped plugin code. Dev-time tooling (PHPStan, PHPUnit) may require newer PHP.
 
 ## Naming
 
