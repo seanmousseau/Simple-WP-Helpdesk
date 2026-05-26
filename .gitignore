@@ -27,6 +27,11 @@ testing/screenshots/
 # Remember plugin (session memory, generated at runtime)
 .remember/
 
+# Local agent session artifacts (not for tracking)
+docs/superpowers/
+.claude/
+.playwright-mcp/
+
 # Git worktrees
 .worktrees/
 
