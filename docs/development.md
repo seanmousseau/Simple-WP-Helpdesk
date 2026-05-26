@@ -1,6 +1,6 @@
 ---
 title: Development Guide
-nav_order: 7
+nav_order: 9
 has_children: true
 ---
 
@@ -39,7 +39,7 @@ Simple-WP-Helpdesk/
     │   ├── class-ticket.php             # File proxy, uploads, deletion, comment filters
     │   └── class-cron.php               # Auto-close, SLA check, retention (tickets + files)
     ├── admin/
-    │   ├── class-settings.php           # Settings page render + save handler (8 tabs)
+    │   ├── class-settings.php           # Settings page render + save handler (10 tabs)
     │   ├── class-ticket-editor.php      # Meta boxes, save_post, conversation UI
     │   ├── class-ticket-list.php        # Columns, sorting, filters, bulk actions
     │   ├── class-reporting.php          # Reporting AJAX endpoints (status, resolution, trend, KPI)
@@ -47,8 +47,11 @@ Simple-WP-Helpdesk/
     ├── frontend/
     │   ├── class-shortcode.php          # [submit_ticket] + [helpdesk_portal] shortcodes
     │   └── class-portal.php             # Client portal view
+    ├── src/                             # PSR-4 namespaced classes (SWH\…) — see below
     ├── vendor/plugin-update-checker/    # GitHub auto-updater library
     ├── assets/
+    │   ├── src/                         # JS source (built via @wordpress/scripts)
+    │   ├── dist/                        # Built JS output (commit-tracked)
     │   ├── swh-shared.css               # Design tokens + shared components
     │   ├── swh-admin.css                # Admin-only styles
     │   ├── swh-frontend.css             # Frontend styles
@@ -238,21 +241,17 @@ echo '<span class="swh-badge swh-badge-' . esc_attr( $status_slug ) . '">'
 
 ## Inbound Email Webhook
 
-The webhook endpoint is registered at `POST /wp-json/swh/v1/inbound-email`.
+End-user setup, payload format, response codes, and provider examples (Mailgun, SendGrid, Postmark) live in [Inbound Email Webhook](inbound-webhook).
 
-**Authentication:** `Authorization: Bearer <swh_inbound_secret>` header.
+Implementation notes for developers:
 
-**Payload fields:**
+- Handler: `swh_handle_inbound_email()` in `simple-wp-helpdesk/includes/class-email.php`.
+- Endpoint registration: `register_rest_route( 'swh/v1', '/inbound-email', … )` — permission callback returns `true` because auth is enforced inside the handler via `hash_equals()` against the bearer header.
+- Soft failures (`sender_mismatch`, `no_ticket_id`, `ticket_not_found`, `empty_body`, `comment_insert_failed`) return HTTP `200` with `success: false` to discourage mail-provider retry storms.
+- Hard failures return real HTTP errors: `401 swh_unauthorized` (bad/missing bearer), `503 swh_not_configured` (blank secret).
+- The endpoint creates `helpdesk_reply` comments only — it cannot create `_is_internal_note=1` comments.
 
-| Field | Description |
-|-------|-------------|
-| `sender` | Sender email address (`from` accepted as fallback) |
-| `subject` | Email subject (must contain `[TKT-XXXX]`) |
-| `body-plain` | Message body (`text` accepted as fallback; lines beginning with `>` are stripped as quoted reply) |
-
-The handler extracts the ticket ID from `[TKT-XXXX]` in the subject, verifies the sender matches `_ticket_email` via `hash_equals()`, strips quoted reply lines, and inserts a new reply comment.
-
-**Docker note:** Apache strips `Authorization` headers before PHP. In Docker-based test environments, bypass HTTP entirely and call `swh_handle_inbound_email()` directly via `wp eval`.
+**Docker note:** Apache strips `Authorization` headers before PHP in some configurations. In Docker-based test environments, bypass HTTP entirely and call `swh_handle_inbound_email()` directly via `wp eval`.
 
 ---
 

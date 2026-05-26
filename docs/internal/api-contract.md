@@ -6,7 +6,7 @@
 
 **Public** (covered by the SemVer policy below):
 
-- Action hooks documented in `docs/developer/hooks.md`.
+- Action hooks documented in `docs/hooks.md`.
 - Filter hooks listed under "Filter hooks" in this doc.
 - The REST endpoint `POST /wp-json/swh/v1/inbound-email`.
 - The `nopriv` AJAX endpoint `wp_ajax_nopriv_swh_submit_csat`.
@@ -49,7 +49,7 @@ When MAJOR is unavoidable, the previous behaviour is wrapped in `simple-wp-helpd
 
 ## Action hooks
 
-Listed in `docs/developer/hooks.md`. Enumerated for reference:
+Listed in `docs/hooks.md`. Enumerated for reference:
 
 | Hook | Signature | Since |
 |---|---|---|
@@ -63,7 +63,7 @@ Listed in `docs/developer/hooks.md`. Enumerated for reference:
 | `swh_csat_submitted` | `(int $ticket_id, int $rating)` | 3.0.0 |
 | `swh_sla_breached` | `(int $ticket_id, int $minutes_over)` | 3.0.0 |
 
-See `docs/developer/hooks.md` for usage examples and full documentation.
+See `docs/hooks.md` for usage examples and full documentation.
 
 ## Filter hooks
 

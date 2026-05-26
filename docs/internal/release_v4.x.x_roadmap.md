@@ -12,7 +12,7 @@ Last updated: 2026-05-25
 
 Each release builds on the last. The order is load-bearing: **v4.1 needs the v3.7 hooks + v4.0 settings migration, v4.2 needs the v4.1 REST surface, v4.3 needs v4.2 signed webhooks.** Don't reorder.
 
-> ⚠️ **Foundation in v3.7.** Several primitives that v4.x depends on land in v3.7.0 ("v4 Foundations") rather than v4.0 — lifecycle action hooks, `swh_get_option()` helper, deprecation helper, JS architecture, PSR-4 autoload, component inventory, perf baseline. See `release_v3.x.x_roadmap.md` for the full list. v4.x assumes those primitives are in place.
+> ⚠️ **Foundation in v3.7.** Several primitives that v4.x depends on land in v3.7.0 ("v4 Foundations") rather than v4.0 — lifecycle action hooks, `swh_get_option()` helper, deprecation helper, JS architecture, PSR-4 autoload, component inventory, perf baseline. See `archive/release_v3.x.x_roadmap.md` for the full list. v4.x assumes those primitives are in place.
 
 ---
 

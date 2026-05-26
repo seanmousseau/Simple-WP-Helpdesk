@@ -146,7 +146,7 @@ These are non-negotiable. The pre-push hook enforces #1; reviewers enforce the r
 1. **`make test-docker` passes locally before push.** No `--no-verify`. No host-PHP fallback.
 2. **Schema-ish change?** If you added, renamed, or removed any option / post meta / comment meta / transient / capability / CPT / taxonomy — update `data-dictionary.md` in the same PR.
 3. **Setting change?** If you added, changed the default of, or removed any item in `swh_get_defaults()` — update `config-reference.md` in the same PR.
-4. **Public API change?** If you added, changed the signature of, or removed any `do_action('swh_*')`, `apply_filters('swh_*')`, REST endpoint, AJAX endpoint, or shortcode attribute — update `api-contract.md` and `docs/developer/hooks.md` in the same PR. See `api-contract.md` for the SemVer breaking-change taxonomy.
+4. **Public API change?** If you added, changed the signature of, or removed any `do_action('swh_*')`, `apply_filters('swh_*')`, REST endpoint, AJAX endpoint, or shortcode attribute — update `api-contract.md` and `docs/hooks.md` in the same PR. See `api-contract.md` for the SemVer breaking-change taxonomy.
 5. **Security posture change?** If you added a new untrusted input source, a new auth flow, a new file or URL handling path — update `security-model.md` in the same PR.
 6. **New UI primitive or design token?** Update `component-inventory.md` in the same PR.
 7. **User-facing feature or regression?** A new or extended Playwright section in `testing/scripts/test_helpdesk_pw.py` ships in the same PR. See `testing-guide.md` for the test update policy.

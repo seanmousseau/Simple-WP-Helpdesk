@@ -1,6 +1,6 @@
 # JS architecture (v3.7.0+)
 
-**Status:** Decision locked 2026-05-13 in Phase 5 of `plan_v3.7.0.md` (issue #390). First consumer (toast notifications) shipped in v3.7.0.
+**Status:** Decision locked 2026-05-13 in Phase 5 of `archive/plan_v3.7.0.md` (issue #390). First consumer (toast notifications) shipped in v3.7.0.
 
 ## Decision
 

@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-nav_order: 9
+nav_order: 8
 ---
 
 # Troubleshooting
@@ -84,7 +84,7 @@ Tokens also rotate automatically on each lookup. If a client bookmarks a link, i
 
 ## The inbound email webhook returns 401
 
-1. Confirm the `Authorization: Bearer <token>` header matches the value stored in **Settings → Assignment & Routing → Inbound Secret**.
+1. Confirm the `Authorization: Bearer <token>` header matches the **Webhook Secret** stored in **Settings → Integrations**.
 2. Apache may strip the `Authorization` header. Add to `.htaccess`:
 
    ```apache
@@ -96,6 +96,8 @@ Tokens also rotate automatically on each lookup. If a client bookmarks a link, i
    ```php
    $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
    ```
+
+For full webhook setup, response codes (`sender_mismatch`, `no_ticket_id`, etc.) and provider configuration: see [Inbound Email Webhook](inbound-webhook).
 
 ---
 

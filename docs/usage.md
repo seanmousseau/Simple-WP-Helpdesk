@@ -1,6 +1,6 @@
 ---
 title: Usage Guide
-nav_order: 4
+nav_order: 3
 ---
 
 # Usage Guide
@@ -132,10 +132,6 @@ Report data is cached for one hour. The KPI cards load asynchronously after page
 
 ### Inbound Email Webhook
 
-Replies sent to a dedicated address can be forwarded to the plugin's inbound webhook at:
+When configured, clients can simply hit **Reply** on a notification email and the reply lands on the right ticket automatically. The endpoint is `POST /wp-json/swh/v1/inbound-email`.
 
-```
-POST /wp-json/swh/v1/inbound-email
-```
-
-See the [Developer Guide](development#inbound-email-webhook) for setup details.
+See the [Inbound Email Webhook](inbound-webhook) guide for setup, payload format, security, and provider examples (Mailgun, SendGrid, Postmark).

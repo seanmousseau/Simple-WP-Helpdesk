@@ -1,3 +1,9 @@
+---
+title: Deprecation Policy
+nav_order: 2
+parent: Development Guide
+---
+
 # Deprecation Policy
 
 When SWH deprecates a hook (action or filter), we follow this policy.
@@ -5,7 +11,7 @@ When SWH deprecates a hook (action or filter), we follow this policy.
 ## Lifecycle
 
 1. **Deprecate** — wrap the firing site in `swh_apply_deprecated_filter()` or `swh_do_deprecated_action()` with the SWH version that introduced the deprecation. Notices appear in `debug.log` under `WP_DEBUG`.
-2. **Document** — add a "Deprecated" section to `docs/developer/hooks.md` listing the old hook, the replacement, and the version of deprecation.
+2. **Document** — add a "Deprecated" section to the [Hooks Reference](../hooks) listing the old hook, the replacement, and the version of deprecation.
 3. **Window** — minimum **two minor releases** between deprecation and removal. E.g. deprecated in 3.7 → not removed before 3.9 (or 4.1, if 4.0 ships first as a major).
 4. **Remove** — only in a major version, never in a minor or patch. Removal is a breaking change.
 
