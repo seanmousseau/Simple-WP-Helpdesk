@@ -22,7 +22,7 @@ $assignee       = swh_get_option( 'routing', 'default_assignee' );
 $rules          = swh_get_option( 'routing', 'assignment_rules', array() );
 ```
 
-The `$key` argument is the option name **without** the `swh_` prefix. The `$group` is advisory in v3.7 (intentionally ignored — see invariant in `api-contract.md`); v4.0 (#356) will consume it for the schema split, so always pass the correct group at call time.
+The `$key` argument is the option name **without** the `swh_` prefix. The `$group` selects the `swh_settings_<group>` storage bucket in v4.0+ (was advisory in v3.7; v4.0 #356 made it the storage discriminator), so always pass the correct group at call time.
 
 For typed reads use `swh_get_string_option()` / `swh_get_int_option()` (`helpers.php:494-509`) — both wrap `get_option()` with a `is_scalar` guard for PHPStan L9 compliance.
 
@@ -163,7 +163,7 @@ UI: Settings → Portal tab. Groups frontend portal appearance and CSAT widget c
 |---|---|---|---|
 | `swh_portal_theme` | `auto` | `auto`/`light`/`dark` | `auto` follows `prefers-color-scheme`; `light`/`dark` force the corresponding `data-swh-theme` on `.swh-helpdesk-wrapper`. |
 | `swh_admin_theme` | `light` | `light`/`dark`/`auto` | Admin theme override. `auto` follows WP admin color scheme. Stored under `portal.admin_theme` despite the "admin" name — same group covers all theme settings. |
-| `swh_csat_enabled` | `true` | bool | Show the 1–5 star CSAT widget after a client closes a ticket. When `false`, only the close-success message renders (no DOM emission, no AJAX surface). Stored as bool when unchecked, string `"1"` when checked (same pattern as `swh_use_violet_theme`). |
+| `swh_csat_enabled` | `true` | bool | Show the 1–5 star CSAT widget after a client closes a ticket. When `false`, only the close-success message renders (no DOM emission, no AJAX surface). Stored as PHP bool. Settings UI maps `isset($_POST[...])` directly to a bool via `swh_set_option('portal', 'csat_enabled', $csat_on)` (admin/class-settings.php:273-274). |
 | `swh_csat_prompt` | `How was your support experience?` | string | Heading shown above the star buttons. |
 | `swh_csat_thanks` | `Thanks for your feedback!` | string | Confirmation shown after a rating submits. |
 | `swh_csat_skip_label` | `Skip` | string | Text for the link that dismisses the widget without rating. |
@@ -184,7 +184,7 @@ UI: Settings → Portal tab. Groups frontend portal appearance and CSAT widget c
 ## Adding a new option
 
 1. Add the key with its default to `swh_get_defaults()` at `simple-wp-helpdesk/includes/helpers.php`.
-2. Pick the correct group (`general`, `email`, `portal`, `notifications`, `tools`, `routing`, `integrations`). The group is advisory in v3.7 but consumed in v4.0.
+2. Pick the correct group (`general`, `email`, `portal`, `notifications`, `tools`, `routing`, `integrations`). The group selects the storage bucket in v4.0+ (advisory in v3.7).
 3. Render and persist the field in the matching tab of `admin/class-settings.php`. If it is destructive, put it on the **Tools** form (separate nonce).
 4. If a write path other than the settings form touches it, document that path in the PR.
 5. Update this doc. Update `data-dictionary.md` if the new option is structured (array / JSON).

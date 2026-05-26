@@ -83,14 +83,32 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Skip for dx or documentation PRs — cosmetic/tooling changes don't need changelog entries
+          # All inputs read via env vars (PR_LABELS / BASE_SHA / HEAD_SHA),
+          # double-quoted in shell — safe from workflow injection.
+
+          # Label-based escape hatch.
           if echo "$PR_LABELS" | grep -qE '"dx"|"documentation"'; then
-            echo "Skipping changelog check for dx/documentation PR."
+            echo "Skipping changelog check for dx/documentation PR (label)."
             exit 0
           fi
-          if ! git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -q '^CHANGELOG\.md$'; then
+
+          # Auto-skip when the diff only touches non-shipping paths (docs, repo
+          # metadata, GitHub config, dev tooling). These can't change user-visible
+          # behavior so they don't need a changelog entry. Path-based detection
+          # works even on PRs that didn't get manually labeled.
+          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          code_files=$(echo "$changed_files" | grep -vE '^(docs/|\.github/|CLAUDE\.md|README\.md|CONTRIBUTING\.md|SECURITY\.md|LICENSE|\.gitignore|\.editorconfig|\.gitattributes|\.githooks/)' || true)
+          if [ -z "$code_files" ]; then
+            echo "Skipping changelog check — diff only touches non-shipping paths."
+            echo "Changed files:"
+            echo "$changed_files" | sed 's/^/  - /'
+            exit 0
+          fi
+
+          if ! echo "$changed_files" | grep -q '^CHANGELOG\.md$'; then
             echo "::error::CHANGELOG.md was not updated in this PR."
             echo "Add an entry under the appropriate version heading before merging."
+            echo "If this PR truly has no user-visible effect, add the 'dx' or 'documentation' label."
             exit 1
           fi
 

@@ -4,7 +4,7 @@ Things that bit us, what we learned, and how to avoid recurrence. Group by categ
 
 This complements `CLAUDE.md`'s "Common Pitfalls" section: that one is a quick checklist of code-level gotchas, this one is the longer-form *story* of what we ran into and what we changed because of it.
 
-Last updated: 2026-05-13
+Last updated: 2026-05-26
 
 ---
 
@@ -185,6 +185,20 @@ The full list of WP/PHP code-level gotchas lives in `CLAUDE.md` → "Common Pitf
 
 **What bit us:** Released with stale PUC; auto-updater on user sites pointed at outdated metadata.
 **Lesson:** Before each release, `cd vendor/plugin-update-checker && git fetch --tags` (or check the GitHub repo) for a newer version. See `feedback_release_checklist.md`.
+
+### Doc PRs need a fact-check pass, not just a style pass (v4.0.6 retrospective)
+
+**What bit us:** PR #497 (the v4.0.6 docs overhaul) added 9 new `contract-*.md` files and rewrote much of the existing tree. CodeRabbit's pass caught 13 markdown / consistency nits. The PR looked clean. A second pass by `pr-review-toolkit:code-reviewer` + `comment-analyzer` — explicitly told to read the contract docs against the actual source — found **15 factual errors** the style pass had missed:
+
+- Invented identifiers: `_ticket_token_exp` (actual: `_ticket_token_created` + `swh_token_expiration_days`), `swh_run_*` cron handlers (actual: `swh_process_*`), `swh_reopen_status` (actual: `swh_reopened_status`), `swh_max_upload_mb` / `swh_max_files` (actual: `swh_max_upload_size` / `swh_max_upload_count`), `_swh_sla_state` (actual: `_ticket_sla_status`), `swh_hp_email` (actual: `swh_website_url_hp`).
+- False structural claims: REST `/wp-json/swh/v1/file/...` endpoint (doesn't exist — uses `?swh_file=` query args), batch caps 50/25/100/none (actual 2/1/1+1/20), auto-close on `post_modified` (actual: `_resolved_timestamp`), ticket retention "status-filtered" (actual: deletes ANY inactive ticket regardless of status), phantom `swh_em_admin_autoclose_*` template, "two-form settings save" (actual: three forms — `swh_danger_action` is a separate nonce), anti-spam default `none` (actual: `honeypot`).
+- Stale floors: `coding-guide.md` still said PHP 7.4 / WP 5.3 baseline.
+
+**Why it happened:** I wrote the contracts from memory of how the code "should" work, rather than reading each file before each claim. Style-only reviewers couldn't catch this because the prose was internally consistent — it just didn't match reality.
+
+**Lesson:** Doc PRs that document code MUST run a fact-check review pass, not just a style pass. The lightweight version: run `pr-review-toolkit:code-reviewer` with an explicit prompt telling it "verify factual claims against the source — read the actual files." It takes ~5 minutes per agent and catches what no style linter can. The two reviewers in PR #497 were the highest-ROI tool calls of that whole session.
+
+**Defaulted to:** "Doc PRs that document code paths" → always run a fact-check pass before merge. Added as a routine step in the per-PR workflow (will land in `planning-and-release-process.md` when an unrelated touch on that doc happens).
 
 ---
 

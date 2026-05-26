@@ -20,7 +20,7 @@
 - Database schema beyond what `data-dictionary.md` documents.
 - Admin AJAX endpoints (`wp_ajax_swh_merge_ticket`, `wp_ajax_swh_send_test_email`, `wp_ajax_swh_report_data`) — these are admin-only and gated by `manage_options`.
 - CSS class names beyond those in `component-inventory.md`.
-- The "advisory" group argument to `swh_get_option()` — it is intentionally ignored in v3.7 and consumed by v4.0 schema migration.
+- In v4.0+, the `$group` argument to `swh_get_option()` selects the `swh_settings_<group>` storage bucket. (Historically advisory in v3.7; the v4.0 schema migration made it the storage discriminator.)
 
 If you depend on an internal API, pin to a version and read the changelog before upgrading.
 
@@ -152,7 +152,7 @@ Registered:
 
 ## Shortcodes
 
-Both shortcodes are dispatched by the same handler `swh_submit_ticket_shortcode()` in `frontend/class-shortcode.php`.
+Both shortcodes are dispatched by separate handlers — `[submit_ticket]` → `swh_ticket_frontend()` and `[helpdesk_portal]` → `swh_helpdesk_portal_shortcode()`, both in `frontend/class-shortcode.php`.
 
 | Shortcode | Attribute | Default | Effect |
 |---|---|---|---|

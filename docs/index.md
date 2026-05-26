@@ -76,6 +76,7 @@ See the [Installation Guide](installation) for full details and the [Configurati
 | Guide | Description |
 |-------|-------------|
 | [Inbound Email Webhook](inbound-webhook) | Accept ticket replies from Mailgun / SendGrid / Postmark / any provider |
+| [REST API](rest-api) | `/wp-json/swh/v1/` endpoint reference (full ticket API coming in v4.1.0) |
 | [Email Setup](email-setup) | Outbound deliverability — WP Mail SMTP, SPF / DKIM / DMARC, providers |
 
 ### Reference

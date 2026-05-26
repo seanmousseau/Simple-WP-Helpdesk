@@ -104,7 +104,7 @@ Categories:
 - **Email Format:** format, logo URL.
 - **Anti-Spam:** method, reCAPTCHA keys/type, Turnstile keys.
 - **Data Retention & Tools:** retention windows, delete-on-uninstall.
-- **Email Templates:** 14 subject/body pairs (see `config-reference.md`).
+- **Email Templates:** 16 subject/body pairs (see `config-reference.md`).
 - **Messages:** success/error strings shown to clients.
 - **Canned Responses:** structured array.
 - **Ticket Templates:** structured array.

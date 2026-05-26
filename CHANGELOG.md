@@ -10,6 +10,23 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.0.7] — 2026-05-26
+
+### Security
+
+- **Cleared 7 Dependabot alerts** (2 high, 5 medium). All were build-time transitive devDeps from `@wordpress/scripts` — `serialize-javascript` (RCE), `minimatch` (ReDoS), `webpack-dev-server` (3 CVEs), `uuid` (buffer bounds). Resolved via `npm overrides` pinning the patched versions. None ship in the plugin. `npm audit` now reports 0 vulnerabilities. (PR #501)
+
+### Documentation
+
+- **REST API endpoint reference (`docs/rest-api.md`)** — new operator-facing page covering the currently-stable `POST /wp-json/swh/v1/inbound-email` endpoint and previewing the v4.1.0 expansion (tickets/replies/technicians/categories/settings CRUD, scoped API keys, per-key rate limiting, OpenAPI 3.1 spec). Stability guarantees called out: paths and shapes stable for v4.x. (PR #500)
+- **Internal docs fact-check audit** — multi-agent review (`pr-review-toolkit:code-reviewer` + `comment-analyzer`) against `simple-wp-helpdesk/` source caught factual errors in the pre-v4.0.6 internal docs. Fixed: `design-document.md` SWH_VERSION (3.7.0 → 4.0.6) and "two-form" invariant rewritten to three forms (main + Tools retention + Danger Zone); `data-dictionary.md` "14 templates" → 16; `api-contract.md` shortcode handlers documented correctly (two separate functions, not one nonexistent dispatcher); `config-reference.md` "advisory in v3.7" language refreshed for v4.0 and CSAT storage type corrected; `js-architecture.md` full rewrite covering all 6 entrypoints (was frozen at the v3.7.0 toast PoC); `design-guide.md` and `component-inventory.md` updated for operator-selectable dark mode (`swh_admin_theme` setting). Added a doc-style-guide rule against numeric source-line citations (the dominant rot pattern). (PR #502)
+- **v4.0.6 retrospective in `lessons-learned.md`** — captured the contract-docs-from-memory finding from PR #497: the multi-agent fact-check pass caught 15 errors that the CodeRabbit style pass had missed. Future doc PRs that document code paths default to a fact-check pass before merge. (PR #498)
+- **Documentation hygiene** — `.gitignore` excludes local agent session artifacts (`docs/superpowers/`, `.claude/`, `.playwright-mcp/`) to prevent accidental staging via `git add docs/`. Nav order across `docs/*.md` renumbered to a clean 1–13 sequence (multiple pages were colliding at the same nav_order value).
+
+### CI
+
+- **CHANGELOG check auto-skips on docs-only PRs** — path-based detection: if the diff touches only `docs/`, `.github/`, or repo metadata files (CLAUDE.md, README.md, CONTRIBUTING.md, SECURITY.md, LICENSE, .gitignore, .editorconfig, .gitattributes, .githooks/), the gate skips. Label-based escape hatch (`dx` / `documentation`) still works. Fixes the long-standing problem of every docs PR red-Xing the gate. All inputs read via env vars + double-quoted shell — no workflow-injection surface. (PR #499)
+
 ## [4.0.6] — 2026-05-26
 
 ### Accessibility

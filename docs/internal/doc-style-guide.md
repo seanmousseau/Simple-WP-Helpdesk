@@ -91,6 +91,7 @@ A table with two rows is almost always better as prose. A bullet list with 12 it
 - **Settings labels in bold** — **Tickets → Settings → Integrations**. Use the en dash (`→`), not the ASCII arrow (`->`).
 - **Keyboard combos** — `Cmd+S` / `Ctrl+S`. Bracket multi-key sequences: `Cmd+Shift+P`.
 - **Hostnames and URLs in code formatting** — `https://dev-direct.seanmousseau.com`.
+- **Never reference source code by line number** — e.g. don't write `helpers.php:336-346`. Line numbers rot the moment code is added or removed above them. Reference by **function or class name** instead — `see swh_is_token_expired() in helpers.php` is durable; `helpers.php:336` is a dead reference six commits later. If you genuinely need an anchor, add a stable `// ── Section name ──` comment in the source and reference the section name. Existing line-number citations should be replaced opportunistically when a doc is touched.
 
 ---
 
