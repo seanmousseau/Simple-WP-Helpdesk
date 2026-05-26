@@ -18,6 +18,8 @@ starting from the next release after 1.8.
 ### Changed
 
 - **Settings: consistent group headings across tabs** (#482). General, Portal, and Integrations already used `<fieldset class="swh-settings-group"><legend>` sections; Assignment & Routing, Messages, and Anti-Spam rendered flat row lists. Wrapped them to match — Assignment & Routing now has Routing / SLA Breach Alerts / Auto-Assignment Rules groups; Messages splits into Success Messages / Error Messages; Anti-Spam wraps the table in a Spam Detection group.
+- **Settings: removed duplicate Theme controls from Assignment & Routing** (#480). v4.0.3 (#471) moved the Frontend Portal Theme + Admin Theme controls to the new Portal tab but didn't remove the legacy copies. Both wrote to the same option keys (`swh_portal_theme`, `swh_admin_theme`), so this is pure UI cleanup — no data migration. Operators no longer see the same conceptual setting in two places.
+- **Settings: Anti-Spam Turnstile rows now hide when Spam Prevention isn't "Turnstile"** (#481). The existing JS toggle handled `.swh-recaptcha-row` visibility tied to the `swh_spam_method` dropdown but never touched the Turnstile rows. Added `.swh-turnstile-row` class to both Turnstile inputs and extended `swhUpdateSpamRows()` to mirror the reCAPTCHA pattern.
 
 ## [4.0.4] — 2026-05-25
 
