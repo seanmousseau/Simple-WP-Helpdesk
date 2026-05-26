@@ -730,7 +730,11 @@ Theme: **Dark Mode Expansion & Accessibility Round 2.** Pure UX/a11y polish — 
 
 ---
 
-[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.4...HEAD
+[4.0.4]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.3...v4.0.4
+[4.0.3]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.2...v4.0.3
+[4.0.2]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.1...v4.0.2
+[4.0.1]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.7.0...v4.0.0
 [3.7.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/seanmousseau/Simple-WP-Helpdesk/compare/v3.5.0...v3.6.0

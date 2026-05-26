@@ -343,6 +343,9 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 
 == Upgrade Notice ==
 
+= 4.0.4 =
+Bug-fix patch: portal v2 now renders the CSAT widget after a client closes a ticket (the v4.0.3 toggle was a no-op on portal v2); frontend submissions with `swh_default_assignee` set via wp-cli no longer skip the assignee email; Email Templates tab gains consistent `(Subject)` labels and groups "Ticket Merged" under the Client section. Safe drop-in upgrade.
+
 = 4.0.3 =
 Settings UX patch: new **Portal** and **Integrations** tabs surface configuration for previously-hardcoded features (CSAT widget) and existing storage groups (inbound webhook secret). No schema changes; safe drop-in upgrade.
 
