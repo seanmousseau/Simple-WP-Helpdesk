@@ -50,8 +50,25 @@ import imaplib
 import os
 import sys
 import time
+from email.header import decode_header, make_header
 from email.message import Message
 from typing import Optional
+
+
+def _decoded_subject(msg: Message) -> str:
+    """Subject header with MIME encoded-word segments decoded.
+
+    Long subjects ride in MIME Q-encoded segments where spaces become `_` and
+    the whole string is wrapped in `=?us-ascii?Q?...?=`. The decoded form is
+    what callers expect for substring matching.
+    """
+    raw = msg.get("Subject") or ""
+    if not raw:
+        return ""
+    try:
+        return str(make_header(decode_header(raw)))
+    except Exception:  # pragma: no cover — defensive
+        return raw
 
 
 def env(name: str, default: Optional[str] = None) -> str:
@@ -164,7 +181,7 @@ def matches(msg: Message, to_addr: str, subject_substr: str, body_substr: str) -
     to_header = (msg.get("To") or "") + " " + (msg.get("Delivered-To") or "") + " " + (msg.get("X-Original-To") or "")
     if to_addr.lower() not in to_header.lower():
         return False
-    if subject_substr and subject_substr.lower() not in (msg.get("Subject") or "").lower():
+    if subject_substr and subject_substr.lower() not in _decoded_subject(msg).lower():
         return False
     if body_substr:
         body = message_text(msg)
