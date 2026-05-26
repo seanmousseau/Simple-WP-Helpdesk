@@ -521,30 +521,6 @@ function swh_render_settings_page() {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Frontend Portal Theme', 'simple-wp-helpdesk' ); ?></th>
-					<td>
-						<?php $portal_theme = swh_get_string_option( 'swh_portal_theme', 'auto' ); ?>
-						<select name="swh_portal_theme">
-							<option value="auto" <?php selected( $portal_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follows system dark/light mode)', 'simple-wp-helpdesk' ); ?></option>
-							<option value="light" <?php selected( $portal_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode', 'simple-wp-helpdesk' ); ?></option>
-							<option value="dark" <?php selected( $portal_theme, 'dark' ); ?>><?php esc_html_e( 'Force dark mode', 'simple-wp-helpdesk' ); ?></option>
-						</select>
-						<p class="description"><?php esc_html_e( 'Controls whether the frontend helpdesk portal responds to the visitor\'s system dark/light mode preference, or forces a single theme regardless.', 'simple-wp-helpdesk' ); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Admin Theme', 'simple-wp-helpdesk' ); ?></th>
-					<td>
-						<?php $admin_theme = swh_get_string_option( 'swh_admin_theme', 'light' ); ?>
-						<select name="swh_admin_theme">
-							<option value="light" <?php selected( $admin_theme, 'light' ); ?>><?php esc_html_e( 'Force light mode (recommended)', 'simple-wp-helpdesk' ); ?></option>
-							<option value="dark" <?php selected( $admin_theme, 'dark' ); ?>><?php esc_html_e( 'Force dark mode', 'simple-wp-helpdesk' ); ?></option>
-							<option value="auto" <?php selected( $admin_theme, 'auto' ); ?>><?php esc_html_e( 'Auto (follow WP admin color scheme)', 'simple-wp-helpdesk' ); ?></option>
-						</select>
-						<p class="description"><?php esc_html_e( 'Controls the appearance of helpdesk admin pages (inbox, drawer, settings, reports). Dark mode styling is partial in v4.0 — light is recommended; full dark variants ship in v4.1.', 'simple-wp-helpdesk' ); ?></p>
-					</td>
-				</tr>
-				<tr>
 					<th scope="row"><?php esc_html_e( 'Restrict Technicians', 'simple-wp-helpdesk' ); ?></th>
 					<td>
 						<label><input type="checkbox" name="swh_restrict_to_assigned" value="yes" <?php checked( swh_get_option( 'routing', 'restrict_to_assigned', 'no' ), 'yes' ); ?>>
@@ -927,8 +903,8 @@ function swh_render_settings_page() {
 							<p class="description"><?php esc_html_e( 'Submissions with a score below this threshold are flagged as spam (0.0 = likely bot, 1.0 = likely human).', 'simple-wp-helpdesk' ); ?></p>
 						</td>
 					</tr>
-					<tr><th scope="row"><?php esc_html_e( 'Turnstile Site Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_site_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_turnstile_site_key' ) ); ?>" class="regular-text"></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Turnstile Secret Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_secret_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_turnstile_secret_key' ) ); ?>" class="regular-text"></td></tr>
+					<tr class="swh-turnstile-row"><th scope="row"><?php esc_html_e( 'Turnstile Site Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_site_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_turnstile_site_key' ) ); ?>" class="regular-text"></td></tr>
+					<tr class="swh-turnstile-row"><th scope="row"><?php esc_html_e( 'Turnstile Secret Key', 'simple-wp-helpdesk' ); ?></th><td><input type="text" name="swh_turnstile_secret_key" value="<?php echo esc_attr( swh_get_string_option( 'swh_turnstile_secret_key' ) ); ?>" class="regular-text"></td></tr>
 				</table>
 				<script>
 				(function() {
@@ -936,6 +912,9 @@ function swh_render_settings_page() {
 						var method = document.getElementById('swh_spam_method').value;
 						document.querySelectorAll('.swh-recaptcha-row').forEach(function(row) {
 							row.style.display = ( 'recaptcha' === method ) ? '' : 'none';
+						});
+						document.querySelectorAll('.swh-turnstile-row').forEach(function(row) {
+							row.style.display = ( 'turnstile' === method ) ? '' : 'none';
 						});
 						if ( 'recaptcha' === method ) {
 							swhUpdateRecaptchaType();
