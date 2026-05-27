@@ -274,7 +274,7 @@ final class TicketsController extends WP_REST_Controller {
 		$response = new WP_REST_Response( $items, 200 );
 		$response->header( 'X-WP-Total', (string) $total );
 		$response->header( 'X-WP-TotalPages', (string) $total_pages );
-		return $response;
+		return ResponseDecorator::with_rate_limit_headers( $response, $request );
 	}
 
 	/**
@@ -289,7 +289,10 @@ final class TicketsController extends WP_REST_Controller {
 		if ( null === $post ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found.', 'simple-wp-helpdesk' ) );
 		}
-		return new WP_REST_Response( TicketSchema::from_post( $post ), 200 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( TicketSchema::from_post( $post ), 200 ),
+			$request
+		);
 	}
 
 	/**
@@ -340,7 +343,10 @@ final class TicketsController extends WP_REST_Controller {
 		if ( ! $post instanceof WP_Post ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found after create.', 'simple-wp-helpdesk' ) );
 		}
-		return new WP_REST_Response( TicketSchema::from_post( $post ), 201 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( TicketSchema::from_post( $post ), 201 ),
+			$request
+		);
 	}
 
 	/**
@@ -359,7 +365,10 @@ final class TicketsController extends WP_REST_Controller {
 		$fields = $this->build_field_patch( $request );
 		if ( empty( $fields ) ) {
 			// Nothing to do — return the current ticket.
-			return new WP_REST_Response( TicketSchema::from_post( $post ), 200 );
+			return ResponseDecorator::with_rate_limit_headers(
+				new WP_REST_Response( TicketSchema::from_post( $post ), 200 ),
+				$request
+			);
 		}
 
 		$result = swh_update_ticket_fields( $id, $fields, $this->context_for( $request ) );
@@ -371,7 +380,10 @@ final class TicketsController extends WP_REST_Controller {
 		if ( ! $post instanceof WP_Post ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found after update.', 'simple-wp-helpdesk' ) );
 		}
-		return new WP_REST_Response( TicketSchema::from_post( $post ), 200 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( TicketSchema::from_post( $post ), 200 ),
+			$request
+		);
 	}
 
 	/**

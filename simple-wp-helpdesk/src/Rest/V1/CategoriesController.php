@@ -102,8 +102,6 @@ final class CategoriesController extends WP_REST_Controller {
 	 * @param WP_REST_Request $request Request object.
 	 */
 	public function get_items( $request ): WP_REST_Response {
-		unset( $request );
-
 		$terms = get_terms(
 			array(
 				'taxonomy'   => 'helpdesk_category',
@@ -121,7 +119,10 @@ final class CategoriesController extends WP_REST_Controller {
 				}
 			}
 		}
-		return new WP_REST_Response( $items, 200 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( $items, 200 ),
+			$request
+		);
 	}
 
 	/**
