@@ -50,6 +50,47 @@ jobs:
       - name: PHPUnit
         run: make phpunit
 
+  openapi:
+    name: OpenAPI — lint + YAML/JSON sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML (for sync script)
+        run: pip install --quiet pyyaml
+
+      - name: Regenerate docs/openapi.json from YAML
+        run: bash bin/openapi-sync.sh
+
+      - name: Fail if openapi.json drifted from docs/openapi.yaml
+        run: |
+          if ! git diff --exit-code -- docs/openapi.json docs/openapi.yaml simple-wp-helpdesk/openapi.json; then
+            echo "::error::openapi.json (docs/ and/or simple-wp-helpdesk/) is out of sync with docs/openapi.yaml."
+            echo "Run 'bash bin/openapi-sync.sh' locally and commit the result."
+            exit 1
+          fi
+
+      - name: Fail if docs/openapi.json and plugin-bundled openapi.json differ
+        run: |
+          if ! diff -q docs/openapi.json simple-wp-helpdesk/openapi.json >/dev/null; then
+            echo "::error::docs/openapi.json and simple-wp-helpdesk/openapi.json must be identical."
+            echo "Run 'bash bin/openapi-sync.sh' locally and commit both files."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Lint OpenAPI spec (Redocly)
+        run: npx --yes @redocly/cli@latest lint docs/openapi.yaml --format=stylish
+
   composer-audit:
     name: Composer Security Audit
     runs-on: ubuntu-latest

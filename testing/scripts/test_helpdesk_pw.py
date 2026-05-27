@@ -7,7 +7,8 @@ client portal, status transitions, internal notes, access control,
 bulk actions, canned responses, file attachments, portal token security,
 XSS escaping, rate limiting, and email trigger verification.
 
-34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 + 6 v3.6.0 = 64 sections
+34 original + 11 v3.0.0 + 7 v3.1.0 + 1 v3.2.0 + 1 v3.3.0 + 2 v3.4.0 + 2 v3.5.0 + 6 v3.6.0
++ 9 v4.0.0 (inbox/drawer/palette/bulk/views/violet/portal-v2/reports/csat) + 2 v4.0.3 + 7 v4.1.0 = 82 sections
 
 Running with pytest (recommended):
     source testing/.venv/bin/activate
@@ -4871,6 +4872,497 @@ def test_75_integrations_tab(page: Page):
     wp_logout(page)
 
 
+def test_76_rest_auth(page: Page):
+    """v4.1.0 #366 — REST auth: bearer parsing, 401 missing/invalid, WP App Password.
+
+    Exercises SWH\\Rest\\Auth::check_request() via the public /swh/v1/tickets
+    route. The route requires the `read` scope, so the only thing this test
+    cares about is whether auth itself passed (200) or rejected (401) — the
+    payload shape is covered by section 77.
+    """
+    print("\n[76] REST auth — bearer parsing + 401 paths")
+    from rest_helpers import api_request, create_api_key, looks_like_plaintext_key
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    key = create_api_key(page, scope="read", label="test_76_auth_read")
+    check("76 rest auth: plaintext looks like swhk_* key",
+          looks_like_plaintext_key(key["plaintext"]),
+          f"got prefix={key['plaintext'][:8]!r}")
+    check("76 rest auth: prefix exposed via API and table",
+          isinstance(key.get("prefix"), str) and len(key["prefix"]) > 0)
+
+    # Missing Authorization header → 401.
+    # NOTE: Playwright's request context inherits browser cookies, so a logged-in
+    # admin would normally satisfy permission via WP user session. We use a
+    # FRESH context (no cookies) to isolate the bearer path.
+    fresh = page.context.browser.new_context()
+    fresh_page = fresh.new_page()
+    try:
+        r = api_request(fresh_page, "GET", "/tickets")
+        check("76 rest auth: no bearer + no cookies → 401",
+              r.status == 401, f"got {r.status}")
+        body = r.json()
+        check("76 rest auth: 401 carries swh_rest_auth_required code",
+              body.get("code") == "swh_rest_auth_required",
+              f"got code={body.get('code')!r}")
+
+        r = api_request(fresh_page, "GET", "/tickets",
+                        headers={"Authorization": "Bearer garbage_not_a_real_key"})
+        check("76 rest auth: garbage bearer → 401",
+              r.status == 401, f"got {r.status}")
+        body = r.json()
+        check("76 rest auth: garbage bearer → swh_rest_auth_invalid",
+              body.get("code") == "swh_rest_auth_invalid",
+              f"got code={body.get('code')!r}")
+
+        r = api_request(fresh_page, "GET", "/tickets", key=key["plaintext"])
+        check("76 rest auth: valid bearer → 200",
+              r.status == 200, f"got {r.status}: {r.text()[:200]}")
+
+        # Admin cookie session must also satisfy auth — verify via the main page
+        # (which still has the admin login from earlier). WP REST cookie-auth
+        # requires X-WP-Nonce in addition to the auth cookies — without it the
+        # call is treated as anonymous.
+        nonce = page.evaluate(
+            "fetch('/wp-admin/admin-ajax.php?action=rest-nonce',"
+            "{credentials:'same-origin'}).then(r=>r.text())"
+        )
+        r2 = api_request(page, "GET", "/tickets",
+                         headers={"X-WP-Nonce": (nonce or "").strip()})
+        check("76 rest auth: admin cookie session + X-WP-Nonce → 200",
+              r2.status == 200, f"got {r2.status}: {r2.text()[:200]}")
+    finally:
+        fresh.close()
+
+    screenshot(page, "76_rest_auth")
+
+
+def test_77_rest_tickets_crud(page: Page):
+    """v4.1.0 #362 — REST tickets CRUD: GET list, single, POST, PATCH, enum reject."""
+    print("\n[77] REST tickets CRUD")
+    from rest_helpers import api_request, create_api_key
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    read_key  = create_api_key(page, scope="read",  label="test_77_crud_read")
+    write_key = create_api_key(page, scope="write", label="test_77_crud_write")
+
+    # ── POST create ─────────────────────────────────────────────────────
+    r = api_request(page, "POST", "/tickets", key=write_key["plaintext"], body={
+        "subject":         f"PW REST Ticket {_ts}",
+        "body":            "Created via REST API for section 77.",
+        "requester_email": CLIENT1_EMAIL,
+        "requester_name":  CLIENT1_NAME,
+        "priority":        "Medium",
+    })
+    check("77 rest crud: POST create → 201", r.status == 201, f"got {r.status}: {r.text()[:200]}")
+    created = r.json() if r.status == 201 else {}
+    state["rest_77_id"] = created.get("id")
+    check("77 rest crud: response has integer id",
+          isinstance(state.get("rest_77_id"), int) and state["rest_77_id"] > 0)
+    for field in ("subject", "status", "priority", "requester", "links", "created_at"):
+        check(f"77 rest crud: response includes {field!r}", field in created)
+    check("77 rest crud: response excludes _swh_unread (allowlist)",
+          "_swh_unread" not in created)
+    check("77 rest crud: response excludes _ticket_token (allowlist)",
+          "_ticket_token" not in created)
+
+    # ── GET list ────────────────────────────────────────────────────────
+    r = api_request(page, "GET", "/tickets?per_page=5", key=read_key["plaintext"])
+    check("77 rest crud: GET list → 200", r.status == 200, f"got {r.status}")
+    total_header = r.headers.get("x-wp-total") or r.headers.get("X-WP-Total")
+    check("77 rest crud: list emits X-WP-Total header",
+          total_header is not None and total_header.isdigit(),
+          f"got {total_header!r}")
+    rows = r.json() if r.status == 200 else []
+    check("77 rest crud: list returns an array", isinstance(rows, list))
+    check("77 rest crud: list page size ≤ requested per_page", len(rows) <= 5)
+
+    # per_page=100 must succeed (boundary of the locked maximum); per_page=200
+    # is rejected by WP's schema argument validation BEFORE the controller
+    # clamps internally — TicketsController declares 'maximum' => 100 on the
+    # per_page argument, so over-cap requests get 400 rest_invalid_param.
+    # The contract therefore covers two assertions:
+    #   - boundary (100) is accepted,
+    #   - over-cap (200) is rejected (not silently truncated).
+    r = api_request(page, "GET", "/tickets?per_page=100", key=read_key["plaintext"])
+    check("77 rest crud: per_page=100 (max) → 200",
+          r.status == 200, f"got {r.status}: {r.text()[:200]}")
+    rows = r.json() if r.status == 200 else []
+    check("77 rest crud: per_page=100 returns at most 100 rows",
+          isinstance(rows, list) and len(rows) <= 100)
+
+    r = api_request(page, "GET", "/tickets?per_page=200", key=read_key["plaintext"])
+    check("77 rest crud: per_page=200 (over cap) → 400 rest_invalid_param",
+          r.status == 400, f"got {r.status}: {r.text()[:200]}")
+
+    # ── GET single ──────────────────────────────────────────────────────
+    if state.get("rest_77_id"):
+        r = api_request(page, "GET", f"/tickets/{state['rest_77_id']}", key=read_key["plaintext"])
+        check("77 rest crud: GET single → 200", r.status == 200, f"got {r.status}")
+        single = r.json() if r.status == 200 else {}
+        check("77 rest crud: single payload id matches",
+              single.get("id") == state["rest_77_id"])
+
+    # 404 unknown id
+    r = api_request(page, "GET", "/tickets/99999999", key=read_key["plaintext"])
+    check("77 rest crud: GET unknown id → 404", r.status == 404, f"got {r.status}")
+    check("77 rest crud: 404 carries swh_rest_not_found",
+          (r.json() if r.status == 404 else {}).get("code") == "swh_rest_not_found")
+
+    # ── PATCH status change ─────────────────────────────────────────────
+    if state.get("rest_77_id"):
+        r = api_request(page, "PATCH", f"/tickets/{state['rest_77_id']}",
+                        key=write_key["plaintext"], body={"status": "In Progress"})
+        check("77 rest crud: PATCH valid status → 200", r.status == 200, f"got {r.status}: {r.text()[:200]}")
+
+        # Invalid status enum → validation error.
+        r = api_request(page, "PATCH", f"/tickets/{state['rest_77_id']}",
+                        key=write_key["plaintext"], body={"status": "NOT_A_REAL_STATUS_XYZ"})
+        check("77 rest crud: PATCH invalid status → 400",
+              r.status == 400, f"got {r.status}: {r.text()[:200]}")
+        check("77 rest crud: 400 carries swh_rest_validation_failed",
+              (r.json() if r.status == 400 else {}).get("code") == "swh_rest_validation_failed")
+
+    screenshot(page, "77_rest_tickets_crud")
+
+
+def test_78_rest_replies(page: Page):
+    """v4.1.0 #363 — REST replies: list + create, internal-note scope visibility."""
+    print("\n[78] REST replies + internal-note visibility")
+    from rest_helpers import api_request, create_api_key
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    ticket_id = state.get("rest_77_id")
+    if not ticket_id:
+        skip("78 rest replies", "no ticket id from section 77 — skipping")
+        return
+
+    read_key  = create_api_key(page, scope="read",  label="test_78_replies_read")
+    write_key = create_api_key(page, scope="write", label="test_78_replies_write")
+
+    # ── Admin-added internal note via WP-CLI so visibility can be checked ─
+    internal_marker  = f"INTERNAL_78_{_ts}"
+    public_marker    = f"PUBLIC_78_{_ts}"
+
+    # Internal note via REST (write scope can post both public + internal).
+    r = api_request(page, "POST", f"/tickets/{ticket_id}/replies",
+                    key=write_key["plaintext"],
+                    body={"body": internal_marker, "is_internal_note": True})
+    check("78 rest replies: POST internal note (write) → 201",
+          r.status == 201, f"got {r.status}: {r.text()[:200]}")
+    posted = r.json() if r.status == 201 else {}
+    check("78 rest replies: posted internal note carries is_internal_note=true",
+          posted.get("is_internal_note") is True)
+
+    # Public reply.
+    r = api_request(page, "POST", f"/tickets/{ticket_id}/replies",
+                    key=write_key["plaintext"],
+                    body={"body": public_marker, "is_internal_note": False})
+    check("78 rest replies: POST public reply (write) → 201",
+          r.status == 201, f"got {r.status}: {r.text()[:200]}")
+
+    # ── GET list with read key — must NOT include internal notes ────────
+    r = api_request(page, "GET", f"/tickets/{ticket_id}/replies", key=read_key["plaintext"])
+    check("78 rest replies: GET list (read scope) → 200", r.status == 200, f"got {r.status}")
+    items = r.json() if r.status == 200 else []
+    bodies = " ".join((it.get("body") or "") for it in items if isinstance(it, dict))
+    check("78 rest replies: read scope sees public marker", public_marker in bodies)
+    check("78 rest replies: read scope does NOT see internal marker",
+          internal_marker not in bodies,
+          "internal note leaked to read-scope caller")
+
+    # ── GET list with write key — sees both ─────────────────────────────
+    r = api_request(page, "GET", f"/tickets/{ticket_id}/replies", key=write_key["plaintext"])
+    items = r.json() if r.status == 200 else []
+    bodies = " ".join((it.get("body") or "") for it in items if isinstance(it, dict))
+    check("78 rest replies: write scope sees public marker", public_marker in bodies)
+    check("78 rest replies: write scope sees internal marker", internal_marker in bodies)
+
+    # ── Attachment validation: empty body + no attachments → 400 ────────
+    r = api_request(page, "POST", f"/tickets/{ticket_id}/replies",
+                    key=write_key["plaintext"],
+                    body={"body": "", "is_internal_note": False})
+    check("78 rest replies: empty body + no attachments → 400",
+          r.status == 400, f"got {r.status}")
+
+    screenshot(page, "78_rest_replies")
+
+
+def test_79_rest_ancillary(page: Page):
+    """v4.1.0 #364 — REST ancillary: technicians, categories, settings/public allowlist."""
+    print("\n[79] REST ancillary endpoints + public allowlist drift")
+    from rest_helpers import api_request, create_api_key
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    read_key = create_api_key(page, scope="read", label="test_79_anc_read")
+
+    r = api_request(page, "GET", "/users/technicians", key=read_key["plaintext"])
+    check("79 rest ancillary: GET technicians → 200", r.status == 200, f"got {r.status}")
+    techs = r.json() if r.status == 200 else []
+    check("79 rest ancillary: technicians is an array", isinstance(techs, list))
+
+    r = api_request(page, "GET", "/categories", key=read_key["plaintext"])
+    check("79 rest ancillary: GET categories → 200", r.status == 200, f"got {r.status}")
+    cats = r.json() if r.status == 200 else []
+    check("79 rest ancillary: categories is an array", isinstance(cats, list))
+
+    # settings/public is unauthenticated — fresh context so the admin cookie
+    # session doesn't mask anonymous behaviour.
+    fresh = page.context.browser.new_context()
+    fresh_page = fresh.new_page()
+    try:
+        r = api_request(fresh_page, "GET", "/settings/public")
+        check("79 rest ancillary: GET /settings/public anonymous → 200",
+              r.status == 200, f"got {r.status}")
+        payload = r.json() if r.status == 200 else {}
+        # Allowlist-driven keys (PublicSettingsAllowlist::map()).
+        for k in ("priority_labels", "status_labels", "sla_thresholds", "features"):
+            check(f"79 rest ancillary: payload includes allowlisted {k!r}",
+                  k in payload, f"missing from {list(payload.keys())}")
+
+        # ── Allowlist drift check ───────────────────────────────────────
+        # Seed an extra option (NOT on the allowlist) and confirm it stays out.
+        wpcli('option update swh_test_phase10_marker "SHOULD_NOT_APPEAR"')
+        wpcli('eval \'$opt = get_option("swh_settings_general", array()); '
+              '$opt["test_phase10_marker"] = "SHOULD_NOT_APPEAR"; '
+              'update_option("swh_settings_general", $opt);\'')
+        try:
+            r = api_request(fresh_page, "GET", "/settings/public")
+            body_text = r.text()
+            check("79 rest ancillary: drift — SHOULD_NOT_APPEAR absent from /settings/public",
+                  "SHOULD_NOT_APPEAR" not in body_text,
+                  "non-allowlisted setting leaked")
+            check("79 rest ancillary: drift — 'test_phase10_marker' key not in response",
+                  "test_phase10_marker" not in body_text)
+        finally:
+            wpcli("option delete swh_test_phase10_marker 2>/dev/null")
+            wpcli('eval \'$opt = get_option("swh_settings_general", array()); '
+                  'unset($opt["test_phase10_marker"]); '
+                  'update_option("swh_settings_general", $opt);\'')
+    finally:
+        fresh.close()
+
+    screenshot(page, "79_rest_ancillary")
+
+
+def test_80_rest_rate_limit(page: Page):
+    """v4.1.0 #367 — rate limit: per-key override, default 60/min, 429 headers."""
+    print("\n[80] REST rate limit + 429 headers")
+    from rest_helpers import api_request, clear_rate_limits, create_api_key
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    clear_rate_limits(page)
+
+    # Per-key override: rate_limit=5 → 5 succeed, 6th = 429.
+    key = create_api_key(page, scope="read", label="test_80_rl_override", rate_limit=5)
+    clear_rate_limits(page)  # generation may have consumed nothing but be safe
+
+    # Hammer the override bucket. Per-key rate_limit=5 means at most 5 of
+    # these should succeed within a 60s window — but the bucket may already
+    # have absorbed a small number of warm-up calls (e.g. the page-rendering
+    # admin AJAX never hits /wp-json/swh, but Playwright's request context
+    # can do redirect-follow pre-fetches). Assert the *envelope*, not exact
+    # slot counts: there must be at least one 200, and the 429 must come
+    # within the override+1 calls. The 429 itself + headers are the key
+    # assertions; section is about the rate-limit contract, not slot math.
+    statuses = []
+    for _ in range(7):
+        r = api_request(page, "GET", "/tickets?per_page=1", key=key["plaintext"])
+        statuses.append(r.status)
+    check("80 rate limit: rate_limit=5 key produces at least one 200",
+          any(s == 200 for s in statuses), f"got {statuses}")
+    check("80 rate limit: rate_limit=5 key produces a 429 within 7 calls",
+          429 in statuses, f"got {statuses}")
+    # Exactly 5 slots permitted within the window: 5×200 then 429s OR
+    # tail-end of a partially-consumed bucket: ≤5×200 then 429s. Either way
+    # the 200 count must not exceed the configured limit.
+    check("80 rate limit: 200 count ≤ configured rate_limit (5)",
+          sum(1 for s in statuses if s == 200) <= 5, f"got {statuses}")
+
+    # Pull the most-recent 429 headers explicitly.
+    r = api_request(page, "GET", "/tickets?per_page=1", key=key["plaintext"])
+    check("80 rate limit: post-burn request still → 429", r.status == 429, f"got {r.status}")
+    body = r.json() if r.status == 429 else {}
+    check("80 rate limit: 429 carries swh_rest_rate_limited",
+          body.get("code") == "swh_rest_rate_limited", f"got code={body.get('code')!r}")
+    hdrs = {k.lower(): v for k, v in (r.headers or {}).items()}
+    check("80 rate limit: 429 emits Retry-After header",
+          "retry-after" in hdrs, f"headers={list(hdrs.keys())}")
+    check("80 rate limit: 429 emits X-RateLimit-Limit", "x-ratelimit-limit" in hdrs)
+    check("80 rate limit: 429 emits X-RateLimit-Remaining", "x-ratelimit-remaining" in hdrs)
+    check("80 rate limit: 429 emits X-RateLimit-Reset", "x-ratelimit-reset" in hdrs)
+    check("80 rate limit: X-RateLimit-Limit matches per-key override (5)",
+          hdrs.get("x-ratelimit-limit") == "5",
+          f"got {hdrs.get('x-ratelimit-limit')!r}")
+
+    screenshot(page, "80_rest_rate_limit")
+
+
+def test_81_rest_capability(page: Page):
+    """v4.1.0 #366 — capability matrix + scope rejection.
+
+    - read-scope key on POST /tickets → 403 swh_rest_scope_insufficient.
+    - write-scope key on POST /tickets → 201.
+    - subscriber-role user (no API key, just WP App Password / cookies) on a
+      /swh/v1 route → 403 swh_rest_capability_required.
+    """
+    print("\n[81] REST capability + scope rejection")
+    from rest_helpers import api_request, clear_rate_limits, create_api_key
+
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    clear_rate_limits(page)
+
+    read_key  = create_api_key(page, scope="read",  label="test_81_cap_read")
+    write_key = create_api_key(page, scope="write", label="test_81_cap_write")
+
+    body = {
+        "subject":         f"PW REST Cap {_ts}",
+        "body":            "Should be rejected — read scope on write route.",
+        "requester_email": CLIENT2_EMAIL,
+        "requester_name":  CLIENT2_NAME,
+    }
+
+    # Read scope on a write route → 403 scope_insufficient.
+    r = api_request(page, "POST", "/tickets", key=read_key["plaintext"], body=body)
+    check("81 capability: read key on POST /tickets → 403",
+          r.status == 403, f"got {r.status}: {r.text()[:200]}")
+    check("81 capability: 403 code = swh_rest_scope_insufficient",
+          (r.json() if r.status == 403 else {}).get("code") == "swh_rest_scope_insufficient")
+
+    # Write scope on the same route → 201.
+    r = api_request(page, "POST", "/tickets", key=write_key["plaintext"], body=body)
+    check("81 capability: write key on POST /tickets → 201",
+          r.status == 201, f"got {r.status}: {r.text()[:200]}")
+
+    # Subscriber-role user → capability_required on any v4.1 route.
+    sub_user  = f"sub_81_{_ts}"
+    sub_email = f"sub_81_{_ts}@example.com"
+    sub_pass  = "subscriber_pw_pass_123!"
+    sub_id = wpcli(
+        f"user create {sub_user} {sub_email} --role=subscriber "
+        f"--user_pass={sub_pass} --porcelain"
+    )
+    if not sub_id.isdigit():
+        skip("81 capability: subscriber path", "could not create test user via WP-CLI")
+        screenshot(page, "81_rest_capability")
+        return
+
+    sub_ctx = page.context.browser.new_context()
+    sub_page = sub_ctx.new_page()
+    try:
+        wp_login(sub_page, sub_user, sub_pass)
+        # WP REST's cookie-auth path requires an X-WP-Nonce header in addition
+        # to the auth_logged_in cookies — without it the request is treated as
+        # anonymous and Auth::check_request rejects with auth_required (401)
+        # instead of capability_required (403). Mint a fresh `wp_rest` nonce
+        # from the subscriber's session.
+        nonce = sub_page.evaluate(
+            "fetch('/wp-admin/admin-ajax.php?action=rest-nonce',"
+            "{credentials:'same-origin'}).then(r=>r.text())"
+        )
+        r = api_request(sub_page, "GET", "/tickets",
+                        headers={"X-WP-Nonce": (nonce or "").strip()})
+        check("81 capability: subscriber on /tickets → 403",
+              r.status == 403, f"got {r.status}: {r.text()[:200]}")
+        body = r.json() if r.status == 403 else {}
+        check("81 capability: 403 code = swh_rest_capability_required",
+              body.get("code") == "swh_rest_capability_required",
+              f"got code={body.get('code')!r}")
+    finally:
+        sub_ctx.close()
+        wpcli(f"user delete {sub_id} --yes 2>/dev/null")
+
+    screenshot(page, "81_rest_capability")
+
+
+def test_82_rest_openapi(page: Page):
+    """v4.1.0 #368 — OpenAPI: /openapi.json valid; admin Redoc page; offline reload."""
+    print("\n[82] REST OpenAPI + admin Redoc offline reload")
+    from rest_helpers import api_request
+
+    # /openapi.json — unauthenticated, fresh context.
+    fresh = page.context.browser.new_context()
+    fresh_page = fresh.new_page()
+    try:
+        r = api_request(fresh_page, "GET", "/openapi.json")
+        check("82 openapi: GET /openapi.json (no auth) → 200",
+              r.status == 200, f"got {r.status}: {r.text()[:200]}")
+        try:
+            spec = r.json()
+        except Exception as exc:
+            check("82 openapi: response body is valid JSON", False, str(exc))
+            spec = {}
+        # Required top-level fields per OpenAPI 3.x. `components` is technically
+        # optional in the spec, but our source-of-truth YAML defines schemas
+        # there — so its absence means the controller fell back to its minimal
+        # stub. As of the v4.1.0 fix that bundles `simple-wp-helpdesk/openapi.json`
+        # inside the plugin directory, the Docker test stack (which mounts only
+        # the plugin) MUST receive the real spec. Asserting `components` here
+        # catches the stub-fallback regression.
+        for key in ("openapi", "info", "paths", "components"):
+            check(f"82 openapi: top-level {key!r} present",
+                  key in spec, f"keys={list(spec.keys())}")
+        # info.version must follow semver — Phase 11 bumps it alongside plugin header.
+        info = spec.get("info") if isinstance(spec, dict) else {}
+        check("82 openapi: info.version is a string",
+              isinstance(info.get("version"), str) and len(info["version"]) > 0)
+    finally:
+        fresh.close()
+
+    # ── Admin Redoc page — Tools → Helpdesk API Reference ───────────────
+    wp_login(page, ADMIN_USER, ADMIN_PASS)
+    page.goto(f"{WP_ADMIN_URL}/tools.php?page=swh-api-reference")
+    page.wait_for_load_state("load")
+
+    # Redoc renders into #swh-redoc (per src/Admin/ApiReferencePage.php). Once
+    # the Redoc bundle hydrates the container it injects child nodes with
+    # [data-section-id] attributes — that's the post-render signal.
+    redoc_selector = "#swh-redoc [data-section-id], redoc, .redoc-wrap"
+    try:
+        page.wait_for_selector(redoc_selector, timeout=10000)
+        rendered_online = True
+    except PlaywrightTimeoutError:
+        rendered_online = False
+    check("82 openapi: admin Redoc page renders (online)", rendered_online,
+          "Redoc viewer never appeared on Tools page")
+
+    # ── No-CDN invariant (issue #368 AC #3): vendored bundle only ───────
+    # A full offline reload of wp-admin would also fail the wp-admin shell
+    # itself (Playwright's set_offline blocks every request, not just CDN).
+    # Stronger / cleaner check: block any non-same-origin asset request and
+    # confirm Redoc still hydrates. This proves the Redoc bundle is served
+    # from the plugin (vendored) — not from cdn.jsdelivr.net or unpkg.
+    if rendered_online:
+        from urllib.parse import urlparse
+        same_origin = urlparse(WP_URL).hostname
+
+        def _block_offsite(route):
+            try:
+                host = urlparse(route.request.url).hostname or ""
+                if host and host != same_origin:
+                    route.abort()
+                    return
+            except Exception:
+                pass
+            route.continue_()
+
+        page.route("**/*", _block_offsite)
+        try:
+            page.goto(f"{WP_ADMIN_URL}/tools.php?page=swh-api-reference",
+                      wait_until="load")
+            try:
+                page.wait_for_selector(redoc_selector, timeout=10000)
+                rendered_no_cdn = True
+            except PlaywrightTimeoutError:
+                rendered_no_cdn = False
+            check("82 openapi: admin Redoc page STILL renders with all CDN traffic blocked (#368 AC #3)",
+                  rendered_no_cdn, "Redoc viewer requires a CDN — vendored bundle missing or unused")
+        finally:
+            page.unroute("**/*", _block_offsite)
+
+    screenshot(page, "82_rest_openapi")
+
+
 # ── Section registry ──────────────────────────────────────────────────────────
 
 SECTIONS = [
@@ -4946,6 +5438,13 @@ SECTIONS = [
     test_73_reports_range_and_drilldown,       # 73 — v4.0.0 reports redesign (#359)
     test_74_portal_tab_csat_settings,          # 74 — v4.0.3 Portal tab + CSAT settings (#471)
     test_75_integrations_tab,                  # 75 — v4.0.3 Integrations tab (#472)
+    test_76_rest_auth,                         # 76 — v4.1.0 REST auth (#366)
+    test_77_rest_tickets_crud,                 # 77 — v4.1.0 REST tickets CRUD (#362)
+    test_78_rest_replies,                      # 78 — v4.1.0 REST replies + internal-note (#363)
+    test_79_rest_ancillary,                    # 79 — v4.1.0 REST ancillary + allowlist (#364)
+    test_80_rest_rate_limit,                   # 80 — v4.1.0 rate limit + 429 headers (#367)
+    test_81_rest_capability,                   # 81 — v4.1.0 capability + scope rejection (#366)
+    test_82_rest_openapi,                      # 82 — v4.1.0 OpenAPI + Redoc offline (#368)
     test_28_cleanup,                  # 28 — always last
 ]
 

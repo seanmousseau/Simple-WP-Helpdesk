@@ -6,7 +6,7 @@ Working-memory for AI agents on Simple WP Helpdesk. Hot invariants, dev commands
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 4.0.6 | **WP:** 6.0+ | **PHP:** 8.0+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 4.1.0 | **WP:** 6.0+ | **PHP:** 8.0+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 - **Plugin lives in:** `simple-wp-helpdesk/` subdir. Repo root holds dev tooling only.
 
 ## Session start — read these every session
@@ -62,6 +62,8 @@ These are the ones that bite most often. The full numbered table is in `docs/int
 5. **Rate-limit keys are per-action with ticket_id:** `portal_close_`, `portal_reopen_`, `portal_reply_` + id. Shared keys block immediate reopen after close.
 6. **No custom DB tables.** All storage is CPT + meta + comments + options + transients. See `docs/internal/data-dictionary.md`.
 7. **Comment isolation:** `comment_type='helpdesk_reply'` segregates ticket activity; internal notes carry `_is_internal_note=1` and must be filtered from frontend.
+8. **`swh_update_ticket_fields()` is the only correct way to mutate ticket fields** (v4.1+, invariant #19). Both `swh_save_ticket_data()` (admin) and the REST PATCH path delegate to this helper for status/priority/assignee/client name+email/CC list/resolved-timestamp. Direct `update_post_meta()` bypasses the same lifecycle hooks that #1 protects.
+9. **`swh_insert_helpdesk_reply()` is the only correct way to insert a reply** (v4.1+, invariant #20). Admin reply and REST replies endpoint both go through this helper — keeps comment-type, internal-note flagging, and downstream hooks consistent.
 
 ## Dev commands
 
@@ -86,6 +88,7 @@ If your PR touches any of these, update the corresponding internal doc:
 | Schema-ish state (options, post meta, comment meta, transients, CPT, capabilities) | `data-dictionary.md` |
 | A setting (add/change/remove) | `config-reference.md` + `contract-settings.md` |
 | A hook, REST endpoint, AJAX, or shortcode attribute | `api-contract.md` + end-user `docs/hooks.md` |
+| A `swh/v1` REST route (add/modify/remove) or any `src/Rest/V1/Schemas/*.php` | `docs/openapi.yaml` + run `bash bin/openapi-sync.sh` to regenerate **both** `docs/openapi.json` AND `simple-wp-helpdesk/openapi.json` (plugin-bundled artifact served by `GET /swh/v1/openapi.json`; CI `openapi` job enforces sync) |
 | Untrusted-input handling, auth, files, tokens | `security-model.md` |
 | Inbound webhook | `contract-inbound-webhook.md` + end-user `docs/inbound-webhook.md` |
 | Ticket lifecycle / status / merge | `contract-ticket-lifecycle.md` |

@@ -10,6 +10,9 @@
 
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
+// Phase 7 (#367): expose swh_test_clear_rate_limits() to every PHPUnit test.
+require_once __DIR__ . '/Support/RateLimitTestHelpers.php';
+
 // WordPress constants used by plugin files.
 define( 'ABSPATH', '/tmp/wp/' );
 define( 'DAY_IN_SECONDS', 86400 );
@@ -51,7 +54,46 @@ if ( ! class_exists( 'WP_REST_Controller' ) ) {
 	 * Minimal WP_REST_Controller stub for unit tests.
 	 */
 	abstract class WP_REST_Controller {
+		/** @var string */
+		protected $namespace = '';
+
+		/** @var string */
+		protected $rest_base = '';
+
+		/** @var array<string,mixed>|null */
+		protected $schema = null;
+
 		abstract public function register_routes(): void;
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_item_schema(): array {
+			return array();
+		}
+
+		/**
+		 * @param string $method HTTP method.
+		 * @return array<string,mixed>
+		 */
+		public function get_endpoint_args_for_item_schema( $method = 'POST' ): array {
+			return array();
+		}
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_public_item_schema(): array {
+			return $this->get_item_schema();
+		}
+
+		/**
+		 * @param array<string,mixed> $schema
+		 * @return array<string,mixed>
+		 */
+		public function add_additional_fields_schema( $schema ): array {
+			return $schema;
+		}
 	}
 }
 
@@ -75,11 +117,33 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		/** @var array<string,mixed> */
 		private array $params = array();
 
+		/** @var array<string,string> */
+		private array $headers = array();
+
+		/** @var string */
+		private string $method;
+
+		/** @var string */
+		private string $route;
+
 		/**
 		 * @param string $method HTTP method.
 		 * @param string $route  Route string.
 		 */
-		public function __construct( string $method = 'GET', string $route = '' ) {}
+		public function __construct( string $method = 'GET', string $route = '' ) {
+			$this->method = $method;
+			$this->route  = $route;
+		}
+
+		/** Mirrors WP core's WP_REST_Request::get_method(). */
+		public function get_method(): string {
+			return $this->method;
+		}
+
+		/** Mirrors WP core's WP_REST_Request::get_route(). */
+		public function get_route(): string {
+			return $this->route;
+		}
 
 		/**
 		 * @param string $key   Parameter name.
@@ -96,6 +160,69 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		public function get_param( string $key ) {
 			return $this->params[ $key ] ?? null;
 		}
+
+		/**
+		 * @param string $name  Header name (case-insensitive).
+		 * @param string $value Header value.
+		 */
+		public function set_header( string $name, string $value ): void {
+			$this->headers[ strtolower( $name ) ] = $value;
+		}
+
+		/**
+		 * @param string $name Header name (case-insensitive).
+		 * @return string Empty string when unset (mirrors WP behaviour).
+		 */
+		public function get_header( string $name ): string {
+			return $this->headers[ strtolower( $name ) ] ?? '';
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	/**
+	 * Minimal WP_Error stub for unit tests.
+	 *
+	 * Mirrors the subset of WP core's WP_Error surface used by the v4.1.0
+	 * REST error envelope ({@see \SWH\Rest\Errors}). `data.status` is the
+	 * field WP core copies into the HTTP response status when handing the
+	 * error to `WP_REST_Server::error_to_response()`.
+	 */
+	class WP_Error {
+		/** @var string */
+		private string $code;
+
+		/** @var string */
+		private string $message;
+
+		/** @var array<string,mixed> */
+		private array $data;
+
+		/**
+		 * @param string              $code    Error code.
+		 * @param string              $message Human-readable message.
+		 * @param array<string,mixed> $data    Arbitrary data — `status` becomes the HTTP status.
+		 */
+		public function __construct( string $code = '', string $message = '', array $data = array() ) {
+			$this->code    = $code;
+			$this->message = $message;
+			$this->data    = $data;
+		}
+
+		public function get_error_code(): string {
+			return $this->code;
+		}
+
+		public function get_error_message(): string {
+			return $this->message;
+		}
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_error_data(): array {
+			return $this->data;
+		}
 	}
 }
 
@@ -109,6 +236,9 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 
 		/** @var int */
 		private int $status;
+
+		/** @var array<string,string> */
+		private array $headers = array();
 
 		/**
 		 * @param mixed $data   Response data.
@@ -127,6 +257,50 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 		public function get_status(): int {
 			return $this->status;
 		}
+
+		/**
+		 * @param string $name  Header name (case-insensitive).
+		 * @param string $value Header value.
+		 */
+		public function header( string $name, string $value ): void {
+			$this->headers[ strtolower( $name ) ] = $value;
+		}
+
+		/**
+		 * @return array<string,string>
+		 */
+		public function get_headers(): array {
+			return $this->headers;
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_Post' ) ) {
+	/**
+	 * Minimal WP_Post stub for unit tests.
+	 *
+	 * Mirrors the public-property surface unit tests need. Real WP_Post is
+	 * loaded from wp-includes/class-wp-post.php in a full WP environment.
+	 */
+	class WP_Post {
+		public int $ID                   = 0;
+		public string $post_type         = '';
+		public string $post_title        = '';
+		public string $post_content      = '';
+		public string $post_status       = 'publish';
+		public string $post_date_gmt     = '';
+		public string $post_modified_gmt = '';
+
+		/**
+		 * @param array<string,mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = $value;
+				}
+			}
+		}
 	}
 }
 
@@ -141,6 +315,27 @@ if ( ! class_exists( 'WP_Comment' ) ) {
 		/** @var string UTC timestamp of the comment. */
 		public string $comment_date_gmt = '';
 
+		/** @var string Comment ID (WP serialises as string). */
+		public string $comment_ID = '0';
+
+		/** @var string Parent post ID (WP serialises as string). */
+		public string $comment_post_ID = '0';
+
+		/** @var string Author user ID (0 for guests/clients). */
+		public string $user_id = '0';
+
+		/** @var string Author display name. */
+		public string $comment_author = '';
+
+		/** @var string Author email. */
+		public string $comment_author_email = '';
+
+		/** @var string Comment body. */
+		public string $comment_content = '';
+
+		/** @var string Comment type (e.g. helpdesk_reply). */
+		public string $comment_type = '';
+
 		/**
 		 * @param array<string, mixed> $data Optional property overrides.
 		 */
@@ -148,6 +343,74 @@ if ( ! class_exists( 'WP_Comment' ) ) {
 			foreach ( $data as $key => $value ) {
 				if ( property_exists( $this, $key ) ) {
 					$this->{$key} = (string) $value;
+				}
+			}
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_Term' ) ) {
+	/**
+	 * Minimal WP_Term stub for unit tests.
+	 *
+	 * Defines the properties read by the v4.1.0 categories controller and the
+	 * ticket schema projection. Tests construct instances directly; no
+	 * database interaction is involved.
+	 */
+	class WP_Term {
+		/** @var int Term ID. */
+		public int $term_id = 0;
+
+		/** @var string Term display name. */
+		public string $name = '';
+
+		/** @var string Term slug. */
+		public string $slug = '';
+
+		/** @var int Parent term ID (0 = top-level). */
+		public int $parent = 0;
+
+		/** @var int Tickets-in-term count. */
+		public int $count = 0;
+
+		/**
+		 * @param array<string,mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = $value;
+				}
+			}
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_User' ) ) {
+	/**
+	 * Minimal WP_User stub for unit tests.
+	 *
+	 * Defines only the properties read by v4.1.0 controllers — display_name,
+	 * user_email, ID. Roles/capabilities are NOT modelled because the
+	 * controllers never read them (the allowlist response forbids it).
+	 */
+	class WP_User {
+		/** @var int WP user ID. */
+		public int $ID = 0;
+
+		/** @var string Display name. */
+		public string $display_name = '';
+
+		/** @var string Email address. */
+		public string $user_email = '';
+
+		/**
+		 * @param array<string,mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = $value;
 				}
 			}
 		}
@@ -179,6 +442,43 @@ if ( ! function_exists( 'sanitize_file_name' ) ) {
 	 */
 	function sanitize_file_name( $filename ) {
 		return strtolower( preg_replace( '/\s+/', '-', (string) $filename ) );
+	}
+}
+
+if ( ! function_exists( '__' ) ) {
+	/**
+	 * Stub: pass-through gettext for unit tests.
+	 *
+	 * @param string $text   Text to translate.
+	 * @param string $domain Text domain (ignored).
+	 * @return string
+	 */
+	function __( $text, $domain = '' ) { // phpcs:ignore
+		return (string) $text;
+	}
+}
+
+if ( ! function_exists( '__return_true' ) ) {
+	function __return_true(): bool {
+		return true;
+	}
+}
+
+if ( ! function_exists( '__return_false' ) ) {
+	function __return_false(): bool {
+		return false;
+	}
+}
+
+if ( ! function_exists( 'is_wp_error' ) ) {
+	/**
+	 * Stub: returns true when $thing is a WP_Error instance.
+	 *
+	 * @param mixed $thing Value to test.
+	 * @return bool
+	 */
+	function is_wp_error( $thing ): bool {
+		return $thing instanceof \WP_Error;
 	}
 }
 

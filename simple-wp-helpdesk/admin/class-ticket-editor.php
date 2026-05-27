@@ -419,33 +419,37 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	$defs            = swh_get_defaults();
 	$old_status      = swh_get_string_meta( $post_id, '_ticket_status' );
 	$old_assigned_to = swh_get_int_meta( $post_id, '_ticket_assigned_to' );
-	$new_status      = isset( $_POST['ticket_status'] ) && is_string( $_POST['ticket_status'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_status'] ) ) : '';
-	$new_priority    = isset( $_POST['ticket_priority'] ) && is_string( $_POST['ticket_priority'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_priority'] ) ) : '';
-	$assigned_to     = isset( $_POST['ticket_assigned_to'] ) && is_scalar( $_POST['ticket_assigned_to'] ) ? absint( $_POST['ticket_assigned_to'] ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
-	// Validate status and priority against configured lists.
-	$allowed_statuses   = swh_get_statuses();
-	$allowed_priorities = swh_get_priorities();
-	if ( $new_status && ! in_array( $new_status, $allowed_statuses, true ) ) {
-		$new_status = $old_status; // Reject unknown status; keep existing.
+	// v4.1.0 Phase 3: status/priority/assignee mutations route through the
+	// context-neutral helper so the admin path, internal REST drawer, and the
+	// new public REST v1 surface all share one mutation choke point. This is
+	// the *only* correct way to mutate these fields (invariant — see
+	// docs/internal/design-document.md).
+	$_field_patch = array();
+	if ( isset( $_POST['ticket_status'] ) && is_string( $_POST['ticket_status'] ) ) {
+		$_field_patch['status'] = sanitize_text_field( wp_unslash( $_POST['ticket_status'] ) );
 	}
-	if ( $new_priority && ! in_array( $new_priority, $allowed_priorities, true ) ) {
-		$new_priority = swh_get_string_meta( $post_id, '_ticket_priority' );
+	if ( isset( $_POST['ticket_priority'] ) && is_string( $_POST['ticket_priority'] ) ) {
+		$_field_patch['priority'] = sanitize_text_field( wp_unslash( $_POST['ticket_priority'] ) );
 	}
-	// Validate assignee: must be an administrator or technician (0 = unassigned).
-	if ( $assigned_to ) {
-		$assignee_data = get_userdata( $assigned_to );
-		if ( ! $assignee_data || empty( array_intersect( array( 'administrator', 'technician' ), (array) $assignee_data->roles ) ) ) {
-			$assigned_to = 0;
-		}
+	if ( isset( $_POST['ticket_assigned_to'] ) && is_scalar( $_POST['ticket_assigned_to'] ) ) {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- absint() is sufficient.
+		$_field_patch['assignee'] = absint( $_POST['ticket_assigned_to'] );
 	}
 
-	swh_set_ticket_status( $post_id, $new_status );
-	update_post_meta( $post_id, '_ticket_priority', $new_priority );
-	update_post_meta( $post_id, '_ticket_assigned_to', $assigned_to ? $assigned_to : '' );
-	if ( $assigned_to !== $old_assigned_to ) {
-		do_action( 'swh_ticket_assigned', $post_id, (int) $old_assigned_to, (int) $assigned_to );
-	}
+	swh_update_ticket_fields(
+		$post_id,
+		$_field_patch,
+		array(
+			'source'   => 'admin_save',
+			'actor_id' => get_current_user_id(),
+		)
+	);
+
+	// Recompute post-update values for the rest of the legacy save flow.
+	$new_status   = swh_get_string_meta( $post_id, '_ticket_status' );
+	$new_priority = swh_get_string_meta( $post_id, '_ticket_priority' );
+	$assigned_to  = swh_get_int_meta( $post_id, '_ticket_assigned_to' );
 
 	// When ticket is reassigned, clear the post lock and suppress lock reads for
 	// 3 minutes. A simple delete_post_meta is not enough because the previous
@@ -461,32 +465,32 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		);
 	}
 
-	// Save editable client name/email (admin-created tickets or corrections).
-	// Must run before the bootstrap and assignment notification so meta is current
-	// when swh_get_secure_ticket_link() and email templates are called below.
-	$client_name  = isset( $_POST['ticket_client_name'] ) && is_string( $_POST['ticket_client_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_client_name'] ) ) : '';
-	$client_email = isset( $_POST['ticket_client_email'] ) && is_string( $_POST['ticket_client_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_client_email'] ) ) : '';
+	// Save editable client name/email + CC list through the helper. Kept as
+	// a separate call from the status/priority/assignee patch above because the
+	// legacy admin flow relies on these values being current before the
+	// ticket-identity bootstrap below runs (the email template parser reads
+	// _ticket_name / _ticket_email for the confirmation email).
+	$client_name   = isset( $_POST['ticket_client_name'] ) && is_string( $_POST['ticket_client_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ticket_client_name'] ) ) : '';
+	$client_email  = isset( $_POST['ticket_client_email'] ) && is_string( $_POST['ticket_client_email'] ) ? sanitize_email( wp_unslash( $_POST['ticket_client_email'] ) ) : '';
+	$_client_patch = array();
 	if ( $client_name ) {
-		update_post_meta( $post_id, '_ticket_name', $client_name );
+		$_client_patch['requester_name'] = $client_name;
 	}
 	if ( $client_email ) {
-		update_post_meta( $post_id, '_ticket_email', $client_email );
+		$_client_patch['requester_email'] = $client_email;
 	}
-	// Save CC / Watcher emails.
 	if ( isset( $_POST['ticket_cc_emails'] ) && is_string( $_POST['ticket_cc_emails'] ) ) {
-		$raw_cc = sanitize_text_field( wp_unslash( $_POST['ticket_cc_emails'] ) );
-		// Sanitize each address and rejoin.
-		$cc_parts = array_map( 'sanitize_email', array_map( 'trim', explode( ',', $raw_cc ) ) );
-		$cc_clean = implode(
-			', ',
-			array_filter(
-				$cc_parts,
-				function ( string $addr ): bool {
-					return (bool) is_email( $addr );
-				}
+		$_client_patch['cc_emails'] = sanitize_text_field( wp_unslash( $_POST['ticket_cc_emails'] ) );
+	}
+	if ( ! empty( $_client_patch ) ) {
+		swh_update_ticket_fields(
+			$post_id,
+			$_client_patch,
+			array(
+				'source'   => 'admin_save',
+				'actor_id' => get_current_user_id(),
 			)
 		);
-		update_post_meta( $post_id, '_ticket_cc_emails', $cc_clean );
 	}
 
 	// For admin-created tickets that have no UID yet, bootstrap the ticket identity.
@@ -528,12 +532,10 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	// call above. Before v4.0.2 it was inlined here, which meant drawer +
 	// bulk assignments never sent the email — see #434/#435 RC follow-up.
 
+	// Resolved-timestamp bookkeeping is owned by swh_update_ticket_fields()
+	// (status branch). $resolved_status is still needed below for the reply
+	// email branching.
 	$resolved_status = swh_get_string_option( 'swh_resolved_status', is_string( $defs['swh_resolved_status'] ) ? $defs['swh_resolved_status'] : '' );
-	if ( $resolved_status === $new_status && $old_status !== $new_status ) {
-		update_post_meta( $post_id, '_resolved_timestamp', time() );
-	} elseif ( $resolved_status === $old_status && $resolved_status !== $new_status ) {
-		delete_post_meta( $post_id, '_resolved_timestamp' );
-	}
 
 	$data_name = swh_get_string_meta( $post_id, '_ticket_name' );
 	$data      = array(
@@ -554,23 +556,27 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	$current_user_email = is_string( $current_user->user_email ) ? $current_user->user_email : '';
 
 	if ( ! empty( $_POST['swh_tech_note_text'] ) && is_string( $_POST['swh_tech_note_text'] ) ) {
-		$note_text  = sanitize_textarea_field( wp_unslash( $_POST['swh_tech_note_text'] ) );
-		$comment_id = wp_insert_comment(
+		$note_text = sanitize_textarea_field( wp_unslash( $_POST['swh_tech_note_text'] ) );
+		// v4.1.0 Phase 4: route through the canonical reply-insert helper so
+		// the admin path, the internal REST drawer, the portal, and the new
+		// public REST v1 surface all share one insertion choke point
+		// (invariant #20, design-document.md). dispatch_email=false because
+		// internal notes never email the requester.
+		swh_insert_helpdesk_reply(
+			$post_id,
 			array(
-				'comment_post_ID'      => $post_id,
-				'comment_author'       => $current_user_name,
-				'comment_author_email' => $current_user_email,
-				'comment_content'      => $note_text,
-				'comment_approved'     => 1,
-				'comment_type'         => 'helpdesk_reply',
+				'body'             => $note_text,
+				'is_internal_note' => true,
+				'author_user_id'   => get_current_user_id(),
+				'author_name'      => $current_user_name,
+				'author_email'     => $current_user_email,
+				'dispatch_email'   => false,
+			),
+			array(
+				'source'   => 'admin_form',
+				'actor_id' => get_current_user_id(),
 			)
 		);
-		if ( $comment_id ) {
-			update_comment_meta( $comment_id, '_is_internal_note', '1' );
-			update_post_meta( $post_id, '_swh_last_activity_at', time() );
-			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
-			\SWH\Concurrency\TicketVersion::bump( $post_id );
-		}
 	}
 
 	$just_replied = false;
@@ -583,42 +589,42 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	$has_files  = ! empty( $files_name[0] );
 
 	if ( $reply_text || $has_files ) {
-		$just_replied    = true;
-		$comment_content = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
-		$comment_id      = wp_insert_comment(
-			array(
-				'comment_post_ID'      => $post_id,
-				'comment_author'       => $current_user_name,
-				'comment_author_email' => $current_user_email,
-				'comment_content'      => $comment_content,
-				'comment_approved'     => 1,
-				'comment_type'         => 'helpdesk_reply',
-			)
-		);
-		if ( $comment_id ) {
-			update_comment_meta( $comment_id, '_is_user_reply', '0' );
-			update_post_meta( $post_id, '_swh_last_activity_at', time() );
-			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
-			\SWH\Concurrency\TicketVersion::bump( $post_id );
-		}
+		$just_replied = true;
 
+		// $_FILES handling stays in the admin path — the admin form posts
+		// multipart uploads through swh_handle_multiple_uploads() and the
+		// resulting URLs feed BOTH the comment meta AND the composite email
+		// below (reply + status-change branching). The helper accepts the
+		// pre-uploaded URL set so the admin path remains the one place that
+		// owns the $_FILES pipeline.
 		$tech_orignames = null;
 		$tech_skipped   = 0;
 		// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$attach_urls = ! empty( $files_raw ) ? swh_handle_multiple_uploads( $files_raw, $tech_orignames, $tech_skipped ) : array();
-		if ( $comment_id && ! empty( $attach_urls ) ) {
-			update_comment_meta( $comment_id, '_attachments', $attach_urls );
-			if ( ! empty( $tech_orignames ) ) {
-				update_comment_meta( $comment_id, '_swh_reply_orignames', $tech_orignames );
-			}
-		}
-		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 
-		// Record first response time only when the comment was actually inserted.
-		if ( $comment_id && $current_user_email !== $data['email'] && ! swh_get_int_meta( $post_id, '_ticket_first_response_at' ) ) {
-			update_post_meta( $post_id, '_ticket_first_response_at', time() );
-		}
+		// v4.1.0 Phase 4: route through the canonical reply-insert helper
+		// (invariant #20). dispatch_email=false because the admin path emits
+		// its own composite "reply + status-change" email below.
+		swh_insert_helpdesk_reply(
+			$post_id,
+			array(
+				'body'             => $reply_text,
+				'is_internal_note' => false,
+				'author_user_id'   => get_current_user_id(),
+				'author_name'      => $current_user_name,
+				'author_email'     => $current_user_email,
+				'attachment_urls'  => $attach_urls,
+				'attachment_names' => is_array( $tech_orignames ) ? $tech_orignames : array(),
+				'dispatch_email'   => false,
+			),
+			array(
+				'source'   => 'admin_form',
+				'actor_id' => get_current_user_id(),
+			)
+		);
+
+		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 	}
 
 	$status_changed = ( $update && $old_status !== $new_status );

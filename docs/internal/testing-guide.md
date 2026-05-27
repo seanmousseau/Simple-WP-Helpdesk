@@ -154,7 +154,7 @@ After opening a PR, run `/review`. Address every actionable finding before merge
 
 ## Playwright test taxonomy
 
-64 sections in `testing/scripts/test_helpdesk_pw.py`. Marks: `smoke`, `security`, `slow`.
+82 sections in `testing/scripts/test_helpdesk_pw.py`. Marks: `smoke`, `security`, `slow`.
 
 | # | Name | Marks |
 |---|------|-------|
@@ -220,8 +220,39 @@ After opening a PR, run `/review`. Address every actionable finding before merge
 | 62 | focus_visible_rings | |
 | 63 | csat_focus_management | |
 | 64 | aria_live_announcements | |
+| 65 | inbox_renders_and_switches_views | |
+| 66 | drawer_opens_and_edits_status | |
+| 67 | drawer_concurrency_conflict_shows_banner | |
+| 68 | palette_opens_with_shortcut_and_switches_view | |
+| 69 | bulk_bar_closes_selected_tickets | |
+| 70 | create_personal_view_and_switch | |
+| 71 | violet_theme_toggle | |
+| 72 | portal_v2_renders_conversation | |
+| 73 | reports_range_and_drilldown | |
+| 74 | portal_tab_csat_settings | |
+| 75 | integrations_tab | |
+| 76 | rest_auth | security |
+| 77 | rest_tickets_crud | |
+| 78 | rest_replies | |
+| 79 | rest_ancillary | security |
+| 80 | rest_rate_limit | security |
+| 81 | rest_capability | security |
+| 82 | rest_openapi | |
 
 (Section numbers are not consecutive; some are reserved for now-merged work.)
+
+### v4.1.0 sections 76–82 — REST surface
+
+All seven sections drive the `swh/v1` REST API via Playwright's request context. Helpers in `testing/scripts/rest_helpers.py`:
+
+- `create_api_key(page, scope, label, rate_limit=None)` — drives the Settings → Integrations → API Keys UI; captures the AJAX response so `{id, plaintext, prefix}` comes from the wire (not DOM scraping); exercises the shown-once modal Copy → Close path so the visual contract is validated alongside the data state. **Labels must start with `test_`** so `revoke_all_test_keys()` can find them.
+- `api_request(page, method, path, key=None, body=None, headers=None)` — thin wrapper around `page.context.request` for `/wp-json/swh/v1{path}` calls with optional Bearer auth and JSON body encoding.
+- `revoke_all_test_keys(page)` — drives the UI to revoke every `test_*` key. CLI fallback (via `wp_cli_helpers.revoke_api_keys_with_label_prefix`) ensures we never leak keys between runs.
+- `clear_rate_limits(page)` — invokes the WP-CLI shim that deletes every `swh_rl_*` and `_swh_rl_*` row (transients + the v4.1 RateLimiter option floor) and flushes the object cache.
+
+Teardown — `revoke_all_test_keys()` + `clear_rate_limits()` — is wired into the session-scoped finalizer in `conftest.py` and runs unconditionally, even on `KeyboardInterrupt`. Sections 80 and 81 additionally call `clear_rate_limits()` in setup so prior rate-limit state can't poison the run.
+
+Cookie-auth note: WP's REST API requires `X-WP-Nonce` header alongside the `auth_logged_in` cookies. Sections 76 (admin cookie path) and 81 (subscriber capability path) mint a fresh `wp_rest` nonce via `admin-ajax.php?action=rest-nonce` before issuing the cookie-auth call.
 
 ## Test architecture
 

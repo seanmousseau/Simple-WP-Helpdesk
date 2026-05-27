@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple WP Helpdesk
  * Description: A comprehensive helpdesk system with auto-close, custom templates, multi-file attachments, internal notes, anti-spam, deep uninstallation cleanup, and GitHub auto-updates.
- * Version: 4.0.7
+ * Version: 4.1.0
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Text Domain: simple-wp-helpdesk
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWH_VERSION', '4.0.7' );
+define( 'SWH_VERSION', '4.1.0' );
 define( 'SWH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWH_PLUGIN_FILE', __FILE__ );
@@ -33,6 +33,8 @@ if ( file_exists( SWH_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+require_once SWH_PLUGIN_DIR . 'includes/ticket-update-fields.php';
+require_once SWH_PLUGIN_DIR . 'includes/insert-helpdesk-reply.php';
 require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-email.php';
@@ -44,6 +46,30 @@ require_once SWH_PLUGIN_DIR . 'includes/theme-violet.php';
 // /wp-json/ calls where is_admin() is false, so guarding these behind
 // is_admin() means the routes never register and every endpoint 404s.
 require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
+
+// v4.1.0 public REST surface — Phase 2 bootstrap registers the `swh/v1`
+// namespace owner; Phase 3+ controllers plug in via Bootstrap::register_controller().
+\SWH\Rest\Bootstrap::boot();
+
+// v4.1.0 Phase 3 — public `swh/v1/tickets` CRUD controller (#362). The
+// file-level Bootstrap::register_controller() call queues the controller
+// for registration on rest_api_init.
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Ticket.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Reply.php';
+// v4.1.0 Phase 9 — Opt-in API access audit log service (#369). Loaded BEFORE
+// the controllers that call ApiAccessLog::record(). The meta box (admin-only)
+// is loaded separately inside the is_admin() block below.
+require_once SWH_PLUGIN_DIR . 'src/Admin/ApiAccessLog.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/TicketsController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/RepliesController.php';
+// v4.1.0 Phase 5 — ancillary read-only endpoints + public settings allowlist (#364).
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/PublicSettingsAllowlist.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/UsersController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/CategoriesController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/SettingsController.php';
+// v4.1.0 Phase 8 — public OpenAPI 3.1 JSON endpoint (#368).
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/OpenApiController.php';
+
 require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';
@@ -55,6 +81,17 @@ require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
 // Admin includes (only in admin context).
 if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
+	// v4.1.0 Phase 6 — API key management AJAX (#365 UI half).
+	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiKeysAjax.php';
+	\SWH\Admin\ApiKeysAjax::boot();
+	// v4.1.0 Phase 8 — Tools → Helpdesk API Reference page (Redoc viewer, #368).
+	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiReferencePage.php';
+	\SWH\Admin\ApiReferencePage::register();
+	// v4.1.0 Phase 9 — Opt-in API access audit log meta box (#369).
+	// ApiAccessLog itself is loaded earlier (above the REST require block) so
+	// the controllers can call ApiAccessLog::record() on non-admin requests.
+	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiAccessLogMetaBox.php';
+	\SWH\Admin\ApiAccessLogMetaBox::register();
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 — kept active; serves ?legacy=1 fallback view with column/filter/badge enhancements.
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';

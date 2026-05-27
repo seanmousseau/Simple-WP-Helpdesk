@@ -57,7 +57,13 @@ const actions = {
 			dispatch( { type: 'FETCH_START', fetchKey } );
 			try {
 				const data = await apiFetch( {
-					path: `/swh/v1/tickets?${ fetchKey }`,
+					// v4.1.0 (Cliff 1 fix): admin-internal listing moved off
+					// `swh/v1` so it stops colliding with the public
+					// {@see SWH\Rest\V1\TicketsController}. The public V1
+					// controller returns a raw array; this admin endpoint
+					// returns the `{tickets,total,page,per_page}` envelope
+					// that the React store consumes.
+					path: `/swh-admin/v1/tickets?${ fetchKey }`,
 				} );
 				// Discard if a newer fetch has already been dispatched.
 				if ( select.getActiveFetchKey() !== fetchKey ) {

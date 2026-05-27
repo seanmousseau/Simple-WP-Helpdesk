@@ -72,6 +72,22 @@ CI failures block all merge gates — see `planning-and-release-process.md`.
 
 ---
 
+## v4.1.0 REST surface — Playwright sections 76–82
+
+Phase 10 of the v4.1.0 release adds seven new pytest sections covering the public `swh/v1` REST API end-to-end. Helpers live in `testing/scripts/rest_helpers.py` (key creation drives the Settings UI; `api_request()` issues bearer-auth REST calls via Playwright's request context). Teardown — `revoke_all_test_keys()` + `clear_rate_limits()` — runs in the session-scoped finalizer in `conftest.py` so the stack is left clean. See `testing-guide.md` for per-section detail.
+
+| # | Function | Covers |
+|---|---|---|
+| 76 | `test_76_rest_auth` | Bearer parsing, 401 missing/invalid, WP App Password via X-WP-Nonce |
+| 77 | `test_77_rest_tickets_crud` | GET list filters + pagination + X-WP-Total, GET single, POST, PATCH, status enum reject, per_page clamp, 404 |
+| 78 | `test_78_rest_replies` | Per-ticket list + create, internal-note scope visibility, attachment/body validation |
+| 79 | `test_79_rest_ancillary` | technicians, categories, /settings/public allowlist drift detection |
+| 80 | `test_80_rest_rate_limit` | Per-key rate_limit override, 429 + Retry-After + X-RateLimit-* headers |
+| 81 | `test_81_rest_capability` | Scope rejection + subscriber-role capability_required path |
+| 82 | `test_82_rest_openapi` | /openapi.json validity, admin Redoc page, no-CDN invariant (#368 AC #3) |
+
+---
+
 ## What does not have a test suite
 
 These exist intentionally outside the automated suites:
