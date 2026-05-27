@@ -1,94 +1,108 @@
 # v4.1.0 — RC Sign-off
 
 **Branch tested:** `dev` @ `12083be` (Gate 2 merge of `release/v4.1.0`)
-**Tested by:** Claude (Opus 4.7) via the `/godmode` v4.1.0 release execution
+**Deployed:** plugin v4.1.0 on `$WP_TESTING_URL` (rsync from local `simple-wp-helpdesk/`; `wp plugin get` confirms `Version: 4.1.0`, `swh_db_version = 4.1.0`)
+**Tested by:** Claude Opus via /godmode v4.1.0 release execution
 **Date:** 2026-05-27
-
-## Status: HOLD — environmental blocker
-
-The v4.1.0 Extended Test Suite and Manual Visual Regression Suite **could not be executed against the dev WordPress instance** because the dev instance is still running plugin **v4.0.7** — the v4.1.0 release has not been deployed to `$WP_TESTING_URL`.
-
-Continuing the runbook would re-verify v4.0.7 behavior under a v4.1.0 label, which is precisely the anti-pattern flagged in the brief (PR #518 — confusing "pre-existing" with "introduced by current release"). Sign-off is withheld pending a v4.1.0 deploy to the dev site.
-
-## Environment verification
-
-| Check | Result | Evidence |
-|---|---|---|
-| `make test-extended-verify` (`testing/extended/verify_env.py`) | PASS | 24/24 required env vars; password-integrity check; SSH + docker + wp-cli; IMAP login; SMTP login (STARTTLS + AUTH) |
-| Pre-flight cleanup (`testing/extended/cleanup.py --confirm`) | PASS | 0 stale tickets, 12 stale test-mailbox messages expunged |
-| Git branch state | OK | `dev` @ `12083be` matches Gate 2 merge commit |
-
-## Deployed plugin version on dev (the blocker)
-
-```
-$ wp plugin get simple-wp-helpdesk --field=version
-4.0.7
-
-$ head simple-wp-helpdesk.php  (file deployed to dev)
-Version: 4.0.7
-
-$ ls includes/rest-api  (on dev)
-(does not exist — v4.1+ would have one)
-
-$ git status  (in the deployed plugin dir on dev)
-not a git checkout — plugin is deployed as a copy, not a git clone
-```
-
-The deployment on dev is **not** a git checkout that tracks `dev`. It is a file-copy install of the v4.0.7 bundle. There is no automated `dev → dev-site` deploy step documented in `planning-and-release-process.md` or `CLAUDE.md`, so this update is a manual operator step.
-
-## What this blocks
-
-| Section | Why it can't run on v4.0.7 |
-|---|---|
-| **8.5 — REST API smoke** (the v4.1.0-specific section the brief explicitly called out) | Endpoints `/wp-json/swh/v1/tickets` and `/wp-json/swh/v1/openapi.json` are not registered in v4.0.7. |
-| Visual regression — Settings → Integrations → REST API keys table + Generate form | Section does not exist in v4.0.7. |
-| Visual regression — Generate Key modal (shown-once secret) | Modal does not exist in v4.0.7. |
-| Visual regression — Revoke Key confirmation modal | Modal does not exist in v4.0.7. |
-| Visual regression — Tools → Helpdesk API Reference (Redoc viewer) | Page does not exist in v4.0.7. |
-| Visual regression — API Access meta box on ticket editor | Meta box does not exist in v4.0.7. |
-
-All other sections (1–8, 9 cleanup) could in principle run today, but doing so would only produce a v4.0.7 re-sign-off; the v4.0.7 sign-off already exists at `releases/v4.0.7/` (visual baseline present; no rc-signoff.md found). Running the rest of the runbook against v4.0.7 and labelling it "v4.1.0 RC sign-off" would be misleading and is exactly the failure mode the brief warned against.
 
 ## Extended Test Suite
 
-| Section | Description | Result |
-|---|---|---|
-| 0 | Environment verification | **PASS** |
-| Pre-flight | `make test-extended-cleanup CONFIRM=1` | **PASS** (0 tickets, 12 mailbox messages purged) |
-| 1 | Authentication and access control | **NOT RUN** — would verify v4.0.7 behavior, not v4.1.0 |
-| 2 | Inbound-email webhook | **NOT RUN** — same |
-| 3 | Outbound email deliverability | **NOT RUN** — same |
-| 4 | Portal flow | **NOT RUN** — same |
-| 5 | Admin inbox surfaces (incl. 5.2 rewrite from #504) | **NOT RUN** — same |
-| 6 | Settings (10 tabs) | **NOT RUN** — same |
-| 7 | Reports + dark mode | **NOT RUN** — same |
-| 8 | Accessibility spot-check | **NOT RUN** — same |
-| **8.5** | **REST API happy-path smoke (v4.1+)** | **BLOCKED — feature absent on dev** |
-| 9 | Post-run cleanup | (will run after the real RC sweep) |
+### Scripted prerequisites
 
-**Total:** 1 PASS / 0 FAIL / 9 NOT RUN / 1 BLOCKED.
+| Section | Result | Notes |
+|---|---|---|
+| 0 — Env verify (`make test-extended-verify`) | ✅ PASS | 24 env vars, password integrity, SSH+docker+wp-cli, IMAP login, SMTP STARTTLS+AUTH |
+| Pre-flight cleanup | ✅ PASS | No CLAUDE-TEST-* tickets to remove; no stale mailbox messages |
+
+### Section 8.5 — REST API smoke (v4.1.0-critical)
+
+| Step | Result | Notes |
+|---|---|---|
+| 8.5.1 — Generate write-scope key | ✅ PASS | `\SWH\Rest\ApiKeys::generate()` via wp-cli (UI flow not browser-driven in this run) |
+| 8.5.2 — POST ticket via REST (HTTPS) | ✅ PASS | Created ticket 938 via curl + bearer; response matches `Schemas/Ticket` allowlist shape |
+| 8.5.3 — GET list + pagination | ✅ PASS | `X-WP-Total: 3`, `X-WP-TotalPages: 1`, `X-RateLimit-Limit: 60`, `X-RateLimit-Remaining/-Reset` all present |
+| 8.5.x — PATCH via curl (HTTPS) | ⚠ ENV BLOCKED | Apache 403 on PATCH methods — see Issue #2. WP-layer dispatch (`rest_do_request`) returns 200 with correct status change. |
+| 8.5.4 — OpenAPI JSON endpoint | ✅ PASS | `info.version: 4.1.0`, 7 paths, 9 schemas, `bearerAuth` security scheme present |
+| 8.5.4 — Admin Redoc viewer | ⏸ NOT VERIFIED | Browser-driven; deferred to visual regression run |
+| 8.5.5 — Revoke key + post-revoke fail | ✅ PASS | Post-revoke bearer call returns `swh_rest_auth_invalid` (401) |
+| Rate-limit (60/min default) | ❌ **FAIL** | **Real v4.1.0 bug — see Issue #1.** Counter decrements ~5 per request instead of 1; 429 hits at request 13 instead of 61. |
+| Replies — internal note via REST | ✅ PASS | POST `/swh/v1/tickets/938/replies` with `is_internal_note: true` → 201, reply 618 created, flag persisted (WP-layer dispatch) |
+| Audit log writes when toggle enabled | ✅ PASS | Toggle off (default) → no meta writes. Toggle on → 3 GETs produced 3 log entries with correct route + action + key_label |
+| Allowlist drift (`settings/public`) | ✅ PASS | Response contains only 4 allowlisted keys. No secrets leaked. |
+
+### Section 5.2 (#504 closure)
+
+| Step | Result | Notes |
+|---|---|---|
+| Doc wording vs. behavior | ✅ PASS | Updated §5.2 correctly describes client-side filter + reload-snap-back to "All" per §5.1 default-view contract. Matches #504 fix option #1. |
+
+### Sections 1–7 (standard) — NOT FULLY RUN
+
+Marked **SKIPPED** this run. Rationale: scripted sections (verify_env, REST smoke, audit log) cover the v4.1.0 surfaces; the standard browser-driven sections would require driving Chrome on the dev server. The recent regression-fix PR #519 was verified to recover all 10 cliff tests via `make e2e-docker × 2` runs against this same code (covers sections 5.x and 6.x indirectly via the e2e suite).
+
+**If full Gate 3 sign-off requires the browser-driven sections, those need a follow-up pass.**
 
 ## Manual Visual Regression
 
-Not captured. The directory `releases/v4.1.0/visual-regression/` was scaffolded (settings/, admin/, portal/, darkmode/, api/) but no screenshots were taken; the v4.1.0-new surfaces would be missing and the rest would only duplicate the existing `releases/v4.0.7/visual/` baseline.
+**NOT CAPTURED this run.** Defer to a follow-up browser-driven session, or accept the e2e suite (80/80 on PR #520 + 73/73 on PR #519) as the visual signal.
 
-**Total:** 0 captured.
+Surfaces that would need capture for full Gate 3:
+- Settings → Integrations → API Keys (empty + active+revoked rows)
+- Generate Key shown-once modal · Revoke confirmation modal
+- Tools → Helpdesk API Reference (Redoc viewer)
+- API Access meta box on ticket editor
+- All standard surfaces, light + dark
 
 ## Issues found
 
-| # | Severity | Title | Notes |
-|---|---|---|---|
-| 1 | **blocker (release process)** | Dev WP not updated to v4.1.0 before Gate 3 verification | The runbook assumes `$WP_TESTING_URL` is running the candidate build. Neither `planning-and-release-process.md` nor `extended-test-plan.md` documents the deploy step from `dev` → dev WP. Recommend adding a step under "Gate 3 — `dev → main`": _"Before running the Extended Test Suite, deploy the current `dev` branch's plugin bundle to `$WP_TESTING_URL`. Confirm via `wp plugin get simple-wp-helpdesk --field=version` that the deployed version matches the candidate."_ |
-| 2 | non-blocker (tooling) | `Makefile` extended-test targets invoke `python3` directly | `testing/extended/*.py` need `paramiko`, which is installed only in `testing/.venv/`. Running `make test-extended-verify` from a clean shell fails with `ModuleNotFoundError: No module named 'paramiko'`. Worked around by invoking `./testing/.venv/bin/python` directly. Recommend the Makefile target use `testing/.venv/bin/python` (or document the activation step explicitly). |
-| 3 | non-blocker (tooling noise) | wp-cli emits PHP 8.3 deprecation noise on every call | `Deprecated: Case statements followed by a semicolon …` from `react/promise` in the wp-cli phar. Confirmed in `_wpcli.py` — the WP_CLI_PHP_ARGS env override is set but only takes effect inside `docker exec -e …`; some invocations bypass it. Cosmetic only; affects log readability of scripted sections. |
+### Issue #1 — Rate-limit counter increments ≈5× per request (HIGH — v4.1.0 regression)
+
+**Symptom:** After 1 authenticated REST call: `X-RateLimit-Remaining: 59` (correct). After 6 calls: `X-RateLimit-Remaining: 29` — should be 54. After ~12 calls: 429. Default 60/min limit gives users effectively ~12 requests/min.
+
+**Reproducible:** Yes. Fresh API key, sequence of `curl -H "Authorization: Bearer swhk_..." GET /swh/v1/tickets/938`. Remaining drops by ~5 per request.
+
+**Suspect cause:** `SWH\Rest\RateLimiter::check()` invoked multiple times per request lifecycle. Likely candidates: `Auth::check_request()` (permission_callback), `ResponseDecorator::with_rate_limit_headers()`, and/or the `rest_pre_dispatch` / `rest_post_dispatch` filter pair.
+
+**Severity:** HIGH — the headline feature ships with a 5× tighter limit than documented. Not a security issue (more restrictive than intended) but a real UX defect for the headline v4.1.0 feature.
+
+**Fix scope estimate:** Small (1–2 files). Either dedupe `check()` calls per request, or make `check()` idempotent within a request via a request-scoped static cache.
+
+**Files to inspect:**
+- `simple-wp-helpdesk/src/Rest/Auth.php`
+- `simple-wp-helpdesk/src/Rest/RateLimiter.php`
+- `simple-wp-helpdesk/src/Rest/V1/ResponseDecorator.php`
+- `simple-wp-helpdesk/src/Rest/Bootstrap.php`
+
+### Issue #2 — Apache rejects PATCH method (ENVIRONMENTAL, not a v4.1.0 bug)
+
+**Symptom:** `curl -X PATCH .../wp-json/swh/v1/tickets/938` returns Apache 403 Forbidden on both `dev.seanmousseau.com` and `dev-direct.seanmousseau.com`. Apache is the source of the 403 (Apache header in response body).
+
+**Not affected:** `rest_do_request()` via wp-cli returns 200 with correct behavior. GET, POST work fine via curl.
+
+**Cause:** Apache config on the dev server (ModSecurity rule, `LimitExcept`, or similar) restricting non-CRUD methods.
+
+**Severity:** ENVIRONMENTAL. Not a v4.1.0 release blocker. Fix dev server Apache config separately.
+
+### Issue #3 — Priority enum case sensitivity (LOW)
+
+**Symptom:** POST `{"priority": "medium"}` → 400. `"Medium"` accepted. Validation against `swh_priority_labels` option is case-sensitive; OpenAPI spec doesn't document an enum.
+
+**Recommendation (v4.1.1):** Either case-insensitive comparison + canonical-form storage, OR document the case sensitivity in OpenAPI via enum.
+
+### Issue #4 — POST response `status` is empty string (LOW)
+
+**Symptom:** POST without `status` returns `"status": ""` in the response. Subsequent GET reflects the actual stored status. Visual paper cut only.
+
+**Recommendation (v4.1.1):** `Schemas\Ticket::from_post()` should read the stored status, not echo input.
 
 ## Gate 3 recommendation
 
-**HOLD.** The Gate 3 prerequisites (Extended Test Suite + Manual Visual Regression Suite per `planning-and-release-process.md` § Gate 3) cannot be satisfied while dev runs v4.0.7. Required next steps before re-attempting RC sign-off:
+**HOLD.** Fix Issue #1 (rate-limit double-count) before merging `dev → main`. The bug ships the headline feature in a degraded state. Fix scope is small; cost of shipping the bug to API-quality story is not.
 
-1. Build the v4.1.0 plugin bundle from `dev` HEAD (`make js-build` + zip per release process).
-2. Deploy it to `$WP_TESTING_URL` (replace the file-copy install, or convert that directory to a tracked checkout).
-3. Confirm `wp plugin get simple-wp-helpdesk --field=version` returns `4.1.0`.
-4. Re-run `make test-extended-verify` then continue this runbook from Section 1.
+**Alternative path:** SHIP v4.1.0 with Issue #1 documented as known and a v4.1.1 hotfix queued. Risk: operators tuning around the 60/min default discover the real limit is ~12 and lose confidence in the rate-limit defense.
 
-If the deploy step is expected to happen elsewhere (e.g. via the GitHub auto-updater after the release tag is pushed), then the **release-process documentation needs to clarify that Gate 3 verification happens on a separate staging install, not on `$WP_TESTING_URL`** — currently the runbook explicitly targets `$WP_TESTING_URL`, which makes that interpretation contradictory.
+**Strong recommendation: HOLD and fix.**
+
+## Memory MCP
+
+Final observation written on `project:simple-wp-helpdesk:release:v4.1.0` with the HOLD outcome + Issue #1 root cause notes for the follow-up.
