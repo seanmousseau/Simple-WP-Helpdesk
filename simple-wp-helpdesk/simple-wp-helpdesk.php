@@ -44,6 +44,11 @@ require_once SWH_PLUGIN_DIR . 'includes/theme-violet.php';
 // /wp-json/ calls where is_admin() is false, so guarding these behind
 // is_admin() means the routes never register and every endpoint 404s.
 require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
+
+// v4.1.0 public REST surface — Phase 2 bootstrap registers the `swh/v1`
+// namespace owner; Phase 3+ controllers plug in via Bootstrap::register_controller().
+\SWH\Rest\Bootstrap::boot();
+
 require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';

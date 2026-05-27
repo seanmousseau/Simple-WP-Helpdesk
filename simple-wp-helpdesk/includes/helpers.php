@@ -1062,3 +1062,29 @@ if ( ! function_exists( 'swh_enqueue_toast_script' ) ) {
 		);
 	}
 }
+
+if ( ! function_exists( 'swh_rest_require' ) ) {
+	/**
+	 * Build a `permission_callback` that requires either a logged-in WP user
+	 * with the `edit_posts` capability, or a valid `swhk_` bearer token whose
+	 * scope satisfies `$scope`.
+	 *
+	 * This is the canonical permission_callback for every v4.1.0 `swh/v1`
+	 * controller. Routes MUST go through this helper — no inline
+	 * `current_user_can` checks in controllers (Phase 2 of the v4.1.0 plan,
+	 * see docs/internal/plan_v4.1.0.md).
+	 *
+	 * Implementation lives in {@see \SWH\Rest\Auth::require_scope()}. This
+	 * thin global wrapper exists so route definitions stay readable
+	 * (`'permission_callback' => swh_rest_require( 'read' )`) without
+	 * requiring callers to `use` the namespaced class.
+	 *
+	 * @param string $scope 'read' or 'write'. `write` keys satisfy both.
+	 * @return callable(\WP_REST_Request): (true|\WP_Error)
+	 *
+	 * @since 4.1.0
+	 */
+	function swh_rest_require( string $scope ): callable {
+		return \SWH\Rest\Auth::require_scope( $scope );
+	}
+}

@@ -108,6 +108,32 @@ The v4.1.0 REST surface introduces operator-issued API keys as a second-class au
 
 **Allowlist contract for `GET /settings/public`.** The Phase 5 settings allowlist excludes the entire `api_keys` sub-key. Bcrypt hashes never appear on any unauthenticated surface. Operators or auditors verifying this should grep `PublicSettingsAllowlist` for wildcards — there are none over the integrations bag.
 
+#### Permission helper logic (v4.1.0 Phase 2)
+
+`SWH\Rest\Auth::check_request()` is the single check every `swh/v1` route runs via `swh_rest_require( $scope )`. Controllers MUST NOT call `current_user_can()` inline — the helper is the only seam. Logic order:
+
+1. **Logged-in WP user with `edit_posts`** → success (cookie auth or Application Password).
+2. **Logged-in WP user without `edit_posts`** → `swh_rest_capability_required` (403). Does NOT fall through to the API key path — a session that already authenticated as a low-cap user cannot smuggle a higher-cap bearer token to elevate.
+3. **No / malformed `Authorization` header** → `swh_rest_auth_required` (401).
+4. **Bearer token that does not start with `swhk_`** → `swh_rest_auth_invalid` (401). The prefix is public — a wrong prefix is a malformed token, not a credential leak.
+5. **Bearer token that does not resolve to an active entry** → `swh_rest_auth_invalid` (401). Revoked keys collapse into this code path because `ApiKeys::find_by_plaintext()` returns `null` for them.
+6. **Scope mismatch** (`read` key on a `write` route) → `swh_rest_scope_insufficient` (403). `write` keys satisfy both `read` and `write` routes.
+7. On success: `ApiKeys::touch_last_used()` runs (write-rate-limited inside ApiKeys), the full key entry is stashed on the request via `WP_REST_Request::set_param( '_swh_api_key', $entry )` for Phase 9 audit-log attribution, and the helper returns `true`.
+
+The helper never logs the bearer token. The plaintext exists only in the in-memory request scope.
+
+#### Per-route capability matrix (v4.1.0)
+
+The matrix below is **documented here** and **enforced per-route** by each phase's controller via `swh_rest_require( 'read' | 'write' )`.
+
+| Route group | Logged-in user | API key scope |
+|---|---|---|
+| `GET /tickets*`, `GET /replies*` | `edit_posts` | `read` |
+| `POST /tickets`, `PATCH /tickets/*`, `POST /replies` | `edit_posts` | `write` |
+| `GET /users/technicians`, `GET /categories` | `edit_posts` | `read` |
+| `GET /settings/public` | **public** (no auth) | n/a |
+| `GET /openapi.json` | **public** | n/a (Phase 8) |
+
 ## Explicit non-threats
 
 The plugin does **not** defend against:
