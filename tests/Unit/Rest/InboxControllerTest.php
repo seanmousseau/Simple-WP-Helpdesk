@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SWH\Tests\Unit\Rest;
 
 use SWH\Rest\InboxController;
+use SWH\Rest\V1\TicketsController;
 use WP_Mock;
 use WP_REST_Request;
 use PHPUnit\Framework\TestCase;
@@ -40,6 +41,14 @@ final class InboxControllerTest extends TestCase {
 
 	protected function tearDown(): void {
 		WP_Mock::tearDown();
+	}
+
+	public function test_admin_and_public_namespaces_are_distinct(): void {
+		$this->assertNotSame(
+			InboxController::NAMESPACE,
+			TicketsController::NAMESPACE,
+			'Admin internal and public REST namespaces must not collide. See PR #519 root cause.'
+		);
 	}
 
 	public function test_register_routes_registers_get_tickets(): void {
