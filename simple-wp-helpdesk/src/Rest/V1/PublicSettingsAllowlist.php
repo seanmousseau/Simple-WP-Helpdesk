@@ -118,9 +118,9 @@ final class PublicSettingsAllowlist {
 	 * @return array{csat:bool,portal:bool,attachments:bool}
 	 */
 	public static function read_features(): array {
-		$csat_raw        = get_option( 'swh_csat_enabled', true );
-		$portal_page_id  = get_option( 'swh_ticket_page_id', 0 );
-		$upload_count    = get_option( 'swh_max_upload_count', 5 );
+		$csat_raw       = get_option( 'swh_csat_enabled', true );
+		$portal_page_id = get_option( 'swh_ticket_page_id', 0 );
+		$upload_count   = get_option( 'swh_max_upload_count', 5 );
 
 		return array(
 			'csat'        => self::truthy( $csat_raw ),

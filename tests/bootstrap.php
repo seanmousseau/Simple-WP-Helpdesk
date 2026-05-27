@@ -327,6 +327,74 @@ if ( ! class_exists( 'WP_Comment' ) ) {
 	}
 }
 
+if ( ! class_exists( 'WP_Term' ) ) {
+	/**
+	 * Minimal WP_Term stub for unit tests.
+	 *
+	 * Defines the properties read by the v4.1.0 categories controller and the
+	 * ticket schema projection. Tests construct instances directly; no
+	 * database interaction is involved.
+	 */
+	class WP_Term {
+		/** @var int Term ID. */
+		public int $term_id = 0;
+
+		/** @var string Term display name. */
+		public string $name = '';
+
+		/** @var string Term slug. */
+		public string $slug = '';
+
+		/** @var int Parent term ID (0 = top-level). */
+		public int $parent = 0;
+
+		/** @var int Tickets-in-term count. */
+		public int $count = 0;
+
+		/**
+		 * @param array<string,mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = $value;
+				}
+			}
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_User' ) ) {
+	/**
+	 * Minimal WP_User stub for unit tests.
+	 *
+	 * Defines only the properties read by v4.1.0 controllers — display_name,
+	 * user_email, ID. Roles/capabilities are NOT modelled because the
+	 * controllers never read them (the allowlist response forbids it).
+	 */
+	class WP_User {
+		/** @var int WP user ID. */
+		public int $ID = 0;
+
+		/** @var string Display name. */
+		public string $display_name = '';
+
+		/** @var string Email address. */
+		public string $user_email = '';
+
+		/**
+		 * @param array<string,mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = $value;
+				}
+			}
+		}
+	}
+}
+
 // Minimal WordPress function stubs required by unit tests.
 // WP_Mock does not define every WordPress function; define those needed here.
 
