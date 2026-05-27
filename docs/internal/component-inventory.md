@@ -396,6 +396,87 @@ relying on colour alone.
 
 ---
 
+## v4.1 primitives
+
+### Shown-once secret modal (`.swh-apikey-modal`)
+
+**Status:** Shipped in v4.1.0 Phase 6 (#365 UI half).
+**Used by:** Integrations tab → REST API keys → Generate.
+**Files:** `simple-wp-helpdesk/admin/class-settings.php` (markup in `swh_render_api_keys_section()`), `simple-wp-helpdesk/assets/swh-api-keys.js`, `simple-wp-helpdesk/assets/swh-api-keys.css`.
+
+The "shown-once secret" interaction has a single defining constraint: the user is about to see a high-stakes secret that **cannot be recovered later**. The modal's job is to make that unambiguous, then make the copy action feel reliable, then make closing the modal a deliberate decision.
+
+Reuse this pattern any time the plugin returns a secret that the operator will never see again (future: HMAC signing secret rotation, one-time recovery codes).
+
+**Visual hierarchy (top → bottom):**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ ⚠  This is the only time you will see this key. Copy   │  ← Warning banner
+│    it now — it cannot be recovered later.               │    (full width, warning tokens)
+├─────────────────────────────────────────────────────────┤
+│ API key generated                                       │  ← Heading (h2)
+│                                                         │
+│ Store this key in your password manager or secrets      │  ← Body explainer
+│ vault before closing this dialog. Once closed, only…    │
+│                                                         │
+│ ┌─────────────────────────────────────┐  ┌──────────┐   │  ← Plaintext input
+│ │ swhk_aBcD1eFgH2iJkL3mNoP4qRsT5uVwX… │  │ 📋 Copy │   │    + Copy button
+│ └─────────────────────────────────────┘  └──────────┘   │
+│                                                         │
+│ ┌─────────────────────────────────────────────────┐     │  ← Inline "Close
+│ │ You haven't copied the key yet. Close anyway?   │     │    anyway?" confirm
+│ │  [ Cancel ]  [ Close anyway ]                   │     │    (hidden until Close
+│ └─────────────────────────────────────────────────┘     │    is pressed without
+│                                                         │    a prior copy)
+├─────────────────────────────────────────────────────────┤
+│                                              [ Close ]  │  ← Footer
+└─────────────────────────────────────────────────────────┘
+```
+
+**Warning placement + weight:** above the heading as a full-width banner using `--swh-color-warning-bg` background, 4px left border in `--swh-color-warning-text`, bold text, leading triangle-alert glyph. The warning is read first by sighted users and is the `aria-describedby` target for screen-reader users — so it announces alongside the dialog heading.
+
+**Copy feedback:**
+
+- Pattern: **button label flip**, not toast. Toasts compete with the modal for attention and can be missed; a button label flip is collocated with the action.
+- On success: button background flips to `--swh-color-success-accent`, label changes from "Copy" → "Copied!", icon implicitly changes (the success colour reads as a checkmark vibe). After **2000 ms** the button reverts to its idle state.
+- `aria-live="polite"` region announces "API key copied to clipboard." once.
+- Copy fallback: if the Clipboard API is unavailable or rejects, the script falls back to `select() + execCommand('copy')`. If both fail, a toast surfaces "Copy failed — select the field and copy manually."
+
+**Focus management:**
+
+- Initial focus: **Copy button** (highest-stakes primary action — get the user to the right action without any tab presses).
+- Tab order: `[Copy] → [Readonly input] → [Close]`. When the inline "Close anyway?" confirmation is shown, the order extends to `[…, Cancel, Close anyway]`.
+- Focus trap: wrap-around. Shift+Tab from the first element jumps to the last; Tab from the last wraps to the first.
+- ESC: behaves like clicking Close. If the plaintext hasn't been copied, shows the inline confirmation and focuses Cancel. If it has, closes immediately.
+- On close: focus returns to the element that opened the modal (the Generate button).
+- The readonly input is `aria-label`'d "Generated API key (copy now — you will not see this again)" so a screen reader user who tabs to it hears the same context-loaded label without re-announcing the dialog name.
+
+**Close behaviour (un-copied case):** an inline confirmation slot reveals inside the dialog (not a nested modal — that would compound focus management). Wording: **"You haven't copied the key yet. Close anyway?"** with `[Cancel]` (default focus) and `[Close anyway]` (danger styling). Cancel hides the slot and returns focus to Copy. The same flow fires from the ESC key and from a backdrop click.
+
+**Plaintext lifecycle:**
+
+- Held in a closure-scoped JS variable + the readonly input value while the modal is open.
+- Never written to `localStorage`, `sessionStorage`, `window`, or any persistent location.
+- On close, both holders are wiped to empty string / null in the same animation frame.
+- The plaintext arrives ONLY in the AJAX response body — never server-rendered into the page HTML.
+
+**Dark-mode tokens used:**
+
+- Surface: `--swh-color-bg` / dark override `#1f1f23`.
+- Body text: `--swh-color-text` / dark `#f0f0f1`.
+- Help / secondary text: `--swh-color-text-secondary` / dark `#c0c0c5`.
+- Warning banner: `--swh-color-warning-bg`, `--swh-color-warning-text` (no dark-mode-specific override — warning colour identity is consistent across themes).
+- Inline confirmation banner: `--swh-color-error-bg`, `--swh-color-error-text`, `--swh-color-danger` (left border).
+- Copy CTA idle: WP `.button-primary` (inherits theme).
+- Copy CTA success: `--swh-color-success-accent`.
+- Focus ring: `--swh-color-focus`, `--swh-color-primary-shadow`.
+- Plaintext input: `--swh-color-bg-subtle` background, `--swh-color-border-input` border / dark override `#2a2a2f` + `#45454a`.
+
+**Revoke confirmation modal:** sibling pattern reused for the row-level revoke action. Same dialog shell, no warning banner (no secret involved), single-paragraph body interpolating the key label, `[Cancel]` (default focus) + `[Revoke key]` (danger styling). ESC closes; focus returns to the originating Revoke button.
+
+---
+
 ## v4.0 component gaps (planned, not yet built)
 
 These primitives do **not** exist in the codebase today. v4.0 UI work

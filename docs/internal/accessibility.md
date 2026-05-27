@@ -83,6 +83,26 @@ Prefer native semantics:
 
 Use ARIA when HTML genuinely doesn't express the pattern: live regions, dialogs (`role="dialog"` + `aria-modal`), composite widgets (tablist/tab/tabpanel).
 
+### 7a. Per-component checklist — shipped surfaces
+
+#### Shown-once secret modal (`.swh-apikey-modal`, v4.1.0 #365)
+
+- [x] `role="dialog"`, `aria-modal="true"`, `aria-labelledby` → heading id, `aria-describedby` → warning-banner id.
+- [x] Initial focus on the **Copy** button (highest-stakes action — no tab presses needed to reach it).
+- [x] Wrap-around focus trap across `[Copy → readonly input → Close]` (extends with `[Cancel, Close anyway]` when the un-copied confirmation is shown).
+- [x] ESC behaves like Close — triggers the "haven't copied yet?" inline confirmation if plaintext hasn't been copied.
+- [x] On close, focus returns to the opener (the Generate button).
+- [x] Plaintext input is `readonly` and carries `aria-label="Generated API key (copy now — you will not see this again)"`.
+- [x] Copy success is announced via `aria-live="polite"` region ("API key copied to clipboard.") AND visually via a button-label flip (`Copy` → `Copied!`) for 2 s.
+- [x] Backdrop click follows the same un-copied-confirmation path as Close (no silent destruction of the only copy of the secret).
+
+#### API keys table (Integrations tab)
+
+- [x] Real `<table>` with `<thead>` / `<tbody>` and `<th scope="col">` on every header.
+- [x] Per-row Revoke button has `aria-label="Revoke key <label>"` so screen-reader users get the row context without sniffing surrounding cells.
+- [x] Revoked rows: keep DOM order, drop opacity to 0.55, strike-through the label cell, and replace the Revoke button with a `<span class="swh-api-key-revoked-label">Revoked <date></span>` — opacity is a reinforcing signal, the strike-through + the textual "Revoked" label are the primary signals (no color-only encoding).
+- [x] Confirmation modal for revoke uses the same dialog/aria-modal pattern; default focus is **Cancel** so accidental Enter presses don't destroy a working key.
+
 ### 8. Dark mode parity
 
 Every check above applies in dark mode too. A focus ring that's visible in light mode but invisible in dark is a bug. Run audits in both modes.
