@@ -50,18 +50,19 @@ final class SettingsControllerTest extends TestCase {
 		$this->assertCount( 1, $registered );
 		$this->assertSame( '/settings/public', $registered[0]['route'] );
 
-		// The route MUST carry permission_callback === '__return_true'. This
-		// is the security signal — anything other than __return_true means
-		// the public endpoint accidentally became gated, or worse, that
-		// someone slipped an authenticated handler in.
+		// The route MUST carry the public-permission wrapper from Bootstrap.
+		// Phase 7 (#367) introduced a per-IP rate-limit check that wraps the
+		// previously-bare __return_true callback. The wrapper still returns
+		// true on the happy path (no auth required) and gates only on
+		// over-limit — semantically the route is still anonymous-readable.
 		$found_method_entry = false;
 		foreach ( $registered[0]['args'] as $k => $v ) {
 			if ( is_int( $k ) ) {
 				$found_method_entry = true;
 				$this->assertSame(
-					'__return_true',
+					array( \SWH\Rest\Bootstrap::class, 'settings_public_permission' ),
 					$v['permission_callback'],
-					'settings/public must remain public — permission_callback must be __return_true.'
+					'settings/public must use Bootstrap::settings_public_permission — public route + per-IP rate limit (Phase 7).'
 				);
 			}
 		}
