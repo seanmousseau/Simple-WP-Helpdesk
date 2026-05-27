@@ -1328,7 +1328,11 @@ function swh_render_api_keys_section(): void {
 						if ( ! is_array( $entry ) || empty( $entry['id'] ) ) {
 							continue;
 						}
-						/** @var array<string,mixed> $entry */
+						/**
+						 * Narrow $entry for PHPStan after the is_array() guard.
+						 *
+						 * @var array<string,mixed> $entry
+						 */
 						swh_render_api_key_row( $entry );
 					}
 					?>
