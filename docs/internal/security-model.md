@@ -134,6 +134,56 @@ The matrix below is **documented here** and **enforced per-route** by each phase
 | `GET /settings/public` | **public** (no auth) | n/a |
 | `GET /openapi.json` | **public** | n/a (Phase 8) |
 
+## Public settings allowlist
+
+`GET /swh/v1/settings/public` (v4.1.0 Phase 5, #364) is the **only** publicly readable endpoint in the v4.1.0 REST surface. Every key in its response goes through a **hard, explicit allowlist** defined in `simple-wp-helpdesk/src/Rest/V1/PublicSettingsAllowlist.php`. This subsection captures the rules; the file is the source of truth.
+
+### Why an allowlist (not a denylist)
+
+A denylist defaults *open* — every new setting added in some future release would be publicly readable unless someone remembered to add it to the denylist. The plugin already stores webhook secrets, API keys, SMTP credentials, and email template bodies in the same options bag as harmless labels; a single forgotten denylist entry leaks the secret to the internet.
+
+The allowlist defaults *closed*: settings are private unless someone makes a deliberate decision to expose them. New settings can never accidentally leak.
+
+### Locked allowlist keys (v4.1.0)
+
+| Response key | Source option(s) | Shape |
+|---|---|---|
+| `priority_labels` | `swh_ticket_priorities` | `string[]` (CSV → trimmed array) |
+| `status_labels` | `swh_ticket_statuses` | `string[]` |
+| `sla_thresholds` | `swh_sla_warn_hours`, `swh_sla_breach_hours` | `{ low:int\|null, medium:int\|null, high:int\|null, urgent:int\|null }` (hours) |
+| `features` | `swh_csat_enabled`, `swh_ticket_page_id`, `swh_max_upload_count` | `{ csat:bool, portal:bool, attachments:bool }` |
+
+The `features` sub-shape is **booleans only** — never the underlying values. `portal` is `true` iff a portal page is configured; the page ID is not exposed. `attachments` is `true` iff uploads are allowed; the size/count caps are not exposed.
+
+### Adding a key — review burden
+
+Adding a key to the allowlist is a deliberate decision. The PR that adds one MUST:
+
+1. Edit `PublicSettingsAllowlist::map()` and add a reader method that returns ONLY the public-safe shape (never the raw option value).
+2. Update this subsection — add a row to the locked-keys table above.
+3. Extend the `LOCKED_KEYS` constant in `tests/Unit/Rest/V1/PublicSettingsAllowlistTest.php`. The drift-detector test `test_allowlist_only_contains_locked_keys()` fails immediately if step 3 is skipped, forcing reviewers to notice the security review burden.
+4. In the PR description, justify why the option's value can never carry secrets — and propose a future-proofing test if the value could in principle become secret-bearing (e.g. an admin-customisable label that some operator might use as a free-text field).
+
+### Known-secret exclusion (negative test)
+
+The drift-detector suite also asserts that **none** of the following option keys can be in the allowlist:
+
+- `swh_inbound_secret` / `inbound_webhook_secret` — bearer token for the inbound email webhook.
+- `api_keys` — v4.1.0 API key entries (Phase 6 surface).
+- `smtp_password`, `smtp_user`, `smtp_host` — third-party SMTP-plugin patterns.
+- `swh_recaptcha_secret_key`, `swh_recaptcha_api_key`, `swh_turnstile_secret_key` — anti-spam provider secrets.
+- `swh_em_user_new_body`, `swh_em_admin_new_body`, etc. — operator-authored email template bodies, which may contain internal phrasing, signed URLs, or workflow details.
+
+If a future PR adds any of these to the allowlist, `test_known_secrets_are_not_in_allowlist` fails in CI.
+
+### No-wildcard guarantee (static check)
+
+`test_no_wildcard_or_prefix_match` reads the `PublicSettingsAllowlist` source file and asserts it contains **none** of: `preg_match`, `preg_match_all`, `fnmatch`, `str_starts_with`, `str_ends_with`, `wp_load_alloptions`, or a `foreach` over `$wpdb`. The allowlist must remain an explicit array of named keys. Anyone trying to introduce "expose all `swh_settings_general` keys" fails CI.
+
+### Related privacy lever
+
+`GET /swh/v1/users/technicians` (also v4.1.0 Phase 5) is gated by `read` scope but the email field can be a privacy concern for some operators. The `swh_hide_staff_email` filter, when it returns `true`, OMITS the `email` key from every object in the response. Default is `false` (email exposed to authenticated `read`-scope callers).
+
 ## Explicit non-threats
 
 The plugin does **not** defend against:
