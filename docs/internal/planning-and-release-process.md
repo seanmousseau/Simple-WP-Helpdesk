@@ -152,7 +152,7 @@ Every gate is **non-negotiable**. A gate that hasn't been met means no merge —
 1. Local test suites pass — at minimum **PHP suite** (`make test-docker`) and **E2E** (`make e2e-docker`).
 2. All CI failures and PR comments addressed (including CodeRabbit — see [non-negotiables](#non-negotiable-rules) on push-back).
 3. Documentation and test updates for this step are in the PR.
-4. **OpenAPI bumped?** If the PR adds, modifies, or removes a `swh/v1` REST route (or changes any `src/Rest/V1/Schemas/*.php` shape), `docs/openapi.yaml` must be updated AND `docs/openapi.json` regenerated via `bash bin/openapi-sync.sh` (CI's `openapi` job will fail otherwise).
+4. **OpenAPI bumped?** If the PR adds, modifies, or removes a `swh/v1` REST route (or changes any `src/Rest/V1/Schemas/*.php` shape), `docs/openapi.yaml` must be updated AND `bash bin/openapi-sync.sh` run — and confirm both `docs/openapi.json` AND `simple-wp-helpdesk/openapi.json` are committed in sync (the plugin-bundled copy is what `GET /swh/v1/openapi.json` actually serves on production single-plugin installs). CI's `openapi` job will fail otherwise.
 
 → Merge when satisfied.
 

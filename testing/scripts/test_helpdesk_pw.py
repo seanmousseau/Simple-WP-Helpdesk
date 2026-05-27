@@ -5293,11 +5293,13 @@ def test_82_rest_openapi(page: Page):
             check("82 openapi: response body is valid JSON", False, str(exc))
             spec = {}
         # Required top-level fields per OpenAPI 3.x. `components` is technically
-        # optional in the spec — it's present in the source-of-truth YAML but
-        # the Docker test stack only mounts the plugin dir (not docs/), so the
-        # controller falls back to a minimal stub when SWH_PLUGIN_DIR/../docs/
-        # isn't accessible. The required-trio is the contractual guarantee.
-        for key in ("openapi", "info", "paths"):
+        # optional in the spec, but our source-of-truth YAML defines schemas
+        # there — so its absence means the controller fell back to its minimal
+        # stub. As of the v4.1.0 fix that bundles `simple-wp-helpdesk/openapi.json`
+        # inside the plugin directory, the Docker test stack (which mounts only
+        # the plugin) MUST receive the real spec. Asserting `components` here
+        # catches the stub-fallback regression.
+        for key in ("openapi", "info", "paths", "components"):
             check(f"82 openapi: top-level {key!r} present",
                   key in spec, f"keys={list(spec.keys())}")
         # info.version must follow semver — Phase 11 bumps it alongside plugin header.

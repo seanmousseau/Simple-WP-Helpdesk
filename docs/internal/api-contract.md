@@ -93,7 +93,15 @@ The full API contract is published in three places:
 - **Public docs site** — https://seanmousseau.github.io/Simple-WP-Helpdesk/api-reference.html (same Redoc viewer, same JSON spec).
 - **JSON endpoint** — `GET /wp-json/swh/v1/openapi.json` (public, rate-limited per-IP via the same bucket as `settings/public`). Point Postman / Insomnia at this URL for a one-click import.
 
-**Source of truth:** `docs/openapi.yaml` (committed). The JSON form `docs/openapi.json` is a build artifact regenerated from the YAML by `bin/openapi-sync.sh`; CI (`.github/workflows/php-tests.yml` → `openapi` job) fails if the two are out of sync, plus runs `npx @redocly/cli lint`.
+**Source of truth:** `docs/openapi.yaml` (committed, human-edited).
+
+**Build artifacts (both committed, both kept in sync by `bin/openapi-sync.sh`):**
+- `docs/openapi.json` — consumed by the GitHub Pages docs site (Redoc viewer embed).
+- `simple-wp-helpdesk/openapi.json` — bundled inside the plugin directory; what `GET /swh/v1/openapi.json` actually serves at runtime. Living inside the plugin is what makes single-plugin installs (release zip, `wp plugin install`, the Docker test stack that only mounts `simple-wp-helpdesk/`) serve the real spec instead of the controller's minimal stub fallback.
+
+CI (`.github/workflows/php-tests.yml` → `openapi` job) regenerates both artifacts from the YAML and fails on any drift, plus runs `npx @redocly/cli lint` against the YAML.
+
+**Controller path resolution** (`SWH\Rest\V1\OpenApiController::SPEC_PATHS`): tries `SWH_PLUGIN_DIR/openapi.json` first (production), falls back to `SWH_PLUGIN_DIR/../docs/openapi.json` (monorepo dev convenience), then to a hard-coded minimal stub (last-resort safety net — logs to `error_log` when `WP_DEBUG` is on so we notice the regression).
 
 Schema definitions live in `simple-wp-helpdesk/src/Rest/V1/Schemas/*.php`. **Editing those files is a public-API change** — the OpenAPI spec must update in the same PR. The `OpenApiSpecTest` drift detector (`tests/Unit/OpenApiSpecTest.php`) enumerates every `Schemas/*.php` and every `Errors` constant, failing if either drifts away from the spec.
 
