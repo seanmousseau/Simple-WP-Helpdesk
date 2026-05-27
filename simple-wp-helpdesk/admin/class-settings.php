@@ -272,6 +272,12 @@ function swh_handle_settings_save() {
 		// Text fields (prompt/thanks/skip_label) are saved by the generic loop below.
 		$csat_on = isset( $_POST['swh_csat_enabled'] );
 		swh_set_option( 'portal', 'csat_enabled', $csat_on );
+		// API access audit log toggle (v4.1.0 Phase 9 #369) — checkbox: absent = disabled.
+		// Disabling the toggle does NOT delete existing _swh_api_access_log meta on
+		// tickets; operators can re-enable and see prior entries. See
+		// docs/internal/config-reference.md.
+		$api_audit_on = isset( $_POST['swh_api_audit_log_enabled'] );
+		swh_set_option( 'integrations', 'api_audit_log_enabled', $api_audit_on );
 		$active_tab = isset( $_POST['swh_active_tab'] ) && is_string( $_POST['swh_active_tab'] ) ? sanitize_key( $_POST['swh_active_tab'] ) : 'tab-general';
 		// Options excluded from the generic save loop (handled separately or by the Tools form).
 		$tools_only = array( 'swh_retention_attachments_days', 'swh_retention_tickets_days', 'swh_delete_on_uninstall', 'swh_canned_responses', 'swh_ticket_templates', 'swh_assignment_rules' );
@@ -977,7 +983,25 @@ function swh_render_settings_page() {
 				 * See docs/internal/contract-settings.md → API Keys.
 				 */
 				swh_render_api_keys_section();
+				$api_audit_enabled = (bool) swh_get_option( 'integrations', 'api_audit_log_enabled', false );
 				?>
+				<fieldset class="swh-settings-group">
+					<legend><?php esc_html_e( 'API access audit log', 'simple-wp-helpdesk' ); ?></legend>
+					<table class="form-table">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Enable API access log', 'simple-wp-helpdesk' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="swh_api_audit_log_enabled" value="1" <?php checked( $api_audit_enabled, true ); ?>>
+									<?php esc_html_e( 'Record the last 10 API requests against each ticket.', 'simple-wp-helpdesk' ); ?>
+								</label>
+								<p class="description">
+									<?php esc_html_e( 'When enabled, records the last 10 API requests against each ticket (key label, route, action, timestamp). Off by default. Disabling the toggle does not delete existing log entries.', 'simple-wp-helpdesk' ); ?>
+								</p>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
 				<fieldset class="swh-settings-group swh-coming-soon" aria-label="<?php esc_attr_e( 'Coming in future releases', 'simple-wp-helpdesk' ); ?>">
 					<legend><?php esc_html_e( 'Coming soon', 'simple-wp-helpdesk' ); ?></legend>
 					<ul style="margin:0 0 0 20px;list-style:disc;">
