@@ -83,6 +83,46 @@ Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 
 **Note:** 8 of the 9 filters listed above were wrapped in `swh_apply_deprecated_filter()` in v4.0.0 (#360). They continue to fire for existing listeners (back-compat preserved) but emit `_doing_it_wrong` notices in `WP_DEBUG` environments. Earliest removal: v4.2. `swh_sla_open_statuses` is post-3.0 and remains supported.
 
+## Public REST API v1
+
+The v4.1.0 release introduces the first formally-public REST surface under the `swh/v1` namespace. Until v4.1.0, the only documented REST endpoint was `POST /wp-json/swh/v1/inbound-email`; the other `swh/v1/*` routes (`tickets`, `views`, `inbox`, `bulk-action`, `technicians`, `palette`) were and remain **internal** controllers consumed by the bundled admin-inbox React app — they live alongside the v1 surface but are not part of the public contract documented below.
+
+**Namespace:** `swh/v1`
+**Bootstrap:** `SWH\Rest\Bootstrap` (`simple-wp-helpdesk/src/Rest/Bootstrap.php`) — registers the namespace on `rest_api_init`. Public-surface controllers (Phases 3+) register themselves through `Bootstrap::register_controller()`.
+
+### Authentication
+
+Two schemes:
+
+1. **WP Application Password (preferred for user-scoped access).** Standard WP 5.6+ Application Passwords. Auth resolves via `current_user_can( 'edit_posts' )`. Operators create one at *Users → Profile → Application Passwords* and pass it as the Basic Auth password.
+2. **API Key (service-to-service).** Bearer token: `Authorization: Bearer swhk_<32 chars>`. Keys are managed under Settings → Integrations (Phase 6 UI). Scopes: `read` / `write`. `write` keys satisfy both `read` and `write` routes. See `security-model.md` → "API key authentication" for the full auth flow.
+
+Public routes (`GET /settings/public`, `GET /openapi.json`) accept anonymous requests. Every other route requires one of the two schemes above. The single `permission_callback` for the entire namespace is `swh_rest_require( $scope )` — controllers MUST NOT inline `current_user_can()` checks.
+
+### Error envelope
+
+Every error response in `swh/v1` is shaped:
+
+```json
+{ "code": "swh_rest_<reason>", "message": "Human readable", "data": { "status": <int> } }
+```
+
+Locked code enum (also defined as `SWH\Rest\Errors` class constants):
+
+| Code | Status | When |
+|---|---|---|
+| `swh_rest_auth_required` | 401 | No / malformed `Authorization` header on a protected route |
+| `swh_rest_auth_invalid` | 401 | Bearer token doesn't resolve to a valid, non-revoked key |
+| `swh_rest_scope_insufficient` | 403 | Valid key but scope insufficient for route |
+| `swh_rest_capability_required` | 403 | Logged-in WP user lacks the required capability |
+| `swh_rest_rate_limited` | 429 | Per-key rate limit exceeded (Phase 7) |
+| `swh_rest_not_found` | 404 | Resource lookup failed |
+| `swh_rest_validation_failed` | 400 | Schema / input validation failure |
+
+### Endpoints
+
+Documented per controller in Phases 3–5 / 8 of the v4.1.0 plan. Phase 2 ships the namespace + permission helper only — this section will grow as v4.1.0 lands.
+
 ## REST envelope contract
 
 All `swh/v1` endpoints follow a uniform envelope shape. JS clients (admin-inbox, portal-v2, reports-v2) rely on these shapes — changing one is a breaking change that must update consumers in the same PR. Contract tests in `tests/Unit/Rest/Contracts/` lock these shapes.

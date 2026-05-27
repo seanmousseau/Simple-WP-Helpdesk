@@ -75,6 +75,9 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		/** @var array<string,mixed> */
 		private array $params = array();
 
+		/** @var array<string,string> */
+		private array $headers = array();
+
 		/**
 		 * @param string $method HTTP method.
 		 * @param string $route  Route string.
@@ -95,6 +98,69 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		 */
 		public function get_param( string $key ) {
 			return $this->params[ $key ] ?? null;
+		}
+
+		/**
+		 * @param string $name  Header name (case-insensitive).
+		 * @param string $value Header value.
+		 */
+		public function set_header( string $name, string $value ): void {
+			$this->headers[ strtolower( $name ) ] = $value;
+		}
+
+		/**
+		 * @param string $name Header name (case-insensitive).
+		 * @return string Empty string when unset (mirrors WP behaviour).
+		 */
+		public function get_header( string $name ): string {
+			return $this->headers[ strtolower( $name ) ] ?? '';
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	/**
+	 * Minimal WP_Error stub for unit tests.
+	 *
+	 * Mirrors the subset of WP core's WP_Error surface used by the v4.1.0
+	 * REST error envelope ({@see \SWH\Rest\Errors}). `data.status` is the
+	 * field WP core copies into the HTTP response status when handing the
+	 * error to `WP_REST_Server::error_to_response()`.
+	 */
+	class WP_Error {
+		/** @var string */
+		private string $code;
+
+		/** @var string */
+		private string $message;
+
+		/** @var array<string,mixed> */
+		private array $data;
+
+		/**
+		 * @param string              $code    Error code.
+		 * @param string              $message Human-readable message.
+		 * @param array<string,mixed> $data    Arbitrary data — `status` becomes the HTTP status.
+		 */
+		public function __construct( string $code = '', string $message = '', array $data = array() ) {
+			$this->code    = $code;
+			$this->message = $message;
+			$this->data    = $data;
+		}
+
+		public function get_error_code(): string {
+			return $this->code;
+		}
+
+		public function get_error_message(): string {
+			return $this->message;
+		}
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_error_data(): array {
+			return $this->data;
 		}
 	}
 }
@@ -179,6 +245,19 @@ if ( ! function_exists( 'sanitize_file_name' ) ) {
 	 */
 	function sanitize_file_name( $filename ) {
 		return strtolower( preg_replace( '/\s+/', '-', (string) $filename ) );
+	}
+}
+
+if ( ! function_exists( '__' ) ) {
+	/**
+	 * Stub: pass-through gettext for unit tests.
+	 *
+	 * @param string $text   Text to translate.
+	 * @param string $domain Text domain (ignored).
+	 * @return string
+	 */
+	function __( $text, $domain = '' ) { // phpcs:ignore
+		return (string) $text;
 	}
 }
 
