@@ -55,8 +55,11 @@ final class SettingsController extends WP_REST_Controller {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_public_settings' ),
-					// PUBLIC ENDPOINT — see class docblock + register_routes() note.
-					'permission_callback' => '__return_true',
+					// PUBLIC ENDPOINT — see class docblock. Phase 7 (#367) wraps
+					// the public permission callback with a per-IP rate limit
+					// (20/min) keyed by an HMAC of the client IP so raw
+					// addresses never appear in transient keys.
+					'permission_callback' => array( Bootstrap::class, 'settings_public_permission' ),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
 			)
@@ -117,8 +120,8 @@ final class SettingsController extends WP_REST_Controller {
 	 * @param WP_REST_Request $request Request object.
 	 */
 	public function get_public_settings( $request ): WP_REST_Response {
-		unset( $request );
-		return new WP_REST_Response( PublicSettingsAllowlist::resolve(), 200 );
+		$response = new WP_REST_Response( PublicSettingsAllowlist::resolve(), 200 );
+		return ResponseDecorator::with_rate_limit_headers( $response, $request );
 	}
 }
 

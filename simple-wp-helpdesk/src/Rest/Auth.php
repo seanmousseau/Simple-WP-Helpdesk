@@ -56,6 +56,9 @@ final class Auth {
 	/** The capability that gates logged-in user access for every v4.1 route. */
 	private const REQUIRED_CAPABILITY = 'edit_posts';
 
+	/** Default per-key rate-limit budget (requests / 60s rolling window). */
+	private const DEFAULT_RATE_LIMIT = 60;
+
 	/**
 	 * Allowed scopes and their satisfies-set. A `write` key satisfies both
 	 * `read` and `write` routes; a `read` key satisfies only `read` routes.
@@ -164,6 +167,31 @@ final class Auth {
 
 		// 7b: stash the entry on the request. Phase 9 audit log reads this.
 		$request->set_param( '_swh_api_key', $entry );
+
+		// 8: per-key rate limit (Phase 7, #367). The per-key override on the
+		// entry wins over the 60/min default. State is always stashed on the
+		// request so {@see \SWH\Rest\V1\ResponseDecorator::with_rate_limit_headers()}
+		// can emit `X-RateLimit-*` on success AND so the rest_post_dispatch
+		// filter in Bootstrap can attach them to the 429 response on the
+		// over-limit path.
+		$override = isset( $entry['rate_limit'] ) && is_numeric( $entry['rate_limit'] )
+			? (int) $entry['rate_limit']
+			: 0;
+		$limit    = $override > 0 ? $override : self::DEFAULT_RATE_LIMIT;
+		$state    = RateLimiter::check( 'swh_rl_api_' . $id, $limit );
+		$request->set_param( '_swh_rate_limit_state', $state );
+
+		if ( ! $state['allowed'] ) {
+			$retry_after = max( 1, $state['reset'] - time() );
+			return new \WP_Error(
+				Errors::RATE_LIMITED,
+				__( 'API rate limit exceeded. Try again later.', 'simple-wp-helpdesk' ),
+				array(
+					'status'      => 429,
+					'retry_after' => $retry_after,
+				)
+			);
+		}
 
 		return true;
 	}
