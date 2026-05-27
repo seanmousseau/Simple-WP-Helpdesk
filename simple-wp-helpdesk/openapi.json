@@ -1,0 +1,1432 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Simple WP Helpdesk REST API",
+    "version": "4.0.7",
+    "description": "Public REST API for the [Simple WP Helpdesk](https://github.com/seanmousseau/Simple-WP-Helpdesk)\nWordPress plugin (`swh/v1` namespace).\n\nAll authenticated endpoints accept a custom bearer API key (Settings \u2192\nIntegrations \u2192 API Keys, format `swhk_<32 chars>`). Logged-in WordPress\nusers with `edit_posts` are also accepted transparently \u2014 including\nsessions established by WordPress core's Application Passwords feature.\nA single public endpoint (`/settings/public`) requires no auth.\n\nEvery successful response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`,\nand `X-RateLimit-Reset` headers. Over-limit responses also include\n`Retry-After`. List endpoints add `X-WP-Total` + `X-WP-TotalPages`.\n\nError envelope is uniform across the namespace: `{ code, message, data }`\nwhere `data.status` mirrors the HTTP status code.\n",
+    "license": {
+      "name": "GPL-2.0-or-later",
+      "identifier": "GPL-2.0-or-later"
+    },
+    "contact": {
+      "name": "Simple WP Helpdesk",
+      "url": "https://github.com/seanmousseau/Simple-WP-Helpdesk"
+    }
+  },
+  "servers": [
+    {
+      "url": "{site_url}/wp-json",
+      "description": "WordPress REST API root",
+      "variables": {
+        "site_url": {
+          "default": "https://example.com",
+          "description": "Your WordPress site URL (no trailing slash)."
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Tickets",
+      "description": "Helpdesk ticket CRUD."
+    },
+    {
+      "name": "Replies",
+      "description": "Ticket reply subcollection (`helpdesk_reply` comments)."
+    },
+    {
+      "name": "Users",
+      "description": "Read-only technician roster."
+    },
+    {
+      "name": "Categories",
+      "description": "Read-only `helpdesk_category` taxonomy."
+    },
+    {
+      "name": "Settings",
+      "description": "Public, allowlisted operator settings."
+    },
+    {
+      "name": "Meta",
+      "description": "API contract metadata (OpenAPI spec)."
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/swh/v1/tickets": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "List tickets",
+        "description": "Paginated, filterable ticket list. Returns the allowlisted ticket shape\n\u2014 internal post meta (`_swh_unread`, API-key access log, `_ticket_token`)\nnever appears in the response.\n",
+        "operationId": "listTickets",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PerPage"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by one or more status labels.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "description": "Filter by priority label.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assignee",
+            "in": "query",
+            "description": "Filter by assigned WP user ID.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filter by `helpdesk_category` term ID.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "description": "Tickets created at or after this ISO-8601 timestamp.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "Tickets created at or before this ISO-8601 timestamp.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Free-text search over subject and body.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tickets.",
+            "headers": {
+              "X-WP-Total": {
+                "$ref": "#/components/headers/X-WP-Total"
+              },
+              "X-WP-TotalPages": {
+                "$ref": "#/components/headers/X-WP-TotalPages"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ticket"
+                  }
+                },
+                "examples": {
+                  "two-tickets": {
+                    "value": [
+                      {
+                        "id": 101,
+                        "subject": "Login page returns 500",
+                        "status": "Open",
+                        "priority": "High",
+                        "assignee": {
+                          "id": 5,
+                          "display_name": "Alice Tech"
+                        },
+                        "requester": {
+                          "email": "client@example.com",
+                          "name": "Bob Client"
+                        },
+                        "category": {
+                          "id": 12,
+                          "name": "Bug",
+                          "slug": "bug"
+                        },
+                        "sla": {
+                          "due_at": 1716835200,
+                          "breached": false
+                        },
+                        "csat": {
+                          "score": null,
+                          "comment": null
+                        },
+                        "created_at": 1716748800,
+                        "updated_at": 1716748900,
+                        "first_response_at": null,
+                        "links": {
+                          "self": "https://example.com/wp-json/swh/v1/tickets/101",
+                          "replies": "https://example.com/wp-json/swh/v1/tickets/101/replies"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Create a ticket",
+        "description": "Create a new `helpdesk_ticket`. Requires `write` scope.",
+        "operationId": "createTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketCreate"
+              },
+              "examples": {
+                "minimal": {
+                  "value": {
+                    "subject": "VPN disconnects every 10 minutes",
+                    "body": "Started yesterday. macOS 14.4.",
+                    "requester_email": "client@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created ticket.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ticket"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/swh/v1/tickets/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Ticket ID.",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Get a ticket",
+        "operationId": "getTicket",
+        "responses": {
+          "200": {
+            "description": "The ticket.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ticket"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Update a ticket",
+        "description": "Partial update. Only keys recognised by `swh_update_ticket_fields()` are\nforwarded; unknown keys are ignored. Requires `write` scope.\n",
+        "operationId": "updateTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketPatch"
+              },
+              "examples": {
+                "assign-and-prioritise": {
+                  "value": {
+                    "status": "In Progress",
+                    "priority": "High",
+                    "assignee": 5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ticket"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/swh/v1/tickets/{id}/replies": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Parent ticket ID.",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Replies"
+        ],
+        "summary": "List replies on a ticket",
+        "description": "Internal notes (`is_internal_note=true`) are returned ONLY when the\ncaller has `write` scope. `read`-scope callers see public replies only.\n",
+        "operationId": "listReplies",
+        "responses": {
+          "200": {
+            "description": "List of replies.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Reply"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Replies"
+        ],
+        "summary": "Append a reply",
+        "description": "Inserts a `helpdesk_reply` comment via the canonical\n`swh_insert_helpdesk_reply()` helper (invariant #20). Requires `write`\nscope. Set `is_internal_note=true` to file a staff-only note.\n",
+        "operationId": "createReply",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyCreate"
+              },
+              "examples": {
+                "public-reply": {
+                  "value": {
+                    "body": "<p>Logs attached \u2014 please confirm.</p>",
+                    "is_internal_note": false
+                  }
+                },
+                "internal-note": {
+                  "value": {
+                    "body": "Customer is on legacy SSO \u2014 escalate to platform team.",
+                    "is_internal_note": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created reply.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reply"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/swh/v1/users/technicians": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List technicians",
+        "description": "Returns WP users carrying the `edit_posts` capability. Allowlisted\nshape only \u2014 no `user_login`, no raw roles, no capabilities. The\n`email` field is omitted when the `swh_hide_staff_email` filter\nreturns true.\n",
+        "operationId": "listTechnicians",
+        "responses": {
+          "200": {
+            "description": "List of technicians.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Technician"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/swh/v1/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "List helpdesk categories",
+        "operationId": "listCategories",
+        "responses": {
+          "200": {
+            "description": "List of categories.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/swh/v1/settings/public": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Public operator settings",
+        "description": "**No authentication required.** Returns the explicit allowlist of\noperator settings safe for unauthenticated callers \u2014 defined by\n`PublicSettingsAllowlist`. Rate-limited per-IP (20/min) using an\nHMAC of the client IP so raw addresses never appear in transient keys.\n",
+        "operationId": "getPublicSettings",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Allowlisted public settings.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSettings"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/swh/v1/openapi.json": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "summary": "Machine-readable API contract",
+        "description": "Returns this OpenAPI 3.1 spec as JSON so tools like Postman and Insomnia\ncan one-click import. Public, rate-limited per-IP via the same bucket\nas `/settings/public`.\n",
+        "operationId": "getOpenApiSpec",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 document.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "An OpenAPI 3.1 document.",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Custom API key generated under **Settings \u2192 Integrations \u2192 API Keys**.\nFormat `swhk_<32 chars>`. Each key has a scope (`read` or `write`) and\nan optional per-key rate-limit override (default 60/min).\n"
+      }
+    },
+    "parameters": {
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "description": "Page of results (1-indexed).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "PerPage": {
+        "name": "per_page",
+        "in": "query",
+        "description": "Items per page. Clamped to 100.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      }
+    },
+    "headers": {
+      "X-WP-Total": {
+        "description": "Total number of items across all pages.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "X-WP-TotalPages": {
+        "description": "Total number of pages.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "X-RateLimit-Limit": {
+        "description": "Request budget per 60-second window.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "X-RateLimit-Remaining": {
+        "description": "Requests remaining in the current window.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "X-RateLimit-Reset": {
+        "description": "Unix timestamp when the current window resets.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "Retry-After": {
+        "description": "Seconds until the rate-limit window resets.",
+        "schema": {
+          "type": "integer"
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required or invalid.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "missing": {
+                "value": {
+                  "code": "swh_rest_auth_required",
+                  "message": "Authentication required.",
+                  "data": {
+                    "status": 401
+                  }
+                }
+              },
+              "invalid": {
+                "value": {
+                  "code": "swh_rest_auth_invalid",
+                  "message": "Invalid API key.",
+                  "data": {
+                    "status": 401
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Caller lacks the required scope or capability.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "scope": {
+                "value": {
+                  "code": "swh_rest_scope_insufficient",
+                  "message": "API key scope insufficient for this route.",
+                  "data": {
+                    "status": 403
+                  }
+                }
+              },
+              "capability": {
+                "value": {
+                  "code": "swh_rest_capability_required",
+                  "message": "User capability insufficient.",
+                  "data": {
+                    "status": 403
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "ticket": {
+                "value": {
+                  "code": "swh_rest_not_found",
+                  "message": "Ticket not found.",
+                  "data": {
+                    "status": 404
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Request body failed validation.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "missing-email": {
+                "value": {
+                  "code": "swh_rest_validation_failed",
+                  "message": "Validation failed.",
+                  "data": {
+                    "status": 400,
+                    "errors": {
+                      "requester_email": "A valid requester_email is required."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Per-key or per-IP rate limit exceeded.",
+        "headers": {
+          "Retry-After": {
+            "$ref": "#/components/headers/Retry-After"
+          },
+          "X-RateLimit-Limit": {
+            "$ref": "#/components/headers/X-RateLimit-Limit"
+          },
+          "X-RateLimit-Remaining": {
+            "$ref": "#/components/headers/X-RateLimit-Remaining"
+          },
+          "X-RateLimit-Reset": {
+            "$ref": "#/components/headers/X-RateLimit-Reset"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "limited": {
+                "value": {
+                  "code": "swh_rest_rate_limited",
+                  "message": "Rate limit exceeded. Try again later.",
+                  "data": {
+                    "status": 429,
+                    "retry_after": 42
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Locked error envelope for the `swh/v1` namespace.",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "One of the locked error codes.",
+            "enum": [
+              "swh_rest_auth_required",
+              "swh_rest_auth_invalid",
+              "swh_rest_scope_insufficient",
+              "swh_rest_capability_required",
+              "swh_rest_rate_limited",
+              "swh_rest_not_found",
+              "swh_rest_validation_failed"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable description. Translation is the caller's responsibility."
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer",
+                "description": "HTTP status code mirrored from the response."
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "description": "Public ticket shape \u2014 source of truth in\n`simple-wp-helpdesk/src/Rest/V1/Schemas/Ticket.php`. Editing that file\nis a public-API change.\n",
+        "required": [
+          "id",
+          "subject",
+          "status",
+          "priority",
+          "assignee",
+          "requester",
+          "category",
+          "sla",
+          "csat",
+          "created_at",
+          "updated_at",
+          "first_response_at",
+          "links"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique ticket identifier (post ID).",
+            "readOnly": true
+          },
+          "subject": {
+            "type": "string",
+            "description": "Ticket subject."
+          },
+          "status": {
+            "type": "string",
+            "description": "Configured status label."
+          },
+          "priority": {
+            "type": "string",
+            "description": "Configured priority label."
+          },
+          "assignee": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "display_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "requester": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "category": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "slug": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "sla": {
+            "type": "object",
+            "properties": {
+              "due_at": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "breached": {
+                "type": "boolean"
+              }
+            }
+          },
+          "csat": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "comment": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "Unix timestamp."
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "Unix timestamp."
+          },
+          "first_response_at": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "type": "string",
+                "format": "uri"
+              },
+              "replies": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          }
+        }
+      },
+      "TicketCreate": {
+        "type": "object",
+        "required": [
+          "subject",
+          "requester_email"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "description": "HTML body. Sanitised via wp_kses_post."
+          },
+          "requester_email": {
+            "type": "string",
+            "format": "email"
+          },
+          "requester_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "assignee": {
+            "type": "integer",
+            "description": "WP user ID."
+          },
+          "category": {
+            "type": "integer",
+            "description": "helpdesk_category term ID."
+          },
+          "cc_emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            }
+          }
+        }
+      },
+      "TicketPatch": {
+        "type": "object",
+        "description": "Partial-update payload. Only the documented keys are honoured; the\ncontroller forwards them through `swh_update_ticket_fields()`.\n",
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "assignee": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "category": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "requester_email": {
+            "type": "string",
+            "format": "email"
+          },
+          "requester_name": {
+            "type": "string"
+          },
+          "cc_emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            }
+          }
+        }
+      },
+      "Reply": {
+        "type": "object",
+        "description": "Public reply shape \u2014 source of truth in\n`simple-wp-helpdesk/src/Rest/V1/Schemas/Reply.php`.\n",
+        "required": [
+          "id",
+          "body",
+          "author",
+          "is_internal_note",
+          "created_at",
+          "attachments",
+          "links"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "body": {
+            "type": "string",
+            "description": "HTML body. Sanitised via wp_kses_post at insert time."
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "staff",
+                  "client"
+                ]
+              },
+              "id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "display_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "is_internal_note": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "integer"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "filename": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "mime": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "size": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "type": "string",
+                "format": "uri"
+              },
+              "ticket": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          }
+        }
+      },
+      "ReplyCreate": {
+        "type": "object",
+        "description": "Either `body` or at least one entry in `attachments` is required.\n",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "is_internal_note": {
+            "type": "boolean",
+            "default": false
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "description": "WP attachment ID."
+            }
+          }
+        }
+      },
+      "Technician": {
+        "type": "object",
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "description": "Null when the `swh_hide_staff_email` filter returns true."
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "parent",
+          "count"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "parent": {
+            "type": "integer",
+            "description": "Parent term ID (0 for top-level)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of tickets in this category."
+          }
+        }
+      },
+      "PublicSettings": {
+        "type": "object",
+        "description": "Hard allowlist \u2014 see\n`simple-wp-helpdesk/src/Rest/V1/PublicSettingsAllowlist.php`. Adding\na key here is a deliberate security-sensitive decision.\n",
+        "required": [
+          "priority_labels",
+          "status_labels",
+          "sla_thresholds",
+          "features"
+        ],
+        "properties": {
+          "priority_labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status_labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sla_thresholds": {
+            "type": "object",
+            "required": [
+              "low",
+              "medium",
+              "high",
+              "urgent"
+            ],
+            "properties": {
+              "low": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "medium": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "high": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "urgent": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          },
+          "features": {
+            "type": "object",
+            "required": [
+              "csat",
+              "portal",
+              "attachments"
+            ],
+            "properties": {
+              "csat": {
+                "type": "boolean"
+              },
+              "portal": {
+                "type": "boolean"
+              },
+              "attachments": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

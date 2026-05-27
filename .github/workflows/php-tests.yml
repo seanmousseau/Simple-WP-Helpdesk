@@ -67,11 +67,19 @@ jobs:
       - name: Regenerate docs/openapi.json from YAML
         run: bash bin/openapi-sync.sh
 
-      - name: Fail if docs/openapi.json drifted from docs/openapi.yaml
+      - name: Fail if openapi.json drifted from docs/openapi.yaml
         run: |
-          if ! git diff --exit-code -- docs/openapi.json docs/openapi.yaml; then
-            echo "::error::docs/openapi.json is out of sync with docs/openapi.yaml."
+          if ! git diff --exit-code -- docs/openapi.json docs/openapi.yaml simple-wp-helpdesk/openapi.json; then
+            echo "::error::openapi.json (docs/ and/or simple-wp-helpdesk/) is out of sync with docs/openapi.yaml."
             echo "Run 'bash bin/openapi-sync.sh' locally and commit the result."
+            exit 1
+          fi
+
+      - name: Fail if docs/openapi.json and plugin-bundled openapi.json differ
+        run: |
+          if ! diff -q docs/openapi.json simple-wp-helpdesk/openapi.json >/dev/null; then
+            echo "::error::docs/openapi.json and simple-wp-helpdesk/openapi.json must be identical."
+            echo "Run 'bash bin/openapi-sync.sh' locally and commit both files."
             exit 1
           fi
 

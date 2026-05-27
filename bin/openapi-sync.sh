@@ -15,6 +15,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 YAML="$REPO_ROOT/docs/openapi.yaml"
 JSON="$REPO_ROOT/docs/openapi.json"
+# Also written into the plugin directory so single-plugin installs (release
+# zip, WP plugin installs, the Docker test stack that mounts only
+# simple-wp-helpdesk/) can serve the real spec from /openapi.json without
+# falling back to the controller's minimal stub. See OpenApiController.
+PLUGIN_JSON="$REPO_ROOT/simple-wp-helpdesk/openapi.json"
 
 if [ ! -f "$YAML" ]; then
   echo "openapi-sync: $YAML not found" >&2
@@ -30,8 +35,9 @@ except ImportError:
     sys.exit(2)
 with open("$YAML", "r", encoding="utf-8") as f:
     spec = yaml.safe_load(f)
-with open("$JSON", "w", encoding="utf-8") as f:
-    json.dump(spec, f, indent=2, sort_keys=False)
-    f.write("\n")
-print(f"openapi-sync: wrote {len(spec.get('paths', {}))} paths to {'$JSON'}")
+payload = json.dumps(spec, indent=2, sort_keys=False) + "\n"
+for path in ("$JSON", "$PLUGIN_JSON"):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(payload)
+print(f"openapi-sync: wrote {len(spec.get('paths', {}))} paths to {'$JSON'} and {'$PLUGIN_JSON'}")
 PY

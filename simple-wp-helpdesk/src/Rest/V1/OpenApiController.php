@@ -45,10 +45,23 @@ final class OpenApiController extends WP_REST_Controller {
 	public const REST_BASE = 'openapi.json';
 
 	/**
-	 * Path to the committed JSON spec artifact (project root relative to the
-	 * plugin dir).
+	 * Candidate paths to the committed JSON spec artifact, in resolution order.
+	 *
+	 * 1. **Plugin-root** (`simple-wp-helpdesk/openapi.json`) — production
+	 *    layout. The release zip and any `wp plugin install` flow only ship
+	 *    the plugin directory, so the spec must live inside it. `bin/openapi-sync.sh`
+	 *    writes this file alongside the canonical `docs/openapi.json`.
+	 * 2. **Monorepo dev layout** (`docs/openapi.json`) — kept as a fallback so
+	 *    `git clone` + `wp plugin activate` against the repo root still works
+	 *    even before someone runs the sync script.
+	 *
+	 * The minimal stub inside `get_spec()` is the last-resort safety net; if
+	 * it fires in any real install we want to know about it.
 	 */
-	private const SPEC_PATH = '../docs/openapi.json';
+	private const SPEC_PATHS = array(
+		'openapi.json',
+		'../docs/openapi.json',
+	);
 
 	public function __construct() {
 		$this->namespace = Bootstrap::NAMESPACE;
@@ -85,14 +98,26 @@ final class OpenApiController extends WP_REST_Controller {
 	 * @return WP_REST_Response
 	 */
 	public function get_spec( WP_REST_Request $request ): WP_REST_Response {
-		$spec_path = SWH_PLUGIN_DIR . self::SPEC_PATH;
-		// file_get_contents() on a known plugin-bundled local path — not a
-		// remote URL fetch. wp_remote_get() does not apply.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$raw = is_readable( $spec_path ) ? file_get_contents( $spec_path ) : false;
+		$raw = false;
+		foreach ( self::SPEC_PATHS as $candidate ) {
+			$spec_path = SWH_PLUGIN_DIR . $candidate;
+			if ( is_readable( $spec_path ) ) {
+				// file_get_contents() on a known plugin-bundled local path —
+				// not a remote URL fetch. wp_remote_get() does not apply.
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$raw = file_get_contents( $spec_path );
+				if ( is_string( $raw ) && '' !== $raw ) {
+					break;
+				}
+				$raw = false;
+			}
+		}
 
 		// Fallback: minimal stub so a misconfigured deploy still returns a
-		// valid OpenAPI document (200) rather than a 5xx.
+		// valid OpenAPI document (200) rather than a 5xx. We never expect
+		// this to fire — `bin/openapi-sync.sh` writes the spec into the
+		// plugin root and CI enforces sync. Log loudly in WP_DEBUG so we
+		// notice in dev if the bundled artifact has gone missing.
 		$spec = array(
 			'openapi' => '3.1.0',
 			'info'    => array(
@@ -102,11 +127,18 @@ final class OpenApiController extends WP_REST_Controller {
 			'paths'   => array(),
 		);
 
-		if ( is_string( $raw ) && '' !== $raw ) {
+		if ( is_string( $raw ) ) {
 			$decoded = json_decode( $raw, true );
 			if ( is_array( $decoded ) ) {
 				$spec = $decoded;
 			}
+		} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log(
+				'[SWH] OpenApiController: bundled openapi.json not found at any of '
+				. implode( ', ', self::SPEC_PATHS )
+				. ' (relative to SWH_PLUGIN_DIR). Serving minimal stub.'
+			);
 		}
 
 		// Rewrite the placeholder server variable so Postman points at this site.
