@@ -262,11 +262,11 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 - **Expect:** Both default to the documented "All" view (NOT "Unassigned" — that v4.0.0 default regression must not return).
 - **Verify:** Read the active view label at the top of the left rail.
 
-### 5.2 — Filters apply via URL hash and persist
+### 5.2 — Filters apply client-side
 
-- **Do:** Click `Status: Open` filter. Observe URL change. Reload the page.
-- **Expect:** Filter persists after reload. URL hash contains `status=open` (or equivalent).
-- **Verify:** URL bar inspection. Filter chip remains active.
+- **Do:** Click `Status: Open` filter. Observe the active view label change in the left rail and the inbox table refresh to filtered rows.
+- **Expect:** The active view label flips to `Open` (or equivalent) and the table updates to show only open tickets. The URL bar does **not** change — filter state is client-side only.
+- **Verify:** Inspect the left rail's active view label and confirm the rendered rows match the filter. Reload the page and confirm the view **snaps back to "All"** — this is intentional per the section 5.1 default-view contract (the v4.0.0 fix that locked the default to "All"). URL-hash filter persistence is not a v4.1 behavior; if it ever lands, it would be re-introduced as a scoped feature decision (see #504).
 
 ### 5.3 — Saved view CRUD
 

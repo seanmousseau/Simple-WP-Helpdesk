@@ -46,6 +46,8 @@ make test-docker           # required before every push (pre-push hook enforces)
 make e2e-docker            # E2E suite in self-contained Docker
 ```
 
+If you edit the OpenAPI spec at `docs/openapi.yaml`, regenerate the JSON artifacts (`docs/openapi.json` + `simple-wp-helpdesk/openapi.json`) with `bash bin/openapi-sync.sh` before committing. CI's `openapi` job runs `git diff --exit-code` and will fail if the YAML and JSON drift.
+
 Per-suite execution detail: [`docs/internal/testing-overview.md`](docs/internal/testing-overview.md) and [`docs/internal/testing-guide.md`](docs/internal/testing-guide.md).
 
 ---
