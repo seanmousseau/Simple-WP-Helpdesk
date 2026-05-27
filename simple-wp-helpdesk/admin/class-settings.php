@@ -1272,13 +1272,24 @@ function swh_render_api_keys_section(): void {
 					<?php esc_html_e( 'Label', 'simple-wp-helpdesk' ); ?>
 					<span aria-hidden="true" class="swh-api-keys-required-marker">*</span>
 				</label>
+				<?php
+				/**
+				 * NOTE (v4.1.0): Do NOT add `required` / `aria-required` here.
+				 * This input lives inside <form id="swh-settings-form">. When the
+				 * operator clicks the main "Save Changes" submit button on any
+				 * tab, an HTML5-required empty field on the (possibly hidden)
+				 * Integrations tab causes the browser to abort form submission
+				 * entirely — silently breaking ALL settings saves. The Generate
+				 * button is type="button" and validates the label client-side
+				 * via JS (assets/swh-api-keys.js) and server-side in
+				 * ApiKeysAjax::generate() — both already block empty labels.
+				 */
+				?>
 				<input
 					type="text"
 					id="swh-apikey-label"
 					class="regular-text"
 					maxlength="60"
-					required
-					aria-required="true"
 					aria-describedby="swh-apikey-label-desc"
 					placeholder="<?php esc_attr_e( 'e.g. CI integration', 'simple-wp-helpdesk' ); ?>">
 				<p id="swh-apikey-label-desc" class="description"><?php esc_html_e( 'Display name only — operators see this in the table below. Max 60 characters.', 'simple-wp-helpdesk' ); ?></p>
