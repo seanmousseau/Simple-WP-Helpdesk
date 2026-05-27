@@ -84,13 +84,27 @@ def _suite_init(page, request):
 
     def _cleanup():
         """Trash tickets created during the run and log out — runs even on KeyboardInterrupt."""
-        for key in ("ticket_id", "ticket2_id", "xss_ticket_id"):
+        for key in ("ticket_id", "ticket2_id", "xss_ticket_id", "rest_77_id"):
             pid = t.state.get(key)
             if pid:
                 try:
                     t.wpcli(f"post delete {pid} --force 2>/dev/null")
                 except Exception:
                     pass
+        # Phase 10: revoke every test_* API key + clear every rate-limit bucket
+        # so the next run starts clean. Both helpers are idempotent + best-effort.
+        try:
+            from rest_helpers import revoke_all_test_keys, clear_rate_limits
+            try:
+                revoke_all_test_keys(page)
+            except Exception:
+                pass
+            try:
+                clear_rate_limits(page)
+            except Exception:
+                pass
+        except ImportError:
+            pass
         try:
             t.wp_logout(page)
         except Exception:
