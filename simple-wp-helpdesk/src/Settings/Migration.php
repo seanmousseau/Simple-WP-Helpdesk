@@ -37,7 +37,31 @@ use function version_compare;
  */
 final class Migration {
 
-	private const TARGET_VERSION = '4.0.0';
+	private const TARGET_VERSION = '4.1.0';
+
+	/**
+	 * Net-new grouped option defaults introduced after the legacy MAP.
+	 *
+	 * Unlike MAP entries (which migrate a legacy flat option into a group),
+	 * these are options that were born grouped — they have no v3.x flat-key
+	 * predecessor. The migration seeds them on the v4.0 → v4.1 step so consumer
+	 * code can call `swh_get_option( $group, $key )` without a defensive
+	 * default at every call site.
+	 *
+	 * Shape: [ group => [ key => default_value ] ]. Defaults are written ONLY
+	 * if the bag does not already contain the key — never overwrites operator
+	 * state.
+	 *
+	 * @since 4.1.0 — `integrations.api_keys` for issue #365 (REST API surface).
+	 * @var array<string, array<string, mixed>>
+	 */
+	private const GROUP_DEFAULTS = array(
+		// Issue #365 (v4.1.0): API keys live INSIDE swh_settings_integrations.
+		// ApiKeys is the only writer; operator UI ships in v4.1 Phase 6.
+		'integrations' => array(
+			'api_keys' => array(),
+		),
+	);
 
 	/**
 	 * Map of legacy flat option name → [ group, key ] in the new schema.
@@ -192,6 +216,26 @@ final class Migration {
 
 		foreach ( $bags as $group => $bag ) {
 			update_option( 'swh_settings_' . $group, $bag );
+		}
+
+		// Seed net-new grouped defaults that have no flat-key predecessor.
+		// Non-destructive: only writes keys that are missing from the bag.
+		foreach ( self::GROUP_DEFAULTS as $group => $defaults ) {
+			$option_name = 'swh_settings_' . $group;
+			$existing    = get_option( $option_name, array() );
+			if ( ! is_array( $existing ) ) {
+				$existing = array();
+			}
+			$changed = false;
+			foreach ( $defaults as $key => $default_value ) {
+				if ( ! array_key_exists( $key, $existing ) ) {
+					$existing[ $key ] = $default_value;
+					$changed          = true;
+				}
+			}
+			if ( $changed ) {
+				update_option( $option_name, $existing );
+			}
 		}
 
 		update_option( 'swh_db_version', self::TARGET_VERSION );
