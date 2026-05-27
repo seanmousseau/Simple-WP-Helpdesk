@@ -120,11 +120,30 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		/** @var array<string,string> */
 		private array $headers = array();
 
+		/** @var string */
+		private string $method;
+
+		/** @var string */
+		private string $route;
+
 		/**
 		 * @param string $method HTTP method.
 		 * @param string $route  Route string.
 		 */
-		public function __construct( string $method = 'GET', string $route = '' ) {}
+		public function __construct( string $method = 'GET', string $route = '' ) {
+			$this->method = $method;
+			$this->route  = $route;
+		}
+
+		/** Mirrors WP core's WP_REST_Request::get_method(). */
+		public function get_method(): string {
+			return $this->method;
+		}
+
+		/** Mirrors WP core's WP_REST_Request::get_route(). */
+		public function get_route(): string {
+			return $this->route;
+		}
 
 		/**
 		 * @param string $key   Parameter name.
@@ -264,12 +283,12 @@ if ( ! class_exists( 'WP_Post' ) ) {
 	 * loaded from wp-includes/class-wp-post.php in a full WP environment.
 	 */
 	class WP_Post {
-		public int $ID = 0;
-		public string $post_type = '';
-		public string $post_title = '';
-		public string $post_content = '';
-		public string $post_status = 'publish';
-		public string $post_date_gmt = '';
+		public int $ID                   = 0;
+		public string $post_type         = '';
+		public string $post_title        = '';
+		public string $post_content      = '';
+		public string $post_status       = 'publish';
+		public string $post_date_gmt     = '';
 		public string $post_modified_gmt = '';
 
 		/**

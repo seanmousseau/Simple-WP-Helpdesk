@@ -53,13 +53,17 @@ final class Migration {
 	 * state.
 	 *
 	 * @since 4.1.0 — `integrations.api_keys` for issue #365 (REST API surface).
+	 * @since 4.1.0 — `integrations.api_audit_log_enabled` for issue #369 (opt-in per-ticket API access log).
 	 * @var array<string, array<string, mixed>>
 	 */
 	private const GROUP_DEFAULTS = array(
 		// Issue #365 (v4.1.0): API keys live INSIDE swh_settings_integrations.
 		// ApiKeys is the only writer; operator UI ships in v4.1 Phase 6.
+		// Issue #369 (v4.1.0): API access audit log toggle. Off by default — opt-in
+		// because the log records per-ticket key-attributed access events.
 		'integrations' => array(
-			'api_keys' => array(),
+			'api_keys'              => array(),
+			'api_audit_log_enabled' => false,
 		),
 	);
 

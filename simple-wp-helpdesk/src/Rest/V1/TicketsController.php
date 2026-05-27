@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace SWH\Rest\V1;
 
+use SWH\Admin\ApiAccessLog;
 use SWH\Rest\Bootstrap;
 use SWH\Rest\Errors;
 use SWH\Rest\V1\Schemas\Ticket as TicketSchema;
@@ -289,10 +290,12 @@ final class TicketsController extends WP_REST_Controller {
 		if ( null === $post ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found.', 'simple-wp-helpdesk' ) );
 		}
-		return ResponseDecorator::with_rate_limit_headers(
+		$response = ResponseDecorator::with_rate_limit_headers(
 			new WP_REST_Response( TicketSchema::from_post( $post ), 200 ),
 			$request
 		);
+		$this->record_access( (int) $post->ID, 'read', $request );
+		return $response;
 	}
 
 	/**
@@ -343,10 +346,12 @@ final class TicketsController extends WP_REST_Controller {
 		if ( ! $post instanceof WP_Post ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found after create.', 'simple-wp-helpdesk' ) );
 		}
-		return ResponseDecorator::with_rate_limit_headers(
+		$response = ResponseDecorator::with_rate_limit_headers(
 			new WP_REST_Response( TicketSchema::from_post( $post ), 201 ),
 			$request
 		);
+		$this->record_access( $ticket_id, 'write', $request );
+		return $response;
 	}
 
 	/**
@@ -364,11 +369,15 @@ final class TicketsController extends WP_REST_Controller {
 
 		$fields = $this->build_field_patch( $request );
 		if ( empty( $fields ) ) {
-			// Nothing to do — return the current ticket.
-			return ResponseDecorator::with_rate_limit_headers(
+			// Nothing to do — return the current ticket. Audit-log this as a
+			// `write` attempt: the caller used a write-scope route, even if
+			// the patch was empty.
+			$response = ResponseDecorator::with_rate_limit_headers(
 				new WP_REST_Response( TicketSchema::from_post( $post ), 200 ),
 				$request
 			);
+			$this->record_access( $id, 'write', $request );
+			return $response;
 		}
 
 		$result = swh_update_ticket_fields( $id, $fields, $this->context_for( $request ) );
@@ -380,9 +389,31 @@ final class TicketsController extends WP_REST_Controller {
 		if ( ! $post instanceof WP_Post ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found after update.', 'simple-wp-helpdesk' ) );
 		}
-		return ResponseDecorator::with_rate_limit_headers(
+		$response = ResponseDecorator::with_rate_limit_headers(
 			new WP_REST_Response( TicketSchema::from_post( $post ), 200 ),
 			$request
+		);
+		$this->record_access( $id, 'write', $request );
+		return $response;
+	}
+
+	/**
+	 * Fire-and-forget audit-log write. No-op when the toggle is off. Called
+	 * AFTER the response has been built but BEFORE returning it on the success
+	 * path of every single-ticket-scoped route. Collection GETs (`get_items`)
+	 * deliberately do NOT call this — see Phase 9 contract.
+	 *
+	 * @param int             $ticket_id Resolved ticket post id.
+	 * @param string          $action    'read' or 'write'.
+	 * @param WP_REST_Request $request   Current request (for key attribution + route).
+	 */
+	private function record_access( int $ticket_id, string $action, WP_REST_Request $request ): void {
+		$api_key = $request->get_param( '_swh_api_key' );
+		ApiAccessLog::record(
+			$ticket_id,
+			$action,
+			(string) $request->get_route(),
+			is_array( $api_key ) ? $api_key : null
 		);
 	}
 
