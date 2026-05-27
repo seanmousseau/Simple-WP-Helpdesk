@@ -374,3 +374,28 @@ Six PRs, each independently mergeable. Each PR turns red cells into green for on
 ---
 
 **This document is load-bearing.** It is the answer to "did we test the thing?" Keep it honest.
+
+---
+
+## Appendix — v4.1.0 REST surface (L4 coverage)
+
+Phase 10 of v4.1.0 adds seven Playwright sections (`testing/scripts/test_helpdesk_pw.py` sections 76–82) covering the public `swh/v1` REST API end-to-end. Helpers in `testing/scripts/rest_helpers.py`; teardown in `testing/scripts/conftest.py`.
+
+| REST surface | L1 | L2 | L3 | L4 | L5 |
+|---|---|---|---|---|---|
+| Bearer auth (parse + 401 missing/invalid) | N/A | ✓ `AuthTest` | ✓ `AuthTest` | **✓ test_76_rest_auth** | N/A |
+| WP App Password / cookie + X-WP-Nonce | N/A | ✓ `AuthTest` | N/A | **✓ test_76_rest_auth** | N/A |
+| Tickets GET list (filters, pagination, X-WP-Total) | N/A | ✓ `TicketsControllerTest` | ✓ `TicketsControllerTest` | **✓ test_77_rest_tickets_crud** | N/A |
+| Tickets GET single + 404 | N/A | ✓ `TicketsControllerTest` | ✓ | **✓ test_77_rest_tickets_crud** | N/A |
+| Tickets POST create (201, allowlist, validation) | N/A | ✓ `TicketsControllerTest` | ✓ | **✓ test_77_rest_tickets_crud** | N/A |
+| Tickets PATCH update + status enum reject | invariant #19 helper | ✓ `TicketsControllerTest` | ✓ `swh_update_ticket_fields` | **✓ test_77_rest_tickets_crud** | N/A |
+| Replies GET list + internal-note scope visibility | N/A | ✓ `RepliesControllerTest` | ✓ | **✓ test_78_rest_replies** | N/A |
+| Replies POST create + attachment validation | N/A | ✓ `RepliesControllerTest` | ✓ | **✓ test_78_rest_replies** | N/A |
+| Technicians / Categories / Settings/public | N/A | ✓ `UsersControllerTest`, `CategoriesControllerTest`, `SettingsControllerTest` | ✓ `PublicSettingsAllowlistTest` | **✓ test_79_rest_ancillary** | N/A |
+| Public settings allowlist drift | N/A | ✓ `PublicSettingsAllowlistTest` | ✓ | **✓ test_79_rest_ancillary** | N/A |
+| Rate limit (per-key override, 429 + headers) | N/A | ✓ `RateLimiterTest`, `BootstrapTest`, `ResponseDecoratorTest` | ✓ `RateLimiterTest` | **✓ test_80_rest_rate_limit** | N/A |
+| Capability rejection (scope_insufficient, capability_required) | N/A | ✓ `AuthTest` | ✓ | **✓ test_81_rest_capability** | N/A |
+| OpenAPI JSON (200, valid, semver version) | N/A | ✓ `OpenApiControllerTest` | ✓ | **✓ test_82_rest_openapi** | N/A |
+| Admin Redoc viewer (no-CDN invariant — issue #368 AC #3) | N/A | N/A | ✓ `OpenApiControllerTest` indirect | **✓ test_82_rest_openapi** | manual visual-regression |
+
+"Every E2E test uses semantic selectors" exit criterion preserved — sections 76–82 talk to the REST API directly via Playwright's request context; the only DOM-coupled selectors are admin settings UI for API-key creation (driven via `create_api_key()` helper) and the Redoc render check (`#swh-redoc [data-section-id]`).
