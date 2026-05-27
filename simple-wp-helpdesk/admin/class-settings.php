@@ -968,10 +968,19 @@ function swh_render_settings_page() {
 						</tr>
 					</table>
 				</fieldset>
+				<?php
+				/**
+				 * v4.1.0 Phase 6 (#365) — API key management UI.
+				 *
+				 * The plaintext key shown in the modal is returned ONLY in the
+				 * AJAX response body; never server-rendered into this page.
+				 * See docs/internal/contract-settings.md → API Keys.
+				 */
+				swh_render_api_keys_section();
+				?>
 				<fieldset class="swh-settings-group swh-coming-soon" aria-label="<?php esc_attr_e( 'Coming in future releases', 'simple-wp-helpdesk' ); ?>">
 					<legend><?php esc_html_e( 'Coming soon', 'simple-wp-helpdesk' ); ?></legend>
 					<ul style="margin:0 0 0 20px;list-style:disc;">
-						<li><strong><?php esc_html_e( 'REST API keys', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'scoped key management for the public /swh/v1 API (v4.1).', 'simple-wp-helpdesk' ); ?></li>
 						<li><strong><?php esc_html_e( 'Outbound webhooks', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'HMAC-signed event subscriptions with delivery log + retry (v4.2).', 'simple-wp-helpdesk' ); ?></li>
 						<li><strong><?php esc_html_e( 'Native integrations', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'Slack, Microsoft Teams, Discord, Zapier (v4.3).', 'simple-wp-helpdesk' ); ?></li>
 					</ul>
@@ -1203,3 +1212,358 @@ function swh_ajax_send_test_email() {
 		wp_send_json_error( array( 'message' => __( 'Email dispatch failed. Check your server mail configuration.', 'simple-wp-helpdesk' ) ) );
 	}
 }
+
+/**
+ * Render the API Keys section inside the Integrations tab.
+ *
+ * v4.1.0 Phase 6 (#365 UI half). The plaintext key is NEVER server-rendered;
+ * the table seeds existing entries (which carry only the prefix, never the
+ * plaintext) and the modal is populated client-side from the AJAX response.
+ *
+ * @since 4.1.0
+ * @return void
+ */
+function swh_render_api_keys_section(): void {
+	$entries = swh_get_option( 'integrations', 'api_keys', array() );
+	if ( ! is_array( $entries ) ) {
+		$entries = array();
+	}
+	?>
+	<fieldset class="swh-settings-group swh-api-keys-section" aria-labelledby="swh-api-keys-legend">
+		<legend id="swh-api-keys-legend"><?php esc_html_e( 'REST API keys', 'simple-wp-helpdesk' ); ?></legend>
+		<p class="description">
+			<?php esc_html_e( 'Scoped bearer tokens for the public /swh/v1 REST API. Use these for service-to-service integrations (CI, automation, third-party tools). For per-user access, prefer built-in WordPress Application Passwords.', 'simple-wp-helpdesk' ); ?>
+			<a href="<?php echo esc_url( 'https://seanmousseau.github.io/Simple-WP-Helpdesk/api-keys.html' ); ?>" target="_blank" rel="noopener noreferrer">
+				<?php esc_html_e( 'Learn more', 'simple-wp-helpdesk' ); ?>
+				<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'simple-wp-helpdesk' ); ?></span>
+			</a>
+		</p>
+
+		<div class="swh-api-keys-generate-form" role="group" aria-labelledby="swh-api-keys-generate-heading">
+			<h4 id="swh-api-keys-generate-heading" class="swh-api-keys-subheading"><?php esc_html_e( 'Generate a new API key', 'simple-wp-helpdesk' ); ?></h4>
+			<div class="swh-api-keys-form-row">
+				<label for="swh-apikey-label" class="swh-api-keys-label-required">
+					<?php esc_html_e( 'Label', 'simple-wp-helpdesk' ); ?>
+					<span aria-hidden="true" class="swh-api-keys-required-marker">*</span>
+				</label>
+				<input
+					type="text"
+					id="swh-apikey-label"
+					class="regular-text"
+					maxlength="60"
+					required
+					aria-required="true"
+					aria-describedby="swh-apikey-label-desc"
+					placeholder="<?php esc_attr_e( 'e.g. CI integration', 'simple-wp-helpdesk' ); ?>">
+				<p id="swh-apikey-label-desc" class="description"><?php esc_html_e( 'Display name only — operators see this in the table below. Max 60 characters.', 'simple-wp-helpdesk' ); ?></p>
+			</div>
+
+			<div class="swh-api-keys-form-row">
+				<span class="swh-api-keys-radio-group-label" id="swh-apikey-scope-label"><?php esc_html_e( 'Scope', 'simple-wp-helpdesk' ); ?></span>
+				<div role="radiogroup" aria-labelledby="swh-apikey-scope-label" class="swh-api-keys-radio-group">
+					<label class="swh-api-keys-radio">
+						<input type="radio" name="swh_apikey_scope" value="read" checked>
+						<span><strong><?php esc_html_e( 'Read', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'list and view tickets', 'simple-wp-helpdesk' ); ?></span>
+					</label>
+					<label class="swh-api-keys-radio">
+						<input type="radio" name="swh_apikey_scope" value="write">
+						<span><strong><?php esc_html_e( 'Read + Write', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'also create, update, and post replies', 'simple-wp-helpdesk' ); ?></span>
+					</label>
+				</div>
+			</div>
+
+			<div class="swh-api-keys-form-row">
+				<label for="swh-apikey-rate-limit">
+					<?php esc_html_e( 'Rate limit override (optional)', 'simple-wp-helpdesk' ); ?>
+				</label>
+				<input
+					type="number"
+					id="swh-apikey-rate-limit"
+					class="small-text"
+					min="1"
+					max="10000"
+					step="1"
+					aria-describedby="swh-apikey-rate-limit-desc"
+					placeholder="60">
+				<span class="swh-api-keys-input-suffix"><?php esc_html_e( 'requests / minute', 'simple-wp-helpdesk' ); ?></span>
+				<p id="swh-apikey-rate-limit-desc" class="description"><?php esc_html_e( 'Leave blank to use the default (60 / min). Accepts 1 to 10000.', 'simple-wp-helpdesk' ); ?></p>
+			</div>
+
+			<p class="swh-api-keys-form-actions">
+				<button type="button" id="swh-apikey-generate" class="button button-primary">
+					<?php esc_html_e( 'Generate API key', 'simple-wp-helpdesk' ); ?>
+				</button>
+			</p>
+		</div>
+
+		<h4 class="swh-api-keys-subheading"><?php esc_html_e( 'Existing keys', 'simple-wp-helpdesk' ); ?></h4>
+		<table id="swh-api-keys-table" class="widefat striped swh-api-keys-table" aria-label="<?php esc_attr_e( 'Existing API keys', 'simple-wp-helpdesk' ); ?>">
+			<thead>
+				<tr>
+					<th scope="col"><?php esc_html_e( 'Label', 'simple-wp-helpdesk' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Scope', 'simple-wp-helpdesk' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Prefix', 'simple-wp-helpdesk' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Last used', 'simple-wp-helpdesk' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Rate limit', 'simple-wp-helpdesk' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Created', 'simple-wp-helpdesk' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Actions', 'simple-wp-helpdesk' ); ?></th>
+				</tr>
+			</thead>
+			<tbody id="swh-api-keys-tbody">
+				<?php if ( empty( $entries ) ) : ?>
+					<tr class="swh-api-keys-empty-row">
+						<td colspan="7">
+							<div class="swh-empty-state">
+								<svg class="swh-empty-state-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+								<p class="swh-empty-state-title"><?php esc_html_e( 'No API keys yet', 'simple-wp-helpdesk' ); ?></p>
+								<p class="swh-empty-state-desc"><?php esc_html_e( 'Generate your first key above to start using the /swh/v1 REST API.', 'simple-wp-helpdesk' ); ?></p>
+							</div>
+						</td>
+					</tr>
+				<?php else : ?>
+					<?php foreach ( $entries as $entry ) : ?>
+						<?php
+						if ( ! is_array( $entry ) || empty( $entry['id'] ) ) {
+							continue;
+						}
+						swh_render_api_key_row( $entry );
+						?>
+					<?php endforeach; ?>
+				<?php endif; ?>
+			</tbody>
+		</table>
+	</fieldset>
+
+	<?php /* Shown-once secret modal (issue #365 UI half). Hidden by default. */ ?>
+	<div
+		id="swh-apikey-modal"
+		class="swh-apikey-modal"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="swh-apikey-modal-heading"
+		aria-describedby="swh-apikey-modal-warning"
+		hidden>
+		<div class="swh-apikey-modal-backdrop" data-swh-apikey-backdrop></div>
+		<div class="swh-apikey-modal-dialog" role="document">
+			<div class="swh-apikey-modal-warning" id="swh-apikey-modal-warning">
+				<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="swh-apikey-modal-warning-icon"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+				<strong><?php esc_html_e( 'This is the only time you will see this key. Copy it now — it cannot be recovered later.', 'simple-wp-helpdesk' ); ?></strong>
+			</div>
+
+			<h2 id="swh-apikey-modal-heading"><?php esc_html_e( 'API key generated', 'simple-wp-helpdesk' ); ?></h2>
+
+			<p class="swh-apikey-modal-help">
+				<?php esc_html_e( 'Store this key in your password manager or secrets vault before closing this dialog. Once closed, only the hashed form is retained — there is no way to view it again.', 'simple-wp-helpdesk' ); ?>
+			</p>
+
+			<div class="swh-apikey-plaintext-wrap">
+				<label for="swh-apikey-plaintext-input" class="screen-reader-text"><?php esc_html_e( 'Generated API key (copy now — you will not see this again)', 'simple-wp-helpdesk' ); ?></label>
+				<input
+					type="text"
+					id="swh-apikey-plaintext-input"
+					class="swh-apikey-plaintext-input"
+					readonly
+					aria-label="<?php esc_attr_e( 'Generated API key (copy now — you will not see this again)', 'simple-wp-helpdesk' ); ?>"
+					value="">
+				<button type="button" id="swh-apikey-copy" class="button button-primary swh-apikey-copy-btn">
+					<span class="swh-apikey-copy-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" focusable="false"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+					</span>
+					<span class="swh-apikey-copy-label"><?php esc_html_e( 'Copy', 'simple-wp-helpdesk' ); ?></span>
+				</button>
+			</div>
+
+			<div class="swh-apikey-modal-live-region" aria-live="polite" aria-atomic="true" id="swh-apikey-modal-live"></div>
+
+			<div class="swh-apikey-modal-confirm" id="swh-apikey-modal-confirm" hidden>
+				<p><?php esc_html_e( 'You haven\'t copied the key yet. Close anyway?', 'simple-wp-helpdesk' ); ?></p>
+				<p class="swh-apikey-modal-confirm-actions">
+					<button type="button" class="button" id="swh-apikey-cancel-close"><?php esc_html_e( 'Cancel', 'simple-wp-helpdesk' ); ?></button>
+					<button type="button" class="button button-link-delete" id="swh-apikey-confirm-close"><?php esc_html_e( 'Close anyway', 'simple-wp-helpdesk' ); ?></button>
+				</p>
+			</div>
+
+			<div class="swh-apikey-modal-footer">
+				<button type="button" class="button" id="swh-apikey-close"><?php esc_html_e( 'Close', 'simple-wp-helpdesk' ); ?></button>
+			</div>
+		</div>
+	</div>
+
+	<?php /* Revoke confirmation modal. Reused for every revoke click. */ ?>
+	<div
+		id="swh-apikey-revoke-modal"
+		class="swh-apikey-modal swh-apikey-modal--revoke"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="swh-apikey-revoke-heading"
+		aria-describedby="swh-apikey-revoke-desc"
+		hidden>
+		<div class="swh-apikey-modal-backdrop" data-swh-apikey-backdrop></div>
+		<div class="swh-apikey-modal-dialog" role="document">
+			<h2 id="swh-apikey-revoke-heading"><?php esc_html_e( 'Revoke API key?', 'simple-wp-helpdesk' ); ?></h2>
+			<p id="swh-apikey-revoke-desc">
+				<?php
+				printf(
+					/* translators: %s: API key label, wrapped in <strong>. */
+					esc_html__( 'Revoking %s will immediately disable any integration using it. This cannot be undone.', 'simple-wp-helpdesk' ),
+					'<strong id="swh-apikey-revoke-target-label"></strong>'
+				);
+				?>
+			</p>
+			<div class="swh-apikey-modal-footer">
+				<button type="button" class="button" id="swh-apikey-revoke-cancel"><?php esc_html_e( 'Cancel', 'simple-wp-helpdesk' ); ?></button>
+				<button type="button" class="button button-link-delete" id="swh-apikey-revoke-confirm"><?php esc_html_e( 'Revoke key', 'simple-wp-helpdesk' ); ?></button>
+			</div>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Render a single API key row. Used at initial page render AND by the JS
+ * (which builds equivalent markup client-side after a generate or revoke).
+ *
+ * @param array<string,mixed> $entry The persisted entry (without plaintext).
+ * @return void
+ */
+function swh_render_api_key_row( array $entry ): void {
+	$id           = isset( $entry['id'] ) && is_string( $entry['id'] ) ? $entry['id'] : '';
+	$label        = isset( $entry['label'] ) && is_string( $entry['label'] ) ? $entry['label'] : '';
+	$scope        = isset( $entry['scope'] ) && is_string( $entry['scope'] ) ? $entry['scope'] : 'read';
+	$prefix       = isset( $entry['prefix'] ) && is_string( $entry['prefix'] ) ? $entry['prefix'] : '';
+	$created_at   = isset( $entry['created_at'] ) ? (int) $entry['created_at'] : 0;
+	$last_used_at = isset( $entry['last_used_at'] ) ? (int) $entry['last_used_at'] : 0;
+	$rate_limit   = isset( $entry['rate_limit'] ) && is_numeric( $entry['rate_limit'] ) ? (int) $entry['rate_limit'] : null;
+	$revoked_at   = isset( $entry['revoked_at'] ) && is_numeric( $entry['revoked_at'] ) ? (int) $entry['revoked_at'] : null;
+
+	$is_revoked = ( null !== $revoked_at && $revoked_at > 0 );
+	$row_class  = $is_revoked ? 'swh-api-key-row swh-api-key-row--revoked' : 'swh-api-key-row';
+	$scope_text = ( 'write' === $scope )
+		? __( 'Read + Write', 'simple-wp-helpdesk' )
+		: __( 'Read', 'simple-wp-helpdesk' );
+	$rate_text  = ( null === $rate_limit )
+		? esc_html__( 'default (60/min)', 'simple-wp-helpdesk' )
+		: sprintf(
+			/* translators: %d: requests per minute. */
+			esc_html__( '%d / min', 'simple-wp-helpdesk' ),
+			$rate_limit
+		);
+
+	$date_format = get_option( 'date_format', 'Y-m-d' );
+	$created_str = $created_at > 0 ? wp_date( (string) $date_format, $created_at ) : '—';
+	$last_used   = $last_used_at > 0
+		? wp_date( (string) $date_format, $last_used_at )
+		: esc_html__( 'Never', 'simple-wp-helpdesk' );
+	$revoked_str = $is_revoked ? wp_date( (string) $date_format, (int) $revoked_at ) : '';
+	?>
+	<tr class="<?php echo esc_attr( $row_class ); ?>" data-swh-apikey-id="<?php echo esc_attr( $id ); ?>">
+		<td class="swh-api-key-cell-label"><?php echo esc_html( $label ); ?></td>
+		<td><?php echo esc_html( $scope_text ); ?></td>
+		<td><code><?php echo esc_html( $prefix ); ?>…</code></td>
+		<td><?php echo esc_html( $last_used ); ?></td>
+		<td><?php echo esc_html( $rate_text ); ?></td>
+		<td><?php echo esc_html( $created_str ); ?></td>
+		<td>
+			<?php if ( $is_revoked ) : ?>
+				<span class="swh-api-key-revoked-label">
+					<?php
+					printf(
+						/* translators: %s: revoked-at date string. */
+						esc_html__( 'Revoked %s', 'simple-wp-helpdesk' ),
+						esc_html( $revoked_str )
+					);
+					?>
+				</span>
+			<?php else : ?>
+				<button
+					type="button"
+					class="button button-link-delete swh-api-key-revoke-btn"
+					data-swh-apikey-id="<?php echo esc_attr( $id ); ?>"
+					data-swh-apikey-label="<?php echo esc_attr( $label ); ?>"
+					aria-label="<?php
+						printf(
+							/* translators: %s: API key label. */
+							esc_attr__( 'Revoke key %s', 'simple-wp-helpdesk' ),
+							esc_attr( $label )
+						);
+					?>">
+					<?php esc_html_e( 'Revoke', 'simple-wp-helpdesk' ); ?>
+				</button>
+			<?php endif; ?>
+		</td>
+	</tr>
+	<?php
+}
+
+/**
+ * Enqueue the API key management JS + CSS on the Helpdesk Settings page only.
+ *
+ * Conditional load — keeps this bundle off every other admin page.
+ *
+ * @since 4.1.0
+ * @param string $hook Current admin page hook suffix.
+ * @return void
+ */
+function swh_api_keys_enqueue( $hook ): void {
+	if ( 'helpdesk_ticket_page_swh-settings' !== $hook ) {
+		return;
+	}
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	wp_enqueue_style(
+		'swh-api-keys',
+		SWH_PLUGIN_URL . 'assets/swh-api-keys.css',
+		array( 'swh-admin' ),
+		SWH_VERSION
+	);
+
+	wp_enqueue_script(
+		'swh-api-keys',
+		SWH_PLUGIN_URL . 'assets/swh-api-keys.js',
+		array( 'swh-admin' ),
+		SWH_VERSION,
+		true
+	);
+
+	$date_format = get_option( 'date_format', 'Y-m-d' );
+
+	wp_localize_script(
+		'swh-api-keys',
+		'swhApiKeys',
+		array(
+			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+			'nonce'      => wp_create_nonce( \SWH\Admin\ApiKeysAjax::NONCE_ACTION ),
+			'dateFormat' => (string) $date_format,
+			'i18n'       => array(
+				'copy'             => __( 'Copy', 'simple-wp-helpdesk' ),
+				'copied'           => __( 'Copied!', 'simple-wp-helpdesk' ),
+				'copyFailed'       => __( 'Copy failed — select the field and copy manually.', 'simple-wp-helpdesk' ),
+				'copyAnnounced'    => __( 'API key copied to clipboard.', 'simple-wp-helpdesk' ),
+				'generating'       => __( 'Generating…', 'simple-wp-helpdesk' ),
+				'generate'         => __( 'Generate API key', 'simple-wp-helpdesk' ),
+				'revoking'         => __( 'Revoking…', 'simple-wp-helpdesk' ),
+				'revoke'           => __( 'Revoke', 'simple-wp-helpdesk' ),
+				'revokeKey'        => __( 'Revoke key', 'simple-wp-helpdesk' ),
+				/* translators: %s is the revoked-at date string. */
+				'revokedAt'        => __( 'Revoked %s', 'simple-wp-helpdesk' ),
+				'never'            => __( 'Never', 'simple-wp-helpdesk' ),
+				'rateLimitDefault' => __( 'default (60/min)', 'simple-wp-helpdesk' ),
+				/* translators: %d is the rate-limit override. */
+				'rateLimitFormat'  => __( '%d / min', 'simple-wp-helpdesk' ),
+				'scopeRead'        => __( 'Read', 'simple-wp-helpdesk' ),
+				'scopeWrite'       => __( 'Read + Write', 'simple-wp-helpdesk' ),
+				'networkError'     => __( 'Network error. Please try again.', 'simple-wp-helpdesk' ),
+				'genericError'     => __( 'Something went wrong.', 'simple-wp-helpdesk' ),
+				/* translators: %s is the API key label. */
+				'revokeAria'       => __( 'Revoke key %s', 'simple-wp-helpdesk' ),
+				'noKeysTitle'      => __( 'No API keys yet', 'simple-wp-helpdesk' ),
+				'noKeysDesc'       => __( 'Generate your first key above to start using the /swh/v1 REST API.', 'simple-wp-helpdesk' ),
+				'generated'        => __( 'API key generated successfully.', 'simple-wp-helpdesk' ),
+				'revoked'          => __( 'API key revoked.', 'simple-wp-helpdesk' ),
+			),
+		)
+	);
+}
+add_action( 'admin_enqueue_scripts', 'swh_api_keys_enqueue' );
