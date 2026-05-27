@@ -75,6 +75,9 @@ require_once SWH_PLUGIN_DIR . 'src/Rest/ViewsController.php';
 // Admin includes (only in admin context).
 if ( is_admin() ) {
 	require_once SWH_PLUGIN_DIR . 'admin/class-settings.php';
+	// v4.1.0 Phase 6 — API key management AJAX (#365 UI half).
+	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiKeysAjax.php';
+	\SWH\Admin\ApiKeysAjax::boot();
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 — kept active; serves ?legacy=1 fallback view with column/filter/badge enhancements.
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';
