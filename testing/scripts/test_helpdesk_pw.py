@@ -4977,13 +4977,23 @@ def test_77_rest_tickets_crud(page: Page):
     check("77 rest crud: list returns an array", isinstance(rows, list))
     check("77 rest crud: list page size ≤ requested per_page", len(rows) <= 5)
 
-    # per_page clamp to 100.
-    r = api_request(page, "GET", "/tickets?per_page=200", key=read_key["plaintext"])
-    check("77 rest crud: per_page=200 still → 200 (clamped, no error)",
-          r.status == 200, f"got {r.status}")
+    # per_page=100 must succeed (boundary of the locked maximum); per_page=200
+    # is rejected by WP's schema argument validation BEFORE the controller
+    # clamps internally — TicketsController declares 'maximum' => 100 on the
+    # per_page argument, so over-cap requests get 400 rest_invalid_param.
+    # The contract therefore covers two assertions:
+    #   - boundary (100) is accepted,
+    #   - over-cap (200) is rejected (not silently truncated).
+    r = api_request(page, "GET", "/tickets?per_page=100", key=read_key["plaintext"])
+    check("77 rest crud: per_page=100 (max) → 200",
+          r.status == 200, f"got {r.status}: {r.text()[:200]}")
     rows = r.json() if r.status == 200 else []
-    check("77 rest crud: per_page clamped to ≤ 100",
+    check("77 rest crud: per_page=100 returns at most 100 rows",
           isinstance(rows, list) and len(rows) <= 100)
+
+    r = api_request(page, "GET", "/tickets?per_page=200", key=read_key["plaintext"])
+    check("77 rest crud: per_page=200 (over cap) → 400 rest_invalid_param",
+          r.status == 400, f"got {r.status}: {r.text()[:200]}")
 
     # ── GET single ──────────────────────────────────────────────────────
     if state.get("rest_77_id"):
