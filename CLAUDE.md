@@ -86,6 +86,7 @@ If your PR touches any of these, update the corresponding internal doc:
 | Schema-ish state (options, post meta, comment meta, transients, CPT, capabilities) | `data-dictionary.md` |
 | A setting (add/change/remove) | `config-reference.md` + `contract-settings.md` |
 | A hook, REST endpoint, AJAX, or shortcode attribute | `api-contract.md` + end-user `docs/hooks.md` |
+| A `swh/v1` REST route (add/modify/remove) or any `src/Rest/V1/Schemas/*.php` | `docs/openapi.yaml` + run `bash bin/openapi-sync.sh` to regenerate `docs/openapi.json` (CI `openapi` job enforces sync) |
 | Untrusted-input handling, auth, files, tokens | `security-model.md` |
 | Inbound webhook | `contract-inbound-webhook.md` + end-user `docs/inbound-webhook.md` |
 | Ticket lifecycle / status / merge | `contract-ticket-lifecycle.md` |

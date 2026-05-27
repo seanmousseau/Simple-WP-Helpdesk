@@ -85,6 +85,18 @@ Enumerated from `grep -rn "apply_filters(\s*['\"]swh_" simple-wp-helpdesk/`:
 
 ## Public REST API v1
 
+### Machine-readable contract
+
+The full API contract is published in three places:
+
+- **Admin viewer** — **Tools → Helpdesk API Reference** (requires `manage_options`). Vendored Redoc viewer (`simple-wp-helpdesk/assets/vendor/redoc/redoc.standalone.js`, MIT-licensed); no CDN call.
+- **Public docs site** — https://seanmousseau.github.io/Simple-WP-Helpdesk/api-reference.html (same Redoc viewer, same JSON spec).
+- **JSON endpoint** — `GET /wp-json/swh/v1/openapi.json` (public, rate-limited per-IP via the same bucket as `settings/public`). Point Postman / Insomnia at this URL for a one-click import.
+
+**Source of truth:** `docs/openapi.yaml` (committed). The JSON form `docs/openapi.json` is a build artifact regenerated from the YAML by `bin/openapi-sync.sh`; CI (`.github/workflows/php-tests.yml` → `openapi` job) fails if the two are out of sync, plus runs `npx @redocly/cli lint`.
+
+Schema definitions live in `simple-wp-helpdesk/src/Rest/V1/Schemas/*.php`. **Editing those files is a public-API change** — the OpenAPI spec must update in the same PR. The `OpenApiSpecTest` drift detector (`tests/Unit/OpenApiSpecTest.php`) enumerates every `Schemas/*.php` and every `Errors` constant, failing if either drifts away from the spec.
+
 The v4.1.0 release introduces the first formally-public REST surface under the `swh/v1` namespace. Until v4.1.0, the only documented REST endpoint was `POST /wp-json/swh/v1/inbound-email`; the other `swh/v1/*` routes (`tickets`, `views`, `inbox`, `bulk-action`, `technicians`, `palette`) were and remain **internal** controllers consumed by the bundled admin-inbox React app — they live alongside the v1 surface but are not part of the public contract documented below.
 
 **Namespace:** `swh/v1`
