@@ -65,6 +65,19 @@ Every entry point below ultimately routes through `swh_update_ticket_fields()` (
 | Portal close / reopen | `frontend/class-portal.php` (admin-post handlers) | `_ticket_token` (`hash_equals`) + WP nonce |
 | Auto-close cron | `includes/class-cron.php` | n/a (server-side) |
 
+### Entry points that insert a reply (`helpdesk_reply` comment)
+
+Every entry point below ultimately routes through `swh_insert_helpdesk_reply()` (invariant #20 in `design-document.md`). The helper handles body sanitisation (`wp_kses_post`), attachment validation, `_swh_unread` / `_ticket_first_response_at` bookkeeping, email dispatch via `swh_send_email()` (invariant #2), and firing `swh_ticket_replied`.
+
+| Entry point | File | Auth |
+|---|---|---|
+| Admin form ("Add Reply" / "Add Internal Note") | `admin/class-ticket-editor.php` (`swh_save_ticket_data`) | WP nonce + `edit_post` capability |
+| **Public REST v1** (`POST /swh/v1/tickets/{id}/replies`) | `src/Rest/V1/RepliesController.php` | `swh_rest_require( 'write' )` — logged-in `edit_posts` or `write`-scoped API key |
+| Internal REST drawer (`POST /swh/v1/tickets/{id}/reply` — legacy) | `src/Rest/TicketController.php` | Logged-in `edit_posts` (migration to the canonical helper is scheduled for v4.2) |
+| Portal reply | `frontend/class-portal.php` | `_ticket_token` (`hash_equals`) + WP nonce (migration scheduled for v4.2) |
+| Inbound email webhook (when matched to an existing ticket) | `simple-wp-helpdesk.php` + `class-email.php` | Bearer token (migration scheduled for v4.2) |
+| Merge breadcrumb | `includes/helpers.php` (`swh_merge_tickets`) | n/a (server-side, fired by admin merge UI) |
+
 ---
 
 ## Invariants

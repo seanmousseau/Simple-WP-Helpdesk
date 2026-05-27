@@ -54,11 +54,11 @@ Cited from `grep -rEon "(update|get|delete)_post_meta\(...\)"` on `simple-wp-hel
 
 ## Comment meta keys
 
-Comments carry these meta when `comment_type='helpdesk_reply'`:
+Comments carry these meta when `comment_type='helpdesk_reply'`. **Canonical writer (v4.1+):** `swh_insert_helpdesk_reply()` in `includes/insert-helpdesk-reply.php` is the only correct way to insert a `helpdesk_reply` comment and the only place that sets the meta keys below (invariant #20). The admin save-post path (`admin/class-ticket-editor.php`) and the public REST v1 controller (`src/Rest/V1/RepliesController.php`) both route through it; the internal drawer / portal / merge sites are scheduled for follow-up migration in v4.2.
 
 | Key | Type | Required? | Purpose | Since |
 |---|---|---|---|---|
-| `_is_internal_note` | string (`'1'`) | optional | Staff-only note. **Must be filtered out** of any frontend renderer. | 2.0.0 |
+| `_is_internal_note` | string (`'1'`) | optional | Staff-only note. **Must be filtered out** of any frontend renderer. Written by `swh_insert_helpdesk_reply()` when `is_internal_note=true`. | 2.0.0 |
 | `_is_user_reply` | string (`'1'`) | optional | Marks a portal-side or inbound-email reply (i.e. came from the client, not staff). Used by reporting to attribute first-response time correctly. | 2.0.0 |
 | `_swh_reply_orignames` | array<string,string> | optional | Per-comment map of attachment URL → original filename for replies and reopens. Falls back to `basename($url)` if missing. | 2.3.0 |
 | `_attachments` | string[] (URLs) | optional | Attachment URLs on the reply comment. | 1.0 |

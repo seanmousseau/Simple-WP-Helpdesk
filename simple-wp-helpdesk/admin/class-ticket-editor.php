@@ -556,23 +556,27 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	$current_user_email = is_string( $current_user->user_email ) ? $current_user->user_email : '';
 
 	if ( ! empty( $_POST['swh_tech_note_text'] ) && is_string( $_POST['swh_tech_note_text'] ) ) {
-		$note_text  = sanitize_textarea_field( wp_unslash( $_POST['swh_tech_note_text'] ) );
-		$comment_id = wp_insert_comment(
+		$note_text = sanitize_textarea_field( wp_unslash( $_POST['swh_tech_note_text'] ) );
+		// v4.1.0 Phase 4: route through the canonical reply-insert helper so
+		// the admin path, the internal REST drawer, the portal, and the new
+		// public REST v1 surface all share one insertion choke point
+		// (invariant #20, design-document.md). dispatch_email=false because
+		// internal notes never email the requester.
+		swh_insert_helpdesk_reply(
+			$post_id,
 			array(
-				'comment_post_ID'      => $post_id,
-				'comment_author'       => $current_user_name,
-				'comment_author_email' => $current_user_email,
-				'comment_content'      => $note_text,
-				'comment_approved'     => 1,
-				'comment_type'         => 'helpdesk_reply',
+				'body'             => $note_text,
+				'is_internal_note' => true,
+				'author_user_id'   => get_current_user_id(),
+				'author_name'      => $current_user_name,
+				'author_email'     => $current_user_email,
+				'dispatch_email'   => false,
+			),
+			array(
+				'source'   => 'admin_form',
+				'actor_id' => get_current_user_id(),
 			)
 		);
-		if ( $comment_id ) {
-			update_comment_meta( $comment_id, '_is_internal_note', '1' );
-			update_post_meta( $post_id, '_swh_last_activity_at', time() );
-			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
-			\SWH\Concurrency\TicketVersion::bump( $post_id );
-		}
 	}
 
 	$just_replied = false;
@@ -585,42 +589,42 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	$has_files  = ! empty( $files_name[0] );
 
 	if ( $reply_text || $has_files ) {
-		$just_replied    = true;
-		$comment_content = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
-		$comment_id      = wp_insert_comment(
-			array(
-				'comment_post_ID'      => $post_id,
-				'comment_author'       => $current_user_name,
-				'comment_author_email' => $current_user_email,
-				'comment_content'      => $comment_content,
-				'comment_approved'     => 1,
-				'comment_type'         => 'helpdesk_reply',
-			)
-		);
-		if ( $comment_id ) {
-			update_comment_meta( $comment_id, '_is_user_reply', '0' );
-			update_post_meta( $post_id, '_swh_last_activity_at', time() );
-			swh_fire_ticket_replied( $post_id, $comment_id, get_current_user_id() );
-			\SWH\Concurrency\TicketVersion::bump( $post_id );
-		}
+		$just_replied = true;
 
+		// $_FILES handling stays in the admin path — the admin form posts
+		// multipart uploads through swh_handle_multiple_uploads() and the
+		// resulting URLs feed BOTH the comment meta AND the composite email
+		// below (reply + status-change branching). The helper accepts the
+		// pre-uploaded URL set so the admin path remains the one place that
+		// owns the $_FILES pipeline.
 		$tech_orignames = null;
 		$tech_skipped   = 0;
 		// $_FILES array is validated and sanitized inside swh_handle_multiple_uploads(); cannot apply sanitize_text_field() to a file array.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$attach_urls = ! empty( $files_raw ) ? swh_handle_multiple_uploads( $files_raw, $tech_orignames, $tech_skipped ) : array();
-		if ( $comment_id && ! empty( $attach_urls ) ) {
-			update_comment_meta( $comment_id, '_attachments', $attach_urls );
-			if ( ! empty( $tech_orignames ) ) {
-				update_comment_meta( $comment_id, '_swh_reply_orignames', $tech_orignames );
-			}
-		}
-		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 
-		// Record first response time only when the comment was actually inserted.
-		if ( $comment_id && $current_user_email !== $data['email'] && ! swh_get_int_meta( $post_id, '_ticket_first_response_at' ) ) {
-			update_post_meta( $post_id, '_ticket_first_response_at', time() );
-		}
+		// v4.1.0 Phase 4: route through the canonical reply-insert helper
+		// (invariant #20). dispatch_email=false because the admin path emits
+		// its own composite "reply + status-change" email below.
+		swh_insert_helpdesk_reply(
+			$post_id,
+			array(
+				'body'             => $reply_text,
+				'is_internal_note' => false,
+				'author_user_id'   => get_current_user_id(),
+				'author_name'      => $current_user_name,
+				'author_email'     => $current_user_email,
+				'attachment_urls'  => $attach_urls,
+				'attachment_names' => is_array( $tech_orignames ) ? $tech_orignames : array(),
+				'dispatch_email'   => false,
+			),
+			array(
+				'source'   => 'admin_form',
+				'actor_id' => get_current_user_id(),
+			)
+		);
+
+		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
 	}
 
 	$status_changed = ( $update && $old_status !== $new_status );
