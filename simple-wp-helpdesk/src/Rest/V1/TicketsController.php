@@ -44,6 +44,16 @@ use function wp_kses_post;
  */
 final class TicketsController extends WP_REST_Controller {
 
+	/**
+	 * Public REST namespace for this controller.
+	 *
+	 * Mirrors {@see Bootstrap::NAMESPACE} so consumers (and static-analysis tools)
+	 * can reference the namespace without traversing the bootstrap. Used by the
+	 * cross-class namespace-isolation assertion in
+	 * SWH\Tests\Unit\Rest\InboxControllerTest (PR #519 follow-up).
+	 */
+	public const NAMESPACE = Bootstrap::NAMESPACE;
+
 	public const REST_BASE = 'tickets';
 
 	/** Maximum allowed `per_page` for list requests. */

@@ -1122,6 +1122,25 @@ function swh_render_settings_page() {
 			<p class="submit" id="save-btn-container"><input type="submit" name="swh_save_settings" class="button button-primary" value="<?php esc_attr_e( 'Save Changes', 'simple-wp-helpdesk' ); ?>"></p>
 		</form>
 
+		<?php
+		/**
+		 * Anchor form for the API Keys "Generate" controls (PR #519 follow-up).
+		 *
+		 * The Generate Key inputs are visually rendered inside the Integrations
+		 * tab (see swh_render_api_keys_section), but they carry an HTML5
+		 * `form="swh-api-keys-generate-form"` attribute that associates them with
+		 * THIS empty form instead of #swh-settings-form. That dissociation means
+		 * any future HTML5 validation on those inputs (required, pattern,
+		 * type=email, min/max) cannot block the parent settings form's
+		 * "Save Changes" submission — the original Cliff 2 failure mode.
+		 *
+		 * `onsubmit="return false"` is belt-and-braces: the Generate button is
+		 * type="button" and dispatches via AJAX, so this form should never
+		 * actually submit.
+		 */
+		?>
+		<form id="swh-api-keys-generate-form" onsubmit="return false;" hidden aria-hidden="true"></form>
+
 		<div id="tab-tools" class="swh-tab-content" role="tabpanel" aria-labelledby="swh-tab-tools" tabindex="0" style="display:none;">
 			<h2><?php esc_html_e( 'Automated Data Retention', 'simple-wp-helpdesk' ); ?></h2>
 			<form method="POST" action="">
@@ -1272,9 +1291,29 @@ function swh_render_api_keys_section(): void {
 					<?php esc_html_e( 'Label', 'simple-wp-helpdesk' ); ?>
 					<span aria-hidden="true" class="swh-api-keys-required-marker">*</span>
 				</label>
+				<?php
+				/**
+				 * Generate Key controls are dissociated from #swh-settings-form
+				 * via the HTML5 `form="swh-api-keys-generate-form"` attribute on
+				 * EVERY input/radio in this block (PR #519 follow-up). The anchor
+				 * <form id="swh-api-keys-generate-form"> element is rendered just
+				 * outside (and after) #swh-settings-form. As a result:
+				 *
+				 *   - HTML5 validation attrs (required, pattern, min/max, type=email)
+				 *     here CANNOT block the parent settings form's "Save Changes"
+				 *     submission — the original Cliff 2 failure mode.
+				 *   - The Generate button stays type="button" and dispatches via
+				 *     AJAX (assets/swh-api-keys.js → ApiKeysAjax::generate).
+				 *
+				 * If you add new inputs/selects/radios here, KEEP the
+				 * `form="swh-api-keys-generate-form"` attribute — that's the
+				 * load-bearing piece.
+				 */
+				?>
 				<input
 					type="text"
 					id="swh-apikey-label"
+					form="swh-api-keys-generate-form"
 					class="regular-text"
 					maxlength="60"
 					required
@@ -1288,11 +1327,11 @@ function swh_render_api_keys_section(): void {
 				<span class="swh-api-keys-radio-group-label" id="swh-apikey-scope-label"><?php esc_html_e( 'Scope', 'simple-wp-helpdesk' ); ?></span>
 				<div role="radiogroup" aria-labelledby="swh-apikey-scope-label" class="swh-api-keys-radio-group">
 					<label class="swh-api-keys-radio">
-						<input type="radio" name="swh_apikey_scope" value="read" checked>
+						<input type="radio" name="swh_apikey_scope" form="swh-api-keys-generate-form" value="read" checked>
 						<span><strong><?php esc_html_e( 'Read', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'list and view tickets', 'simple-wp-helpdesk' ); ?></span>
 					</label>
 					<label class="swh-api-keys-radio">
-						<input type="radio" name="swh_apikey_scope" value="write">
+						<input type="radio" name="swh_apikey_scope" form="swh-api-keys-generate-form" value="write">
 						<span><strong><?php esc_html_e( 'Read + Write', 'simple-wp-helpdesk' ); ?></strong> — <?php esc_html_e( 'also create, update, and post replies', 'simple-wp-helpdesk' ); ?></span>
 					</label>
 				</div>
@@ -1305,6 +1344,7 @@ function swh_render_api_keys_section(): void {
 				<input
 					type="number"
 					id="swh-apikey-rate-limit"
+					form="swh-api-keys-generate-form"
 					class="small-text"
 					min="1"
 					max="10000"

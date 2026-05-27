@@ -44,7 +44,13 @@ use function update_comment_meta;
  */
 class TicketController extends WP_REST_Controller {
 
-	public const NAMESPACE = 'swh/v1';
+	// v4.1.0 (Cliff 1 fix): admin-internal drawer/reply endpoints moved off
+	// `swh/v1` so they no longer shadow the public {@see \SWH\Rest\V1\TicketsController}
+	// (PR #511, Phase 3). The drawer payload includes admin-only fields
+	// (assignee, last_activity, version) and uses a version-checked PATCH
+	// shape (`expected_version` + `patch`) that the public V1 controller
+	// does not implement.
+	public const NAMESPACE = 'swh-admin/v1';
 	public const REST_BASE = 'tickets';
 
 	/** {@inheritDoc} */
@@ -150,7 +156,7 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * GET /swh/v1/tickets/{id} — return full drawer payload.
+	 * GET /swh-admin/v1/tickets/{id} — return full drawer payload.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response
@@ -176,6 +182,17 @@ class TicketController extends WP_REST_Controller {
 			);
 		}
 
+		// v4.1.0 (Cliff 1 follow-up): the React MetaRow's SelectControl options
+		// use stable lowercase keys (`open`, `in_progress`, `resolved`, ...)
+		// while operators configure capitalized labels. Normalize the wire
+		// value to the lowercase key so the controlled <select> finds a
+		// matching option after a save round-trip; otherwise React renders
+		// `value="Resolved"` against options whose values are lowercase and
+		// the browser falls back to the first option, silently reverting
+		// the operator's edit in the UI.
+		$status_key   = self::label_to_key( $this->meta_string( $id, '_ticket_status' ) );
+		$priority_key = self::label_to_key( $this->meta_string( $id, '_ticket_priority' ) );
+
 		return new WP_REST_Response(
 			array(
 				'id'          => $id,
@@ -184,8 +201,8 @@ class TicketController extends WP_REST_Controller {
 				'attachments' => $orig_attachments,
 				'version'     => TicketVersion::current( $id ),
 				'created'     => $post->post_date_gmt,
-				'status'      => $this->meta_string( $id, '_ticket_status' ),
-				'priority'    => $this->meta_string( $id, '_ticket_priority' ),
+				'status'      => $status_key,
+				'priority'    => $priority_key,
 				'assignee'    => $this->meta_int( $id, '_ticket_assigned_to' ),
 				'email'       => $this->meta_string( $id, '_ticket_email' ),
 				'unread'      => '1' === $this->meta_string( $id, '_swh_unread' ),
@@ -197,7 +214,24 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * PATCH /swh/v1/tickets/{id} — update meta with version check.
+	 * Convert a configured label (e.g. "In Progress") into the stable
+	 * lowercase key the React drawer expects (e.g. "in_progress").
+	 *
+	 * Empty input passes through unchanged so missing meta does not coerce
+	 * to a phantom option key.
+	 *
+	 * @param string $label Configured label, possibly mixed-case with spaces.
+	 * @return string Lowercase key, spaces and hyphens collapsed to underscores.
+	 */
+	private static function label_to_key( string $label ): string {
+		if ( '' === $label ) {
+			return $label;
+		}
+		return strtolower( str_replace( array( ' ', '-' ), '_', $label ) );
+	}
+
+	/**
+	 * PATCH /swh-admin/v1/tickets/{id} — update meta with version check.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response
@@ -274,7 +308,7 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * POST /swh/v1/tickets/{id}/reply — insert reply with version check.
+	 * POST /swh-admin/v1/tickets/{id}/reply — insert reply with version check.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response
