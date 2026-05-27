@@ -110,6 +110,7 @@ final class ApiKeysAjax {
 		} catch ( InvalidArgumentException $e ) {
 			// Defence in depth — ApiKeys also validates. Should not reach here.
 			self::error( 'swh_apikey_generate_failed', esc_html__( 'Could not generate API key.', 'simple-wp-helpdesk' ), 400 );
+			return; // Unreachable — self::error() exits via wp_send_json_error().
 		}
 
 		// `entry` already excludes the hash per ApiKeys::generate() contract.

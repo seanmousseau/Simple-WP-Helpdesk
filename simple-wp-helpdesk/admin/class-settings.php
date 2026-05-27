@@ -970,7 +970,7 @@ function swh_render_settings_page() {
 				</fieldset>
 				<?php
 				/**
-				 * v4.1.0 Phase 6 (#365) — API key management UI.
+				 * API key management UI (v4.1.0 Phase 6, #365).
 				 *
 				 * The plaintext key shown in the modal is returned ONLY in the
 				 * AJAX response body; never server-rendered into this page.
@@ -1216,7 +1216,9 @@ function swh_ajax_send_test_email() {
 /**
  * Render the API Keys section inside the Integrations tab.
  *
- * v4.1.0 Phase 6 (#365 UI half). The plaintext key is NEVER server-rendered;
+ * Renders the form, table, and two modals (shown-once secret + revoke
+ * confirmation). v4.1.0 Phase 6 (#365 UI half). The plaintext key is NEVER
+ * server-rendered;
  * the table seeds existing entries (which carry only the prefix, never the
  * plaintext) and the modal is populated client-side from the AJAX response.
  *
@@ -1321,14 +1323,15 @@ function swh_render_api_keys_section(): void {
 						</td>
 					</tr>
 				<?php else : ?>
-					<?php foreach ( $entries as $entry ) : ?>
-						<?php
+					<?php
+					foreach ( $entries as $entry ) {
 						if ( ! is_array( $entry ) || empty( $entry['id'] ) ) {
 							continue;
 						}
+						/** @var array<string,mixed> $entry */
 						swh_render_api_key_row( $entry );
-						?>
-					<?php endforeach; ?>
+					}
+					?>
 				<?php endif; ?>
 			</tbody>
 		</table>
@@ -1431,8 +1434,8 @@ function swh_render_api_key_row( array $entry ): void {
 	$label        = isset( $entry['label'] ) && is_string( $entry['label'] ) ? $entry['label'] : '';
 	$scope        = isset( $entry['scope'] ) && is_string( $entry['scope'] ) ? $entry['scope'] : 'read';
 	$prefix       = isset( $entry['prefix'] ) && is_string( $entry['prefix'] ) ? $entry['prefix'] : '';
-	$created_at   = isset( $entry['created_at'] ) ? (int) $entry['created_at'] : 0;
-	$last_used_at = isset( $entry['last_used_at'] ) ? (int) $entry['last_used_at'] : 0;
+	$created_at   = isset( $entry['created_at'] ) && is_numeric( $entry['created_at'] ) ? (int) $entry['created_at'] : 0;
+	$last_used_at = isset( $entry['last_used_at'] ) && is_numeric( $entry['last_used_at'] ) ? (int) $entry['last_used_at'] : 0;
 	$rate_limit   = isset( $entry['rate_limit'] ) && is_numeric( $entry['rate_limit'] ) ? (int) $entry['rate_limit'] : null;
 	$revoked_at   = isset( $entry['revoked_at'] ) && is_numeric( $entry['revoked_at'] ) ? (int) $entry['revoked_at'] : null;
 
@@ -1449,12 +1452,13 @@ function swh_render_api_key_row( array $entry ): void {
 			$rate_limit
 		);
 
-	$date_format = get_option( 'date_format', 'Y-m-d' );
-	$created_str = $created_at > 0 ? wp_date( (string) $date_format, $created_at ) : '—';
-	$last_used   = $last_used_at > 0
-		? wp_date( (string) $date_format, $last_used_at )
+	$date_format_raw = get_option( 'date_format', 'Y-m-d' );
+	$date_format     = is_string( $date_format_raw ) ? $date_format_raw : 'Y-m-d';
+	$created_str     = $created_at > 0 ? (string) wp_date( $date_format, $created_at ) : '—';
+	$last_used       = $last_used_at > 0
+		? (string) wp_date( $date_format, $last_used_at )
 		: esc_html__( 'Never', 'simple-wp-helpdesk' );
-	$revoked_str = $is_revoked ? wp_date( (string) $date_format, (int) $revoked_at ) : '';
+	$revoked_str     = $is_revoked ? (string) wp_date( $date_format, (int) $revoked_at ) : '';
 	?>
 	<tr class="<?php echo esc_attr( $row_class ); ?>" data-swh-apikey-id="<?php echo esc_attr( $id ); ?>">
 		<td class="swh-api-key-cell-label"><?php echo esc_html( $label ); ?></td>
@@ -1480,13 +1484,15 @@ function swh_render_api_key_row( array $entry ): void {
 					class="button button-link-delete swh-api-key-revoke-btn"
 					data-swh-apikey-id="<?php echo esc_attr( $id ); ?>"
 					data-swh-apikey-label="<?php echo esc_attr( $label ); ?>"
-					aria-label="<?php
+					aria-label="
+					<?php
 						printf(
 							/* translators: %s: API key label. */
 							esc_attr__( 'Revoke key %s', 'simple-wp-helpdesk' ),
 							esc_attr( $label )
 						);
-					?>">
+					?>
+					">
 					<?php esc_html_e( 'Revoke', 'simple-wp-helpdesk' ); ?>
 				</button>
 			<?php endif; ?>
@@ -1527,7 +1533,8 @@ function swh_api_keys_enqueue( $hook ): void {
 		true
 	);
 
-	$date_format = get_option( 'date_format', 'Y-m-d' );
+	$date_format_raw = get_option( 'date_format', 'Y-m-d' );
+	$date_format     = is_string( $date_format_raw ) ? $date_format_raw : 'Y-m-d';
 
 	wp_localize_script(
 		'swh-api-keys',
@@ -1535,7 +1542,7 @@ function swh_api_keys_enqueue( $hook ): void {
 		array(
 			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 			'nonce'      => wp_create_nonce( \SWH\Admin\ApiKeysAjax::NONCE_ACTION ),
-			'dateFormat' => (string) $date_format,
+			'dateFormat' => $date_format,
 			'i18n'       => array(
 				'copy'             => __( 'Copy', 'simple-wp-helpdesk' ),
 				'copied'           => __( 'Copied!', 'simple-wp-helpdesk' ),
