@@ -51,6 +51,20 @@ The "Resolved" and "Closed" labels are tracked in `swh_resolved_status` and `swh
 - Inbound email reply on Resolved/Closed: status → first label in `swh_get_statuses()` (default `Open`).
 - Auto-close cron: Resolved → Closed after `swh_autoclose_days` days of inactivity (0 disables).
 
+### Entry points that mutate ticket fields
+
+Every entry point below ultimately routes through `swh_update_ticket_fields()` (invariant #19 in `design-document.md`). The helper validates input + dispatches `swh_set_ticket_status()` / `swh_ticket_assigned` / resolved-timestamp bookkeeping.
+
+| Entry point | File | Auth |
+|---|---|---|
+| Admin save-post (`save_post_helpdesk_ticket`) | `admin/class-ticket-editor.php` (`swh_save_ticket_data`) | WP nonce + `edit_post` capability |
+| Internal REST drawer (`PATCH /swh/v1/tickets/{id}`) | `src/Rest/TicketController.php` | Logged-in `edit_posts` capability |
+| **Public REST v1** (`POST /swh/v1/tickets`, `PATCH /swh/v1/tickets/{id}`) | `src/Rest/V1/TicketsController.php` | `swh_rest_require( 'write' )` — logged-in `edit_posts` or `write`-scoped API key |
+| Bulk action controller (`POST /swh/v1/bulk-action`) | `src/Rest/BulkController.php` | Logged-in `edit_posts` |
+| Inbound email webhook | `simple-wp-helpdesk.php` + `class-email.php` | Bearer token (`swh_inbound_secret`) |
+| Portal close / reopen | `frontend/class-portal.php` (admin-post handlers) | `_ticket_token` (`hash_equals`) + WP nonce |
+| Auto-close cron | `includes/class-cron.php` | n/a (server-side) |
+
 ---
 
 ## Invariants
