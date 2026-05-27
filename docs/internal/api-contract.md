@@ -242,6 +242,63 @@ Every insertion routes through `swh_insert_helpdesk_reply()` — the canonical r
 | 400 | `swh_rest_validation_failed` | Body missing without attachments; attachment ID invalid (`data.errors.attachments`). |
 | 404 | `swh_rest_not_found` | Ticket ID unknown or post type mismatch. |
 
+#### `swh/v1/users/technicians` — Technician roster (Phase 5, #364)
+
+| Method | Path | Cap | Scope | Returns |
+|---|---|---|---|---|
+| GET | `/swh/v1/users/technicians` | `edit_posts` | `read` | 200 + array of technician payloads |
+
+Read-only listing of users carrying the `edit_posts` capability. Response objects use a hard allowlist — exactly `{ id, display_name, email }`. `user_login`, `roles`, `capabilities`, and raw meta are never returned. Ordered by `display_name` ascending.
+
+**Privacy lever — `swh_hide_staff_email` filter.** Add `add_filter( 'swh_hide_staff_email', '__return_true' )` and the `email` field is OMITTED from every object (the key disappears entirely; it is not null). Useful when client-scope keys consume this endpoint but the operator does not want staff inboxes exposed.
+
+```json
+[
+  { "id": 7, "display_name": "Alice", "email": "alice@example.com" },
+  { "id": 11, "display_name": "Bob",  "email": "bob@example.com" }
+]
+```
+
+#### `swh/v1/categories` — Helpdesk categories (Phase 5, #364)
+
+| Method | Path | Cap | Scope | Returns |
+|---|---|---|---|---|
+| GET | `/swh/v1/categories` | `edit_posts` | `read` | 200 + array of category payloads |
+
+Read-only listing of `helpdesk_category` taxonomy terms. Response objects use a hard allowlist — exactly `{ id, name, slug, parent, count }`. Term description and meta are never returned. Ordered by `name` ascending. Empty taxonomy returns `[]` (not an error).
+
+```json
+[
+  { "id": 3, "name": "Billing", "slug": "billing", "parent": 0, "count": 5 },
+  { "id": 4, "name": "Bug",     "slug": "bug",     "parent": 0, "count": 12 }
+]
+```
+
+#### `swh/v1/settings/public` — Public operator settings (Phase 5, #364)
+
+| Method | Path | Auth | Returns |
+|---|---|---|---|
+| GET | `/swh/v1/settings/public` | **public** (no auth) | 200 + allowlisted subset |
+
+The ONLY public (no-auth) endpoint in the v4.1.0 surface. The route registers `'permission_callback' => '__return_true'` — deliberate, see `security-model.md` → "Public settings allowlist". Every key in the response comes from `\SWH\Rest\V1\PublicSettingsAllowlist::resolve()`; the file is the single source of truth. Wildcards, prefix matches, and "loop all options" patterns are forbidden — see the no-wildcard static test.
+
+Locked response (v4.1.0):
+
+```json
+{
+  "priority_labels": ["Low", "Medium", "High"],
+  "status_labels":   ["Open", "In Progress", "Resolved", "Closed"],
+  "sla_thresholds":  { "low": null, "medium": 4, "high": 8, "urgent": null },
+  "features":        { "csat": true, "portal": true, "attachments": true }
+}
+```
+
+`sla_thresholds` keys are priority buckets; values are hours. Today the plugin stores a single warn/breach pair (not per-priority) — `medium` mirrors `swh_sla_warn_hours`, `high` mirrors `swh_sla_breach_hours`, `low` and `urgent` are null until per-priority thresholds ship in a future release.
+
+`features` is **booleans only** — never the underlying config values. `portal` is true iff `swh_ticket_page_id > 0`; the page ID is not exposed. `attachments` is true iff `swh_max_upload_count > 0`; the cap is not exposed.
+
+Phase 7 will add per-IP rate limiting to this route. Phase 5 ships the endpoint + allowlist only.
+
 ## REST envelope contract
 
 All `swh/v1` endpoints follow a uniform envelope shape. JS clients (admin-inbox, portal-v2, reports-v2) rely on these shapes — changing one is a breaking change that must update consumers in the same PR. Contract tests in `tests/Unit/Rest/Contracts/` lock these shapes.
