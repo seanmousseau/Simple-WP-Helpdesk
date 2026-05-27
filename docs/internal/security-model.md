@@ -134,6 +134,30 @@ The matrix below is **documented here** and **enforced per-route** by each phase
 | `GET /settings/public` | **public** (no auth) | n/a |
 | `GET /openapi.json` | **public** | n/a (Phase 8) |
 
+### REST rate limiting (v4.1.0 Phase 7, #367)
+
+Enforced by `SWH\Rest\RateLimiter` (`simple-wp-helpdesk/src/Rest/RateLimiter.php`). Two buckets, both fixed 60-second rolling windows:
+
+- **Per-API-key bucket** — key `swh_rl_api_<key_id>`. Default budget **60 req/min**, overridable per-key via `Settings → Integrations → API Keys` (1–10000). Triggered from `Auth::check_request()` after the scope check.
+- **Per-IP bucket** — key `swh_rl_ip_<hash>` where `hash = hash_hmac('sha256', $ip, wp_salt('nonce'))`. Budget **20 req/min**, not operator-configurable. Triggered from `Bootstrap::settings_public_permission()` — wraps the public `settings/public` route only.
+
+**Why hash the IP?** Two reasons:
+
+1. **Privacy / log hygiene.** Transient keys land in `wp_options` (or the persistent object cache). Without hashing, any operator with DB read access could enumerate every visitor IP that hit the public route in the last 60 seconds. Hashing the IP with `wp_salt('nonce')` produces a value that's deterministic *within a site* (same IP always hashes to the same bucket) but not reversible from the bucket key alone.
+2. **Bucket-key forgery resistance.** A pre-image attacker who learned a victim IP could not, even with DB access, write a transient row that would block-or-allow that IP without also knowing the site's nonce salt.
+
+The salt source is locked to `wp_salt('nonce')` because (a) it is already required to be set on a production WP site and (b) rotating it (operator-initiated) cleanly invalidates all open rate-limit windows — useful when responding to a DDoS attempt.
+
+**Headers.** Every response — success or 429 — carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`. The 429 response additionally carries `Retry-After: <seconds-to-window-end>`. Integrators rely on these to back off; the 429 path emits them via `Bootstrap::attach_rate_limit_headers()` (rest_post_dispatch filter), success path via `SWH\Rest\V1\ResponseDecorator::with_rate_limit_headers()`.
+
+**What is NOT rate-limited.** Logged-in WP-user requests (the WP Application Password path) are NOT subject to the per-API-key bucket — they are already gated by core WP capability checks and core's own login throttling. Rate limiting in v4.1.0 targets the two anonymous attack surfaces: stolen API keys and unauthenticated public requests.
+
+**Anti-patterns explicitly forbidden:**
+
+- Raw IPs in transient keys (privacy).
+- Sharing a bucket key across read and write paths of the same API key — the limit is on total requests, not per-action.
+- Suppressing `X-RateLimit-*` headers on the 429 path — integrators need them to back off cleanly.
+
 ## Public settings allowlist
 
 `GET /swh/v1/settings/public` (v4.1.0 Phase 5, #364) is the **only** publicly readable endpoint in the v4.1.0 REST surface. Every key in its response goes through a **hard, explicit allowlist** defined in `simple-wp-helpdesk/src/Rest/V1/PublicSettingsAllowlist.php`. This subsection captures the rules; the file is the source of truth.
