@@ -36,6 +36,7 @@ class TokenComparisonInvariantTest extends SourceScanTestCase {
 		//   class-ticket.php:52  — file proxy token check
 		//   class-email.php:247  — inbound-email bearer auth
 		//   class-email.php:310  — inbound-email From-address match
+		//   src/Rest/ApiKeys.php:154 — API key prefix comparison (v4.1.0 #365)
 		// Lines 512/647/731/812 shifted to 536/671/755/836 in v4.0.4 (#477) when
 		// the portal v2 wrapper added an unconditional CSAT render block to close
 		// the gap that the v4.0.3 settings UI couldn't surface; no semantic change.
@@ -48,6 +49,7 @@ class TokenComparisonInvariantTest extends SourceScanTestCase {
 			'includes/class-ticket.php:52',
 			'includes/class-email.php:247',
 			'includes/class-email.php:310',
+			'src/Rest/ApiKeys.php:154',
 		);
 		$this->assertSourceMatchesAllowList(
 			$allow,

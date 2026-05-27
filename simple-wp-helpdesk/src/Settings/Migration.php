@@ -214,28 +214,34 @@ final class Migration {
 			$bags[ $group ][ $new_key ] = $value;
 		}
 
-		foreach ( $bags as $group => $bag ) {
-			update_option( 'swh_settings_' . $group, $bag );
-		}
-
-		// Seed net-new grouped defaults that have no flat-key predecessor.
-		// Non-destructive: only writes keys that are missing from the bag.
+		// Fold net-new grouped defaults into the bags ALONGSIDE legacy-derived
+		// values. Non-destructive: a default is applied only when the key is
+		// not already set by the MAP loop AND not already present on a fresh
+		// read of the existing option. This preserves operator state for sites
+		// that previously stored a value via a code path other than the MAP.
 		foreach ( self::GROUP_DEFAULTS as $group => $defaults ) {
-			$option_name = 'swh_settings_' . $group;
-			$existing    = get_option( $option_name, array() );
+			$existing = get_option( 'swh_settings_' . $group, array() );
 			if ( ! is_array( $existing ) ) {
 				$existing = array();
 			}
-			$changed = false;
+			$bags[ $group ] ??= array();
 			foreach ( $defaults as $key => $default_value ) {
-				if ( ! array_key_exists( $key, $existing ) ) {
-					$existing[ $key ] = $default_value;
-					$changed          = true;
+				if ( array_key_exists( $key, $bags[ $group ] ) ) {
+					continue; // Already populated from a legacy MAP entry.
 				}
+				if ( array_key_exists( $key, $existing ) ) {
+					// Operator already has a stored value — keep it. Preserve
+					// it in the bag we are about to write so we don't blow it
+					// away with the other group writes.
+					$bags[ $group ][ $key ] = $existing[ $key ];
+					continue;
+				}
+				$bags[ $group ][ $key ] = $default_value;
 			}
-			if ( $changed ) {
-				update_option( $option_name, $existing );
-			}
+		}
+
+		foreach ( $bags as $group => $bag ) {
+			update_option( 'swh_settings_' . $group, $bag );
 		}
 
 		update_option( 'swh_db_version', self::TARGET_VERSION );

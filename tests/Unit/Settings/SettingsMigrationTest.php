@@ -29,7 +29,7 @@ class SettingsMigrationTest extends TestCase {
 		WP_Mock::userFunction( 'get_option' )
 			->once()
 			->with( 'swh_db_version', '0' )
-			->andReturn( '4.0.0' );
+			->andReturn( '4.1.0' );
 
 		// If update_option fires, WP_Mock will throw (unexpected call).
 		WP_Mock::userFunction( 'update_option' )->never();
@@ -40,13 +40,13 @@ class SettingsMigrationTest extends TestCase {
 	}
 
 	/**
-	 * When swh_db_version is a higher version (e.g. 4.1.0), run() must also skip.
+	 * When swh_db_version is a higher version (e.g. 5.0.0), run() must also skip.
 	 */
 	public function test_skip_when_higher_version_already_migrated(): void {
 		WP_Mock::userFunction( 'get_option' )
 			->once()
 			->with( 'swh_db_version', '0' )
-			->andReturn( '4.1.0' );
+			->andReturn( '5.0.0' );
 
 		WP_Mock::userFunction( 'update_option' )->never();
 
@@ -121,7 +121,7 @@ class SettingsMigrationTest extends TestCase {
 
 		// db_version write.
 		WP_Mock::userFunction( 'update_option' )
-			->with( 'swh_db_version', '4.0.0' )
+			->with( 'swh_db_version', '4.1.0' )
 			->andReturn( true );
 
 		// Allow any other group bag writes (email, portal, routing, tools, integrations).
@@ -185,7 +185,7 @@ class SettingsMigrationTest extends TestCase {
 			->andReturn( true );
 
 		WP_Mock::userFunction( 'update_option' )
-			->with( 'swh_db_version', '4.0.0' )
+			->with( 'swh_db_version', '4.1.0' )
 			->andReturn( true );
 
 		WP_Mock::userFunction( 'update_option' )
@@ -229,7 +229,7 @@ class SettingsMigrationTest extends TestCase {
 			->andReturn( true );
 
 		WP_Mock::userFunction( 'update_option' )
-			->with( 'swh_db_version', '4.0.0' )
+			->with( 'swh_db_version', '4.1.0' )
 			->andReturn( true );
 
 		WP_Mock::userFunction( 'update_option' )
@@ -273,7 +273,7 @@ class SettingsMigrationTest extends TestCase {
 			->andReturn( true );
 
 		WP_Mock::userFunction( 'update_option' )
-			->with( 'swh_db_version', '4.0.0' )
+			->with( 'swh_db_version', '4.1.0' )
 			->andReturn( true );
 
 		WP_Mock::userFunction( 'update_option' )
@@ -304,10 +304,24 @@ class SettingsMigrationTest extends TestCase {
 			->zeroOrMoreTimes()
 			->andReturn( null );
 
-		// Only swh_db_version should be written; no group bags.
+		// Bumping to TARGET_VERSION '4.1.0' triggers GROUP_DEFAULTS seeding for
+		// integrations.api_keys = [] (v4.1.0 #365), so the integrations bag is
+		// written even though no legacy flat keys produced a bag.
 		WP_Mock::userFunction( 'update_option' )
 			->once()
-			->with( 'swh_db_version', '4.0.0' )
+			->with(
+				'swh_settings_integrations',
+				\Mockery::on( function ( $bag ) {
+					return is_array( $bag )
+						&& array_key_exists( 'api_keys', $bag )
+						&& array() === $bag['api_keys'];
+				} )
+			)
+			->andReturn( true );
+
+		WP_Mock::userFunction( 'update_option' )
+			->once()
+			->with( 'swh_db_version', '4.1.0' )
 			->andReturn( true );
 
 		( new Migration() )->run();
@@ -333,9 +347,20 @@ class SettingsMigrationTest extends TestCase {
 			->zeroOrMoreTimes()
 			->andReturn( null );
 
+		// integrations.api_keys default seeded by GROUP_DEFAULTS (v4.1.0 #365).
 		WP_Mock::userFunction( 'update_option' )
 			->once()
-			->with( 'swh_db_version', '4.0.0' )
+			->with(
+				'swh_settings_integrations',
+				\Mockery::on( function ( $bag ) {
+					return is_array( $bag ) && array_key_exists( 'api_keys', $bag );
+				} )
+			)
+			->andReturn( true );
+
+		WP_Mock::userFunction( 'update_option' )
+			->once()
+			->with( 'swh_db_version', '4.1.0' )
 			->andReturn( true );
 
 		( new Migration() )->run();
