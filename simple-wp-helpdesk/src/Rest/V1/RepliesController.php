@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace SWH\Rest\V1;
 
+use SWH\Admin\ApiAccessLog;
 use SWH\Rest\Bootstrap;
 use SWH\Rest\Errors;
 use SWH\Rest\V1\Schemas\Reply as ReplySchema;
@@ -143,10 +144,12 @@ final class RepliesController extends WP_REST_Controller {
 			$items[] = ReplySchema::from_comment( $c );
 		}
 
-		return ResponseDecorator::with_rate_limit_headers(
+		$response = ResponseDecorator::with_rate_limit_headers(
 			new WP_REST_Response( $items, 200 ),
 			$request
 		);
+		$this->record_access( $id, 'read', $request );
+		return $response;
 	}
 
 	/**
@@ -224,9 +227,31 @@ final class RepliesController extends WP_REST_Controller {
 		if ( ! $comment instanceof WP_Comment ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Reply not found after create.', 'simple-wp-helpdesk' ) );
 		}
-		return ResponseDecorator::with_rate_limit_headers(
+		$response = ResponseDecorator::with_rate_limit_headers(
 			new WP_REST_Response( ReplySchema::from_comment( $comment ), 201 ),
 			$request
+		);
+		$this->record_access( $id, 'write', $request );
+		return $response;
+	}
+
+	/**
+	 * Fire-and-forget audit-log write. No-op when the toggle is off. Called
+	 * AFTER the response has been built on every success path of the per-ticket
+	 * replies endpoint. Both list-replies and create-reply are
+	 * single-ticket-scoped, so both audit.
+	 *
+	 * @param int             $ticket_id Resolved ticket post id.
+	 * @param string          $action    'read' or 'write'.
+	 * @param WP_REST_Request $request   Current request (for key attribution + route).
+	 */
+	private function record_access( int $ticket_id, string $action, WP_REST_Request $request ): void {
+		$api_key = $request->get_param( '_swh_api_key' );
+		ApiAccessLog::record(
+			$ticket_id,
+			$action,
+			(string) $request->get_route(),
+			is_array( $api_key ) ? $api_key : null
 		);
 	}
 
