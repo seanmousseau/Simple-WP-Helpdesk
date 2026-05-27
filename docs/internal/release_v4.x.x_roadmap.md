@@ -104,20 +104,21 @@ Close [#458](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/458) if n
 
 ## v4.1.0 — Event Surface & REST API
 
-Milestone: [#19](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/19) — 0/9 closed (was 10; lifecycle hooks moved to v3.7)
+Milestone: [#19](https://github.com/seanmousseau/Simple-WP-Helpdesk/milestone/19) — 9/9 closed (was 10; lifecycle hooks moved to v3.7). **Shipped 2026-05-27** — tag + milestone closure happen in Phase 12.
 Theme: Public REST API v1, scoped API keys, OpenAPI spec, per-key rate limiting. Sits on top of v3.7 lifecycle hooks ([#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361)) and v4.0 settings split ([#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356)).
 **Depends on:** v3.7 lifecycle action hooks ([#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361)) + v4.0 settings schema migration ([#356](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/356)).
 
 - ~~[#361](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/361) — Lifecycle action hooks~~ → **moved to v3.7** (de-risks v4.1 by giving hooks a release cycle to settle)
-- [ ] [#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/362) — REST API v1: tickets CRUD (`swh/v1/tickets`)
-- [ ] [#363](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/363) — REST API v1: replies (`swh/v1/tickets/{id}/replies`)
-- [ ] [#364](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/364) — REST API v1: read-only endpoints (technicians, categories, settings)
-- [ ] [#365](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/365) — API key management UI (scoped, per-key rate limit, revocable)
-- [ ] [#366](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/366) — Per-endpoint capability + permission_callback wiring
-- [ ] [#367](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/367) — Per-key rate limiting (60/min default)
-- [ ] [#368](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/368) — OpenAPI 3.1 spec + Redoc viewer (hidden admin page)
-- [ ] [#369](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/369) — Opt-in API access audit log (last 10 accesses per ticket)
-- [ ] [#370](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/370) — Playwright: 7 new sections for REST API
+- [x] [#362](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/362) — REST API v1: tickets CRUD (`swh/v1/tickets`) (PR #511)
+- [x] [#363](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/363) — REST API v1: replies (`swh/v1/tickets/{id}/replies`) (PR #512)
+- [x] [#364](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/364) — REST API v1: read-only endpoints (technicians, categories, settings) (PR #513)
+- [x] [#365](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/365) — API key management UI (scoped, per-key rate limit, revocable) (PR #509, #514)
+- [x] [#366](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/366) — Per-endpoint capability + permission_callback wiring (PR #510)
+- [x] [#367](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/367) — Per-key + per-IP rate limiting (60/min default) (PR #515)
+- [x] [#368](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/368) — OpenAPI 3.1 spec + admin Redoc viewer + Pages embed (PR #516)
+- [x] [#369](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/369) — Opt-in API access audit log (last 10 accesses per ticket) (PR #517)
+- [x] [#370](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/370) — Playwright: 7 new sections (76–82) for REST API (PR #518, #520)
+- [x] [#504](https://github.com/seanmousseau/Simple-WP-Helpdesk/issues/504) — extended-test-plan §5.2 alignment (Phase 11 docs sweep)
 
 ---
 
