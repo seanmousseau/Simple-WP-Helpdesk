@@ -63,6 +63,8 @@ require_once SWH_PLUGIN_DIR . 'src/Rest/V1/PublicSettingsAllowlist.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/UsersController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/CategoriesController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/SettingsController.php';
+// v4.1.0 Phase 8 — public OpenAPI 3.1 JSON endpoint (#368).
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/OpenApiController.php';
 
 require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
@@ -78,6 +80,9 @@ if ( is_admin() ) {
 	// v4.1.0 Phase 6 — API key management AJAX (#365 UI half).
 	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiKeysAjax.php';
 	\SWH\Admin\ApiKeysAjax::boot();
+	// v4.1.0 Phase 8 — Tools → Helpdesk API Reference page (Redoc viewer, #368).
+	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiReferencePage.php';
+	\SWH\Admin\ApiReferencePage::register();
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 — kept active; serves ?legacy=1 fallback view with column/filter/badge enhancements.
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';
