@@ -39,6 +39,14 @@ The page lives under **Tickets → Settings** (capability: `manage_options`).
 
 The Canned/Templates/Tools group key collision is historical and documented in `config-reference.md`.
 
+### REST-managed sub-keys (do NOT route through the freeform save handler)
+
+A small number of sub-keys live inside grouped settings bags but are **never** written via the multi-form `swh_handle_settings_save()` path. They have a dedicated writer class and (in most cases) a dedicated admin UI surface. The freeform save handler MUST skip these keys — letting an unrelated form post overwrite them would clobber operator state that was set out-of-band.
+
+| Bag.sub-key | Writer | Surface | Notes |
+|---|---|---|---|
+| `integrations.api_keys` | `SWH\Rest\ApiKeys` (at `simple-wp-helpdesk/src/Rest/ApiKeys.php`) | v4.1 Phase 6 admin UI (issue #365 UI half) + REST routes (Phase 2+) | Default `[]`. Entries store bcrypt hashes — see `security-model.md` → "API key authentication" and `data-dictionary.md`. Introduced 4.1.0 Phase 1. |
+
 ---
 
 ## Multi-form save pattern

@@ -90,6 +90,24 @@ All `swh/v1` endpoints authenticate via standard WP REST `permission_callback` (
 
 Operators integrating with the REST API (Zapier, Make, custom scripts) MUST use application passwords. The `testing/extended/` runbook scripts use WP-CLI over SSH for this reason — they skip the REST surface entirely to avoid the Basic Auth confusion. (#442)
 
+### API key authentication (v4.1.0+)
+
+The v4.1.0 REST surface introduces operator-issued API keys as a second-class auth mechanism alongside WP Application Passwords. Application Passwords remain the preferred path for users who have WP accounts; API keys exist for integrations that should not impersonate a real WP user (CI bots, dashboards, third-party connectors).
+
+**Bearer-token verification idiom.** Mirrors the inbound-email webhook precedent (`includes/class-email.php`): the client presents the plaintext key in the `Authorization: Bearer <plaintext>` header; the plugin extracts the first 12 chars as a prefix, narrows candidate entries with `hash_equals()` on the stored prefix (invariant #3), and then runs `password_verify()` against the stored bcrypt hash. All comparisons are constant-time.
+
+**Storage.** Keys live inside the `swh_settings_integrations` option bag under the `api_keys` sub-key. `SWH\Rest\ApiKeys` (at `simple-wp-helpdesk/src/Rest/ApiKeys.php`) is the only writer — operators do not edit the list via the freeform settings save handler. Each entry stores a bcrypt hash (cost 12), a 12-char prefix, a scope (`read` or `write`), the issuing WP user id, timestamps, an optional per-key rate-limit override, and a `revoked_at` field. See `data-dictionary.md` for the exact shape.
+
+**Plaintext lifetime.** The full plaintext (`swhk_<base62 32-char>`) is returned exactly once from `ApiKeys::generate()` and is **never** persisted, logged, or echoed elsewhere. The prefix is the only key-derived value safe to display in the operator UI after generation — it identifies the key without enabling its use.
+
+**Scopes.** Two scopes are defined: `read` and `write`. `write` implies `read`. Phase 2's permission helper rejects scope mismatches with `swh_rest_scope_insufficient` (HTTP 403). There is intentionally no "client" or "owner" scope — see plan §14 / open question #6.
+
+**Revocation.** `ApiKeys::revoke( $id )` is permanent — `revoked_at` is set and never cleared. `find_by_plaintext()` returns `null` for revoked entries so the request fails closed at `permission_callback`. There is no unrevoke path.
+
+**Write-rate-limiting.** `ApiKeys::touch_last_used()` is internally rate-limited to once per 5 minutes per key via a `swh_apikey_touch_<id>` transient guard, preventing write amplification when a single key drives high-RPS traffic.
+
+**Allowlist contract for `GET /settings/public`.** The Phase 5 settings allowlist excludes the entire `api_keys` sub-key. Bcrypt hashes never appear on any unauthenticated surface. Operators or auditors verifying this should grep `PublicSettingsAllowlist` for wildcards — there are none over the integrations bag.
+
 ## Explicit non-threats
 
 The plugin does **not** defend against:

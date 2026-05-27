@@ -37,7 +37,31 @@ use function version_compare;
  */
 final class Migration {
 
-	private const TARGET_VERSION = '4.0.0';
+	private const TARGET_VERSION = '4.1.0';
+
+	/**
+	 * Net-new grouped option defaults introduced after the legacy MAP.
+	 *
+	 * Unlike MAP entries (which migrate a legacy flat option into a group),
+	 * these are options that were born grouped — they have no v3.x flat-key
+	 * predecessor. The migration seeds them on the v4.0 → v4.1 step so consumer
+	 * code can call `swh_get_option( $group, $key )` without a defensive
+	 * default at every call site.
+	 *
+	 * Shape: [ group => [ key => default_value ] ]. Defaults are written ONLY
+	 * if the bag does not already contain the key — never overwrites operator
+	 * state.
+	 *
+	 * @since 4.1.0 — `integrations.api_keys` for issue #365 (REST API surface).
+	 * @var array<string, array<string, mixed>>
+	 */
+	private const GROUP_DEFAULTS = array(
+		// Issue #365 (v4.1.0): API keys live INSIDE swh_settings_integrations.
+		// ApiKeys is the only writer; operator UI ships in v4.1 Phase 6.
+		'integrations' => array(
+			'api_keys' => array(),
+		),
+	);
 
 	/**
 	 * Map of legacy flat option name → [ group, key ] in the new schema.
@@ -188,6 +212,32 @@ final class Migration {
 			}
 			$bags[ $group ]           ??= array();
 			$bags[ $group ][ $new_key ] = $value;
+		}
+
+		// Fold net-new grouped defaults into the bags ALONGSIDE legacy-derived
+		// values. Non-destructive: a default is applied only when the key is
+		// not already set by the MAP loop AND not already present on a fresh
+		// read of the existing option. This preserves operator state for sites
+		// that previously stored a value via a code path other than the MAP.
+		foreach ( self::GROUP_DEFAULTS as $group => $defaults ) {
+			$existing = get_option( 'swh_settings_' . $group, array() );
+			if ( ! is_array( $existing ) ) {
+				$existing = array();
+			}
+			$bags[ $group ] ??= array();
+			foreach ( $defaults as $key => $default_value ) {
+				if ( array_key_exists( $key, $bags[ $group ] ) ) {
+					continue; // Already populated from a legacy MAP entry.
+				}
+				if ( array_key_exists( $key, $existing ) ) {
+					// Operator already has a stored value — keep it. Preserve
+					// it in the bag we are about to write so we don't blow it
+					// away with the other group writes.
+					$bags[ $group ][ $key ] = $existing[ $key ];
+					continue;
+				}
+				$bags[ $group ][ $key ] = $default_value;
+			}
 		}
 
 		foreach ( $bags as $group => $bag ) {
