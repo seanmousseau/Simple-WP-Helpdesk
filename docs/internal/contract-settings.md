@@ -45,7 +45,29 @@ A small number of sub-keys live inside grouped settings bags but are **never** w
 
 | Bag.sub-key | Writer | Surface | Notes |
 |---|---|---|---|
-| `integrations.api_keys` | `SWH\Rest\ApiKeys` (at `simple-wp-helpdesk/src/Rest/ApiKeys.php`) | v4.1 Phase 6 admin UI (issue #365 UI half) + REST routes (Phase 2+) | Default `[]`. Entries store bcrypt hashes — see `security-model.md` → "API key authentication" and `data-dictionary.md`. Introduced 4.1.0 Phase 1. |
+| `integrations.api_keys` | `SWH\Rest\ApiKeys` (at `simple-wp-helpdesk/src/Rest/ApiKeys.php`) | Integrations tab → REST API keys section (v4.1.0 Phase 6, issue #365 UI half) + REST routes (Phase 2+) | Default `[]`. Entries store bcrypt hashes — see `security-model.md` → "API key authentication" and `data-dictionary.md`. Introduced 4.1.0 Phase 1. |
+
+### API Keys section (Integrations tab)
+
+Lives inside `tab-integrations` and is rendered by `swh_render_api_keys_section()` in `admin/class-settings.php`. The section is **outside** the freeform main settings form — it never POSTs to `swh_handle_settings_save()`. All mutation goes through two admin-AJAX endpoints handled by `SWH\Admin\ApiKeysAjax`:
+
+| Endpoint (`action=`) | Method | Gate | Body | Success payload |
+|---|---|---|---|---|
+| `swh_api_key_generate` | POST | `check_ajax_referer( 'swh_api_keys', '_nonce' )` + `manage_options` | `label` (1–60), `scope` (`read`\|`write`), `rate_limit` (blank or 1–10000) | `{ plaintext, entry }` — `entry.hash` is stripped by `ApiKeys::generate()` |
+| `swh_api_key_revoke` | POST | same gate | `id` matching `^k_<uuid>$` | `{ revoked_at: int }` |
+
+Locked error envelope: `{ code, message[, field] }`. Codes: `swh_apikey_bad_nonce`, `swh_apikey_forbidden`, `swh_apikey_label_required`, `swh_apikey_label_too_long`, `swh_apikey_scope_invalid`, `swh_apikey_rate_limit_out_of_range`, `swh_apikey_id_invalid`, `swh_apikey_revoke_failed`, `swh_apikey_generate_failed`.
+
+The shared nonce action is `swh_api_keys` (constant: `\SWH\Admin\ApiKeysAjax::NONCE_ACTION`). The nonce field name in the POST body is `_nonce` (constant: `\SWH\Admin\ApiKeysAjax::NONCE_FIELD`). Both are localised to the page via `wp_localize_script` on the `swhApiKeys` global.
+
+**Plaintext lifecycle invariants:**
+
+- The plaintext key is returned ONLY in the `swh_api_key_generate` AJAX response body. It is never server-rendered into any page.
+- The browser holds the plaintext in a closure-scoped variable + the modal's readonly input value, and only while the modal is open. Both are wiped on close.
+- No write to `localStorage` / `sessionStorage` / `window`.
+- Revocation is permanent — `ApiKeys::revoke()` sets `revoked_at` and the row is greyed-out in the table. There is no unrevoke endpoint.
+
+**Asset enqueue:** `swh-api-keys.css` + `swh-api-keys.js` (vanilla, no build) load via `swh_api_keys_enqueue()` on hook `helpdesk_ticket_page_swh-settings` only, gated again on `manage_options`. Modal pattern is the **"Shown-once secret modal"** in `component-inventory.md`.
 
 ---
 
