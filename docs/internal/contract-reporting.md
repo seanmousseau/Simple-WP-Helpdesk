@@ -99,6 +99,24 @@ Measured in `performance-baseline.md`. Exceeding the cold-cache budget on a 10k-
 
 ---
 
+## API Access meta box (per-ticket audit log)
+
+**Where:** Ticket editor (`helpdesk_ticket` post type), side context, low priority. Title: "API Access".
+
+**Visibility:** Conditional. Only rendered when *Settings → Integrations → "Enable API access log"* is on (option key `swh_settings_integrations.api_audit_log_enabled`). When the toggle is off, the meta box is not registered — operators who don't opt in never see it.
+
+**What it shows:** Up to 10 most-recent REST API requests against this ticket. Columns: Date, Key, Action, Route. Newest first. When no entries exist (yet): a plain "No API requests recorded for this ticket." message — no empty table is rendered.
+
+**Where the data lives:** `_swh_api_access_log` post meta on the ticket (see `data-dictionary.md`). Writer: `SWH\Admin\ApiAccessLog::record()` invoked by `Rest\V1\TicketsController` (GET single, POST, PATCH) and `Rest\V1\RepliesController` (GET list per-ticket, POST). Collection GETs (`/tickets` list) do NOT write entries.
+
+**Privacy:** the box surfaces only what `ApiAccessLog::record()` stores. Never includes request bodies, query strings, IP addresses, or response payloads. Renderer is `esc_html`-strict; the `aria-label="API access log for this ticket"` + `<th scope="col">` cells preserve a11y semantics.
+
+**Lifecycle:** entries are FIFO-trimmed to 10 per ticket. Toggling the feature off does NOT delete existing entries (idempotent operator-friendly behaviour). Cascades automatically on `wp_delete_post`.
+
+Introduced 4.1.0 (#369).
+
+---
+
 ## Routing
 
 | Touching … | Read also |
