@@ -101,8 +101,6 @@ final class UsersController extends WP_REST_Controller {
 	 * @param WP_REST_Request $request Request object.
 	 */
 	public function get_items( $request ): WP_REST_Response {
-		unset( $request );
-
 		$users = get_users(
 			array(
 				'capability' => 'edit_posts',
@@ -121,7 +119,10 @@ final class UsersController extends WP_REST_Controller {
 				$items[] = self::from_user( $u, $hide_email );
 			}
 		}
-		return new WP_REST_Response( $items, 200 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( $items, 200 ),
+			$request
+		);
 	}
 
 	/**

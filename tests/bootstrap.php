@@ -10,6 +10,9 @@
 
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
+// Phase 7 (#367): expose swh_test_clear_rate_limits() to every PHPUnit test.
+require_once __DIR__ . '/Support/RateLimitTestHelpers.php';
+
 // WordPress constants used by plugin files.
 define( 'ABSPATH', '/tmp/wp/' );
 define( 'DAY_IN_SECONDS', 86400 );

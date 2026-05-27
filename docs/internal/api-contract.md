@@ -297,7 +297,37 @@ Locked response (v4.1.0):
 
 `features` is **booleans only** — never the underlying config values. `portal` is true iff `swh_ticket_page_id > 0`; the page ID is not exposed. `attachments` is true iff `swh_max_upload_count > 0`; the cap is not exposed.
 
-Phase 7 will add per-IP rate limiting to this route. Phase 5 ships the endpoint + allowlist only.
+Phase 7 (#367) adds a per-IP rate limit of **20 requests / minute** to this route. The bucket key is `swh_rl_ip_<hash_hmac('sha256', $ip, wp_salt('nonce'))>` — see `security-model.md` for why the IP is hashed.
+
+## Rate limiting (Phase 7, #367)
+
+Two buckets:
+
+- **Per-API-key bucket** (`swh_rl_api_<key_id>`) — applies to every authenticated `swh/v1/*` route. Default: **60 requests / minute**. Operators can override per-key in the *Settings → Integrations → API Keys* form (1–10000). The override on the key entry wins; absent override falls back to the 60/min default.
+- **Per-IP bucket** (`swh_rl_ip_<hmac>`) — applies only to the anonymous `GET /settings/public` route. Fixed at **20 requests / minute**, not operator-configurable.
+
+The two buckets are independent. Exhausting `/settings/public` from one IP does not affect that IP's authenticated calls; exhausting a key does not affect other keys, and does not affect logged-in WP-user auth on the same route.
+
+**Window semantics.** Fixed 60-second rolling window keyed on first request. The 61st request in the window returns `429 swh_rest_rate_limited` and the response includes `Retry-After: <seconds-to-window-end>`. When the window expires, the counter resets to 1 on the next request and the reset timestamp jumps forward by 60 seconds.
+
+**Response headers (emitted on every response — success AND 429):**
+
+| Header | Value |
+|---|---|
+| `X-RateLimit-Limit` | the active budget (60 default, or per-key override, or 20 for the public route) |
+| `X-RateLimit-Remaining` | `max(0, limit - count)` for the current window |
+| `X-RateLimit-Reset` | unix timestamp when the current window ends |
+| `Retry-After` | seconds-to-reset; emitted **only** when status is 429 |
+
+**429 body** uses the standard error envelope:
+
+```json
+{ "code": "swh_rest_rate_limited", "message": "API rate limit exceeded. Try again later.", "data": { "status": 429, "retry_after": 17 } }
+```
+
+**Storage.** WP transients with a `wp_options` floor (key prefix `_swh_rl_`). The floor exists so sites without persistent object cache still have a stable counter when the transient store evicts under memory pressure. The `RateLimiter::check()` return shape (`{ allowed, remaining, reset, limit }`) is the contract — the storage layer is private.
+
+**Bucket-name privacy.** Raw client IPs **never** appear in transient keys — see `security-model.md` for the HMAC + salt rationale.
 
 ## REST envelope contract
 

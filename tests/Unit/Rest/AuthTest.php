@@ -292,6 +292,97 @@ final class AuthTest extends TestCase {
 	}
 
 	// -----------------------------------------------------------------------
+	// Rate limiting (Phase 7 #367)
+	// -----------------------------------------------------------------------
+
+	public function test_successful_auth_stashes_rate_limit_state_on_request(): void {
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry = $this->make_entry( 'k_rl_state', 'read' );
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$request = new WP_REST_Request();
+		$request->set_header( 'authorization', 'Bearer swhk_rlstatekey0000000000000000000000000' );
+		$lookup = static fn ( string $p ): ?array => $entry;
+
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+
+		$state = $request->get_param( '_swh_rate_limit_state' );
+		$this->assertIsArray( $state );
+		$this->assertTrue( $state['allowed'] );
+		$this->assertSame( 60, $state['limit'], 'Default key gets the 60/min default budget' );
+		$this->assertSame( 59, $state['remaining'] );
+	}
+
+	public function test_per_key_override_replaces_default_limit(): void {
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry               = $this->make_entry( 'k_rl_override', 'read' );
+		$entry['rate_limit'] = 10;
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$request = new WP_REST_Request();
+		$request->set_header( 'authorization', 'Bearer swhk_rloverridekey00000000000000000000000' );
+		$lookup = static fn ( string $p ): ?array => $entry;
+
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+		$state = $request->get_param( '_swh_rate_limit_state' );
+		$this->assertSame( 10, $state['limit'] );
+		$this->assertSame( 9, $state['remaining'] );
+	}
+
+	public function test_over_limit_returns_rate_limited_error_with_state_on_request(): void {
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry               = $this->make_entry( 'k_rl_burn', 'read' );
+		$entry['rate_limit'] = 2;
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$lookup = static fn ( string $p ): ?array => $entry;
+
+		// Burn the budget.
+		for ( $i = 0; $i < 2; $i++ ) {
+			$req = new WP_REST_Request();
+			$req->set_header( 'authorization', 'Bearer swhk_rlburnkey00000000000000000000000000' );
+			$this->assertTrue( Auth::check_request( $req, 'read', $lookup ) );
+		}
+
+		// Next request — over limit.
+		$req = new WP_REST_Request();
+		$req->set_header( 'authorization', 'Bearer swhk_rlburnkey00000000000000000000000000' );
+		$result = Auth::check_request( $req, 'read', $lookup );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( Errors::RATE_LIMITED, $result->get_error_code() );
+		$this->assertSame( 429, $result->get_error_data()['status'] );
+		$this->assertArrayHasKey( 'retry_after', $result->get_error_data() );
+
+		// State is still stashed so the rest_post_dispatch filter can read it.
+		$state = $req->get_param( '_swh_rate_limit_state' );
+		$this->assertIsArray( $state );
+		$this->assertFalse( $state['allowed'] );
+		$this->assertSame( 0, $state['remaining'] );
+	}
+
+	public function test_bucket_key_uses_swh_rl_api_prefix_with_key_id(): void {
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry = $this->make_entry( 'k_bucket_id', 'read' );
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$request = new WP_REST_Request();
+		$request->set_header( 'authorization', 'Bearer swhk_bucketidkey0000000000000000000000000' );
+		$lookup = static fn ( string $p ): ?array => $entry;
+
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+		$this->assertArrayHasKey(
+			'swh_rl_api_k_bucket_id',
+			self::$transients,
+			'RateLimiter wrote to the swh_rl_api_<id> transient — bucket is per-key'
+		);
+	}
+
+	// -----------------------------------------------------------------------
 	// Helpers
 	// -----------------------------------------------------------------------
 

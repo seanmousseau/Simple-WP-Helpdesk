@@ -143,7 +143,10 @@ final class RepliesController extends WP_REST_Controller {
 			$items[] = ReplySchema::from_comment( $c );
 		}
 
-		return new WP_REST_Response( $items, 200 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( $items, 200 ),
+			$request
+		);
 	}
 
 	/**
@@ -221,7 +224,10 @@ final class RepliesController extends WP_REST_Controller {
 		if ( ! $comment instanceof WP_Comment ) {
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Reply not found after create.', 'simple-wp-helpdesk' ) );
 		}
-		return new WP_REST_Response( ReplySchema::from_comment( $comment ), 201 );
+		return ResponseDecorator::with_rate_limit_headers(
+			new WP_REST_Response( ReplySchema::from_comment( $comment ), 201 ),
+			$request
+		);
 	}
 
 	/**
