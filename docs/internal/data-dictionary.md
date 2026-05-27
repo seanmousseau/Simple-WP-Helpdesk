@@ -132,7 +132,8 @@ Storage shape introduced by #356. Each group is a single top-level option holdin
 | `swh_settings_notifications` | array | NOT seeded by the 4.0.0 migration — no call sites or defaults today. Future work. |
 | `swh_settings_tools` | array | Spam method, reCAPTCHA/Turnstile keys, retention windows, delete-on-uninstall, canned responses, ticket templates, SLA thresholds. |
 | `swh_settings_routing` | array | Default assignee, fallback email, ticket page id, token TTL, restrict-to-assigned, assignment rules. |
-| `swh_settings_integrations` | array | `inbound_secret`. Outbound webhook config in v4.2+. |
+| `swh_settings_integrations` | array | `inbound_secret`, `api_keys`. Outbound webhook config in v4.2+. |
+| `swh_settings_integrations.api_keys` | `array<int, array>` | Operator-issued REST API keys. Default `[]`. **Writer:** `SWH\Rest\ApiKeys` only — operators do not edit this via the freeform settings save handler; UI ships in v4.1 Phase 6. **Sensitive:** entries contain bcrypt hashes; this list MUST NOT appear in any public REST surface (the `GET /settings/public` allowlist in Phase 5 excludes the entire `api_keys` sub-key). Each entry: `{ id: 'k_<uuid>', label: string≤60, scope: 'read'\|'write', prefix: string(12) (first 12 chars of plaintext), hash: bcrypt cost 12, created_at: unix, created_by: int, last_used_at: unix\|0, rate_limit: int\|null, revoked_at: unix\|null }`. Plaintext is shown exactly once at generation and never persisted. See `security-model.md` → "API key authentication" for the auth flow. Introduced 4.1.0 (#365). |
 
 ## Transients
 
