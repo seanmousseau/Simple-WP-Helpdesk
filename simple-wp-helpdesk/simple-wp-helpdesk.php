@@ -34,6 +34,7 @@ if ( file_exists( SWH_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
 require_once SWH_PLUGIN_DIR . 'includes/ticket-update-fields.php';
+require_once SWH_PLUGIN_DIR . 'includes/insert-helpdesk-reply.php';
 require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-email.php';
@@ -54,7 +55,9 @@ require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
 // file-level Bootstrap::register_controller() call queues the controller
 // for registration on rest_api_init.
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Ticket.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Reply.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/TicketsController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/RepliesController.php';
 
 require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';

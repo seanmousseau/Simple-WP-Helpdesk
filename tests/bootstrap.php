@@ -293,6 +293,27 @@ if ( ! class_exists( 'WP_Comment' ) ) {
 		/** @var string UTC timestamp of the comment. */
 		public string $comment_date_gmt = '';
 
+		/** @var string Comment ID (WP serialises as string). */
+		public string $comment_ID = '0';
+
+		/** @var string Parent post ID (WP serialises as string). */
+		public string $comment_post_ID = '0';
+
+		/** @var string Author user ID (0 for guests/clients). */
+		public string $user_id = '0';
+
+		/** @var string Author display name. */
+		public string $comment_author = '';
+
+		/** @var string Author email. */
+		public string $comment_author_email = '';
+
+		/** @var string Comment body. */
+		public string $comment_content = '';
+
+		/** @var string Comment type (e.g. helpdesk_reply). */
+		public string $comment_type = '';
+
 		/**
 		 * @param array<string, mixed> $data Optional property overrides.
 		 */
