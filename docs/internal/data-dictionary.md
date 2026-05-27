@@ -113,6 +113,18 @@ Categories:
 - **Inbound Email:** Bearer secret.
 - **Frontend Portal Appearance:** theme preference.
 
+**Publicly readable settings (v4.1.0+).** A small subset of operator settings is exposed via `GET /swh/v1/settings/public` (Phase 5, #364) — the only public no-auth endpoint in `swh/v1`. The hard allowlist is `simple-wp-helpdesk/src/Rest/V1/PublicSettingsAllowlist.php` and is documented in `security-model.md` → "Public settings allowlist". The following options are read by the allowlist (and ONLY these — wildcard / prefix-match exposure is forbidden):
+
+- `swh_ticket_priorities` — publicly readable via `/swh/v1/settings/public` as `priority_labels` (CSV → trimmed `string[]`).
+- `swh_ticket_statuses` — publicly readable via `/swh/v1/settings/public` as `status_labels`.
+- `swh_sla_warn_hours` — publicly readable via `/swh/v1/settings/public` as `sla_thresholds.medium`.
+- `swh_sla_breach_hours` — publicly readable via `/swh/v1/settings/public` as `sla_thresholds.high`.
+- `swh_csat_enabled` — publicly readable via `/swh/v1/settings/public` as `features.csat` (boolean only, the value itself is not exposed in any other form).
+- `swh_ticket_page_id` — informs `features.portal` (boolean — true iff `> 0`). The page ID itself is NOT exposed.
+- `swh_max_upload_count` — informs `features.attachments` (boolean — true iff `> 0`). The cap is NOT exposed.
+
+Every other option in `swh_get_defaults()` is private to authenticated callers. Secret-bearing options (`swh_inbound_secret`, `swh_recaptcha_secret_key`, `swh_turnstile_secret_key`, `swh_recaptcha_api_key`, all email template bodies) are explicitly tested as NOT-in-allowlist via `PublicSettingsAllowlistTest::test_known_secrets_are_not_in_allowlist`.
+
 Additionally:
 
 - `swh_db_version` — installed plugin version; updated by `swh_run_upgrade_routine()` at `class-installer.php:147` AND by `\SWH\Settings\Migration::run()` (v4.0.0+, sets to `'4.0.0'` after grouped-options migration). **Not** in `swh_get_defaults()` and **excluded** from bulk operations (`swh_get_all_option_keys()` filters it out).
