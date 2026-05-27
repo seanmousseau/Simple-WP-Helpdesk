@@ -188,6 +188,60 @@ Optional: `body`, `requester_name`, `priority`, `status`, `assignee`, `category`
 | 400 | `swh_rest_validation_failed` | Required field missing / unknown enum value / role check fails. Field keys are in `data.errors`. |
 | 404 | `swh_rest_not_found` | Ticket ID unknown or post type mismatch. |
 
+#### `swh/v1/tickets/{id}/replies` — Replies subcollection (Phase 4, #363)
+
+| Method | Path | Cap | Scope | Returns |
+|---|---|---|---|---|
+| GET | `/swh/v1/tickets/{id}/replies` | `edit_posts` | `read` | 200 + array of reply payloads / 404 if ticket unknown |
+| POST | `/swh/v1/tickets/{id}/replies` | `edit_posts` | `write` | 201 + reply payload / 400 / 404 |
+
+Every insertion routes through `swh_insert_helpdesk_reply()` — the canonical reply-insert helper (invariant #20, design-document.md). The controller never calls `wp_insert_comment` directly. Body is `wp_kses_post`-sanitised at the helper boundary; attachment media IDs are validated (must exist, must be `attachment` post type, must pass the MIME allowlist that mirrors `swh_handle_multiple_uploads()`). Internal notes (`is_internal_note=true`) store `_is_internal_note=1` on the comment and are excluded from GET responses returned to `read`-scope callers.
+
+**Internal-note visibility note.** The v4.1.0 surface has only `read` and `write` scopes — there is no separate "client" scope. Internal notes are excluded from GET responses returned to `read`-scope callers (clients) and surfaced to `write`-scope callers (staff / trusted integrations). #363 originally framed the rule against a "client" scope; restated here for clarity.
+
+**Reply response (the OpenAPI Phase 8 `Reply` component, locked in `src/Rest/V1/Schemas/Reply.php`):**
+
+```json
+{
+  "id": 1001,
+  "body": "Looking into it",
+  "author": {
+    "type": "staff",
+    "id": 7,
+    "display_name": "Tech",
+    "email": "tech@example.com"
+  },
+  "is_internal_note": false,
+  "created_at": 1716800000,
+  "attachments": [
+    { "id": null, "url": "https://example.com/wp-content/uploads/swh-helpdesk/file.pdf", "filename": "file.pdf", "mime": null, "size": null }
+  ],
+  "links": {
+    "self":   "https://example.com/wp-json/swh/v1/tickets/42/replies/1001",
+    "ticket": "https://example.com/wp-json/swh/v1/tickets/42"
+  }
+}
+```
+
+**POST `/swh/v1/tickets/{id}/replies` body:**
+
+```json
+{
+  "body": "Looking into it",
+  "is_internal_note": false,
+  "attachments": [123, 456]
+}
+```
+
+`body` is required unless at least one `attachments` media ID is supplied (mirrors the admin "Attached file(s)" fallback). `is_internal_note=true` requires the `write` scope (already gated by the route). `attachments` is an array of media IDs; each is validated server-side and a single bad ID rejects the whole POST with `swh_rest_validation_failed` and `data.errors.attachments` populated.
+
+**Error codes:**
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `swh_rest_validation_failed` | Body missing without attachments; attachment ID invalid (`data.errors.attachments`). |
+| 404 | `swh_rest_not_found` | Ticket ID unknown or post type mismatch. |
+
 ## REST envelope contract
 
 All `swh/v1` endpoints follow a uniform envelope shape. JS clients (admin-inbox, portal-v2, reports-v2) rely on these shapes — changing one is a breaking change that must update consumers in the same PR. Contract tests in `tests/Unit/Rest/Contracts/` lock these shapes.
