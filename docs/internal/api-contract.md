@@ -123,6 +123,71 @@ Locked code enum (also defined as `SWH\Rest\Errors` class constants):
 
 Documented per controller in Phases 3–5 / 8 of the v4.1.0 plan. Phase 2 ships the namespace + permission helper only — this section will grow as v4.1.0 lands.
 
+#### `swh/v1/tickets` — Tickets CRUD (Phase 3, #362)
+
+Controller: `simple-wp-helpdesk/src/Rest/V1/TicketsController.php`. Schema source of truth: `simple-wp-helpdesk/src/Rest/V1/Schemas/Ticket.php` (also feeds the Phase 8 OpenAPI `Ticket` component).
+
+| Method | Path | Cap | Scope | Response |
+|---|---|---|---|---|
+| GET | `/swh/v1/tickets` | `edit_posts` | `read` | 200 + array of tickets, `X-WP-Total` + `X-WP-TotalPages` headers |
+| GET | `/swh/v1/tickets/{id}` | `edit_posts` | `read` | 200 ticket / 404 |
+| POST | `/swh/v1/tickets` | `edit_posts` | `write` | 201 ticket / 400 |
+| PATCH | `/swh/v1/tickets/{id}` | `edit_posts` | `write` | 200 ticket / 400 / 404 |
+
+**List filters (query params):**
+
+- `status[]` — array of status labels (e.g. `status[]=Open&status[]=In Progress`).
+- `priority` — single priority label.
+- `assignee` — WP user ID.
+- `category` — `helpdesk_category` term ID.
+- `after` / `before` — ISO-8601 timestamps (inclusive).
+- `search` — free-text search over subject + body.
+- `page` (default 1) / `per_page` (default 20, max 100).
+
+Pagination headers: `X-WP-Total` (total result count) and `X-WP-TotalPages` (total pages at current `per_page`).
+
+**Ticket response shape (allowlist — no other keys appear):**
+
+```json
+{
+  "id": 42,
+  "subject": "PDF download broken",
+  "status": "Open",
+  "priority": "High",
+  "assignee": { "id": 3, "display_name": "Jane Tech" },
+  "requester": { "email": "client@example.com", "name": "Alice Client" },
+  "category": { "id": 7, "name": "Billing", "slug": "billing" },
+  "sla": { "due_at": 1779999999, "breached": false },
+  "csat": { "score": null, "comment": null },
+  "created_at": 1779800000,
+  "updated_at": 1779880000,
+  "first_response_at": null,
+  "links": {
+    "self":    "https://example.com/wp-json/swh/v1/tickets/42",
+    "replies": "https://example.com/wp-json/swh/v1/tickets/42/replies"
+  }
+}
+```
+
+Internal post meta (`_swh_unread`, `_swh_api_access_log`, `_ticket_token`, …) is intentionally excluded.
+
+**POST `/swh/v1/tickets` body (minimum):**
+
+```json
+{ "subject": "Need help", "requester_email": "client@example.com" }
+```
+
+Optional: `body`, `requester_name`, `priority`, `status`, `assignee`, `category`, `cc_emails`. All optional fields are forwarded to `swh_update_ticket_fields()` after the post is created; any validation failure surfaces as `swh_rest_validation_failed` with the failing field key in `data.errors`.
+
+**PATCH `/swh/v1/tickets/{id}` body** — any subset of the keys above (no `subject` is required; PATCH is partial). Status / priority / assignee / category / subject / body / requester contact mutations all route through `swh_update_ticket_fields()` (invariant #19, design-document.md). Invalid values are rejected before any side effects with `swh_rest_validation_failed`.
+
+**Error codes** (in addition to the standard `swh_rest_*` envelope from §"Error envelope"):
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `swh_rest_validation_failed` | Required field missing / unknown enum value / role check fails. Field keys are in `data.errors`. |
+| 404 | `swh_rest_not_found` | Ticket ID unknown or post type mismatch. |
+
 ## REST envelope contract
 
 All `swh/v1` endpoints follow a uniform envelope shape. JS clients (admin-inbox, portal-v2, reports-v2) rely on these shapes — changing one is a breaking change that must update consumers in the same PR. Contract tests in `tests/Unit/Rest/Contracts/` lock these shapes.

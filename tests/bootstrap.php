@@ -51,7 +51,46 @@ if ( ! class_exists( 'WP_REST_Controller' ) ) {
 	 * Minimal WP_REST_Controller stub for unit tests.
 	 */
 	abstract class WP_REST_Controller {
+		/** @var string */
+		protected $namespace = '';
+
+		/** @var string */
+		protected $rest_base = '';
+
+		/** @var array<string,mixed>|null */
+		protected $schema = null;
+
 		abstract public function register_routes(): void;
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_item_schema(): array {
+			return array();
+		}
+
+		/**
+		 * @param string $method HTTP method.
+		 * @return array<string,mixed>
+		 */
+		public function get_endpoint_args_for_item_schema( $method = 'POST' ): array {
+			return array();
+		}
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_public_item_schema(): array {
+			return $this->get_item_schema();
+		}
+
+		/**
+		 * @param array<string,mixed> $schema
+		 * @return array<string,mixed>
+		 */
+		public function add_additional_fields_schema( $schema ): array {
+			return $schema;
+		}
 	}
 }
 
@@ -176,6 +215,9 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 		/** @var int */
 		private int $status;
 
+		/** @var array<string,string> */
+		private array $headers = array();
+
 		/**
 		 * @param mixed $data   Response data.
 		 * @param int   $status HTTP status code.
@@ -192,6 +234,50 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 
 		public function get_status(): int {
 			return $this->status;
+		}
+
+		/**
+		 * @param string $name  Header name (case-insensitive).
+		 * @param string $value Header value.
+		 */
+		public function header( string $name, string $value ): void {
+			$this->headers[ strtolower( $name ) ] = $value;
+		}
+
+		/**
+		 * @return array<string,string>
+		 */
+		public function get_headers(): array {
+			return $this->headers;
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_Post' ) ) {
+	/**
+	 * Minimal WP_Post stub for unit tests.
+	 *
+	 * Mirrors the public-property surface unit tests need. Real WP_Post is
+	 * loaded from wp-includes/class-wp-post.php in a full WP environment.
+	 */
+	class WP_Post {
+		public int $ID = 0;
+		public string $post_type = '';
+		public string $post_title = '';
+		public string $post_content = '';
+		public string $post_status = 'publish';
+		public string $post_date_gmt = '';
+		public string $post_modified_gmt = '';
+
+		/**
+		 * @param array<string,mixed> $data Optional property overrides.
+		 */
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $key => $value ) {
+				if ( property_exists( $this, $key ) ) {
+					$this->{$key} = $value;
+				}
+			}
 		}
 	}
 }
@@ -258,6 +344,30 @@ if ( ! function_exists( '__' ) ) {
 	 */
 	function __( $text, $domain = '' ) { // phpcs:ignore
 		return (string) $text;
+	}
+}
+
+if ( ! function_exists( '__return_true' ) ) {
+	function __return_true(): bool {
+		return true;
+	}
+}
+
+if ( ! function_exists( '__return_false' ) ) {
+	function __return_false(): bool {
+		return false;
+	}
+}
+
+if ( ! function_exists( 'is_wp_error' ) ) {
+	/**
+	 * Stub: returns true when $thing is a WP_Error instance.
+	 *
+	 * @param mixed $thing Value to test.
+	 * @return bool
+	 */
+	function is_wp_error( $thing ): bool {
+		return $thing instanceof \WP_Error;
 	}
 }
 
