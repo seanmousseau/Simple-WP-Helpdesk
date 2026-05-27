@@ -46,7 +46,9 @@ final class InboxControllerTest extends TestCase {
 		WP_Mock::userFunction(
 			'register_rest_route',
 			array(
-				'args'  => array( 'swh/v1', '/tickets', WP_Mock\Functions::type( 'array' ) ),
+				// v4.1.0 (Cliff 1 fix): admin-internal listing moved off `swh/v1`
+				// so it no longer collides with the public V1 TicketsController.
+				'args'  => array( 'swh-admin/v1', '/tickets', WP_Mock\Functions::type( 'array' ) ),
 				'times' => 1,
 			)
 		);

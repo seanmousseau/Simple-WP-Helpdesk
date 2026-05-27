@@ -41,7 +41,7 @@ const actions = {
 			dispatch( { type: 'FETCH_START' } );
 			try {
 				const data = await apiFetch( {
-					path: `/swh/v1/tickets/${ id }`,
+					path: `/swh-admin/v1/tickets/${ id }`,
 				} );
 				// Discard if the drawer has moved to a different ticket.
 				if ( select.getTicketId() !== fetchedForId ) {
@@ -74,7 +74,7 @@ const actions = {
 			dispatch( { type: 'SAVE_START' } );
 			try {
 				const data = await apiFetch( {
-					path: `/swh/v1/tickets/${ ticket.id }`,
+					path: `/swh-admin/v1/tickets/${ ticket.id }`,
 					method: 'PATCH',
 					data: { expected_version: ticket.version, patch },
 				} );
@@ -129,13 +129,13 @@ const actions = {
 					fd.append( 'mark_resolved', resolved ? '1' : '0' );
 					files.forEach( ( f ) => fd.append( 'attachments[]', f ) );
 					data = await apiFetch( {
-						path: `/swh/v1/tickets/${ ticket.id }/reply`,
+						path: `/swh-admin/v1/tickets/${ ticket.id }/reply`,
 						method: 'POST',
 						body: fd,
 					} );
 				} else {
 					data = await apiFetch( {
-						path: `/swh/v1/tickets/${ ticket.id }/reply`,
+						path: `/swh-admin/v1/tickets/${ ticket.id }/reply`,
 						method: 'POST',
 						data: {
 							expected_version: ticket.version,

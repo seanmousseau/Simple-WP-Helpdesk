@@ -100,11 +100,33 @@ if ( ! function_exists( 'swh_update_ticket_fields' ) ) {
 			$candidate = is_string( $fields['status'] ) ? $fields['status'] : '';
 			$allowed   = swh_get_statuses();
 			$allowed   = is_array( $allowed ) ? $allowed : array();
-			if ( '' === $candidate || ! in_array( $candidate, $allowed, true ) ) {
+			// v4.1.0 (Cliff 1 follow-up): canonicalize case + token form before
+			// validating. Admin drawer + inbox JS emit lowercase keys
+			// (`open`, `in_progress`, `resolved`, `closed`); operators
+			// configure capitalized labels (`Open`, `In Progress`, ...). Map
+			// the incoming key onto the configured label so REST callers do
+			// not have to know the operator's exact casing. Public REST keeps
+			// the same forgiving behaviour, which matches the schema's
+			// "enum (configurable)" contract.
+			$resolved_label = '';
+			if ( '' !== $candidate ) {
+				foreach ( $allowed as $label ) {
+					if ( ! is_string( $label ) ) {
+						continue;
+					}
+					$normalized    = strtolower( str_replace( array( ' ', '-' ), '_', $label ) );
+					$candidate_key = strtolower( str_replace( array( ' ', '-' ), '_', $candidate ) );
+					if ( $normalized === $candidate_key ) {
+						$resolved_label = $label;
+						break;
+					}
+				}
+			}
+			if ( '' === $resolved_label ) {
 				$errors['status'] = __( 'Status is not one of the configured values.', 'simple-wp-helpdesk' );
 			} else {
-				swh_set_ticket_status( $ticket_id, $candidate );
-				$new_status = $candidate;
+				swh_set_ticket_status( $ticket_id, $resolved_label );
+				$new_status = $resolved_label;
 				$applied[]  = 'status';
 			}
 		}

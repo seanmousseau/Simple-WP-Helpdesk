@@ -34,7 +34,15 @@ use function swh_get_string_meta;
  */
 class InboxController extends WP_REST_Controller {
 
-	public const NAMESPACE = 'swh/v1';
+	// v4.1.0 (Cliff 1 fix): admin-internal listing moved off `swh/v1` so it
+	// no longer collides with the public {@see \SWH\Rest\V1\TicketsController}
+	// (PR #511, Phase 3). Both controllers registered GET /swh/v1/tickets
+	// under the same namespace; the public controller was loaded first and
+	// won dispatch, returning a raw array — but the admin Inbox React store
+	// reads `data.tickets`/`data.total`, so the list collapsed to "empty".
+	// Keeping the admin surface on `swh-admin/v1` preserves the locked v4.1
+	// public schema without restoring the legacy `tickets` wrapper.
+	public const NAMESPACE = 'swh-admin/v1';
 	public const REST_BASE = 'tickets';
 
 	/**
