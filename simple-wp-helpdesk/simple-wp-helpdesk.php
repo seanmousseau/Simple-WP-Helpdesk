@@ -56,6 +56,10 @@ require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
 // for registration on rest_api_init.
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Ticket.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Reply.php';
+// v4.1.0 Phase 9 — Opt-in API access audit log service (#369). Loaded BEFORE
+// the controllers that call ApiAccessLog::record(). The meta box (admin-only)
+// is loaded separately inside the is_admin() block below.
+require_once SWH_PLUGIN_DIR . 'src/Admin/ApiAccessLog.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/TicketsController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/RepliesController.php';
 // v4.1.0 Phase 5 — ancillary read-only endpoints + public settings allowlist (#364).
@@ -83,6 +87,11 @@ if ( is_admin() ) {
 	// v4.1.0 Phase 8 — Tools → Helpdesk API Reference page (Redoc viewer, #368).
 	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiReferencePage.php';
 	\SWH\Admin\ApiReferencePage::register();
+	// v4.1.0 Phase 9 — Opt-in API access audit log meta box (#369).
+	// ApiAccessLog itself is loaded earlier (above the REST require block) so
+	// the controllers can call ApiAccessLog::record() on non-admin requests.
+	require_once SWH_PLUGIN_DIR . 'src/Admin/ApiAccessLogMetaBox.php';
+	\SWH\Admin\ApiAccessLogMetaBox::register();
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-editor.php';
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-list.php'; // v4.0.0 — kept active; serves ?legacy=1 fallback view with column/filter/badge enhancements.
 	require_once SWH_PLUGIN_DIR . 'admin/class-ticket-inbox.php';
