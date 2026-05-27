@@ -91,6 +91,9 @@ final class TicketControllerTest extends TestCase {
 		// swh_set_ticket_status is a plugin function; allow it to be called
 		// (it may or may not be interceptable depending on load order).
 		WP_Mock::userFunction( 'swh_set_ticket_status', [ 'return' => null ] );
+		// v4.1.0 Phase 3: PATCH path routes through swh_update_ticket_fields().
+		WP_Mock::userFunction( 'swh_update_ticket_fields', [ 'return' => [ 'ok' => true, 'errors' => [], 'applied' => [ 'status' ] ] ] );
+		WP_Mock::userFunction( 'get_current_user_id', [ 'return' => 1 ] );
 
 		$req = new WP_REST_Request( 'PATCH', '/swh/v1/tickets/42' );
 		$req->set_param( 'id', 42 );

@@ -33,6 +33,7 @@ if ( file_exists( SWH_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 
 // Core includes (always loaded).
 require_once SWH_PLUGIN_DIR . 'includes/helpers.php';
+require_once SWH_PLUGIN_DIR . 'includes/ticket-update-fields.php';
 require_once SWH_PLUGIN_DIR . 'includes/deprecations.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-installer.php';
 require_once SWH_PLUGIN_DIR . 'includes/class-email.php';

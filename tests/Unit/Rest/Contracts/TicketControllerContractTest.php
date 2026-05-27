@@ -23,6 +23,7 @@ final class TicketControllerContractTest extends TestCase {
 	protected function setUp(): void {
 		WP_Mock::setUp();
 		require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
+		require_once SWH_PLUGIN_DIR . 'includes/ticket-update-fields.php';
 	}
 
 	protected function tearDown(): void {
@@ -222,6 +223,12 @@ final class TicketControllerContractTest extends TestCase {
 				'return' => 0,
 			)
 		);
+		// v4.1.0 Phase 3: PATCH routes through swh_update_ticket_fields().
+		WP_Mock::userFunction( 'swh_get_string_meta', array( 'args' => array( 42, '_ticket_status' ), 'return' => 'Open' ) );
+		WP_Mock::userFunction( 'swh_get_statuses', array( 'return' => array( 'Open', 'Resolved' ) ) );
+		WP_Mock::userFunction( 'swh_get_priorities', array( 'return' => array( 'Low', 'Medium', 'High' ) ) );
+		WP_Mock::userFunction( 'get_userdata', array( 'args' => array( 11 ), 'return' => (object) array( 'roles' => array( 'technician' ) ) ) );
+		WP_Mock::userFunction( 'get_current_user_id', array( 'return' => 1 ) );
 		// Canonical write must happen.
 		WP_Mock::userFunction(
 			'update_post_meta',

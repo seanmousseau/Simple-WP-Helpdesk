@@ -24,6 +24,7 @@ use function swh_get_int_option;
 use function swh_get_secure_ticket_link;
 use function swh_send_email;
 use function swh_set_ticket_status;
+use function swh_update_ticket_fields;
 use function update_post_meta;
 use function wp_get_post_terms;
 use function wp_get_current_user;
@@ -225,21 +226,31 @@ class TicketController extends WP_REST_Controller {
 			);
 		}
 
+		// v4.1.0 Phase 3: status/priority/assignee mutations route through the
+		// context-neutral helper. Single mutation choke point for all callers
+		// (admin save, internal REST, public REST v1).
+		$_field_patch = array();
 		if ( isset( $patch['status'] ) && is_string( $patch['status'] ) ) {
-			swh_set_ticket_status( $id, $patch['status'] );  // bumps via B2.
-		}
-		if ( array_key_exists( 'assignee', $patch ) ) {
-			$assignee     = (int) $patch['assignee'];
-			$old_assigned = swh_get_int_meta( $id, '_ticket_assigned_to' );
-			update_post_meta( $id, '_ticket_assigned_to', $assignee > 0 ? $assignee : '' );
-			TicketVersion::bump( $id );
-			if ( $old_assigned !== $assignee ) {
-				/** Fires the lifecycle action so assignee emails dispatch (see swh_apply_assignment_rules). */
-				do_action( 'swh_ticket_assigned', $id, $old_assigned, $assignee );
-			}
+			$_field_patch['status'] = $patch['status'];
 		}
 		if ( isset( $patch['priority'] ) && is_string( $patch['priority'] ) ) {
-			update_post_meta( $id, '_ticket_priority', sanitize_key( $patch['priority'] ) );
+			$_field_patch['priority'] = sanitize_key( $patch['priority'] );
+		}
+		if ( array_key_exists( 'assignee', $patch ) ) {
+			$_field_patch['assignee'] = is_numeric( $patch['assignee'] ) ? (int) $patch['assignee'] : 0;
+		}
+		if ( ! empty( $_field_patch ) ) {
+			swh_update_ticket_fields(
+				$id,
+				$_field_patch,
+				array(
+					'source'   => 'rest_internal',
+					'actor_id' => get_current_user_id(),
+				)
+			);
+			// swh_set_ticket_status() bumps the version internally; explicit
+			// bump covers the priority/assignee branches that don't bump from
+			// the helper itself.
 			TicketVersion::bump( $id );
 		}
 		if ( ! empty( $patch['mark_read'] ) ) {
