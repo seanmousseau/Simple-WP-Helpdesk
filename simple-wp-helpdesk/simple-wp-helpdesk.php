@@ -58,6 +58,11 @@ require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Ticket.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Reply.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/TicketsController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/V1/RepliesController.php';
+// v4.1.0 Phase 5 — ancillary read-only endpoints + public settings allowlist (#364).
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/PublicSettingsAllowlist.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/UsersController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/CategoriesController.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/SettingsController.php';
 
 require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
