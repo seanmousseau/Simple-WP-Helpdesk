@@ -50,6 +50,12 @@ require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
 // namespace owner; Phase 3+ controllers plug in via Bootstrap::register_controller().
 \SWH\Rest\Bootstrap::boot();
 
+// v4.1.0 Phase 3 — public `swh/v1/tickets` CRUD controller (#362). The
+// file-level Bootstrap::register_controller() call queues the controller
+// for registration on rest_api_init.
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/Schemas/Ticket.php';
+require_once SWH_PLUGIN_DIR . 'src/Rest/V1/TicketsController.php';
+
 require_once SWH_PLUGIN_DIR . 'src/Rest/InboxController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/TicketController.php';
 require_once SWH_PLUGIN_DIR . 'src/Rest/BulkController.php';
