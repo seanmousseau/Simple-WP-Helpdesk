@@ -156,7 +156,7 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * GET /swh/v1/tickets/{id} — return full drawer payload.
+	 * GET /swh-admin/v1/tickets/{id} — return full drawer payload.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response
@@ -231,7 +231,7 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * PATCH /swh/v1/tickets/{id} — update meta with version check.
+	 * PATCH /swh-admin/v1/tickets/{id} — update meta with version check.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response
@@ -308,7 +308,7 @@ class TicketController extends WP_REST_Controller {
 	}
 
 	/**
-	 * POST /swh/v1/tickets/{id}/reply — insert reply with version check.
+	 * POST /swh-admin/v1/tickets/{id}/reply — insert reply with version check.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response

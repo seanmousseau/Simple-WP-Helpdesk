@@ -2,7 +2,7 @@
 /**
  * REST controller for the admin inbox list view (v4.0.0 #349).
  *
- * Endpoint: GET /swh/v1/tickets
+ * Endpoint: GET /swh-admin/v1/tickets
  * Capability: edit_posts (matches helpdesk_ticket cap_type).
  *
  * @package Simple_WP_Helpdesk
@@ -27,7 +27,7 @@ use function swh_get_int_meta;
 use function swh_get_string_meta;
 
 /**
- * REST controller: GET /swh/v1/tickets
+ * REST controller: GET /swh-admin/v1/tickets
  *
  * Returns a paginated list of helpdesk tickets for the inbox view.
  * The `view` parameter selects one of the 4 default saved views.
