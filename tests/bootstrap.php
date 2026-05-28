@@ -422,14 +422,17 @@ if ( ! class_exists( 'WP_User' ) ) {
 
 if ( ! function_exists( 'wp_unslash' ) ) {
 	/**
-	 * Stub: strip slashes from a string (matches WP behaviour for scalar
-	 * inputs). Real WP recurses into arrays/objects — tests only need the
-	 * scalar path.
+	 * Stub: mirror WP core's `wp_unslash()` recursion — arrays get
+	 * mapped, scalars get `stripslashes()`, everything else passes through.
+	 * Keeps array-shaped call sites honest under the test bootstrap.
 	 *
 	 * @param mixed $value Input value.
 	 * @return mixed
 	 */
 	function wp_unslash( $value ) {
+		if ( is_array( $value ) ) {
+			return array_map( 'wp_unslash', $value );
+		}
 		return is_string( $value ) ? stripslashes( $value ) : $value;
 	}
 }
