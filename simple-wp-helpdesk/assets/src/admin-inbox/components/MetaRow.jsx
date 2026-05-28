@@ -6,11 +6,14 @@ import { __ } from '@wordpress/i18n';
 import { SelectControl } from '@wordpress/components';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
-// v4.1.1 (#537): read the operator-configured priority + status labels
-// from the swhInbox localize bundle so the dropdown matches what the REST
-// API validates and what the rest of the plugin renders. Falling back to a
-// minimal default keeps the component renderable in tests / preview
-// environments without the localize bundle.
+// v4.1.1 (#537): render the operator-configured priority + status labels
+// in the dropdown DISPLAY text, while keeping the option VALUE as the
+// tokenized form (`Resolved` → `resolved`, `In Progress` → `in_progress`).
+// The admin REST controller's response runs `label_to_key()` on each meta
+// value, so the SelectControl's `value` prop is the token form — using
+// labels as values would never match on round-trip and the select would
+// snap back to the first option. The server's swh_update_ticket_fields()
+// canonical resolver accepts the token form on the way back.
 const DEFAULT_STATUS_LABELS = [ 'Open', 'In Progress', 'Resolved', 'Closed' ];
 const DEFAULT_PRIORITY_LABELS = [ 'Low', 'Medium', 'High' ];
 
@@ -20,15 +23,18 @@ const readLocalizedLabels = ( key, fallback ) => {
 	return list.length ? list : fallback;
 };
 
+const tokenize = ( label ) =>
+	String( label || '' ).toLowerCase().replace( /[\s-]+/g, '_' );
+
 const getStatusOptions = () =>
 	readLocalizedLabels( 'statusLabels', DEFAULT_STATUS_LABELS ).map( ( label ) => ( {
-		value: label,
+		value: tokenize( label ),
 		label,
 	} ) );
 
 const getPriorityOptions = () =>
 	readLocalizedLabels( 'priorityLabels', DEFAULT_PRIORITY_LABELS ).map( ( label ) => ( {
-		value: label,
+		value: tokenize( label ),
 		label,
 	} ) );
 
