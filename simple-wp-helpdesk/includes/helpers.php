@@ -506,10 +506,121 @@ function swh_get_client_ip() {
 		return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
 	}
 	if ( $trust_proxy && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && is_string( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-		$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
-		return trim( $ips[0] );
+		$raw     = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
+		$ips     = array_map( 'trim', explode( ',', $raw ) );
+		$ips     = array_values(
+			array_filter(
+				$ips,
+				static function ( $v ) {
+					return '' !== $v;
+				}
+			)
+		);
+		$trusted = defined( 'SWH_TRUSTED_PROXIES' ) && is_string( SWH_TRUSTED_PROXIES ) ? (string) SWH_TRUSTED_PROXIES : '';
+		if ( '' !== $trusted && ! empty( $ips ) ) {
+			// Walk XFF right-to-left and pop entries that fall inside the
+			// configured trusted-proxy set. The first untrusted hop wins —
+			// that's the originating client per Symfony's
+			// trusted_proxies handling. Leftmost (the spoofable value the
+			// client could supply) is only returned when every hop is
+			// trusted, which means the operator's proxy chain produced
+			// every value in the header.
+			$selected = swh_select_xff_hop( $ips, $trusted );
+			if ( '' !== $selected ) {
+				return $selected;
+			}
+		}
+		return isset( $ips[0] ) ? $ips[0] : '';
 	}
 	return isset( $_SERVER['REMOTE_ADDR'] ) && is_string( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+}
+
+/**
+ * Walk an X-Forwarded-For chain right-to-left, popping IPs that fall inside
+ * a configured trusted-proxy set, and return the first untrusted hop.
+ *
+ * Pure function — no $_SERVER reads, no side effects — so the rightmost-hop
+ * algorithm is unit-testable without a request context. Called from
+ * {@see swh_get_client_ip()} when `SWH_TRUSTED_PROXIES` is defined.
+ *
+ * @param string[] $ips     XFF chain, already trimmed + non-empty. Leftmost first.
+ * @param string   $trusted Comma-separated list of trusted IPs or CIDR blocks
+ *                          (e.g. `10.0.0.0/8,192.168.0.0/16,203.0.113.5`).
+ * @return string The first untrusted hop, or empty string when every entry
+ *                is trusted (caller can fall back to leftmost in that case).
+ *
+ * @since 4.1.1
+ */
+function swh_select_xff_hop( array $ips, string $trusted ): string {
+	$trusted_list = array_values(
+		array_filter(
+			array_map( 'trim', explode( ',', $trusted ) ),
+			static function ( $v ) {
+				return '' !== $v;
+			}
+		)
+	);
+	if ( empty( $trusted_list ) ) {
+		return '';
+	}
+	for ( $i = count( $ips ) - 1; $i >= 0; $i-- ) {
+		$ip = $ips[ $i ];
+		if ( ! swh_ip_in_list( $ip, $trusted_list ) ) {
+			return $ip;
+		}
+	}
+	return '';
+}
+
+/**
+ * Return true when `$ip` matches any entry in `$cidrs`. Each entry is either
+ * a bare IP (v4 or v6) or a CIDR block.
+ *
+ * @param string   $ip    Single IP to test.
+ * @param string[] $cidrs Bare IPs / CIDR blocks.
+ *
+ * @since 4.1.1
+ */
+function swh_ip_in_list( string $ip, array $cidrs ): bool {
+	if ( '' === $ip || false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+		return false;
+	}
+	foreach ( $cidrs as $entry ) {
+		$entry = trim( $entry );
+		if ( '' === $entry ) {
+			continue;
+		}
+		if ( false === strpos( $entry, '/' ) ) {
+			if ( $entry === $ip ) {
+				return true;
+			}
+			continue;
+		}
+		list( $subnet, $bits ) = explode( '/', $entry, 2 );
+		$bits                  = (int) $bits;
+		$ip_bin                = @inet_pton( $ip ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- inet_pton emits a warning on malformed input; we treat that as "no match".
+		$subnet_bin            = @inet_pton( $subnet ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( false === $ip_bin || false === $subnet_bin || strlen( $ip_bin ) !== strlen( $subnet_bin ) ) {
+			continue;
+		}
+		$max_bits = strlen( $ip_bin ) * 8;
+		if ( $bits < 0 || $bits > $max_bits ) {
+			continue;
+		}
+		$full_bytes = intdiv( $bits, 8 );
+		$rem_bits   = $bits % 8;
+		if ( $full_bytes > 0 && substr( $ip_bin, 0, $full_bytes ) !== substr( $subnet_bin, 0, $full_bytes ) ) {
+			continue;
+		}
+		if ( 0 === $rem_bits ) {
+			return true;
+		}
+		$mask = chr( 0xff << ( 8 - $rem_bits ) & 0xff );
+		if ( ( $ip_bin[ $full_bytes ] & $mask ) === ( $subnet_bin[ $full_bytes ] & $mask ) ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /**
