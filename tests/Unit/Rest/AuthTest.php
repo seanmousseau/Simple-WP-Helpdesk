@@ -364,6 +364,103 @@ final class AuthTest extends TestCase {
 		$this->assertSame( 0, $state['remaining'] );
 	}
 
+	// -----------------------------------------------------------------------
+	// Per-request idempotency (v4.1.0 fix — rest_send_allow_header re-fires)
+	// -----------------------------------------------------------------------
+
+	public function test_check_request_only_increments_rate_limit_once_per_request(): void {
+		// Regression: WP REST's rest_send_allow_header() re-invokes the
+		// permission_callback once per handler on the matched route to build
+		// the `Allow:` header. Without per-request idempotency, every HTTP
+		// request would double- or triple-count against the rate limit.
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry = $this->make_entry( 'k_idem_count', 'read' );
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$request = new WP_REST_Request();
+		$request->set_header( 'authorization', 'Bearer swhk_idemcountkey0000000000000000000000' );
+
+		$lookup_calls = 0;
+		$lookup       = function ( string $p ) use ( $entry, &$lookup_calls ): ?array {
+			++$lookup_calls;
+			return $entry;
+		};
+
+		// Three calls, same request — simulates rest_send_allow_header walking
+		// the route's handlers (GET + Allow-header build).
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+
+		$this->assertSame( 1, $lookup_calls, 'lookup (and therefore bcrypt + rate-limit) ran exactly once' );
+
+		// Rate-limit state must reflect a single increment.
+		$state = $request->get_param( '_swh_rate_limit_state' );
+		$this->assertIsArray( $state );
+		$this->assertSame( 60, $state['limit'] );
+		$this->assertSame( 59, $state['remaining'], 'Exactly one decrement, not three' );
+	}
+
+	public function test_check_request_scope_cache_is_scope_aware(): void {
+		// A single route can bind handlers with different required scopes (e.g.
+		// GET wants read, PATCH wants write). The Allow-header walk hits both.
+		// Each scope answer must compute independently — read should pass on a
+		// read key, write should fail with SCOPE_INSUFFICIENT — but each scope
+		// answer is only computed once.
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry = $this->make_entry( 'k_scope_cache', 'read' );
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$request = new WP_REST_Request();
+		$request->set_header( 'authorization', 'Bearer swhk_scopecachekey000000000000000000000' );
+
+		$lookup_calls = 0;
+		$lookup       = function ( string $p ) use ( $entry, &$lookup_calls ): ?array {
+			++$lookup_calls;
+			return $entry;
+		};
+
+		// First scope: read — passes.
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+		// Second scope: write — fails (scope insufficient on a read key).
+		$write_result = Auth::check_request( $request, 'write', $lookup );
+		$this->assertInstanceOf( WP_Error::class, $write_result );
+		$this->assertSame( Errors::SCOPE_INSUFFICIENT, $write_result->get_error_code() );
+
+		// Re-invoke both scopes — must hit their caches, no extra lookups.
+		$this->assertTrue( Auth::check_request( $request, 'read', $lookup ) );
+		$this->assertInstanceOf( WP_Error::class, Auth::check_request( $request, 'write', $lookup ) );
+
+		$this->assertSame( 2, $lookup_calls, 'Exactly one lookup per scope (read + write), regardless of repeat calls' );
+	}
+
+	public function test_check_request_only_runs_password_verify_once_per_request(): void {
+		// The bcrypt verify is the perf hot path (cost 12 ≈ 80ms). Asserted
+		// indirectly via the lookup-call counter — lookup is what invokes the
+		// hash check inside ApiKeys::find_by_plaintext in production.
+		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
+
+		$entry = $this->make_entry( 'k_bcrypt', 'write' );
+		self::$options['swh_settings_integrations'] = array( 'api_keys' => array( $entry ) );
+
+		$request = new WP_REST_Request();
+		$request->set_header( 'authorization', 'Bearer swhk_bcryptkey0000000000000000000000000' );
+
+		$lookup_calls = 0;
+		$lookup       = function ( string $p ) use ( $entry, &$lookup_calls ): ?array {
+			++$lookup_calls;
+			return $entry;
+		};
+
+		for ( $i = 0; $i < 5; $i++ ) {
+			$this->assertTrue( Auth::check_request( $request, 'write', $lookup ) );
+		}
+
+		$this->assertSame( 1, $lookup_calls, 'bcrypt-bearing lookup fires exactly once per request' );
+	}
+
 	public function test_bucket_key_uses_swh_rl_api_prefix_with_key_id(): void {
 		WP_Mock::userFunction( 'is_user_logged_in', array( 'return' => false ) );
 

@@ -113,6 +113,19 @@ final class Bootstrap {
 	 * @return true|WP_Error
 	 */
 	public static function settings_public_permission( WP_REST_Request $request ) {
+		// Request-level idempotency. WP REST's `rest_send_allow_header()`
+		// invokes permission_callback once per handler on the matched route
+		// to build the `Allow:` header (wp-includes/rest-api.php:866-898),
+		// which means RateLimiter::check would otherwise increment twice for
+		// every single HTTP GET — halving the effective per-IP budget.
+		// Cache the computed result on the request and short-circuit.
+		// See Auth::check_request() for the same pattern with scope-aware keys.
+		$cache_key = '_swh_settings_public_auth_result';
+		$cached    = $request->get_param( $cache_key );
+		if ( true === $cached || $cached instanceof WP_Error ) {
+			return $cached;
+		}
+
 		// REMOTE_ADDR is a server-provided IP; sanitize_text_field strips
 		// anything that wouldn't survive a hash_hmac call. Fallback to 0.0.0.0
 		// when the server didn't populate it (CLI, tests, exotic SAPIs).
@@ -127,7 +140,7 @@ final class Bootstrap {
 
 		if ( ! $state['allowed'] ) {
 			$retry_after = max( 1, $state['reset'] - time() );
-			return new WP_Error(
+			$err         = new WP_Error(
 				Errors::RATE_LIMITED,
 				__( 'Rate limit exceeded. Try again later.', 'simple-wp-helpdesk' ),
 				array(
@@ -135,8 +148,11 @@ final class Bootstrap {
 					'retry_after' => $retry_after,
 				)
 			);
+			$request->set_param( $cache_key, $err );
+			return $err;
 		}
 
+		$request->set_param( $cache_key, true );
 		return true;
 	}
 

@@ -152,6 +152,8 @@ The salt source is locked to `wp_salt('nonce')` because (a) it is already requir
 
 **What is NOT rate-limited.** Logged-in WP-user requests (the WP Application Password path) are NOT subject to the per-API-key bucket — they are already gated by core WP capability checks and core's own login throttling. Rate limiting in v4.1.0 targets the two anonymous attack surfaces: stolen API keys and unauthenticated public requests.
 
+**Per-request idempotency.** WP REST's `rest_send_allow_header()` (wp-includes/rest-api.php:866-898) re-invokes a route's `permission_callback` once per registered handler on the matched route to build the response `Allow:` header. There is no filter to opt out — it is part of WP's REST contract. Without protection, `RateLimiter::check()` (which always increments on call) would fire 2-3× per HTTP request, halving the effective rate limit. Both `Auth::check_request()` and `Bootstrap::settings_public_permission()` therefore cache their computed result (true or WP_Error) on the request via `WP_REST_Request::set_param()` and short-circuit at the top — `_swh_auth_result_<scope>` for Auth (scope-aware because handlers on the same route may require different scopes), `_swh_settings_public_auth_result` for Bootstrap. `RateLimiter::check()` itself remains "always increments"; the dedupe lives in the callers.
+
 **Anti-patterns explicitly forbidden:**
 
 - Raw IPs in transient keys (privacy).

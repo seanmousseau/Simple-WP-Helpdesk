@@ -46,6 +46,26 @@ use function is_user_logged_in;
  * `ApiKeys::find_by_plaintext()`. Production code uses the default which
  * delegates to the static class method.
  *
+ * **Per-request idempotency (v4.1.0 fix).** WP REST invokes a route's
+ * `permission_callback` more than once per HTTP request. Specifically,
+ * `rest_send_allow_header()` in `wp-includes/rest-api.php` (lines 866-898)
+ * walks every handler bound to the matched route and re-invokes its
+ * `permission_callback` to build the response's `Allow:` header. There is no
+ * filter to opt out — it is part of WP's REST contract.
+ *
+ * The naive implementation therefore ran `password_verify()` (bcrypt cost 12),
+ * `RateLimiter::check()` (rate-limit increment), and the `_swh_api_key` +
+ * `_swh_rate_limit_state` stash 2-3× per request. Effective rate-limit became
+ * 30/min instead of the documented 60/min.
+ *
+ * Fix: cache the per-scope result on the request via
+ * `WP_REST_Request::set_param( '_swh_auth_result_<scope>', $result )` and
+ * short-circuit at the top of {@see check_request()}. The cache is
+ * scope-aware because a single route may bind two handlers with different
+ * required scopes; each must answer independently but only do the auth + rate
+ * limit work once. The actual logic lives in the private helper
+ * {@see compute_check()}.
+ *
  * @since 4.1.0
  */
 final class Auth {
@@ -80,6 +100,46 @@ final class Auth {
 	 * @return true|WP_Error
 	 */
 	public static function check_request(
+		WP_REST_Request $request,
+		string $scope,
+		?callable $api_key_lookup = null
+	) {
+		// Request-level idempotency. WP REST invokes permission_callback more
+		// than once per HTTP request — `rest_send_allow_header()` runs it once
+		// per handler on the matched route to build the `Allow:` header (see
+		// wp-includes/rest-api.php lines 866-898). Without this guard, the
+		// bcrypt verify inside ApiKeys::find_by_plaintext, RateLimiter::check
+		// (which increments), and the request stashes would all fire 2-3×
+		// per request and the effective rate-limit would be ~half what's
+		// documented.
+		//
+		// Cache key is per-scope: a route can bind a GET handler that wants
+		// `read` and a PATCH handler that wants `write`. Both run under the
+		// Allow-header walk and must answer independently — but each scope
+		// answer only needs to be computed once.
+		$cache_key = '_swh_auth_result_' . $scope;
+		$cached    = $request->get_param( $cache_key );
+		if ( true === $cached || $cached instanceof \WP_Error ) {
+			return $cached;
+		}
+
+		$result = self::compute_check( $request, $scope, $api_key_lookup );
+		$request->set_param( $cache_key, $result );
+		return $result;
+	}
+
+	/**
+	 * Compute the permission result for a request + scope. This is the body of
+	 * {@see check_request()} extracted into a helper so the public entrypoint
+	 * can wrap it in a per-request idempotency cache without changing
+	 * observable behavior on any of the eight return paths.
+	 *
+	 * @param WP_REST_Request $request         Incoming REST request.
+	 * @param string          $scope           Required scope ('read' or 'write').
+	 * @param callable|null   $api_key_lookup  Test seam — see {@see check_request()}.
+	 * @return true|WP_Error
+	 */
+	private static function compute_check(
 		WP_REST_Request $request,
 		string $scope,
 		?callable $api_key_lookup = null
