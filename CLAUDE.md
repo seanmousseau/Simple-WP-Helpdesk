@@ -6,7 +6,7 @@ Working-memory for AI agents on Simple WP Helpdesk. Hot invariants, dev commands
 
 Simple WP Helpdesk — a WordPress helpdesk/ticketing plugin. No custom DB tables; uses CPT (`helpdesk_ticket`), comments, post meta, and `wp_options`.
 
-- **Version:** 4.1.0 | **WP:** 6.0+ | **PHP:** 8.0+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
+- **Version:** 4.1.1 | **WP:** 6.0+ | **PHP:** 8.0+ | **Repo:** seanmousseau/Simple-WP-Helpdesk
 - **Plugin lives in:** `simple-wp-helpdesk/` subdir. Repo root holds dev tooling only.
 
 ## Session start — read these every session
