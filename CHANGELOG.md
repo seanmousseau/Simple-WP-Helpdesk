@@ -33,10 +33,11 @@ starting from the next release after 1.8.
 
 - API keys stored as **bcrypt hashes** (cost 12); plaintext is shown once at generation and never persisted.
 - IP-bucket rate limiting hashes IPs via `hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) )` so transient keys cannot be reverse-mapped to source IPs. Per-IP buckets now read the canonical `swh_get_client_ip()` helper so CDN / X-Forwarded-For callers bucket per real client. (CR #526 #9)
+- `swh_get_client_ip()` only trusts `CF-Connecting-IP` / `X-Forwarded-For` when the operator has explicitly declared `define( 'SWH_TRUST_PROXY', true );` in `wp-config.php`. Without the opt-in, the helper falls back to `REMOTE_ADDR` so direct-to-origin clients cannot spoof the header to rotate fake IPs and skip the per-IP rate limit. Operator note added to `docs/api-keys.md`. (post-CR hardening)
 - Public-settings endpoint allowlist is **explicit** (no wildcards); a unit-test drift detector fails CI if a known-secret key is added.
 - `Auth::check_request()` logged-in-WP-user precedence is unconditional — a low-cap logged-in user is **never** silently upgraded via a bearer API key on the same request.
 - `swh_insert_helpdesk_reply()` now validates every pre-uploaded attachment URL against `wp_upload_dir()['baseurl']` and rejects the insert outright when a URL points outside the uploads directory — closes a path where a privileged caller could persist arbitrary remote URLs into reply meta. (CR #526 #5)
-- `wp eval` payloads in `testing/scripts/wp_cli_helpers.py` now JSON-encode interpolated values so PHP-string injection through test fixtures is impossible. (CR #526 #15)
+- `wp eval` payloads in `testing/scripts/wp_cli_helpers.py` now base64-encode interpolated values via `_php_str()`. Defends against **both** layers of injection the value passes through: the PHP parser (caller-supplied label/title can't break out of the surrounding string literal) AND the shell quoting (`'…'` argument to `sh -c "wp eval '…'"`, including SSH-remote shells, which `json.dumps()` alone left exposed when the input contained a `'` character). (CR #526 #15 + post-CR follow-up)
 
 ### Fixed
 

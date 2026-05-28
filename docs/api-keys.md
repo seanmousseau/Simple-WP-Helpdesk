@@ -118,6 +118,20 @@ The REST API uses `GET`, `POST`, `PATCH`, and `DELETE`. Some hardened WordPress 
 
 A diagnostic: if `curl -X PATCH` against a `/wp-json/swh/v1/tickets/<id>` URL returns a generic Apache 403 page (not a JSON error envelope), the request was blocked by Apache before it reached WordPress. That's the `.htaccess` pattern above.
 
+### Per-IP rate limit on public endpoints requires trust-proxy opt-in
+
+The unauthenticated `GET /wp-json/swh/v1/settings/public` endpoint (and `GET /wp-json/swh/v1/openapi.json`) is rate-limited per client IP (20 req/min default). The plugin reads `REMOTE_ADDR` directly by default — the IP address WordPress sees on the request socket.
+
+When your install sits behind a reverse proxy (Cloudflare, Nginx, a load balancer, Varnish, etc.), `REMOTE_ADDR` is the **proxy's** address, not the client's. Every visitor through the same proxy then hashes to the same per-IP bucket, and the 20 req/min budget collapses into a single shared limit for the whole site.
+
+To honour the proxy's `CF-Connecting-IP` or `X-Forwarded-For` header instead, declare the trust opt-in in `wp-config.php`:
+
+```php
+define( 'SWH_TRUST_PROXY', true );
+```
+
+**Only set this when you actually have a trusted proxy in front of WordPress.** Without a trusted proxy, anyone connecting directly to your origin can spoof the header to rotate fake IPs and skip the rate limit. The default (opt-out) is the safer setting for direct-to-origin installs.
+
 ### WordPress Application Passwords requires HTTPS recognition
 
 Application Passwords (the second supported auth scheme in v4.1.0) need WordPress's `wp_is_application_passwords_available()` to return `true`. Two common reasons that returns `false`:

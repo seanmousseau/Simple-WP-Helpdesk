@@ -17,23 +17,30 @@ unit and E2E paths converge on the same SQL.
 """
 from __future__ import annotations
 
-import json
-import subprocess
+import base64
 from typing import Optional
 
 
 def _php_str(value: str) -> str:
-    """Render a Python string as a safe PHP double-quoted string literal.
+    """Render a Python string as a PHP expression that evaluates to the value.
 
-    JSON-encoded strings happen to be a valid PHP double-quoted-string
-    syntax for the characters we care about here (letters, digits, dashes,
-    underscores, quotes, backslashes). Using ``json.dumps`` instead of
-    f-string interpolation prevents any caller-supplied label/title from
-    breaking out of the surrounding ``'…'`` and injecting arbitrary PHP into
-    a ``wp eval`` payload — the value goes through the quote/escape rules
-    of a JSON parser instead of being naively concatenated.
+    Defends against BOTH layers of interpretation that the value will pass
+    through on the way to PHP:
+
+    1. **PHP parser** — the expression is embedded in a `wp eval` payload.
+       Naive interpolation could let a caller-supplied label/title close the
+       PHP string literal and inject arbitrary PHP.
+    2. **Shell quoting** — the payload is then handed to `sh -c "wp eval
+       '...'"` (and, in SSH mode, through a second shell on the remote
+       host). A literal `'` in the value (e.g. ``"O'Brien"``) would break
+       the outer single-quoted shell argument.
+
+    Base64-encoding satisfies both: the output is in the `[A-Za-z0-9+/=]`
+    alphabet — no characters with special meaning in PHP string syntax or
+    in shell quoting. PHP decodes at runtime via `base64_decode()`.
     """
-    return json.dumps(value)
+    b64 = base64.b64encode(value.encode("utf-8")).decode("ascii")
+    return f'base64_decode("{b64}")'
 
 
 _CLEAR_RL_PHP = (
