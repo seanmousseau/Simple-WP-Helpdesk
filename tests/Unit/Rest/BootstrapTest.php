@@ -37,6 +37,12 @@ final class BootstrapTest extends TestCase {
 		$this->transients = array();
 		$this->options    = array();
 
+		// Bootstrap::settings_public_permission() routes the IP source
+		// through swh_get_client_ip() (Phase 7 hardening + CR #526 #9). The
+		// helper is defined globally by includes/helpers.php (other test
+		// files load it first) and calls wp_unslash() + sanitize_text_field();
+		// both are stubbed in tests/bootstrap.php so it works in WP_Mock too.
+
 		WP_Mock::userFunction(
 			'get_transient',
 			array(

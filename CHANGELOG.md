@@ -32,9 +32,12 @@ starting from the next release after 1.8.
 ### Security
 
 - API keys stored as **bcrypt hashes** (cost 12); plaintext is shown once at generation and never persisted.
-- IP-bucket rate limiting hashes IPs via `hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) )` so transient keys cannot be reverse-mapped to source IPs.
+- IP-bucket rate limiting hashes IPs via `hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) )` so transient keys cannot be reverse-mapped to source IPs. Per-IP buckets now read the canonical `swh_get_client_ip()` helper so CDN / X-Forwarded-For callers bucket per real client. (CR #526 #9)
+- `swh_get_client_ip()` only trusts `CF-Connecting-IP` / `X-Forwarded-For` when the operator has explicitly declared `define( 'SWH_TRUST_PROXY', true );` in `wp-config.php`. Without the opt-in, the helper falls back to `REMOTE_ADDR` so direct-to-origin clients cannot spoof the header to rotate fake IPs and skip the per-IP rate limit. Operator note added to `docs/api-keys.md`. (post-CR hardening)
 - Public-settings endpoint allowlist is **explicit** (no wildcards); a unit-test drift detector fails CI if a known-secret key is added.
 - `Auth::check_request()` logged-in-WP-user precedence is unconditional — a low-cap logged-in user is **never** silently upgraded via a bearer API key on the same request.
+- `swh_insert_helpdesk_reply()` now validates every pre-uploaded attachment URL against `wp_upload_dir()['baseurl']` and rejects the insert outright when a URL points outside the uploads directory — closes a path where a privileged caller could persist arbitrary remote URLs into reply meta. (CR #526 #5)
+- `wp eval` payloads in `testing/scripts/wp_cli_helpers.py` now base64-encode interpolated values via `_php_str()`. Defends against **both** layers of injection the value passes through: the PHP parser (caller-supplied label/title can't break out of the surrounding string literal) AND the shell quoting (`'…'` argument to `sh -c "wp eval '…'"`, including SSH-remote shells, which `json.dumps()` alone left exposed when the input contained a `'` character). (CR #526 #15 + post-CR follow-up)
 
 ### Fixed
 
@@ -42,6 +45,13 @@ starting from the next release after 1.8.
 - **PR #519 hotfix** — REST namespace collision between admin-internal controllers and the new public surface collapsed the admin Inbox (locked public schema won dispatch). Admin controllers relocated to `swh-admin/v1`.
 - **PR #521 hotfix** — `OpenApiController::SPEC_PATH` assumed the `docs/` sibling exists next to the plugin; single-plugin installs (no monorepo checkout) now fall back to the in-plugin `simple-wp-helpdesk/openapi.json` artifact.
 - `docs/internal/extended-test-plan.md` §5.2 contradicted §5.1 on filter persistence; the runbook now matches v4.0+ default-view snap-back behavior. (#504)
+- Plugin bootstrap now `require_once`s `src/Rest/Bootstrap.php` BEFORE the static `boot()` call so production single-plugin installs (no `vendor/autoload.php`) load the namespace owner. (CR #526 #1)
+- Admin ticket editor `$just_replied` flag is now gated on a successful `swh_insert_helpdesk_reply()` result — failed inserts no longer trigger "user replied" emails. (CR #526 #3)
+- Settings → API Keys: revoke action now mutates the row in place instead of rebuilding it with placeholder `last_used_at`/`rate_limit`/`created_at` zeros — the operator's visible history is preserved through revoke. (CR #526 #4)
+- `ApiKeys::persist()` returns a verified bool; `generate()` throws and `revoke()` returns false when the underlying option write fails, so callers no longer silently drop a key creation / revocation. (CR #526 #7)
+- `TicketController::update_item()` no longer double-bumps the ticket version when the patch includes a `status` change (`swh_set_ticket_status()` already bumps internally). (CR #526 #12)
+- `TicketsController::create_item()` hard-rolls-back the inserted post when the post-create field patch fails validation — no more orphan tickets on partial-failure creates. (CR #526 #13)
+- `UsersController` now always emits the `email` key (null when hidden by the `swh_hide_staff_email` filter) so the response shape is stable. (CR #526 #18)
 
 ### Documentation
 
@@ -53,6 +63,12 @@ starting from the next release after 1.8.
 - Invariants **#19** (`swh_update_ticket_fields()` is the only ticket-field mutation path) and **#20** (`swh_insert_helpdesk_reply()` is the only reply-insert path) added to `docs/internal/design-document.md`.
 - Phase 0 plan-discovery process codified (PR #507/#508): captured nine plan-vs-code contradictions in `docs/internal/v4.1.0-issue-snapshots/` before any code-touching phase ran.
 - V1 REST controllers now pass `Bootstrap::NAMESPACE` directly to `register_rest_route()` (was `$this->namespace`). Runtime byte-equal; clears a PHPStan `non-falsy-string` narrowing that fired on the PHP 8.1/8.2/8.3 CI matrix but not on the local PHP 8.5+ host. `phpstan.neon` now pins `phpVersion: 80100` so local analysis catches the same matrix-specific narrowing going forward. (PR #527)
+- `.github/workflows/php-tests.yml` actions pinned to commit SHAs (was floating major-version tags) so a future malicious action release cannot retroactively poison historic CI runs. (CR #526 #2)
+- `RateLimiter::read()` now `delete_option()`s expired wp_options floor rows so the options table doesn't grow unbounded on sites without persistent object cache. (CR #526 #11)
+- `RateLimiter::check()` doc-block now documents the read-modify-write non-atomicity under concurrency and the worst-case overshoot bound (single-digit, sized for abuse-prevention not accounting). (CR #526 #10)
+- Test infrastructure: `revoke_all_test_keys()` re-raises and logs when both UI and CLI cleanup paths fail so leaked test keys don't poison later runs (CR #526 #14); `RateLimitTestHelpers` now also deletes legacy un-prefixed `swh_rl_%` rows (CR #526 #16); `InsertHelpdeskReplyTest` happy-path asserts `comment_type='helpdesk_reply'` on the inserted comment (CR #526 #17); `ApiKeysAjaxTest` revoke happy-path asserts generate succeeded before consuming `$entry` (CR #526 #19).
+- Stylelint: dropped deprecated `clip` property + corrected `currentColor` → `currentcolor` keyword casing in `swh-api-keys.css`. (CR #526)
+- Documentation nits: added language identifiers to fenced code blocks in `docs/api-keys.md`, `docs/internal/component-inventory.md`, `docs/internal/plan_v4.1.0.md`; removed duplicate "Closed by Phase N" sentences across `docs/internal/v4.1.0-issue-snapshots/*.md`; normalized "localized" spelling in `docs/internal/contract-settings.md`. (CR #526)
 
 ### Notes
 

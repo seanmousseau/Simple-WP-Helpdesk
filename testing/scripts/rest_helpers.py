@@ -206,13 +206,22 @@ def revoke_all_test_keys(page: Page) -> None:
             modal.wait_for(state="visible", timeout=3000)
             page.click("#swh-apikey-revoke-confirm")
             modal.wait_for(state="hidden", timeout=3000)
-    except Exception:
+    except Exception as ui_err:
         # UI path failed (likely because the suite is mid-teardown). Fall back
-        # to CLI wipe. revoke_api_keys_with_label_prefix is idempotent.
+        # to CLI wipe. revoke_api_keys_with_label_prefix is idempotent. If the
+        # CLI wipe ALSO fails, surface the error — otherwise test runs would
+        # pass while leaving stale keys in the DB that contaminate later runs.
+        import sys
         try:
             revoke_api_keys_with_label_prefix(t.wpcli, "test_")
-        except Exception:
-            pass
+        except Exception as cli_err:
+            print(
+                f"revoke_all_test_keys: UI cleanup failed ({ui_err!r}) "
+                f"AND CLI fallback failed ({cli_err!r}) — test keys may "
+                f"leak between runs",
+                file=sys.stderr,
+            )
+            raise
 
 
 def clear_rate_limits(page: Page) -> None:

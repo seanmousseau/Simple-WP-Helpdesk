@@ -19,17 +19,17 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # 2.37.1
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
           coverage: none
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57  # v4.2.0
         with:
           path: vendor
           key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
@@ -54,10 +54,10 @@ jobs:
     name: OpenAPI — lint + YAML/JSON sync
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38  # v5.4.0
         with:
           python-version: '3.12'
 
@@ -84,7 +84,7 @@ jobs:
           fi
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
           node-version: '20'
 
@@ -95,9 +95,9 @@ jobs:
     name: Composer Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # 2.37.1
         with:
           php-version: '8.2'
           tools: composer:v2
@@ -106,15 +106,22 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-scripts
 
-      - name: Security audit (production deps only)
-        run: composer audit --no-dev
+      - name: Security audit (lockfile, all packages)
+        # `--locked` audits the composer.lock file directly without needing
+        # an installed package set. We intentionally audit BOTH require and
+        # require-dev — security advisories matter whether a dep ships in
+        # the bundle or only runs in CI, and the install step above already
+        # pulled the dev set so the lock is current. Older flag combos
+        # (`--no-dev` with `--locked`) errored "No installed packages found"
+        # on Composer 2.7+ runners despite the lock being authoritative.
+        run: composer audit --locked
 
   changelog-check:
     name: CHANGELOG Updated
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
@@ -161,11 +168,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # 2.37.1
         with:
           php-version: '8.2'
           tools: composer:v2

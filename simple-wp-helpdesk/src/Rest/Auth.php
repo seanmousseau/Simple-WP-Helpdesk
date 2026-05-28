@@ -234,12 +234,41 @@ final class Auth {
 		// can emit `X-RateLimit-*` on success AND so the rest_post_dispatch
 		// filter in Bootstrap can attach them to the 429 response on the
 		// over-limit path.
-		$override = isset( $entry['rate_limit'] ) && is_numeric( $entry['rate_limit'] )
-			? (int) $entry['rate_limit']
-			: 0;
-		$limit    = $override > 0 ? $override : self::DEFAULT_RATE_LIMIT;
-		$state    = RateLimiter::check( 'swh_rl_api_' . $id, $limit );
-		$request->set_param( '_swh_rate_limit_state', $state );
+		//
+		// Per-request dedup: the scope-aware auth cache at the top of this
+		// method already short-circuits same-scope re-invocations. But WP's
+		// {@see rest_send_allow_header()} re-fires permission_callback for
+		// EVERY handler on the matched route — so a route with both
+		// read-scope and write-scope handlers triggers two distinct
+		// cache-miss paths (one per scope) for a key that satisfies both.
+		// Without this guard, write-scope keys would get half their
+		// documented rate-limit budget on dual-handler routes. The
+		// `_swh_rate_limit_state` request param is the dedup marker: if
+		// any earlier invocation in this request already counted, reuse
+		// that state instead of incrementing again.
+		$existing_state = $request->get_param( '_swh_rate_limit_state' );
+		if (
+			is_array( $existing_state )
+			&& isset( $existing_state['allowed'], $existing_state['remaining'], $existing_state['reset'], $existing_state['limit'] )
+			&& is_bool( $existing_state['allowed'] )
+			&& is_int( $existing_state['remaining'] )
+			&& is_int( $existing_state['reset'] )
+			&& is_int( $existing_state['limit'] )
+		) {
+			$state = array(
+				'allowed'   => $existing_state['allowed'],
+				'remaining' => $existing_state['remaining'],
+				'reset'     => $existing_state['reset'],
+				'limit'     => $existing_state['limit'],
+			);
+		} else {
+			$override = isset( $entry['rate_limit'] ) && is_numeric( $entry['rate_limit'] )
+				? (int) $entry['rate_limit']
+				: 0;
+			$limit    = $override > 0 ? $override : self::DEFAULT_RATE_LIMIT;
+			$state    = RateLimiter::check( 'swh_rl_api_' . $id, $limit );
+			$request->set_param( '_swh_rate_limit_state', $state );
+		}
 
 		if ( ! $state['allowed'] ) {
 			$retry_after = max( 1, $state['reset'] - time() );

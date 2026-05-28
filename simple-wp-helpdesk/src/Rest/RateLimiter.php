@@ -59,6 +59,18 @@ final class RateLimiter {
 	 * Always returns a state array — even on the over-limit path — so callers
 	 * can emit `X-RateLimit-*` headers on the 429 response.
 	 *
+	 * **Concurrency.** The increment is read-modify-write and is NOT atomic
+	 * under concurrent requests. On sites with persistent object cache
+	 * (Redis/Memcached) the underlying transient `set` is effectively
+	 * last-writer-wins; on the wp_options floor it is `update_option`. In the
+	 * worst case a small burst of concurrent requests at the boundary of the
+	 * rolling window may each see the pre-increment count and write the same
+	 * `count + 1`, letting one or two extra requests through before the next
+	 * window. The limiter is sized for abuse-prevention, not for accounting,
+	 * so a single-digit overshoot under contention is acceptable. If a
+	 * stricter floor is ever required we'd switch the count to a scalar key
+	 * and use `wp_cache_incr()` for atomic increments.
+	 *
 	 * @param string $bucket_key Already-prefixed: `swh_rl_api_<id>` or `swh_rl_ip_<hash>`.
 	 * @param int    $limit      Max requests per 60-second rolling window.
 	 * @return array{ allowed: bool, remaining: int, reset: int, limit: int }
@@ -136,7 +148,8 @@ final class RateLimiter {
 
 		// Option fallback floor — used when the transient store evicted under
 		// memory pressure but the row is still valid time-wise.
-		$option = get_option( self::OPTION_PREFIX . $bucket_key, null );
+		$option_key = self::OPTION_PREFIX . $bucket_key;
+		$option     = get_option( $option_key, null );
 		if ( is_array( $option ) && isset( $option['count'], $option['window_start'] ) && is_numeric( $option['count'] ) && is_numeric( $option['window_start'] ) ) {
 			$window_start = (int) $option['window_start'];
 			if ( time() < $window_start + self::WINDOW_SECONDS ) {
@@ -145,6 +158,11 @@ final class RateLimiter {
 					'window_start' => $window_start,
 				);
 			}
+			// Expired floor — delete it so wp_options doesn't grow unbounded
+			// on sites without persistent object cache. Window + a small grace
+			// (handled by the comparison above) means anything reaching here
+			// is past the rolling window and safe to discard.
+			delete_option( $option_key );
 		}
 
 		return null;

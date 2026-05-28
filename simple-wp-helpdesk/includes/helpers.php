@@ -488,10 +488,24 @@ function swh_is_token_expired( $ticket_id ) {
  * @return string The client IP address, or empty string if unavailable.
  */
 function swh_get_client_ip() {
-	if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && is_string( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+	// Proxy headers (`CF-Connecting-IP`, `X-Forwarded-For`) are trivially
+	// spoofable by anyone connecting directly to the origin. Only honour them
+	// when the operator has explicitly declared their install sits behind a
+	// trusted reverse proxy via:
+	//
+	// define( 'SWH_TRUST_PROXY', true );
+	//
+	// in `wp-config.php`. Without that opt-in, fall back to `REMOTE_ADDR` so a
+	// rate-limit-evading client can't rotate fake IPs by setting the header
+	// themselves. Cloudflare-fronted installs SHOULD set the constant — the
+	// IP would otherwise hash to the CF edge node's address and pool every
+	// visitor behind that node into a single per-IP rate-limit bucket.
+	$trust_proxy = defined( 'SWH_TRUST_PROXY' ) && SWH_TRUST_PROXY;
+
+	if ( $trust_proxy && ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && is_string( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
 		return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
 	}
-	if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && is_string( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+	if ( $trust_proxy && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && is_string( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
 		$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
 		return trim( $ips[0] );
 	}

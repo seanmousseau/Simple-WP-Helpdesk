@@ -95,7 +95,7 @@ final class UsersControllerTest extends TestCase {
 		$this->assertStringNotContainsString( 'capabilities', $flat );
 	}
 
-	public function test_swh_hide_staff_email_filter_omits_email_field(): void {
+	public function test_swh_hide_staff_email_filter_nulls_email_field(): void {
 		WP_Mock::onFilter( 'swh_hide_staff_email' )->with( false )->reply( true );
 		WP_Mock::userFunction( 'get_users', array(
 			'return' => array(
@@ -108,10 +108,14 @@ final class UsersControllerTest extends TestCase {
 
 		$data = $response->get_data();
 		$this->assertCount( 1, $data );
+		// Per CR #526 #18: response shape is stable — `email` is always
+		// present, but null when the filter says hide. This lets clients
+		// rely on `data.email === null` instead of branching on key
+		// existence.
 		$keys = array_keys( $data[0] );
 		sort( $keys );
-		$this->assertSame( array( 'display_name', 'id' ), $keys );
-		$this->assertArrayNotHasKey( 'email', $data[0] );
+		$this->assertSame( array( 'display_name', 'email', 'id' ), $keys );
+		$this->assertNull( $data[0]['email'] );
 
 		$flat = (string) json_encode( $data );
 		$this->assertStringNotContainsString( 'alice@example.com', $flat );

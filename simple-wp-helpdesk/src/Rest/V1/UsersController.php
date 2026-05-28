@@ -131,14 +131,16 @@ final class UsersController extends WP_REST_Controller {
 	 * @return array<string,mixed>
 	 */
 	private static function from_user( WP_User $user, bool $hide_email ): array {
-		$out = array(
+		// Always emit the `email` key so the response shape is stable —
+		// clients can read `email` without conditional key-existence checks.
+		// When hidden, the value is null (documented as nullable in the
+		// OpenAPI schema).
+		$email = isset( $user->user_email ) ? (string) $user->user_email : '';
+		return array(
 			'id'           => (int) $user->ID,
 			'display_name' => isset( $user->display_name ) ? (string) $user->display_name : '',
+			'email'        => $hide_email ? null : $email,
 		);
-		if ( ! $hide_email ) {
-			$out['email'] = isset( $user->user_email ) ? (string) $user->user_email : '';
-		}
-		return $out;
 	}
 }
 

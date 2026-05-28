@@ -58,7 +58,7 @@ Lives inside `tab-integrations` and is rendered by `swh_render_api_keys_section(
 
 Locked error envelope: `{ code, message[, field] }`. Codes: `swh_apikey_bad_nonce`, `swh_apikey_forbidden`, `swh_apikey_label_required`, `swh_apikey_label_too_long`, `swh_apikey_scope_invalid`, `swh_apikey_rate_limit_out_of_range`, `swh_apikey_id_invalid`, `swh_apikey_revoke_failed`, `swh_apikey_generate_failed`.
 
-The shared nonce action is `swh_api_keys` (constant: `\SWH\Admin\ApiKeysAjax::NONCE_ACTION`). The nonce field name in the POST body is `_nonce` (constant: `\SWH\Admin\ApiKeysAjax::NONCE_FIELD`). Both are localised to the page via `wp_localize_script` on the `swhApiKeys` global.
+The shared nonce action is `swh_api_keys` (constant: `\SWH\Admin\ApiKeysAjax::NONCE_ACTION`). The nonce field name in the POST body is `_nonce` (constant: `\SWH\Admin\ApiKeysAjax::NONCE_FIELD`). Both are localized to the page via `wp_localize_script` on the `swhApiKeys` global.
 
 **Plaintext lifecycle invariants:**
 

@@ -282,10 +282,13 @@ class TicketController extends WP_REST_Controller {
 					'actor_id' => get_current_user_id(),
 				)
 			);
-			// swh_set_ticket_status() bumps the version internally; explicit
-			// bump covers the priority/assignee branches that don't bump from
-			// the helper itself.
-			TicketVersion::bump( $id );
+			// swh_set_ticket_status() bumps the version internally. Only emit an
+			// explicit bump when the patch has NO status mutation — otherwise
+			// each PATCH that changes status would jump the version by 2 and
+			// invalidate other clients' ETag prematurely.
+			if ( ! isset( $_field_patch['status'] ) ) {
+				TicketVersion::bump( $id );
+			}
 		}
 		if ( ! empty( $patch['mark_read'] ) ) {
 			// Drawer dispatches this after rendering the unread indicator so the

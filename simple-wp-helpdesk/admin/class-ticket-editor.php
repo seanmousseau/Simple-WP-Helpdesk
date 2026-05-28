@@ -589,8 +589,6 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 	$has_files  = ! empty( $files_name[0] );
 
 	if ( $reply_text || $has_files ) {
-		$just_replied = true;
-
 		// $_FILES handling stays in the admin path — the admin form posts
 		// multipart uploads through swh_handle_multiple_uploads() and the
 		// resulting URLs feed BOTH the comment meta AND the composite email
@@ -606,7 +604,10 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 		// v4.1.0 Phase 4: route through the canonical reply-insert helper
 		// (invariant #20). dispatch_email=false because the admin path emits
 		// its own composite "reply + status-change" email below.
-		swh_insert_helpdesk_reply(
+		// Only mark $just_replied true when the canonical insert helper
+		// confirms success — otherwise email branching below would fire
+		// "user reply" messages without an actual reply persisted.
+		$reply_result = swh_insert_helpdesk_reply(
 			$post_id,
 			array(
 				'body'             => $reply_text,
@@ -624,7 +625,10 @@ function swh_save_ticket_data( $post_id, $post, $update ) {
 			)
 		);
 
-		$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
+		if ( $reply_result && ! is_wp_error( $reply_result ) ) {
+			$just_replied    = true;
+			$data['message'] = $reply_text ? $reply_text : __( 'Attached file(s)', 'simple-wp-helpdesk' );
+		}
 	}
 
 	$status_changed = ( $update && $old_status !== $new_status );

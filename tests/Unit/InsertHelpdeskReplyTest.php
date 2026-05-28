@@ -59,6 +59,13 @@ final class InsertHelpdeskReplyTest extends TestCase {
 		WP_Mock::userFunction( 'get_option', array( 'return' => '' ) );
 		WP_Mock::userFunction( 'admin_url', array( 'return' => 'https://example.com/wp-admin/' ) );
 		WP_Mock::userFunction( 'wp_get_attachment_url', array( 'return' => false ) );
+		// Stub uploads baseurl for the pre-uploaded URL allowlist check.
+		WP_Mock::userFunction( 'wp_upload_dir', array(
+			'return' => array(
+				'baseurl' => 'https://example.com/wp-content/uploads',
+				'basedir' => '/tmp/uploads',
+			),
+		) );
 	}
 
 	protected function tearDown(): void {
@@ -92,9 +99,23 @@ final class InsertHelpdeskReplyTest extends TestCase {
 
 	public function test_staff_reply_inserts_helpdesk_reply_comment_and_fires_action(): void {
 		$this->stub_ticket( 42 );
+
+		// Capture the comment payload via a callback matcher so we can assert
+		// invariant #7 (comments inserted by this helper MUST carry
+		// comment_type='helpdesk_reply' to segregate ticket activity from
+		// regular blog comments). WP_Mock's `args` matcher accepts a callable
+		// that returns true for a match — we use it both as the matcher and
+		// as a side-channel to record the payload for later assertions.
+		$captured_payload = null;
 		WP_Mock::userFunction( 'wp_insert_comment', array(
 			'times'  => 1,
-			'return' => 1001,
+			'args'   => array(
+				\WP_Mock\Functions::type( 'array' ),
+			),
+			'return' => function ( $payload ) use ( &$captured_payload ) {
+				$captured_payload = $payload;
+				return 1001;
+			},
 		) );
 		WP_Mock::expectAction( 'swh_ticket_replied', 42, 1001, true );
 		$this->permissive_meta_writes();
@@ -108,6 +129,9 @@ final class InsertHelpdeskReplyTest extends TestCase {
 		) );
 
 		$this->assertSame( 1001, $id );
+		$this->assertIsArray( $captured_payload, 'wp_insert_comment must receive an array payload.' );
+		$this->assertSame( 'helpdesk_reply', $captured_payload['comment_type'] ?? null,
+			"Invariant #7: replies inserted by swh_insert_helpdesk_reply() must use comment_type='helpdesk_reply'." );
 	}
 
 	public function test_internal_note_sets_meta_and_skips_email(): void {
@@ -275,9 +299,10 @@ final class InsertHelpdeskReplyTest extends TestCase {
 
 	public function test_pre_uploaded_urls_persisted_to_comment_meta(): void {
 		$this->stub_ticket( 42 );
+		$valid_url = 'https://example.com/wp-content/uploads/2026/01/y.png';
 		WP_Mock::userFunction( 'wp_insert_comment', array( 'return' => 6006 ) );
 		WP_Mock::userFunction( 'update_comment_meta', array(
-			'args'  => array( 6006, '_attachments', array( 'https://x/y.png' ) ),
+			'args'  => array( 6006, '_attachments', array( $valid_url ) ),
 			'times' => 1,
 		) );
 		$this->permissive_meta_writes();
@@ -287,10 +312,34 @@ final class InsertHelpdeskReplyTest extends TestCase {
 			'author_user_id'   => 7,
 			'author_name'      => 'Tech',
 			'author_email'     => 'tech@example.com',
-			'attachment_urls'  => array( 'https://x/y.png' ),
-			'attachment_names' => array( 'https://x/y.png' => 'y.png' ),
+			'attachment_urls'  => array( $valid_url ),
+			'attachment_names' => array( $valid_url => 'y.png' ),
 			'dispatch_email'   => false,
 		) );
 		$this->assertSame( 6006, $id );
+	}
+
+	/**
+	 * Security regression: pre-uploaded URLs that don't live under the site's
+	 * uploads baseurl must be rejected outright. A caller could otherwise
+	 * smuggle an arbitrary remote URL into the reply meta and the rendered
+	 * HTML would happily embed/link it.
+	 */
+	public function test_pre_uploaded_urls_outside_uploads_baseurl_are_rejected(): void {
+		$this->stub_ticket( 42 );
+		// wp_insert_comment must NOT be reached when the URL fails validation.
+		WP_Mock::userFunction( 'wp_insert_comment', array( 'times' => 0 ) );
+		$this->permissive_meta_writes();
+
+		$id = swh_insert_helpdesk_reply( 42, array(
+			'body'             => 'malicious payload',
+			'author_user_id'   => 7,
+			'author_name'      => 'Tech',
+			'author_email'     => 'tech@example.com',
+			'attachment_urls'  => array( 'https://evil.example/exfil.png' ),
+			'attachment_names' => array( 'https://evil.example/exfil.png' => 'exfil.png' ),
+			'dispatch_email'   => false,
+		) );
+		$this->assertFalse( $id, 'insert helper must reject URLs outside the uploads baseurl.' );
 	}
 }
