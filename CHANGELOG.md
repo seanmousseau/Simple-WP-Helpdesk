@@ -52,6 +52,7 @@ starting from the next release after 1.8.
 
 - Invariants **#19** (`swh_update_ticket_fields()` is the only ticket-field mutation path) and **#20** (`swh_insert_helpdesk_reply()` is the only reply-insert path) added to `docs/internal/design-document.md`.
 - Phase 0 plan-discovery process codified (PR #507/#508): captured nine plan-vs-code contradictions in `docs/internal/v4.1.0-issue-snapshots/` before any code-touching phase ran.
+- V1 REST controllers now pass `Bootstrap::NAMESPACE` directly to `register_rest_route()` (was `$this->namespace`). Runtime byte-equal; clears a PHPStan `non-falsy-string` narrowing that fired on the PHP 8.1/8.2/8.3 CI matrix but not on the local PHP 8.5+ host. `phpstan.neon` now pins `phpVersion: 80100` so local analysis catches the same matrix-specific narrowing going forward. (PR #527)
 
 ### Notes
 
