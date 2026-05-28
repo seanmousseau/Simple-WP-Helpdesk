@@ -38,6 +38,7 @@ starting from the next release after 1.8.
 
 ### Fixed
 
+- REST rate-limit counter no longer increments multiple times per request when WP REST re-fires `permission_callback` via `rest_send_allow_header()` (wp-includes/rest-api.php:866-898). Effective per-key budget now matches the documented 60 req/min default (was ~30/min); per-IP budget on `settings/public` now matches the documented 20 req/min (was ~10/min). Cached per-request per-scope on the request via `WP_REST_Request::set_param`.
 - **PR #519 hotfix** — REST namespace collision between admin-internal controllers and the new public surface collapsed the admin Inbox (locked public schema won dispatch). Admin controllers relocated to `swh-admin/v1`.
 - **PR #521 hotfix** — `OpenApiController::SPEC_PATH` assumed the `docs/` sibling exists next to the plugin; single-plugin installs (no monorepo checkout) now fall back to the in-plugin `simple-wp-helpdesk/openapi.json` artifact.
 - `docs/internal/extended-test-plan.md` §5.2 contradicted §5.1 on filter persistence; the runbook now matches v4.0+ default-view snap-back behavior. (#504)
