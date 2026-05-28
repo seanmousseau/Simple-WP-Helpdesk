@@ -122,13 +122,22 @@ function swh_inbox_enqueue( string $hook ): void {
 		$version
 	);
 
+	// v4.1.1 (#537): surface operator-configured priority + status labels so
+	// the React drawer's SelectControls render the same enums the REST API
+	// validates against. Without this the drawer hardcoded `Normal` /
+	// `Urgent` which silently mismatch the configured `Low / Medium / High`
+	// defaults and fail REST priority validation.
+	$statuses   = swh_get_statuses();
+	$priorities = swh_get_priorities();
 	wp_localize_script(
 		'swh-admin-inbox',
 		'swhInbox',
 		array(
-			'restUrl'       => esc_url_raw( rest_url( 'swh/v1/' ) ),
-			'restNonce'     => wp_create_nonce( 'wp_rest' ),
-			'currentUserId' => get_current_user_id(),
+			'restUrl'        => esc_url_raw( rest_url( 'swh/v1/' ) ),
+			'restNonce'      => wp_create_nonce( 'wp_rest' ),
+			'currentUserId'  => get_current_user_id(),
+			'statusLabels'   => is_array( $statuses ) ? array_values( $statuses ) : array(),
+			'priorityLabels' => is_array( $priorities ) ? array_values( $priorities ) : array(),
 		)
 	);
 }

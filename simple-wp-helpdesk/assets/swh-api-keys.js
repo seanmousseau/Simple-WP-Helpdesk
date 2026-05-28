@@ -276,7 +276,21 @@
 	function openSecretModal( plaintext ) {
 		modal.plaintext = plaintext;
 		modal.copied    = false;
-		modal.opener    = document.activeElement;
+		// The Generate button is disabled across the async generate round-trip
+		// (refs.generateBtn.disabled = true in onGenerate), which causes
+		// browsers to drop focus to <body>. Capturing document.activeElement
+		// here would therefore stash <body> and the close path would move
+		// focus to a non-interactive element — losing the keyboard user's
+		// place. Prefer the Generate button as the canonical opener and only
+		// fall back to whatever was active otherwise.
+		var active = document.activeElement;
+		if ( refs.generateBtn ) {
+			modal.opener = refs.generateBtn;
+		} else if ( active && active !== document.body ) {
+			modal.opener = active;
+		} else {
+			modal.opener = null;
+		}
 
 		refs.plaintextInput.value = plaintext;
 		refs.copyBtn.classList.remove( 'is-copied' );

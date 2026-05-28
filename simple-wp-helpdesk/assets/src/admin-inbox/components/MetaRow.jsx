@@ -6,18 +6,31 @@ import { __ } from '@wordpress/i18n';
 import { SelectControl } from '@wordpress/components';
 import { SWH_DRAWER_STORE } from '../store/drawer';
 
-const getStatusOptions = () => [
-	{ value: 'open', label: __( 'Open', 'simple-wp-helpdesk' ) },
-	{ value: 'in_progress', label: __( 'In Progress', 'simple-wp-helpdesk' ) },
-	{ value: 'resolved', label: __( 'Resolved', 'simple-wp-helpdesk' ) },
-	{ value: 'closed', label: __( 'Closed', 'simple-wp-helpdesk' ) },
-];
-const getPriorityOptions = () => [
-	{ value: 'low', label: __( 'Low', 'simple-wp-helpdesk' ) },
-	{ value: 'normal', label: __( 'Normal', 'simple-wp-helpdesk' ) },
-	{ value: 'high', label: __( 'High', 'simple-wp-helpdesk' ) },
-	{ value: 'urgent', label: __( 'Urgent', 'simple-wp-helpdesk' ) },
-];
+// v4.1.1 (#537): read the operator-configured priority + status labels
+// from the swhInbox localize bundle so the dropdown matches what the REST
+// API validates and what the rest of the plugin renders. Falling back to a
+// minimal default keeps the component renderable in tests / preview
+// environments without the localize bundle.
+const DEFAULT_STATUS_LABELS = [ 'Open', 'In Progress', 'Resolved', 'Closed' ];
+const DEFAULT_PRIORITY_LABELS = [ 'Low', 'Medium', 'High' ];
+
+const readLocalizedLabels = ( key, fallback ) => {
+	const bag = ( typeof window !== 'undefined' && window.swhInbox ) || {};
+	const list = Array.isArray( bag[ key ] ) ? bag[ key ].filter( ( v ) => typeof v === 'string' && v !== '' ) : [];
+	return list.length ? list : fallback;
+};
+
+const getStatusOptions = () =>
+	readLocalizedLabels( 'statusLabels', DEFAULT_STATUS_LABELS ).map( ( label ) => ( {
+		value: label,
+		label,
+	} ) );
+
+const getPriorityOptions = () =>
+	readLocalizedLabels( 'priorityLabels', DEFAULT_PRIORITY_LABELS ).map( ( label ) => ( {
+		value: label,
+		label,
+	} ) );
 
 // Module-level cache so opening different tickets in the same session
 // reuses one fetch.
