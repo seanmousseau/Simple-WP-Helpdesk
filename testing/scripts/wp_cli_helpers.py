@@ -17,8 +17,23 @@ unit and E2E paths converge on the same SQL.
 """
 from __future__ import annotations
 
+import json
 import subprocess
 from typing import Optional
+
+
+def _php_str(value: str) -> str:
+    """Render a Python string as a safe PHP double-quoted string literal.
+
+    JSON-encoded strings happen to be a valid PHP double-quoted-string
+    syntax for the characters we care about here (letters, digits, dashes,
+    underscores, quotes, backslashes). Using ``json.dumps`` instead of
+    f-string interpolation prevents any caller-supplied label/title from
+    breaking out of the surrounding ``'…'`` and injecting arbitrary PHP into
+    a ``wp eval`` payload — the value goes through the quote/escape rules
+    of a JSON parser instead of being naively concatenated.
+    """
+    return json.dumps(value)
 
 
 _CLEAR_RL_PHP = (
@@ -61,7 +76,7 @@ def revoke_api_keys_with_label_prefix(wpcli, prefix: str = "test_") -> None:
         prefix: Label prefix to match (default ``test_``).
     """
     php = (
-        f"$prefix = '{prefix}'; "
+        f"$prefix = {_php_str(prefix)}; "
         "$opt = get_option('swh_settings_integrations', array()); "
         "if (!is_array($opt)) { $opt = array(); } "
         "$keys = isset($opt['api_keys']) && is_array($opt['api_keys']) ? $opt['api_keys'] : array(); "
@@ -80,8 +95,8 @@ def revoke_api_keys_with_label_prefix(wpcli, prefix: str = "test_") -> None:
 def seed_test_ticket(wpcli, title: str, content: str = "seed body") -> Optional[int]:
     """Create a published `helpdesk_ticket` and return its post id (or None)."""
     php = (
-        f"$id = wp_insert_post(array('post_type'=>'helpdesk_ticket',"
-        f"'post_title'=>'{title}','post_content'=>'{content}',"
+        "$id = wp_insert_post(array('post_type'=>'helpdesk_ticket',"
+        f"'post_title'=>{_php_str(title)},'post_content'=>{_php_str(content)},"
         "'post_status'=>'publish')); echo (int) $id;"
     )
     out = wpcli(f"eval '{php}'")

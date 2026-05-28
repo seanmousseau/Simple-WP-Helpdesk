@@ -343,17 +343,25 @@ final class TicketsController extends WP_REST_Controller {
 		}
 		$ticket_id = (int) $insert_result;
 
-		// Apply optional fields through the canonical helper.
+		// Apply optional fields through the canonical helper. If the field
+		// patch fails validation, hard-rollback the inserted post so we
+		// never leave an orphan ticket whose status/priority/assignee never
+		// got applied — that would surface in the inbox as a half-created
+		// ticket the caller never saw a successful 201 for.
 		$fields = $this->build_field_patch( $request );
 		if ( ! empty( $fields ) ) {
 			$result = swh_update_ticket_fields( $ticket_id, $fields, $this->context_for( $request ) );
 			if ( ! $result['ok'] ) {
+				wp_delete_post( $ticket_id, true );
 				return $this->validation_error( $result['errors'] );
 			}
 		}
 
 		$post = get_post( $ticket_id );
 		if ( ! $post instanceof WP_Post ) {
+			// Defensive — if the post vanished between insert and get_post,
+			// surface as not-found rather than 500. No orphan to clean since
+			// it's already gone.
 			return Errors::respond( Errors::NOT_FOUND, 404, __( 'Ticket not found after create.', 'simple-wp-helpdesk' ) );
 		}
 		$response = ResponseDecorator::with_rate_limit_headers(

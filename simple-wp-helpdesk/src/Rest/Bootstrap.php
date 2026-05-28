@@ -104,8 +104,10 @@ final class Bootstrap {
 	 * Permission wrapper for the public `settings/public` route. Applies a
 	 * per-IP rate limit (Phase 7, #367) before allowing the anonymous read.
 	 *
-	 * IP source: `$_SERVER['REMOTE_ADDR']`. Missing / non-string falls back to
-	 * the literal string `0.0.0.0` so the bucket key remains valid. The IP is
+	 * IP source: `swh_get_client_ip()` — honors CF-Connecting-IP and
+	 * X-Forwarded-For so proxied/CDN callers bucket per real client. Missing
+	 * / non-string falls back to the literal string `0.0.0.0` so the bucket
+	 * key remains valid. The IP is
 	 * hashed with `hash_hmac('sha256', $ip, wp_salt('nonce'))` before use so
 	 * raw addresses never appear in transient keys (security-model.md).
 	 *
@@ -126,14 +128,16 @@ final class Bootstrap {
 			return $cached;
 		}
 
-		// REMOTE_ADDR is a server-provided IP; sanitize_text_field strips
-		// anything that wouldn't survive a hash_hmac call. Fallback to 0.0.0.0
-		// when the server didn't populate it (CLI, tests, exotic SAPIs).
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
-		$raw_ip = isset( $_SERVER['REMOTE_ADDR'] ) && is_string( $_SERVER['REMOTE_ADDR'] )
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
-			? sanitize_text_field( (string) $_SERVER['REMOTE_ADDR'] )
-			: '0.0.0.0';
+		// Use the canonical IP helper so proxied requests (Cloudflare,
+		// X-Forwarded-For) bucket per real caller, not per origin server.
+		// swh_get_client_ip() is loaded by the plugin bootstrap before any
+		// REST controller can reach this path. Returns an empty string in
+		// exotic SAPIs — fall back to a stable sentinel so the hashed
+		// bucket is consistent.
+		$raw_ip = (string) swh_get_client_ip();
+		if ( '' === $raw_ip ) {
+			$raw_ip = '0.0.0.0';
+		}
 		$hashed = hash_hmac( 'sha256', $raw_ip, wp_salt( 'nonce' ) );
 		$state  = RateLimiter::check( 'swh_rl_ip_' . $hashed, self::PUBLIC_IP_RATE_LIMIT );
 		$request->set_param( '_swh_rate_limit_state', $state );

@@ -301,7 +301,7 @@ This refactor lands in the same PR as the new endpoints — it's a Phase 3 prere
 
 ### Ticket response schema (locked — also the source of truth for Phase 8 OpenAPI `Ticket` component)
 
-```
+```yaml
 id              int
 subject         string
 status          enum(open, on-hold, in-progress, resolved, closed)
@@ -385,8 +385,8 @@ Lands as the first commit on the branch; the controller goes on top.
 
 ### Request shape (POST)
 
-```
-{ body: string, is_internal_note: bool, attachments: int[]  /* media IDs */ }
+```json
+{ "body": "string", "is_internal_note": true, "attachments": [123] }
 ```
 
 ### Behaviour (locked from #363)
@@ -445,7 +445,7 @@ Lands as the first commit on the branch; the controller goes on top.
 
 ### Public settings allowlist (locked)
 
-```
+```yaml
 priority_labels      => from swh_priority_labels option
 status_labels        => from swh_status_labels option
 sla_thresholds       => { low: int|null, medium: int|null, high: int|null, urgent: int|null } (hours)

@@ -420,6 +420,20 @@ if ( ! class_exists( 'WP_User' ) ) {
 // Minimal WordPress function stubs required by unit tests.
 // WP_Mock does not define every WordPress function; define those needed here.
 
+if ( ! function_exists( 'wp_unslash' ) ) {
+	/**
+	 * Stub: strip slashes from a string (matches WP behaviour for scalar
+	 * inputs). Real WP recurses into arrays/objects — tests only need the
+	 * scalar path.
+	 *
+	 * @param mixed $value Input value.
+	 * @return mixed
+	 */
+	function wp_unslash( $value ) {
+		return is_string( $value ) ? stripslashes( $value ) : $value;
+	}
+}
+
 if ( ! function_exists( 'sanitize_text_field' ) ) {
 	/**
 	 * Stub: strip tags and trim (matches WP behaviour for simple strings).

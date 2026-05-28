@@ -83,6 +83,7 @@ final class ApiKeys {
 	 * @param int|null $rate_limit Optional per-key rate-limit override.
 	 * @return array{plaintext:string, entry:array<string,mixed>} The plaintext and the persisted entry MINUS the hash.
 	 * @throws InvalidArgumentException If $label or $scope is invalid.
+	 * @throws \RuntimeException If the persistent option write fails.
 	 */
 	public static function generate( string $label, string $scope, ?int $rate_limit = null ): array {
 		$label = trim( $label );
@@ -113,7 +114,9 @@ final class ApiKeys {
 
 		$entries   = self::all();
 		$entries[] = $entry;
-		self::persist( $entries );
+		if ( ! self::persist( $entries ) ) {
+			throw new \RuntimeException( 'Failed to persist new API key entry.' );
+		}
 
 		// Exclude the hash from the returned entry so callers cannot accidentally log it.
 		$public_entry = $entry;
@@ -192,8 +195,7 @@ final class ApiKeys {
 			return false;
 		}
 
-		self::persist( $entries );
-		return true;
+		return self::persist( $entries );
 	}
 
 	/**
@@ -258,14 +260,27 @@ final class ApiKeys {
 	/**
 	 * Write the entries array back into the integrations bag.
 	 *
+	 * Returns true on successful write OR when the option value is already
+	 * identical to what we'd write (update_option returns false in that case
+	 * but it's not an error). Returns false on real write failure so callers
+	 * can surface storage errors instead of silently dropping a revocation /
+	 * key creation.
+	 *
 	 * @param array<int,array<string,mixed>> $entries
 	 */
-	private static function persist( array $entries ): void {
+	private static function persist( array $entries ): bool {
 		$bag = get_option( self::OPTION, array() );
 		if ( ! is_array( $bag ) ) {
 			$bag = array();
 		}
 		$bag[ self::SUBKEY ] = array_values( $entries );
-		update_option( self::OPTION, $bag );
+		if ( update_option( self::OPTION, $bag ) ) {
+			return true;
+		}
+		// update_option returns false either on failure OR when value is
+		// unchanged. Re-read to confirm the persisted state matches what we
+		// intended; only treat a true mismatch as a hard failure.
+		$verify = get_option( self::OPTION, array() );
+		return is_array( $verify ) && isset( $verify[ self::SUBKEY ] ) && $verify[ self::SUBKEY ] === $bag[ self::SUBKEY ];
 	}
 }

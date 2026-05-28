@@ -49,6 +49,9 @@ require_once SWH_PLUGIN_DIR . 'src/Concurrency/TicketVersion.php';
 
 // v4.1.0 public REST surface — Phase 2 bootstrap registers the `swh/v1`
 // namespace owner; Phase 3+ controllers plug in via Bootstrap::register_controller().
+// Production single-plugin installs may not ship vendor/autoload.php, so explicitly
+// require the Bootstrap class file before calling its static boot() method.
+require_once SWH_PLUGIN_DIR . 'src/Rest/Bootstrap.php';
 \SWH\Rest\Bootstrap::boot();
 
 // v4.1.0 Phase 3 — public `swh/v1/tickets` CRUD controller (#362). The

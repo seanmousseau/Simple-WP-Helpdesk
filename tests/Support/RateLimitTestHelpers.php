@@ -44,6 +44,10 @@ if ( ! function_exists( 'swh_test_clear_rate_limits' ) ) {
 				"DELETE FROM {$prefix} WHERE option_name LIKE '\\_transient\\_swh\\_rl\\_%'"
 				. " OR option_name LIKE '\\_transient\\_timeout\\_swh\\_rl\\_%'"
 				. " OR option_name LIKE '\\_swh\\_rl\\_%'"
+				// Legacy un-prefixed rows written by swh_is_rate_limited() — these
+				// existed before the RateLimiter class added the leading underscore
+				// prefix; clean them up too so the broad-stroke reset is honest.
+				. " OR option_name LIKE 'swh\\_rl\\_%'"
 			);
 			// phpcs:enable
 		}

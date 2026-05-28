@@ -143,10 +143,24 @@ if ( ! function_exists( 'swh_insert_helpdesk_reply' ) ) {
 		$has_media_ids    = isset( $data['attachments'] ) && is_array( $data['attachments'] ) && ! empty( $data['attachments'] );
 
 		if ( $has_pre_uploaded ) {
+			// Security: reject any pre-uploaded URL that doesn't live under
+			// the site's uploads baseurl. Without this check a caller could
+			// inject an arbitrary remote URL into the reply meta and the
+			// rendered HTML would happily link/embed it.
+			$uploads      = wp_upload_dir();
+			$baseurl      = isset( $uploads['baseurl'] ) && is_string( $uploads['baseurl'] ) ? $uploads['baseurl'] : '';
+			$baseurl_norm = '' !== $baseurl ? rtrim( $baseurl, '/' ) . '/' : '';
+
 			foreach ( $data['attachment_urls'] as $url ) {
-				if ( is_string( $url ) && '' !== $url ) {
-					$attachment_urls[] = $url;
+				if ( ! is_string( $url ) || '' === $url ) {
+					continue;
 				}
+				if ( '' === $baseurl_norm || strpos( $url, $baseurl_norm ) !== 0 ) {
+					// Caller passed a URL outside the uploads dir — refuse the
+					// whole insert so we never persist a poisoned reference.
+					return false;
+				}
+				$attachment_urls[] = $url;
 			}
 			if ( isset( $data['attachment_names'] ) && is_array( $data['attachment_names'] ) ) {
 				foreach ( $data['attachment_names'] as $url => $name ) {

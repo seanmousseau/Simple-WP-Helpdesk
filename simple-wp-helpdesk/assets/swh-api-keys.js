@@ -441,8 +441,7 @@
 	}
 
 	function onRevokeConfirmed() {
-		var id    = revokeTarget.id;
-		var label = revokeTarget.label;
+		var id = revokeTarget.id;
 		if ( ! id ) {
 			return;
 		}
@@ -459,27 +458,26 @@
 				closeRevokeModal();
 				return;
 			}
-			// Reuse the previous row's metadata + flip revoked_at — the revoke
-			// endpoint returns only { revoked_at } so we read existing cells.
+			// The revoke endpoint returns only { revoked_at }. Mutate the
+			// existing row in place: preserve last_used_at, rate_limit,
+			// created_at, prefix, scope, label cells, then swap the actions
+			// cell for the "revoked at" label and apply the --revoked modifier
+			// class. Rebuilding via buildRow() with placeholder zero values
+			// would wipe the user's view of when the key was last used / when
+			// it was created.
 			var existing = refs.tbody.querySelector( 'tr[data-swh-apikey-id="' + id.replace( /"/g, '' ) + '"]' );
-			var prefix   = '';
 			if ( existing ) {
-				var codeNode = existing.querySelector( 'code' );
-				if ( codeNode ) {
-					prefix = ( codeNode.textContent || '' ).replace( /…$/, '' );
+				existing.className = 'swh-api-key-row swh-api-key-row--revoked';
+				var actionsCell = existing.lastElementChild;
+				if ( actionsCell ) {
+					while ( actionsCell.firstChild ) {
+						actionsCell.removeChild( actionsCell.firstChild );
+					}
+					actionsCell.appendChild(
+						el( 'span', { className: 'swh-api-key-revoked-label' }, format( i18n.revokedAt, formatDate( res.body.data.revoked_at ) ) )
+					);
 				}
 			}
-			var entry = {
-				id:           id,
-				label:        label,
-				scope:        existing && existing.children[ 1 ].textContent === i18n.scopeWrite ? 'write' : 'read',
-				prefix:       prefix,
-				last_used_at: 0,
-				rate_limit:   null,
-				created_at:   0,
-				revoked_at:   res.body.data.revoked_at,
-			};
-			replaceRow( id, entry );
 			showSuccess( i18n.revoked );
 			closeRevokeModal();
 		} ).catch( function () {

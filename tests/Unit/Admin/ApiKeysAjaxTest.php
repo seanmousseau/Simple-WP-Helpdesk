@@ -333,11 +333,21 @@ final class ApiKeysAjaxTest extends TestCase {
 	public function test_revoke_happy_path_returns_revoked_at(): void {
 		$this->gate();
 
-		// Generate a key first to give the revoke a real id to hit.
+		// Generate a key first to give the revoke a real id to hit. Assert
+		// the generate succeeded and the payload shape is what we expect
+		// before consuming `$entry` — otherwise a silent generate regression
+		// would surface as a confusing undefined-variable error instead of a
+		// clear failure on the generate path.
 		$_POST = array( 'label' => 'CI integration', 'scope' => 'read' );
+		$entry = null;
 		try {
 			ApiKeysAjax::handle_generate();
+			$this->fail( 'handle_generate() must short-circuit via ApiKeyAjaxStopException.' );
 		} catch ( ApiKeyAjaxStopException $e ) {
+			$this->assertTrue( $e->is_success, 'Generate must succeed before revoke can be exercised.' );
+			$this->assertArrayHasKey( 'entry', $e->payload );
+			$this->assertIsArray( $e->payload['entry'] );
+			$this->assertArrayHasKey( 'id', $e->payload['entry'] );
 			$entry = $e->payload['entry'];
 		}
 

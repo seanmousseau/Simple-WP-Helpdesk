@@ -410,7 +410,7 @@ Reuse this pattern any time the plugin returns a secret that the operator will n
 
 **Visual hierarchy (top → bottom):**
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │ ⚠  This is the only time you will see this key. Copy   │  ← Warning banner
 │    it now — it cannot be recovered later.               │    (full width, warning tokens)

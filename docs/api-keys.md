@@ -61,7 +61,7 @@ The format is `swhk_<32-character random string>`. The leading `swhk_` is intent
 
 Every response includes rate-limit headers (added in v4.1.0 Phase 7):
 
-```
+```http
 X-RateLimit-Limit:     60
 X-RateLimit-Remaining: 59
 X-RateLimit-Reset:     1717083600
