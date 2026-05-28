@@ -144,9 +144,10 @@ if ( ! function_exists( 'swh_insert_helpdesk_reply' ) ) {
 
 		if ( $has_pre_uploaded ) {
 			// Security: reject any pre-uploaded URL that doesn't live under
-			// the site's uploads baseurl. Without this check a caller could
-			// inject an arbitrary remote URL into the reply meta and the
-			// rendered HTML would happily link/embed it.
+			// the site's uploads baseurl. Prefix match is not enough on its
+			// own — `.../uploads/../../private` still passes `strpos === 0`,
+			// so we also reject any URL whose path component contains a
+			// traversal segment after percent-decoding.
 			$uploads      = wp_upload_dir();
 			$baseurl      = isset( $uploads['baseurl'] ) && is_string( $uploads['baseurl'] ) ? $uploads['baseurl'] : '';
 			$baseurl_norm = '' !== $baseurl ? rtrim( $baseurl, '/' ) . '/' : '';
@@ -159,6 +160,17 @@ if ( ! function_exists( 'swh_insert_helpdesk_reply' ) ) {
 					// Caller passed a URL outside the uploads dir — refuse the
 					// whole insert so we never persist a poisoned reference.
 					return false;
+				}
+				$path_part = wp_parse_url( $url, PHP_URL_PATH );
+				if ( ! is_string( $path_part ) ) {
+					return false;
+				}
+				$decoded  = rawurldecode( $path_part );
+				$segments = explode( '/', str_replace( '\\', '/', $decoded ) );
+				foreach ( $segments as $segment ) {
+					if ( '..' === $segment || '.' === $segment ) {
+						return false;
+					}
 				}
 				$attachment_urls[] = $url;
 			}

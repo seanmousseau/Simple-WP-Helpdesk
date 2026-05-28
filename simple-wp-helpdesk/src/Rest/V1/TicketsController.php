@@ -20,8 +20,14 @@ use function get_current_user_id;
 use function register_rest_route;
 use function sanitize_email;
 use function sanitize_text_field;
+use function swh_get_defaults;
+use function swh_get_string_meta;
+use function swh_get_string_option;
 use function swh_rest_require;
+use function swh_set_ticket_status;
 use function swh_update_ticket_fields;
+use function update_post_meta;
+use function wp_delete_post;
 use function wp_insert_post;
 use function wp_kses_post;
 
@@ -354,6 +360,30 @@ final class TicketsController extends WP_REST_Controller {
 			if ( ! $result['ok'] ) {
 				wp_delete_post( $ticket_id, true );
 				return $this->validation_error( $result['errors'] );
+			}
+		}
+
+		// Seed configured defaults for status/priority when the caller didn't
+		// supply them. Without this the post-create response reads back empty
+		// strings from `_ticket_status` / `_ticket_priority` until a
+		// subsequent admin save fills them in.
+		$defs = swh_get_defaults();
+		if ( '' === swh_get_string_meta( $ticket_id, '_ticket_status' ) ) {
+			$default_status = swh_get_string_option(
+				'swh_default_status',
+				is_string( $defs['swh_default_status'] ) ? $defs['swh_default_status'] : ''
+			);
+			if ( '' !== $default_status ) {
+				swh_set_ticket_status( $ticket_id, $default_status );
+			}
+		}
+		if ( '' === swh_get_string_meta( $ticket_id, '_ticket_priority' ) ) {
+			$default_priority = swh_get_string_option(
+				'swh_default_priority',
+				is_string( $defs['swh_default_priority'] ) ? $defs['swh_default_priority'] : ''
+			);
+			if ( '' !== $default_priority ) {
+				update_post_meta( $ticket_id, '_ticket_priority', $default_priority );
 			}
 		}
 

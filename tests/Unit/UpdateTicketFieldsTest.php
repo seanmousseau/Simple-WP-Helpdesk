@@ -167,6 +167,36 @@ final class UpdateTicketFieldsTest extends TestCase {
 		$this->assertArrayHasKey( 'priority', $result['errors'] );
 	}
 
+	/**
+	 * #532 — priority matching is case-insensitive; the stored value is the
+	 * operator-configured label (canonical casing).
+	 *
+	 * @dataProvider provide_priority_aliases
+	 */
+	public function test_priority_case_insensitive_resolves_to_configured_label( string $input ): void {
+		$this->stub_ticket( 42 );
+		WP_Mock::userFunction( 'update_post_meta', array(
+			'args'  => array( 42, '_ticket_priority', 'Medium' ),
+			'times' => 1,
+		) );
+
+		$result = swh_update_ticket_fields( 42, array( 'priority' => $input ) );
+
+		$this->assertTrue( $result['ok'], 'priority "' . $input . '" should validate' );
+		$this->assertContains( 'priority', $result['applied'] );
+	}
+
+	/**
+	 * @return array<string,array{0:string}>
+	 */
+	public function provide_priority_aliases(): array {
+		return array(
+			'lowercase' => array( 'medium' ),
+			'allcaps'   => array( 'MEDIUM' ),
+			'titlecase' => array( 'Medium' ),
+		);
+	}
+
 	// -----------------------------------------------------------------------
 	// Assignee — admin/technician role gate + swh_ticket_assigned action
 	// -----------------------------------------------------------------------

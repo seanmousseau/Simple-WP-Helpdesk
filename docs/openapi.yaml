@@ -525,8 +525,8 @@ components:
           description: Unique ticket identifier (post ID).
           readOnly: true
         subject: { type: string, description: Ticket subject. }
-        status: { type: string, description: Configured status label. }
-        priority: { type: string, description: Configured priority label. }
+        status: { type: string, description: "Configured status label. Matching on write is case-insensitive and tolerates _/-/space (e.g. `in_progress` resolves to the configured `In Progress`); the response always echoes the canonical operator-configured label." }
+        priority: { type: string, description: "Configured priority label. Matching on write is case-insensitive (e.g. `medium` resolves to the configured `Medium`); the response always echoes the canonical operator-configured label." }
         assignee:
           type: object
           properties:
