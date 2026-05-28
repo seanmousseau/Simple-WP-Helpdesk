@@ -6,23 +6,25 @@ import { Button, SelectControl } from '@wordpress/components';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { dispatchBulk } from '../util/bulk-action';
 
-// Status/priority option labels must be defined inside a function or component so
-// that `__()` is evaluated after i18n is initialized. They are memoized at render
-// time here for simplicity since these lists are static.
+// v4.1.1 (#537): read operator-configured priority + status labels from the
+// swhInbox localize bundle so the bulk dropdowns match the REST enum.
+const DEFAULT_STATUS_LABELS = [ 'Open', 'In Progress', 'Resolved', 'Closed' ];
+const DEFAULT_PRIORITY_LABELS = [ 'Low', 'Medium', 'High' ];
+
+const readLocalizedLabels = ( key, fallback ) => {
+	const bag = ( typeof window !== 'undefined' && window.swhInbox ) || {};
+	const list = Array.isArray( bag[ key ] ) ? bag[ key ].filter( ( v ) => typeof v === 'string' && v !== '' ) : [];
+	return list.length ? list : fallback;
+};
+
 const getStatusOptions = () => [
 	{ value: '', label: __( 'Status…', 'simple-wp-helpdesk' ) },
-	{ value: 'open', label: __( 'Open', 'simple-wp-helpdesk' ) },
-	{ value: 'in_progress', label: __( 'In Progress', 'simple-wp-helpdesk' ) },
-	{ value: 'resolved', label: __( 'Resolved', 'simple-wp-helpdesk' ) },
-	{ value: 'closed', label: __( 'Closed', 'simple-wp-helpdesk' ) },
+	...readLocalizedLabels( 'statusLabels', DEFAULT_STATUS_LABELS ).map( ( label ) => ( { value: label, label } ) ),
 ];
 
 const getPriorityOptions = () => [
 	{ value: '', label: __( 'Priority…', 'simple-wp-helpdesk' ) },
-	{ value: 'low', label: __( 'Low', 'simple-wp-helpdesk' ) },
-	{ value: 'normal', label: __( 'Normal', 'simple-wp-helpdesk' ) },
-	{ value: 'high', label: __( 'High', 'simple-wp-helpdesk' ) },
-	{ value: 'urgent', label: __( 'Urgent', 'simple-wp-helpdesk' ) },
+	...readLocalizedLabels( 'priorityLabels', DEFAULT_PRIORITY_LABELS ).map( ( label ) => ( { value: label, label } ) ),
 ];
 
 export const BulkBar = () => {
