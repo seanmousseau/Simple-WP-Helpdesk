@@ -132,6 +132,15 @@ define( 'SWH_TRUST_PROXY', true );
 
 **Only set this when you actually have a trusted proxy in front of WordPress.** Without a trusted proxy, anyone connecting directly to your origin can spoof the header to rotate fake IPs and skip the rate limit. The default (opt-out) is the safer setting for direct-to-origin installs.
 
+**v4.1.1: harden against XFF spoofing with `SWH_TRUSTED_PROXIES`.** Even with `SWH_TRUST_PROXY` enabled, the v4.1.0 helper returned the leftmost `X-Forwarded-For` entry — the value the original client supplied. A client connecting to a proxy that appends (rather than overwrites) `X-Forwarded-For` could still inject a fake leftmost IP. Declare your trusted proxy CIDR set in `wp-config.php` to walk the chain right-to-left and return the first untrusted hop:
+
+```php
+define( 'SWH_TRUST_PROXY', true );
+define( 'SWH_TRUSTED_PROXIES', '10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12' );
+```
+
+The value is a comma-separated list of IPs or CIDR blocks (IPv4 + IPv6 both supported). Cloudflare publishes their edge ranges at <https://www.cloudflare.com/ips/>. When `SWH_TRUSTED_PROXIES` is undefined, the helper preserves v4.1.0 leftmost behavior so existing deployments don't change.
+
 ### WordPress Application Passwords requires HTTPS recognition
 
 Application Passwords (the second supported auth scheme in v4.1.0) need WordPress's `wp_is_application_passwords_available()` to return `true`. Two common reasons that returns `false`:

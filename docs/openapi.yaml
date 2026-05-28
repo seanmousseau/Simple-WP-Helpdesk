@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Simple WP Helpdesk REST API
-  version: 4.1.0
+  version: 4.1.1
   description: |
     Public REST API for the [Simple WP Helpdesk](https://github.com/seanmousseau/Simple-WP-Helpdesk)
     WordPress plugin (`swh/v1` namespace).
@@ -525,8 +525,8 @@ components:
           description: Unique ticket identifier (post ID).
           readOnly: true
         subject: { type: string, description: Ticket subject. }
-        status: { type: string, description: Configured status label. }
-        priority: { type: string, description: Configured priority label. }
+        status: { type: string, description: "Configured status label. Matching on write is case-insensitive and tolerates _/-/space (e.g. `in_progress` resolves to the configured `In Progress`); the response always echoes the canonical operator-configured label." }
+        priority: { type: string, description: "Configured priority label. Matching on write is case-insensitive (e.g. `medium` resolves to the configured `Medium`); the response always echoes the canonical operator-configured label." }
         assignee:
           type: object
           properties:

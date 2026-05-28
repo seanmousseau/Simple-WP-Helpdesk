@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Simple WP Helpdesk REST API",
-    "version": "4.1.0",
+    "version": "4.1.1",
     "description": "Public REST API for the [Simple WP Helpdesk](https://github.com/seanmousseau/Simple-WP-Helpdesk)\nWordPress plugin (`swh/v1` namespace).\n\nAll authenticated endpoints accept a custom bearer API key (Settings \u2192\nIntegrations \u2192 API Keys, format `swhk_<32 chars>`). Logged-in WordPress\nusers with `edit_posts` are also accepted transparently \u2014 including\nsessions established by WordPress core's Application Passwords feature.\nA single public endpoint (`/settings/public`) requires no auth.\n\nEvery successful response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`,\nand `X-RateLimit-Reset` headers. Over-limit responses also include\n`Retry-After`. List endpoints add `X-WP-Total` + `X-WP-TotalPages`.\n\nError envelope is uniform across the namespace: `{ code, message, data }`\nwhere `data.status` mirrors the HTTP status code.\n",
     "license": {
       "name": "GPL-2.0-or-later",
@@ -958,11 +958,11 @@
           },
           "status": {
             "type": "string",
-            "description": "Configured status label."
+            "description": "Configured status label. Matching on write is case-insensitive and tolerates _/-/space (e.g. `in_progress` resolves to the configured `In Progress`); the response always echoes the canonical operator-configured label."
           },
           "priority": {
             "type": "string",
-            "description": "Configured priority label."
+            "description": "Configured priority label. Matching on write is case-insensitive (e.g. `medium` resolves to the configured `Medium`); the response always echoes the canonical operator-configured label."
           },
           "assignee": {
             "type": "object",

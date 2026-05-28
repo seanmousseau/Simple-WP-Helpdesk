@@ -121,20 +121,9 @@ function swh_violet_filter_body_class( $classes ) {
 add_filter( 'admin_body_class', 'swh_violet_filter_body_class' );
 add_filter( 'body_class', 'swh_violet_filter_body_class' );
 
-/**
- * Preload geist-400.woff2 to avoid FOUT on the first admin/frontend paint.
- */
-function swh_violet_preload_font(): void {
-	if ( ! swh_violet_is_enabled() ) {
-		return;
-	}
-	if ( ! swh_violet_is_helpdesk_screen() ) {
-		return;
-	}
-	printf(
-		'<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>',
-		esc_url( SWH_PLUGIN_URL . 'assets/fonts/geist-400.woff2' )
-	);
-}
-add_action( 'admin_head', 'swh_violet_preload_font' );
-add_action( 'wp_head', 'swh_violet_preload_font' );
+// v4.1.1 (#536): font preload removed. The previous link pointed at the
+// unhashed `assets/fonts/geist-400.woff2`, but the @font-face in the built
+// theme stylesheet loads the hashed bundle (`assets/dist/fonts/geist-400.<hash>.woff2`),
+// so the preloaded resource was never consumed — every admin page logged a
+// "preloaded but not used" console warning. The font itself has
+// `font-display: swap`, so dropping the preload is invisible to users.

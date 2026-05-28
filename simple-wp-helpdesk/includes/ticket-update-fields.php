@@ -136,10 +136,27 @@ if ( ! function_exists( 'swh_update_ticket_fields' ) ) {
 			$candidate = is_string( $fields['priority'] ) ? $fields['priority'] : '';
 			$allowed   = swh_get_priorities();
 			$allowed   = is_array( $allowed ) ? $allowed : array();
-			if ( '' === $candidate || ! in_array( $candidate, $allowed, true ) ) {
+			// Match status: canonicalize case + token form so REST callers
+			// can send `medium` / `MEDIUM` / `Medium` regardless of the
+			// operator-configured display label.
+			$resolved_priority = '';
+			if ( '' !== $candidate ) {
+				$candidate_key = strtolower( str_replace( array( ' ', '-' ), '_', $candidate ) );
+				foreach ( $allowed as $label ) {
+					if ( ! is_string( $label ) ) {
+						continue;
+					}
+					$normalized = strtolower( str_replace( array( ' ', '-' ), '_', $label ) );
+					if ( $normalized === $candidate_key ) {
+						$resolved_priority = $label;
+						break;
+					}
+				}
+			}
+			if ( '' === $resolved_priority ) {
 				$errors['priority'] = __( 'Priority is not one of the configured values.', 'simple-wp-helpdesk' );
 			} else {
-				update_post_meta( $ticket_id, '_ticket_priority', $candidate );
+				update_post_meta( $ticket_id, '_ticket_priority', $resolved_priority );
 				$applied[] = 'priority';
 			}
 		}
