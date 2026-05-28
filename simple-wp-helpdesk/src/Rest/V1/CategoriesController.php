@@ -43,7 +43,7 @@ final class CategoriesController extends WP_REST_Controller {
 	 */
 	public function register_routes(): void {
 		register_rest_route(
-			$this->namespace,
+			Bootstrap::NAMESPACE,
 			'/' . $this->rest_base,
 			array(
 				array(

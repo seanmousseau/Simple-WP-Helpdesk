@@ -72,7 +72,7 @@ final class TicketsController extends WP_REST_Controller {
 	 */
 	public function register_routes(): void {
 		register_rest_route(
-			$this->namespace,
+			Bootstrap::NAMESPACE,
 			'/' . $this->rest_base,
 			array(
 				array(
@@ -92,7 +92,7 @@ final class TicketsController extends WP_REST_Controller {
 		);
 
 		register_rest_route(
-			$this->namespace,
+			Bootstrap::NAMESPACE,
 			'/' . $this->rest_base . '/(?P<id>\d+)',
 			array(
 				'args'   => array(

@@ -3,6 +3,11 @@ includes:
 
 parameters:
     level: 9
+    # Match CI's lowest PHP version (php-tests workflow matrix runs 8.1/8.2/8.3).
+    # Without this, local analysis runs against the host PHP version (currently
+    # 8.5+), which masks errors CI catches — e.g. non-falsy-string narrowing
+    # on register_rest_route() that fired on PR #526 but passed locally.
+    phpVersion: 80100
     treatPhpDocTypesAsCertain: false
     paths:
         - simple-wp-helpdesk/
