@@ -66,15 +66,27 @@ from _selectors import (
 # ── Load .env file ────────────────────────────────────────────────────────────
 
 def _load_dotenv():
-    candidates = [
+    # Project-local first (overrides win), then the cross-project global
+    # secrets file at ~/.claude/dev-secrets.env. Keys set by earlier files
+    # (or the real environment) are never overwritten — that's the precedence.
+    project_local = [
         os.path.join(os.path.dirname(__file__), "..", ".env"),
         "testing/.env",
         ".env",
     ]
+    candidates = []
+    for p in project_local:
+        if os.path.isfile(p):
+            candidates.append(p)
+            break  # only the highest-priority local hit
+    global_secrets = os.path.expanduser("~/.claude/dev-secrets.env")
+    if os.path.isfile(global_secrets):
+        candidates.append(global_secrets)
+    if not candidates:
+        print("WARNING: testing/.env not found — using existing environment variables.")
+        return
     for path in candidates:
         path = os.path.normpath(path)
-        if not os.path.isfile(path):
-            continue
         with open(path) as f:
             for line in f:
                 line = line.strip()
@@ -90,8 +102,6 @@ def _load_dotenv():
                 if key and key not in os.environ:
                     os.environ[key] = val
         print(f"Loaded env from: {path}")
-        return
-    print("WARNING: testing/.env not found — using existing environment variables.")
 
 _load_dotenv()
 

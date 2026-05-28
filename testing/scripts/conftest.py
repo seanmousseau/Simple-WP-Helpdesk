@@ -16,15 +16,25 @@ import pytest
 # ── .env loading ──────────────────────────────────────────────────────────────
 
 def _load_dotenv():
-    candidates = [
+    # Project-local first (project-specific overrides win), then the
+    # cross-project global secrets file. Loader is precedence-ordered:
+    # `if key not in os.environ` means a key set by an earlier file (or
+    # the real environment) is never overwritten by a later file.
+    project_local = [
         os.path.join(os.path.dirname(__file__), "..", ".env"),
         "testing/.env",
         ".env",
     ]
+    candidates = []
+    for p in project_local:
+        if os.path.isfile(p):
+            candidates.append(p)
+            break  # only the highest-priority local hit
+    global_secrets = os.path.expanduser("~/.claude/dev-secrets.env")
+    if os.path.isfile(global_secrets):
+        candidates.append(global_secrets)
     for path in candidates:
         path = os.path.normpath(path)
-        if not os.path.isfile(path):
-            continue
         with open(path) as f:
             for line in f:
                 line = line.strip()
@@ -39,7 +49,6 @@ def _load_dotenv():
                     val = val[1:-1]
                 if key and key not in os.environ:
                     os.environ[key] = val
-        return
 
 
 def pytest_configure(config):
