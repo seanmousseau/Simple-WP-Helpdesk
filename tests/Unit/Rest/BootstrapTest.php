@@ -138,6 +138,24 @@ final class BootstrapTest extends TestCase {
 		}
 	}
 
+	public function test_settings_public_permission_only_increments_once_per_request(): void {
+		// Regression: WP REST's rest_send_allow_header() re-fires the
+		// permission_callback once per handler on the matched route. Without
+		// per-request idempotency the IP bucket would be decremented twice
+		// per HTTP request (effective limit 10/min, not the documented 20).
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.99';
+		$request                = new WP_REST_Request();
+
+		$this->assertTrue( Bootstrap::settings_public_permission( $request ) );
+		$this->assertTrue( Bootstrap::settings_public_permission( $request ) );
+		$this->assertTrue( Bootstrap::settings_public_permission( $request ) );
+
+		$state = $request->get_param( '_swh_rate_limit_state' );
+		$this->assertIsArray( $state );
+		$this->assertSame( 20, $state['limit'] );
+		$this->assertSame( 19, $state['remaining'], 'IP bucket decremented exactly once, not three times' );
+	}
+
 	public function test_missing_remote_addr_falls_back_to_default_bucket(): void {
 		unset( $_SERVER['REMOTE_ADDR'] );
 		$request = new WP_REST_Request();
