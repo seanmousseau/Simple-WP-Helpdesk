@@ -94,6 +94,46 @@ Revoked keys stay in the table (greyed-out) for audit purposes. Future versions 
 
 Only operators with the `manage_options` WordPress capability can generate or revoke API keys. The Integrations section is the same — non-administrators don't see it.
 
+## Operator environment requirements
+
+Two configuration items on your WordPress host can break the REST API even though the plugin itself is installed correctly. Both are standard WordPress-hosting issues, not v4.1.0-specific:
+
+### Apache method restrictions
+
+The REST API uses `GET`, `POST`, `PATCH`, and `DELETE`. Some hardened WordPress `.htaccess` files include a `<LimitExcept>` directive that blocks all methods except `GET POST HEAD`. If integrators see HTTP 403 on `PATCH` or `DELETE` requests, look for and widen this block:
+
+```apache
+# Before (blocks PATCH/DELETE):
+<LimitExcept GET POST HEAD>
+    Order Allow,Deny
+    Deny from all
+</LimitExcept>
+
+# After (REST-compatible):
+<LimitExcept GET POST HEAD PUT PATCH DELETE OPTIONS>
+    Order Allow,Deny
+    Deny from all
+</LimitExcept>
+```
+
+A diagnostic: if `curl -X PATCH` against a `/wp-json/swh/v1/tickets/<id>` URL returns a generic Apache 403 page (not a JSON error envelope), the request was blocked by Apache before it reached WordPress. That's the `.htaccess` pattern above.
+
+### WordPress Application Passwords requires HTTPS recognition
+
+Application Passwords (the second supported auth scheme in v4.1.0) need WordPress's `wp_is_application_passwords_available()` to return `true`. Two common reasons that returns `false`:
+
+1. **WordPress doesn't see the request as SSL.** If the site sits behind a TLS-terminating reverse proxy, add the standard trust-proxy snippet to `wp-config.php`:
+
+   ```php
+   if ( ! empty( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ) {
+       $_SERVER['HTTPS'] = 'on';
+   }
+   ```
+
+2. **A security plugin has disabled Application Passwords.** Some plugins (e.g. Security Ninja Premium's auto-fixer module) deliberately hook `wp_is_application_passwords_available` and force it to `false` as a hardening measure. If you want App Password support on this install, change the security plugin's setting OR rely on the v4.1.0 custom API key flow instead — custom keys are independent of Application Passwords and work in any configuration.
+
+If Application Passwords are unavailable for either reason, the custom API key flow (this guide) is unaffected and remains the recommended path for service-to-service integrations.
+
 ## Related
 
 - **WordPress Application Passwords:** <https://wordpress.org/documentation/article/application-passwords/>
