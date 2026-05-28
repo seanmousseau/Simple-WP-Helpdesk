@@ -4155,14 +4155,17 @@ def test_66_drawer_opens_and_edits_status(page: Page):
               title_visible and f"#{ticket_id}" in title_text,
               f"ticket_id={ticket_id}, title={title_text!r}")
 
-        # Change status to resolved via the labelled SelectControl.
+        # Change status to Resolved via the labelled SelectControl.
+        # v4.1.1 (#537): option values are now the operator-configured
+        # canonical labels (e.g. `Resolved`), not the lowercase tokens the
+        # v4.1.0 hardcoded enum used. The default config ships `Resolved`.
         status_select = drawer_status_select(page)
         if status_select.count() > 0:
-            status_select.select_option(value="resolved")
+            status_select.select_option(value="Resolved")
             page.wait_for_timeout(800)
             new_val = status_select.input_value()
-            check("drawer #350: status select reflects resolved",
-                  new_val == "resolved", f"value={new_val!r}")
+            check("drawer #350: status select reflects Resolved",
+                  new_val == "Resolved", f"value={new_val!r}")
         else:
             skip("drawer #350: status select", "no select labelled 'Status' in drawer")
 
@@ -4235,9 +4238,12 @@ def test_67_drawer_concurrency_conflict_shows_banner(page: Page):
     )
 
     # Trigger a PATCH from the UI by changing the status dropdown.
+    # v4.1.1 (#537): SelectControl values are now the canonical configured
+    # labels (`In Progress`), not the lowercase tokens used by the v4.1.0
+    # hardcoded enum.
     status_select = page.locator(".swh-drawer-meta-row select").first
     if status_select.count() > 0:
-        status_select.select_option(value="in_progress")
+        status_select.select_option(value="In Progress")
         # Conflict banner should appear.
         banner_visible = False
         with suppress(PlaywrightTimeoutError):
