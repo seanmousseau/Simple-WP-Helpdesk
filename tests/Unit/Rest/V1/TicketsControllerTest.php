@@ -208,6 +208,52 @@ final class TicketsControllerTest extends TestCase {
 		$this->assertSame( 77, $response->get_data()['id'] );
 	}
 
+	/**
+	 * #533 — when the caller omits `status` (and `priority`) from POST, the
+	 * controller must seed the configured defaults so the response reflects
+	 * the persisted state rather than echoing empty strings.
+	 *
+	 * Locks the side-effect: `swh_set_ticket_status()` writes
+	 * `_ticket_status='Open'` and `update_post_meta()` writes
+	 * `_ticket_priority='Medium'` (the values from `swh_get_defaults()`).
+	 */
+	public function test_create_item_seeds_defaults_when_status_and_priority_omitted(): void {
+		WP_Mock::userFunction( 'wp_insert_post', array( 'return' => 77 ) );
+		WP_Mock::userFunction( 'get_post_meta', array(
+			'return' => function ( int $post_id, string $key, bool $single = false ) {
+				// Empty meta for the freshly-created ticket — exactly the
+				// state v4.1.0 rc-signoff Issue #5 reproduced.
+				return '';
+			},
+		) );
+		WP_Mock::userFunction( 'get_userdata', array( 'return' => null ) );
+		WP_Mock::userFunction( 'get_post', array( 'args' => array( 77 ), 'return' => $this->fake_post( 77 ) ) );
+		WP_Mock::userFunction( 'wp_get_post_terms', array( 'return' => array() ) );
+
+		// Default status is seeded via swh_set_ticket_status() — which writes
+		// to _ticket_status via update_post_meta(). Defaults come from
+		// swh_get_defaults() (Open, Medium).
+		WP_Mock::userFunction( 'update_post_meta', array(
+			'args'  => array( 77, '_ticket_status', 'Open' ),
+			'times' => 1,
+		) );
+		WP_Mock::userFunction( 'update_post_meta', array(
+			'args'  => array( 77, '_ticket_priority', 'Medium' ),
+			'times' => 1,
+		) );
+		// Tolerate auxiliary writes (last_activity, version bump).
+		WP_Mock::userFunction( 'update_post_meta' );
+
+		$req = new WP_REST_Request( 'POST', '/swh/v1/tickets' );
+		$req->set_param( 'subject', 'Need help' );
+		$req->set_param( 'body', 'Some body' );
+		$req->set_param( 'requester_email', 'client@example.com' );
+		// No status, no priority.
+
+		$response = ( new TicketsController() )->create_item( $req );
+		$this->assertSame( 201, $response->get_status() );
+	}
+
 	// -----------------------------------------------------------------------
 	// update_item
 	// -----------------------------------------------------------------------

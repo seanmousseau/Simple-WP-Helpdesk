@@ -75,11 +75,11 @@ final class Ticket {
 					'type'        => 'string',
 				),
 				'status'            => array(
-					'description' => 'Configured status label. Must be a member of the configured status list.',
+					'description' => 'Configured status label. Must be a member of the configured status list. Matching is case-insensitive and tolerates `_`/`-`/space (e.g. `in_progress` resolves to the configured `In Progress`); the response always echoes the canonical operator-configured label.',
 					'type'        => 'string',
 				),
 				'priority'          => array(
-					'description' => 'Configured priority label. Must be a member of the configured priority list.',
+					'description' => 'Configured priority label. Must be a member of the configured priority list. Matching is case-insensitive (e.g. `medium` resolves to the configured `Medium`); the response always echoes the canonical operator-configured label.',
 					'type'        => 'string',
 				),
 				'assignee'          => array(

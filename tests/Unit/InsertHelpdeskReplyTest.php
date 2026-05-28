@@ -66,6 +66,11 @@ final class InsertHelpdeskReplyTest extends TestCase {
 				'basedir' => '/tmp/uploads',
 			),
 		) );
+		WP_Mock::userFunction( 'wp_parse_url', array(
+			'return' => function ( $url, $component = -1 ) {
+				return parse_url( $url, $component );
+			},
+		) );
 	}
 
 	protected function tearDown(): void {
@@ -341,5 +346,41 @@ final class InsertHelpdeskReplyTest extends TestCase {
 			'dispatch_email'   => false,
 		) );
 		$this->assertFalse( $id, 'insert helper must reject URLs outside the uploads baseurl.' );
+	}
+
+	/**
+	 * #530 — even when a URL prefix-matches the uploads baseurl, a traversal
+	 * segment (`..`, percent-encoded `%2e%2e`, or a stray `.`) must cause the
+	 * whole insert to fail. Without this the persisted href could point
+	 * anywhere under the docroot.
+	 *
+	 * @dataProvider provide_traversal_urls
+	 */
+	public function test_pre_uploaded_urls_with_path_traversal_are_rejected( string $url ): void {
+		$this->stub_ticket( 42 );
+		WP_Mock::userFunction( 'wp_insert_comment', array( 'times' => 0 ) );
+		$this->permissive_meta_writes();
+
+		$id = swh_insert_helpdesk_reply( 42, array(
+			'body'             => 'traversal',
+			'author_user_id'   => 7,
+			'author_name'      => 'Tech',
+			'author_email'     => 'tech@example.com',
+			'attachment_urls'  => array( $url ),
+			'attachment_names' => array( $url => 'x.png' ),
+			'dispatch_email'   => false,
+		) );
+		$this->assertFalse( $id, 'insert helper must reject traversal URL: ' . $url );
+	}
+
+	/**
+	 * @return array<string,array{0:string}>
+	 */
+	public function provide_traversal_urls(): array {
+		return array(
+			'literal-dotdot'         => array( 'https://example.com/wp-content/uploads/../../private/secret.png' ),
+			'percent-encoded-dotdot' => array( 'https://example.com/wp-content/uploads/%2e%2e/%2e%2e/private/secret.png' ),
+			'single-dot-segment'     => array( 'https://example.com/wp-content/uploads/./still-bad.png' ),
+		);
 	}
 }

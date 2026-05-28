@@ -958,11 +958,11 @@
           },
           "status": {
             "type": "string",
-            "description": "Configured status label."
+            "description": "Configured status label. Matching on write is case-insensitive and tolerates _/-/space (e.g. `in_progress` resolves to the configured `In Progress`); the response always echoes the canonical operator-configured label."
           },
           "priority": {
             "type": "string",
-            "description": "Configured priority label."
+            "description": "Configured priority label. Matching on write is case-insensitive (e.g. `medium` resolves to the configured `Medium`); the response always echoes the canonical operator-configured label."
           },
           "assignee": {
             "type": "object",
