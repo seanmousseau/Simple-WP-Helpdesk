@@ -90,6 +90,126 @@ All `swh/v1` endpoints authenticate via standard WP REST `permission_callback` (
 
 Operators integrating with the REST API (Zapier, Make, custom scripts) MUST use application passwords. The `testing/extended/` runbook scripts use WP-CLI over SSH for this reason — they skip the REST surface entirely to avoid the Basic Auth confusion. (#442)
 
+### API key authentication (v4.1.0+)
+
+The v4.1.0 REST surface introduces operator-issued API keys as a second-class auth mechanism alongside WP Application Passwords. Application Passwords remain the preferred path for users who have WP accounts; API keys exist for integrations that should not impersonate a real WP user (CI bots, dashboards, third-party connectors).
+
+**Bearer-token verification idiom.** Mirrors the inbound-email webhook precedent (`includes/class-email.php`): the client presents the plaintext key in the `Authorization: Bearer <plaintext>` header; the plugin extracts the first 12 chars as a prefix, narrows candidate entries with `hash_equals()` on the stored prefix (invariant #3), and then runs `password_verify()` against the stored bcrypt hash. All comparisons are constant-time.
+
+**Storage.** Keys live inside the `swh_settings_integrations` option bag under the `api_keys` sub-key. `SWH\Rest\ApiKeys` (at `simple-wp-helpdesk/src/Rest/ApiKeys.php`) is the only writer — operators do not edit the list via the freeform settings save handler. Each entry stores a bcrypt hash (cost 12), a 12-char prefix, a scope (`read` or `write`), the issuing WP user id, timestamps, an optional per-key rate-limit override, and a `revoked_at` field. See `data-dictionary.md` for the exact shape.
+
+**Plaintext lifetime.** The full plaintext (`swhk_<base62 32-char>`) is returned exactly once from `ApiKeys::generate()` and is **never** persisted, logged, or echoed elsewhere. The prefix is the only key-derived value safe to display in the operator UI after generation — it identifies the key without enabling its use.
+
+**Scopes.** Two scopes are defined: `read` and `write`. `write` implies `read`. Phase 2's permission helper rejects scope mismatches with `swh_rest_scope_insufficient` (HTTP 403). There is intentionally no "client" or "owner" scope — see plan §14 / open question #6.
+
+**Revocation.** `ApiKeys::revoke( $id )` is permanent — `revoked_at` is set and never cleared. `find_by_plaintext()` returns `null` for revoked entries so the request fails closed at `permission_callback`. There is no unrevoke path.
+
+**Write-rate-limiting.** `ApiKeys::touch_last_used()` is internally rate-limited to once per 5 minutes per key via a `swh_apikey_touch_<id>` transient guard, preventing write amplification when a single key drives high-RPS traffic.
+
+**Allowlist contract for `GET /settings/public`.** The Phase 5 settings allowlist excludes the entire `api_keys` sub-key. Bcrypt hashes never appear on any unauthenticated surface. Operators or auditors verifying this should grep `PublicSettingsAllowlist` for wildcards — there are none over the integrations bag.
+
+#### Permission helper logic (v4.1.0 Phase 2)
+
+`SWH\Rest\Auth::check_request()` is the single check every `swh/v1` route runs via `swh_rest_require( $scope )`. Controllers MUST NOT call `current_user_can()` inline — the helper is the only seam. Logic order:
+
+1. **Logged-in WP user with `edit_posts`** → success (cookie auth or Application Password).
+2. **Logged-in WP user without `edit_posts`** → `swh_rest_capability_required` (403). Does NOT fall through to the API key path — a session that already authenticated as a low-cap user cannot smuggle a higher-cap bearer token to elevate.
+3. **No / malformed `Authorization` header** → `swh_rest_auth_required` (401).
+4. **Bearer token that does not start with `swhk_`** → `swh_rest_auth_invalid` (401). The prefix is public — a wrong prefix is a malformed token, not a credential leak.
+5. **Bearer token that does not resolve to an active entry** → `swh_rest_auth_invalid` (401). Revoked keys collapse into this code path because `ApiKeys::find_by_plaintext()` returns `null` for them.
+6. **Scope mismatch** (`read` key on a `write` route) → `swh_rest_scope_insufficient` (403). `write` keys satisfy both `read` and `write` routes.
+7. On success: `ApiKeys::touch_last_used()` runs (write-rate-limited inside ApiKeys), the full key entry is stashed on the request via `WP_REST_Request::set_param( '_swh_api_key', $entry )` for Phase 9 audit-log attribution, and the helper returns `true`.
+
+The helper never logs the bearer token. The plaintext exists only in the in-memory request scope.
+
+#### Per-route capability matrix (v4.1.0)
+
+The matrix below is **documented here** and **enforced per-route** by each phase's controller via `swh_rest_require( 'read' | 'write' )`.
+
+| Route group | Logged-in user | API key scope |
+|---|---|---|
+| `GET /tickets*`, `GET /replies*` | `edit_posts` | `read` |
+| `POST /tickets`, `PATCH /tickets/*`, `POST /replies` | `edit_posts` | `write` |
+| `GET /users/technicians`, `GET /categories` | `edit_posts` | `read` |
+| `GET /settings/public` | **public** (no auth) | n/a |
+| `GET /openapi.json` | **public** | n/a (Phase 8) |
+
+### REST rate limiting (v4.1.0 Phase 7, #367)
+
+Enforced by `SWH\Rest\RateLimiter` (`simple-wp-helpdesk/src/Rest/RateLimiter.php`). Two buckets, both fixed 60-second rolling windows:
+
+- **Per-API-key bucket** — key `swh_rl_api_<key_id>`. Default budget **60 req/min**, overridable per-key via `Settings → Integrations → API Keys` (1–10000). Triggered from `Auth::check_request()` after the scope check.
+- **Per-IP bucket** — key `swh_rl_ip_<hash>` where `hash = hash_hmac('sha256', $ip, wp_salt('nonce'))`. Budget **20 req/min**, not operator-configurable. Triggered from `Bootstrap::settings_public_permission()` — wraps the public `settings/public` route only.
+
+**Why hash the IP?** Two reasons:
+
+1. **Privacy / log hygiene.** Transient keys land in `wp_options` (or the persistent object cache). Without hashing, any operator with DB read access could enumerate every visitor IP that hit the public route in the last 60 seconds. Hashing the IP with `wp_salt('nonce')` produces a value that's deterministic *within a site* (same IP always hashes to the same bucket) but not reversible from the bucket key alone.
+2. **Bucket-key forgery resistance.** A pre-image attacker who learned a victim IP could not, even with DB access, write a transient row that would block-or-allow that IP without also knowing the site's nonce salt.
+
+The salt source is locked to `wp_salt('nonce')` because (a) it is already required to be set on a production WP site and (b) rotating it (operator-initiated) cleanly invalidates all open rate-limit windows — useful when responding to a DDoS attempt.
+
+**Headers.** Every response — success or 429 — carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`. The 429 response additionally carries `Retry-After: <seconds-to-window-end>`. Integrators rely on these to back off; the 429 path emits them via `Bootstrap::attach_rate_limit_headers()` (rest_post_dispatch filter), success path via `SWH\Rest\V1\ResponseDecorator::with_rate_limit_headers()`.
+
+**What is NOT rate-limited.** Logged-in WP-user requests (the WP Application Password path) are NOT subject to the per-API-key bucket — they are already gated by core WP capability checks and core's own login throttling. Rate limiting in v4.1.0 targets the two anonymous attack surfaces: stolen API keys and unauthenticated public requests.
+
+**Per-request idempotency.** WP REST's `rest_send_allow_header()` (wp-includes/rest-api.php:866-898) re-invokes a route's `permission_callback` once per registered handler on the matched route to build the response `Allow:` header. There is no filter to opt out — it is part of WP's REST contract. Without protection, `RateLimiter::check()` (which always increments on call) would fire 2-3× per HTTP request, halving the effective rate limit. Both `Auth::check_request()` and `Bootstrap::settings_public_permission()` therefore cache their computed result (true or WP_Error) on the request via `WP_REST_Request::set_param()` and short-circuit at the top — `_swh_auth_result_<scope>` for Auth (scope-aware because handlers on the same route may require different scopes), `_swh_settings_public_auth_result` for Bootstrap. `RateLimiter::check()` itself remains "always increments"; the dedupe lives in the callers.
+
+**Anti-patterns explicitly forbidden:**
+
+- Raw IPs in transient keys (privacy).
+- Sharing a bucket key across read and write paths of the same API key — the limit is on total requests, not per-action.
+- Suppressing `X-RateLimit-*` headers on the 429 path — integrators need them to back off cleanly.
+
+## Public settings allowlist
+
+`GET /swh/v1/settings/public` (v4.1.0 Phase 5, #364) is the **only** publicly readable endpoint in the v4.1.0 REST surface. Every key in its response goes through a **hard, explicit allowlist** defined in `simple-wp-helpdesk/src/Rest/V1/PublicSettingsAllowlist.php`. This subsection captures the rules; the file is the source of truth.
+
+### Why an allowlist (not a denylist)
+
+A denylist defaults *open* — every new setting added in some future release would be publicly readable unless someone remembered to add it to the denylist. The plugin already stores webhook secrets, API keys, SMTP credentials, and email template bodies in the same options bag as harmless labels; a single forgotten denylist entry leaks the secret to the internet.
+
+The allowlist defaults *closed*: settings are private unless someone makes a deliberate decision to expose them. New settings can never accidentally leak.
+
+### Locked allowlist keys (v4.1.0)
+
+| Response key | Source option(s) | Shape |
+|---|---|---|
+| `priority_labels` | `swh_ticket_priorities` | `string[]` (CSV → trimmed array) |
+| `status_labels` | `swh_ticket_statuses` | `string[]` |
+| `sla_thresholds` | `swh_sla_warn_hours`, `swh_sla_breach_hours` | `{ low:int\|null, medium:int\|null, high:int\|null, urgent:int\|null }` (hours) |
+| `features` | `swh_csat_enabled`, `swh_ticket_page_id`, `swh_max_upload_count` | `{ csat:bool, portal:bool, attachments:bool }` |
+
+The `features` sub-shape is **booleans only** — never the underlying values. `portal` is `true` iff a portal page is configured; the page ID is not exposed. `attachments` is `true` iff uploads are allowed; the size/count caps are not exposed.
+
+### Adding a key — review burden
+
+Adding a key to the allowlist is a deliberate decision. The PR that adds one MUST:
+
+1. Edit `PublicSettingsAllowlist::map()` and add a reader method that returns ONLY the public-safe shape (never the raw option value).
+2. Update this subsection — add a row to the locked-keys table above.
+3. Extend the `LOCKED_KEYS` constant in `tests/Unit/Rest/V1/PublicSettingsAllowlistTest.php`. The drift-detector test `test_allowlist_only_contains_locked_keys()` fails immediately if step 3 is skipped, forcing reviewers to notice the security review burden.
+4. In the PR description, justify why the option's value can never carry secrets — and propose a future-proofing test if the value could in principle become secret-bearing (e.g. an admin-customisable label that some operator might use as a free-text field).
+
+### Known-secret exclusion (negative test)
+
+The drift-detector suite also asserts that **none** of the following option keys can be in the allowlist:
+
+- `swh_inbound_secret` / `inbound_webhook_secret` — bearer token for the inbound email webhook.
+- `api_keys` — v4.1.0 API key entries (Phase 6 surface).
+- `smtp_password`, `smtp_user`, `smtp_host` — third-party SMTP-plugin patterns.
+- `swh_recaptcha_secret_key`, `swh_recaptcha_api_key`, `swh_turnstile_secret_key` — anti-spam provider secrets.
+- `swh_em_user_new_body`, `swh_em_admin_new_body`, etc. — operator-authored email template bodies, which may contain internal phrasing, signed URLs, or workflow details.
+
+If a future PR adds any of these to the allowlist, `test_known_secrets_are_not_in_allowlist` fails in CI.
+
+### No-wildcard guarantee (static check)
+
+`test_no_wildcard_or_prefix_match` reads the `PublicSettingsAllowlist` source file and asserts it contains **none** of: `preg_match`, `preg_match_all`, `fnmatch`, `str_starts_with`, `str_ends_with`, `wp_load_alloptions`, or a `foreach` over `$wpdb`. The allowlist must remain an explicit array of named keys. Anyone trying to introduce "expose all `swh_settings_general` keys" fails CI.
+
+### Related privacy lever
+
+`GET /swh/v1/users/technicians` (also v4.1.0 Phase 5) is gated by `read` scope but the email field can be a privacy concern for some operators. The `swh_hide_staff_email` filter, when it returns `true`, OMITS the `email` key from every object in the response. Default is `false` (email exposed to authenticated `read`-scope callers).
+
 ## Explicit non-threats
 
 The plugin does **not** defend against:

@@ -262,11 +262,11 @@ SMTP can't exercise the bearer-auth code paths because by the time SMTP complete
 - **Expect:** Both default to the documented "All" view (NOT "Unassigned" — that v4.0.0 default regression must not return).
 - **Verify:** Read the active view label at the top of the left rail.
 
-### 5.2 — Filters apply via URL hash and persist
+### 5.2 — Filters apply client-side
 
-- **Do:** Click `Status: Open` filter. Observe URL change. Reload the page.
-- **Expect:** Filter persists after reload. URL hash contains `status=open` (or equivalent).
-- **Verify:** URL bar inspection. Filter chip remains active.
+- **Do:** Click `Status: Open` filter. Observe the active view label change in the left rail and the inbox table refresh to filtered rows.
+- **Expect:** The active view label flips to `Open` (or equivalent) and the table updates to show only open tickets. The URL bar does **not** change — filter state is client-side only.
+- **Verify:** Inspect the left rail's active view label and confirm the rendered rows match the filter. Reload the page and confirm the view **snaps back to "All"** — this is intentional per the section 5.1 default-view contract (the v4.0.0 fix that locked the default to "All"). URL-hash filter persistence is not a v4.1 behavior; if it ever lands, it would be re-introduced as a scoped feature decision (see #504).
 
 ### 5.3 — Saved view CRUD
 
@@ -391,6 +391,57 @@ Tick each tab below:
 - **Verify:** Tree structure looks like the documented layout in `design-document.md`.
 
 - [ ] Section 8 complete.
+
+---
+
+## Section 8.5 — REST API happy-path smoke (v4.1+) (≈5 min — **scripted via curl or wp eval**)
+
+This is the RC-level smoke for the v4.1.0 REST surface. Full E2E coverage is in Playwright sections 76–82 (`make e2e-docker`); this runbook section is a one-pass sanity check that nothing in the production-shaped environment broke between the dev stack and the RC site.
+
+### 8.5.1 — Generate a write-scope API key
+
+- **Do:** WP-admin → Helpdesk → Settings → Integrations → REST API keys. Label `rc-smoke-<date>`, scope Read + Write, no rate-limit override. Click Generate.
+- **Expect:** Shown-once secret modal appears with a `swhk_…` token. Copy + close.
+- **Verify:** Row appears in the existing-keys table with the expected scope.
+
+### 8.5.2 — Create a ticket via REST
+
+```bash
+KEY=swhk_…             # the token from 8.5.1
+SITE=https://your.site # the RC site URL
+
+curl -sS -X POST "$SITE/wp-json/swh/v1/tickets" \
+  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"subject":"RC smoke","body":"created via REST","requester_email":"rc-smoke@example.com","priority":"Medium"}'
+```
+
+- **Expect:** HTTP 201, JSON body with `id`, `subject`, `status`, `priority`, `requester`, `links.self`, `links.replies`.
+- **Verify:** Response excludes `_swh_unread`, `_ticket_token`, `_swh_api_access_log` (allowlist invariant).
+
+### 8.5.3 — List + filter
+
+```bash
+curl -sS -D - "$SITE/wp-json/swh/v1/tickets?per_page=5&priority=Medium" \
+  -H "Authorization: Bearer $KEY" | head -30
+```
+
+- **Expect:** HTTP 200, `X-WP-Total` header populated, body is a JSON array.
+- **Verify:** The ticket created in 8.5.2 appears.
+
+### 8.5.4 — OpenAPI + Redoc
+
+- **Do:** Open `$SITE/wp-json/swh/v1/openapi.json` in a browser tab.
+- **Expect:** Valid JSON with top-level `openapi`, `info`, `paths` fields.
+- **Do:** WP-admin → Tools → Helpdesk API Reference.
+- **Expect:** Redoc viewer renders the full spec. No CDN warnings in the DevTools network tab — every request resolves against the WP host.
+
+### 8.5.5 — Revoke the key
+
+- **Do:** Back in Settings → Integrations → REST API keys, click Revoke on the smoke key.
+- **Expect:** Row shows "Revoked …" state.
+- **Verify:** Repeat the curl from 8.5.2 — must return HTTP 401 `swh_rest_auth_invalid`.
+
+- [ ] Section 8.5 complete.
 
 ---
 

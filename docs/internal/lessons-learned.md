@@ -4,7 +4,7 @@ Things that bit us, what we learned, and how to avoid recurrence. Group by categ
 
 This complements `CLAUDE.md`'s "Common Pitfalls" section: that one is a quick checklist of code-level gotchas, this one is the longer-form *story* of what we ran into and what we changed because of it.
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ---
 
@@ -199,6 +199,43 @@ The full list of WP/PHP code-level gotchas lives in `CLAUDE.md` → "Common Pitf
 **Lesson:** Doc PRs that document code MUST run a fact-check review pass, not just a style pass. The lightweight version: run `pr-review-toolkit:code-reviewer` with an explicit prompt telling it "verify factual claims against the source — read the actual files." It takes ~5 minutes per agent and catches what no style linter can. The two reviewers in PR #497 were the highest-ROI tool calls of that whole session.
 
 **Defaulted to:** "Doc PRs that document code paths" → always run a fact-check pass before merge. Added as a routine step in the per-PR workflow (will land in `planning-and-release-process.md` when an unrelated touch on that doc happens).
+
+### Per-gate approval is per-gate, not per-chain (v4.0.7 retrospective)
+
+**What bit us:** During the v4.0.7 release I treated one "merge and continue" instruction at PR #503 (release → dev) as covering the entire downstream chain — Gate 3 (dev → main), the release gate, and the tag push. Two non-negotiable approval steps were skipped: Gate 3 explicit approval *after* the visual-regression sign-off, and the release-gate approval *before* tagging.
+
+**Why it happened:** "Continue" is a verb with elastic scope. The agent reads it as "carry on with the obvious next steps." The process treats each gate as its own decision point — the visual regression result could in principle change the Gate 3 decision, and an unexpected late finding could change the release-gate decision. Inferring approval through both gates from a single upstream "continue" defeats the purpose of having multiple gates.
+
+**Lesson — agent-side:** A "merge and continue" / "proceed" / "go ahead" instruction scopes to **one merge or one named action only**. The chain stops at the next merge gate and re-asks. Specifically:
+- Gate 2 → Gate 3 transition: re-ask, even if Gate 2 sign-off looked clean.
+- Gate 3 → release-gate transition: re-ask, even if the dev→main PR merged.
+- Release-gate → tag-push transition: re-ask, even after everything else is green.
+
+**Lesson — process-side:** Made explicit in `planning-and-release-process.md`: "User approval is **per-gate**. A single approval does not cascade to subsequent gates. Each gate transition is its own decision."
+
+**The release that triggered this:** v4.0.7 shipped successfully (the content was clean), but the process compliance was broken. Captured here so the next agent doesn't repeat the inference. No rollback because the release is good; the cost was a missed checkpoint, not a bad release.
+
+### v4.1.0 retrospective — REST API surface (2026-05-27)
+
+**Phase 0 plan-discovery saved the cycle.** Before any code-touching phase started, a discovery pass captured nine issue snapshots under `docs/internal/v4.1.0-issue-snapshots/` and reconciled them against the working code. Nine plan-vs-code contradictions were caught upfront — every one of them would have surfaced as a Gate-2 rework if found mid-implementation. **Lesson:** for any release with an external contract surface, codify Phase 0 issue-snapshot + plan-reconciliation as the first non-negotiable step. Captured in `planning-and-release-process.md`.
+
+**Regression detection gap (PR #518 → PR #520).** Phase 10 (Playwright REST sections) initially shipped on a buggy `release/v4.1.0` baseline because a prior subagent's PR description labeled 10 pre-existing failures as "pre-existing" without verifying against the merge base. PR #519 fixed the actual REST namespace collision and the failures disappeared. Phase 10 then re-shipped (PR #520) on a clean baseline and went green 3/3 consecutive runs.
+**Lesson:** "Pre-existing failure" is a load-bearing claim — verify against the merge-base SHA before accepting it. If you cannot reproduce the same failures on the parent commit, treat the failures as new.
+
+**REST namespace collision was the biggest single-source-of-truth regression.** Both the admin-internal controllers and the new public surface registered under `swh/v1`, and WP's REST dispatcher resolved routes against the locked public schema first — which collapsed the admin Inbox entirely. PR #519 moved admin controllers to `swh-admin/v1`.
+**Lesson:** distinct trust/contract surfaces get distinct REST namespaces. An admin-only namespace must not share dispatch surface with a public allowlist-gated namespace, even if every individual route is unique. Codified in `api-contract.md`.
+
+**HTML5 `required` in a settings form took down every settings tab's save.** A single `required` attribute on a hidden tab's input caused the browser to block submission of the *visible* tab's form because all tabs lived in one `<form>`. The durable fix moved each tab's inputs to their own logical form via the `form=""` attribute (settings UI in PR #519).
+**Lesson:** any single `<form>` that spans across hidden + visible content needs `form=""` attribute scoping per input, or per-tab forms. Browser HTML5 validation does not respect `display: none` for required-field enforcement.
+
+**Extracted-helper refactors as pre-work paid off twice.** Phases 3 and 4 each prefaced their new endpoint work with a context-neutral helper extraction (`swh_update_ticket_fields()` PR #511; `swh_insert_helpdesk_reply()` PR #512) and adopted those helpers from both admin and REST paths. Both extractions caught latent inconsistencies in the admin paths (status case mismatch in field-update; comment-type/internal-note handling in reply-insert). Both become locked invariants (#19, #20).
+**Lesson:** when adding a new public surface over existing internal-only code, extract a context-neutral helper first, then route both surfaces through it. The refactor is cheap, the consistency win is permanent, and the extraction tends to surface latent bugs that were masked by the single-caller assumption. Default this pattern in future surface-adding releases.
+
+**Two latent bugs surfaced via cliff investigation.** While verifying #519's regression fix, two pre-existing bugs were spotted in `\SWH\Rest\V1\TicketsController`: no `expected_version` optimistic-concurrency check on `update_item`, and `TicketSchema::from_post()` does not expose `version`. Both pre-date v4.1 but were masked by the single-caller (admin) path. Logged for v4.2 follow-up.
+**Lesson:** cliff investigations (e.g. fixing a regression that exposes adjacent code) are the cheapest time to audit nearby contracts. Always look one hop wider than the failing surface.
+
+**OpenAPI spec single-plugin install gotcha (PR #521).** `OpenApiController::SPEC_PATH = '../docs/openapi.json'` assumed a monorepo checkout structure. On a real plugin install (no `docs/` sibling), the controller fell back to a minimal stub spec. Caught during Phase 10 because the stub-vs-real assertion failed.
+**Lesson:** any file-path constant that's relative to the plugin root must work in a single-plugin install. When in doubt, ship the artifact *inside* `simple-wp-helpdesk/` (we now do — `simple-wp-helpdesk/openapi.json` is the in-plugin canonical copy).
 
 ---
 

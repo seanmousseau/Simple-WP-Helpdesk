@@ -154,6 +154,9 @@ These belong to the **Tools** form (separate nonce — see `design-document.md` 
 | Option key | Default | Type | Purpose |
 |---|---|---|---|
 | `swh_inbound_secret` | `''` | string | Bearer token required by the inbound-email REST endpoint. Empty disables the endpoint (every call fails auth). |
+| REST API rate limit (per key) | `60` requests / minute | integer | v4.1.0 Phase 7 (#367). Hard-coded default; per-key override exposed in *Settings → Integrations → API Keys* (range 1–10000). Stored on the key entry as `rate_limit` (null = use default). Override wins when present. The settings-form input has `placeholder="60"` and helper text reminds operators of the default. |
+| REST public-route rate limit (per IP) | `20` requests / minute | integer | v4.1.0 Phase 7 (#367). Applies to `GET /swh/v1/settings/public` only. **Not** operator-configurable — locked in `Bootstrap::PUBLIC_IP_RATE_LIMIT`. Buckets are keyed by `hash_hmac('sha256', $ip, wp_salt('nonce'))`; the raw IP is never stored. |
+| Enable API access log | `false` (off) | bool | v4.1.0 Phase 9 (#369). UI: *Settings → Integrations → "Enable API access log"*. Stored at `swh_settings_integrations.api_audit_log_enabled`. When enabled, records the last 10 API requests against each ticket on `_swh_api_access_log` post meta. **Privacy:** captures route (path only — query string stripped), key id+label (or `wp_application_password` + user_login for App Password / cookie auth), action (`read`/`write`), and unix timestamp. **No request body, no query string, no IP, no response body.** Disabling the toggle does NOT delete existing log entries — operators can re-enable to view prior history. Also gates whether the "API Access" meta box appears on the ticket editor. |
 
 ### Portal (`swh_settings_portal`)
 
@@ -175,7 +178,8 @@ UI: Settings → Portal tab. Groups frontend portal appearance and CSAT widget c
 | `swh_db_version` | `class-installer.php:147`. Used by `swh_run_upgrade_routine()` to gate upgrade work. Not in `swh_get_all_option_keys()`. |
 | `swh_comment_type_v2` | One-time migration flag (set at `class-installer.php:104`; deleted at uninstall). |
 | `swh_tech_caps_v2` | One-time migration flag (set at `class-installer.php:176`; deleted at uninstall). |
-| `swh_rl_<hash>` | Rate-limit locks. Bulk-deleted by `LIKE 'swh\_rl\_%'` at uninstall (`class-installer.php:228`). |
+| `swh_rl_<hash>` | Legacy rate-limit locks from `swh_is_rate_limited()` (transient key form). v4.1.0 Phase 7 (#367) adds two more transient families with the same prefix: `swh_rl_api_<key_id>` (per-API-key) and `swh_rl_ip_<hmac>` (per-IP) — all expire on a 60s TTL and need no explicit cleanup. |
+| `_swh_rl_<bucket>` | v4.1.0 Phase 7 (#367) `wp_options` floor for `SWH\Rest\RateLimiter` — written alongside the transient so the counter survives sites whose persistent cache evicts under memory pressure. No TTL on the option row, but the floor is window-validated on read (`now < window_start + 60`) so stale entries cannot block a fresh request. Operators on cache-less sites may see these rows accumulate slowly until a future uninstall sweep is added. |
 
 ## Override pattern (wp-config constants)
 

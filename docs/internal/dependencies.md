@@ -30,9 +30,10 @@ That is the complete shipped dependency list. **Everything else is hand-rolled i
 
 ## Runtime dependencies — JavaScript
 
-| Package | Purpose | Notes |
-|---|---|---|
-| `chart.js` | Reporting dashboard charts. | Bundled, not from npm — loaded via `wp_enqueue_script` from `simple-wp-helpdesk/assets/`. |
+| Package | Version | License | Purpose | Notes |
+|---|---|---|---|---|
+| `chart.js` | (bundled) | MIT | Reporting dashboard charts. | Bundled, not from npm — loaded via `wp_enqueue_script` from `simple-wp-helpdesk/assets/`. |
+| `redoc` | 2.5.2 | MIT | OpenAPI 3.1 viewer for **Tools → Helpdesk API Reference** (admin) and the Pages-rendered `docs/api-reference.html`. | Vendored bundle at `simple-wp-helpdesk/assets/vendor/redoc/redoc.standalone.js` (940KB minified). A second copy ships under `docs/assets/redoc.standalone.js` for the Pages site. No CDN — same security-model.md rationale as every other shipped asset. Conditional enqueue: loaded ONLY on the API Reference page (`tools_page_swh-api-reference`), never on the rest of wp-admin. **SHA256 (v2.5.2):** `6beb5aea23b71d09122ee35de8f326e38aec050e774f3bfba1f34e5c36608986`. **Upgrade cadence:** every minor release of Simple WP Helpdesk; refresh the bundle, update the SHA256 here, and re-validate `docs/openapi.yaml` against `npx @redocly/cli lint`. |
 
 No other JS runtime dependencies. The JS source under `simple-wp-helpdesk/assets/src/` is plain ES modules; the build tool is dev-only.
 

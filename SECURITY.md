@@ -52,9 +52,15 @@ In scope:
 
 - Anything in the `simple-wp-helpdesk/` plugin directory shipped on `main`.
 - The inbound email webhook endpoint and any other REST/AJAX endpoint we register.
+- The public REST API v1 surface (`swh/v1`) — bearer auth, scope checks, rate limiting, public-settings allowlist.
+- The API key management surface — storage, generation, revocation, plaintext lifecycle.
 - The token-based portal authentication and download proxy.
 - Anti-spam handling, rate limiting, and CSRF (nonce) gating.
 - File upload validation and the protected uploads directory.
+
+### API key vulnerabilities
+
+API keys (v4.1.0+) are stored as **bcrypt hashes** (cost 12); the plaintext is shown once at generation and is never persisted. Keys carry an explicit scope (`read` or `read+write`) and can be revoked at any time from Settings → Integrations → API Keys, which invalidates them immediately on the next request. The REST surface enforces per-key and per-IP rate limits, and never reveals secret settings (the public-settings endpoint is gated by an explicit allowlist). If you suspect a key has been compromised or you can demonstrate a bypass of any of these protections, report it via the channels above and treat it as a high-severity finding.
 
 Out of scope:
 

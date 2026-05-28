@@ -152,6 +152,7 @@ Every gate is **non-negotiable**. A gate that hasn't been met means no merge —
 1. Local test suites pass — at minimum **PHP suite** (`make test-docker`) and **E2E** (`make e2e-docker`).
 2. All CI failures and PR comments addressed (including CodeRabbit — see [non-negotiables](#non-negotiable-rules) on push-back).
 3. Documentation and test updates for this step are in the PR.
+4. **OpenAPI bumped?** If the PR adds, modifies, or removes a `swh/v1` REST route (or changes any `src/Rest/V1/Schemas/*.php` shape), `docs/openapi.yaml` must be updated AND `bash bin/openapi-sync.sh` run — and confirm both `docs/openapi.json` AND `simple-wp-helpdesk/openapi.json` are committed in sync (the plugin-bundled copy is what `GET /swh/v1/openapi.json` actually serves on production single-plugin installs). CI's `openapi` job will fail otherwise.
 
 → Merge when satisfied.
 
@@ -186,6 +187,22 @@ Every gate is **non-negotiable**. A gate that hasn't been met means no merge —
 2. **User approval to release granted.**
 
 Only then: tag `vX.Y.Z`, push the tag, let the release workflow build and publish.
+
+---
+
+## Approval scope (important)
+
+**Every "user approval" line in the gates above is its own decision.** A single approval — "merge", "ship it", "continue", "go ahead" — covers **one named action only**: the merge being asked about, or the tag push being asked about. It does **not** cascade to the next gate.
+
+Specifically:
+
+- Approval for `release → dev` merge does NOT imply approval for `dev → main`.
+- Approval for `dev → main` merge does NOT imply approval for the release tag push.
+- Approval to release does NOT imply approval to do anything else after the release.
+
+After every approval-gated action, **pause and re-ask** before the next gated action — even when the path forward looks obvious. The gates exist because a result at one step (a CI failure, a visual-regression anomaly, a late finding) can change the decision at the next step. Inferring approval through a chain defeats the purpose of having multiple gates.
+
+When in doubt, re-ask. Cost of an extra question is one line of text; cost of an inferred approval is a real process bug. See `lessons-learned.md` → "Per-gate approval is per-gate, not per-chain (v4.0.7 retrospective)" for the incident that codified this rule.
 
 ---
 

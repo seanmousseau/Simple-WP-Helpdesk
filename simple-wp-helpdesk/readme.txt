@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.0.7
+Stable tag: 4.1.0
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,19 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.1.0 =
+* Added: Public REST API v1 (`swh/v1`) — tickets CRUD, replies, technicians, categories, public-settings allowlist. Bearer auth via API keys or WP Application Passwords. (#362, #363, #364, #366)
+* Added: API key management under Settings → Integrations → API Keys. Bcrypt-hashed, scoped read/write, revocable, optional per-key rate-limit override. Plaintext shown once at generation. (#365)
+* Added: Per-key + per-IP rate limiting with `X-RateLimit-*` and `Retry-After` headers. (#367)
+* Added: OpenAPI 3.1 spec served at `GET /wp-json/swh/v1/openapi.json`, plus admin Tools → Helpdesk API Reference page (vendored Redoc, no CDN) and Pages site embed. (#368)
+* Added: Opt-in API access audit log per ticket (Settings → Integrations toggle, default off). (#369)
+* Changed: `swh_save_ticket_data()` now delegates ticket-field mutations to a new context-neutral `swh_update_ticket_fields()` helper; the REST PATCH path uses the same helper. (invariant #19)
+* Changed: Reply insertion refactored to a context-neutral `swh_insert_helpdesk_reply()` helper used by both admin and REST. (invariant #20)
+* Changed: Admin-internal REST controllers moved from `swh/v1` to `swh-admin/v1` to prevent collision with the public surface.
+* Security: IP-bucket rate-limit transient keys hash IPs via `hash_hmac('sha256', $ip, wp_salt('nonce'))` so keys cannot be reverse-mapped to source IPs.
+* Security: Public-settings endpoint uses an explicit allowlist (no wildcards); CI drift detector fails if a known-secret key is added.
+* Fixed: `docs/internal/extended-test-plan.md` §5.2 aligned with the v4.0+ default-view snap-back behavior. (#504)
 
 = 4.0.7 =
 * Security: Cleared 7 Dependabot alerts (2 high, 5 medium). All were build-time transitive devDeps from @wordpress/scripts (serialize-javascript RCE, minimatch ReDoS, webpack-dev-server, uuid). Resolved via npm overrides. None ship in the plugin. (#501)

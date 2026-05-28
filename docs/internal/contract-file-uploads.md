@@ -128,6 +128,12 @@ The single most-attacked surface in any file-serving plugin. Hard rules:
 5. **Delete paths are `realpath`-validated.**
 6. **Retention runs in micro-batches** (no whole-table scans inside a single cron tick).
 
+## REST reply attachments (Phase 4, #363)
+
+`POST /swh/v1/tickets/{id}/replies` accepts `attachments` as an `int[]` of media IDs (NOT a multipart `$_FILES` upload — clients pre-upload through the media library or `/wp-json/wp/v2/media`, then reference the resulting IDs). The reply-insert helper (`swh_insert_helpdesk_reply()`, invariant #20) validates each ID against the same MIME allowlist as `swh_handle_multiple_uploads()` — image/jpeg, image/gif, image/png, application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain. An ID that does not exist, is not an `attachment` post type, or whose MIME falls outside the allowlist rejects the whole POST with `swh_rest_validation_failed` and `data.errors.attachments` populated.
+
+The admin save-post path still owns the `$_FILES` pipeline; the helper accepts `attachment_urls` (pre-uploaded URLs from `swh_handle_multiple_uploads()`) as an alternative input shape, so the two paths share the same comment-meta writer without duplicating the upload pipeline.
+
 ---
 
 ## Failure modes

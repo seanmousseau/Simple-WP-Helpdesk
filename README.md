@@ -35,6 +35,7 @@ A lightweight, full-featured ticketing system built natively for WordPress. No t
 - **CSAT satisfaction prompt** — optional 1–5 star rating after ticket closure
 - **GDPR tools** — per-email data purge, retention policies, full uninstall cleanup
 - **Inbound email webhook** — `POST /wp-json/swh/v1/inbound-email` with Bearer auth — see [end-user guide](https://seanmousseau.github.io/Simple-WP-Helpdesk/inbound-webhook)
+- **Public REST API v1** (`swh/v1`) — tickets CRUD, replies, technicians, categories, public-settings allowlist. Scoped, bcrypt-hashed, revocable API keys with per-key rate-limit override. OpenAPI 3.1 spec + admin Redoc viewer. See [API keys](https://seanmousseau.github.io/Simple-WP-Helpdesk/api-keys) and [API reference](https://seanmousseau.github.io/Simple-WP-Helpdesk/api-reference).
 - **Accessibility (WCAG 2.2 AA)** — semantic fieldsets, ARIA labels, focus rings in both themes
 - **Internationalization (i18n)** ready with full `.pot` file
 - **GitHub auto-updater** — new releases delivered directly to the WordPress dashboard

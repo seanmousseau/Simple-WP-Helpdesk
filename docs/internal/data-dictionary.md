@@ -50,15 +50,16 @@ Cited from `grep -rEon "(update|get|delete)_post_meta\(...\)"` on `simple-wp-hel
 | `_swh_unread` | string (`'1'`) | optional | Set to `'1'` when a client posts a reply; cleared when admin opens the ticket. Pairs with the `swh_unread_count` transient (see invariant #17). | 3.1.0 |
 | `_swh_last_activity_at` | int (unix ts) | optional | Updated on every status change and reply insert. Used by the inbox to sort by recency. Written by `swh_set_ticket_status()` and the three user-visible reply paths. | 4.0.0 (#349) |
 | `_swh_version` | int | absent on pre-4.0 tickets (treated as 1 by `TicketVersion::current()`) | Optimistic-concurrency version counter. **Every user-visible ticket mutation MUST bump this** (invariant #18) — use `TicketVersion::bump()`. Mismatch with client-supplied `expected_version` returns 409 from the REST drawer endpoints. New in 4.0.0; absent on pre-4.0 tickets is expected and safe. See invariant #18. | 4.0.0 (#350) |
+| `_swh_api_access_log` | `array<int, array>` (max 10) | optional | Opt-in per-ticket REST API access audit log. Written by `SWH\Admin\ApiAccessLog::record()` (Phase 9, #369) **only when** `swh_settings_integrations.api_audit_log_enabled` is `true`. FIFO-trimmed at 10 entries — oldest dropped on insert. Each entry: `{ ts: int (unix), key_id: string ('k_<uuid>' or 'wp_application_password'), key_label: string (operator-set label or current user_login), action: 'read'\|'write', route: string (path only, query string stripped) }`. **Privacy contract:** never contains request body, query string, IP address, or response body. Cascades on `wp_delete_post`. Disabling the toggle does NOT delete existing entries. Surfaced read-only via the "API Access" meta box on the ticket editor (also gated by the toggle). MUST NOT leak via any public REST surface — the v1 Ticket schema explicitly omits it. | 4.1.0 (#369) |
 | `_edit_lock` | string | WP core | WordPress's own concurrent-edit lock. Not owned by this plugin. | WP core |
 
 ## Comment meta keys
 
-Comments carry these meta when `comment_type='helpdesk_reply'`:
+Comments carry these meta when `comment_type='helpdesk_reply'`. **Canonical writer (v4.1+):** `swh_insert_helpdesk_reply()` in `includes/insert-helpdesk-reply.php` is the only correct way to insert a `helpdesk_reply` comment and the only place that sets the meta keys below (invariant #20). The admin save-post path (`admin/class-ticket-editor.php`) and the public REST v1 controller (`src/Rest/V1/RepliesController.php`) both route through it; the internal drawer / portal / merge sites are scheduled for follow-up migration in v4.2.
 
 | Key | Type | Required? | Purpose | Since |
 |---|---|---|---|---|
-| `_is_internal_note` | string (`'1'`) | optional | Staff-only note. **Must be filtered out** of any frontend renderer. | 2.0.0 |
+| `_is_internal_note` | string (`'1'`) | optional | Staff-only note. **Must be filtered out** of any frontend renderer. Written by `swh_insert_helpdesk_reply()` when `is_internal_note=true`. | 2.0.0 |
 | `_is_user_reply` | string (`'1'`) | optional | Marks a portal-side or inbound-email reply (i.e. came from the client, not staff). Used by reporting to attribute first-response time correctly. | 2.0.0 |
 | `_swh_reply_orignames` | array<string,string> | optional | Per-comment map of attachment URL → original filename for replies and reopens. Falls back to `basename($url)` if missing. | 2.3.0 |
 | `_attachments` | string[] (URLs) | optional | Attachment URLs on the reply comment. | 1.0 |
@@ -113,6 +114,18 @@ Categories:
 - **Inbound Email:** Bearer secret.
 - **Frontend Portal Appearance:** theme preference.
 
+**Publicly readable settings (v4.1.0+).** A small subset of operator settings is exposed via `GET /swh/v1/settings/public` (Phase 5, #364) — the only public no-auth endpoint in `swh/v1`. The hard allowlist is `simple-wp-helpdesk/src/Rest/V1/PublicSettingsAllowlist.php` and is documented in `security-model.md` → "Public settings allowlist". The following options are read by the allowlist (and ONLY these — wildcard / prefix-match exposure is forbidden):
+
+- `swh_ticket_priorities` — publicly readable via `/swh/v1/settings/public` as `priority_labels` (CSV → trimmed `string[]`).
+- `swh_ticket_statuses` — publicly readable via `/swh/v1/settings/public` as `status_labels`.
+- `swh_sla_warn_hours` — publicly readable via `/swh/v1/settings/public` as `sla_thresholds.medium`.
+- `swh_sla_breach_hours` — publicly readable via `/swh/v1/settings/public` as `sla_thresholds.high`.
+- `swh_csat_enabled` — publicly readable via `/swh/v1/settings/public` as `features.csat` (boolean only, the value itself is not exposed in any other form).
+- `swh_ticket_page_id` — informs `features.portal` (boolean — true iff `> 0`). The page ID itself is NOT exposed.
+- `swh_max_upload_count` — informs `features.attachments` (boolean — true iff `> 0`). The cap is NOT exposed.
+
+Every other option in `swh_get_defaults()` is private to authenticated callers. Secret-bearing options (`swh_inbound_secret`, `swh_recaptcha_secret_key`, `swh_turnstile_secret_key`, `swh_recaptcha_api_key`, all email template bodies) are explicitly tested as NOT-in-allowlist via `PublicSettingsAllowlistTest::test_known_secrets_are_not_in_allowlist`.
+
 Additionally:
 
 - `swh_db_version` — installed plugin version; updated by `swh_run_upgrade_routine()` at `class-installer.php:147` AND by `\SWH\Settings\Migration::run()` (v4.0.0+, sets to `'4.0.0'` after grouped-options migration). **Not** in `swh_get_defaults()` and **excluded** from bulk operations (`swh_get_all_option_keys()` filters it out).
@@ -132,7 +145,9 @@ Storage shape introduced by #356. Each group is a single top-level option holdin
 | `swh_settings_notifications` | array | NOT seeded by the 4.0.0 migration — no call sites or defaults today. Future work. |
 | `swh_settings_tools` | array | Spam method, reCAPTCHA/Turnstile keys, retention windows, delete-on-uninstall, canned responses, ticket templates, SLA thresholds. |
 | `swh_settings_routing` | array | Default assignee, fallback email, ticket page id, token TTL, restrict-to-assigned, assignment rules. |
-| `swh_settings_integrations` | array | `inbound_secret`. Outbound webhook config in v4.2+. |
+| `swh_settings_integrations` | array | `inbound_secret`, `api_keys`, `api_audit_log_enabled`. Outbound webhook config in v4.2+. |
+| `swh_settings_integrations.api_keys` | `array<int, array>` | Operator-issued REST API keys. Default `[]`. **Writer:** `SWH\Rest\ApiKeys` only — operators do not edit this via the freeform settings save handler; UI ships in v4.1 Phase 6. **Sensitive:** entries contain bcrypt hashes; this list MUST NOT appear in any public REST surface (the `GET /settings/public` allowlist in Phase 5 excludes the entire `api_keys` sub-key). Each entry: `{ id: 'k_<uuid>', label: string≤60, scope: 'read'\|'write', prefix: string(12) (first 12 chars of plaintext), hash: bcrypt cost 12, created_at: unix, created_by: int, last_used_at: unix\|0, rate_limit: int\|null, revoked_at: unix\|null }`. Plaintext is shown exactly once at generation and never persisted. See `security-model.md` → "API key authentication" for the auth flow. Introduced 4.1.0 (#365). |
+| `swh_settings_integrations.api_audit_log_enabled` | bool | Opt-in toggle for the per-ticket API access audit log (Phase 9, #369). Default `false`. Operator-writable via the Integrations tab. When `true`, every successful REST request that resolves to a single ticket id appends one entry (max 10, FIFO) to that ticket's `_swh_api_access_log` post meta. Flipping the toggle to `false` does NOT delete existing entries — operators can re-enable to see prior history. The toggle also gates whether the "API Access" meta box renders on the ticket editor. Introduced 4.1.0 (#369). |
 
 ## Transients
 

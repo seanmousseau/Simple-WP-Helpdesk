@@ -14,6 +14,8 @@ ehthumbs.db
 # Composer (if re-introduced)
 vendor/
 !simple-wp-helpdesk/vendor/
+!simple-wp-helpdesk/assets/vendor/
+!simple-wp-helpdesk/assets/vendor/**
 composer.lock
 
 # WordPress debug log

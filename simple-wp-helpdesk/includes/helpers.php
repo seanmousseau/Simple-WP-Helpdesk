@@ -488,10 +488,24 @@ function swh_is_token_expired( $ticket_id ) {
  * @return string The client IP address, or empty string if unavailable.
  */
 function swh_get_client_ip() {
-	if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && is_string( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+	// Proxy headers (`CF-Connecting-IP`, `X-Forwarded-For`) are trivially
+	// spoofable by anyone connecting directly to the origin. Only honour them
+	// when the operator has explicitly declared their install sits behind a
+	// trusted reverse proxy via:
+	//
+	// define( 'SWH_TRUST_PROXY', true );
+	//
+	// in `wp-config.php`. Without that opt-in, fall back to `REMOTE_ADDR` so a
+	// rate-limit-evading client can't rotate fake IPs by setting the header
+	// themselves. Cloudflare-fronted installs SHOULD set the constant — the
+	// IP would otherwise hash to the CF edge node's address and pool every
+	// visitor behind that node into a single per-IP rate-limit bucket.
+	$trust_proxy = defined( 'SWH_TRUST_PROXY' ) && SWH_TRUST_PROXY;
+
+	if ( $trust_proxy && ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && is_string( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
 		return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
 	}
-	if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && is_string( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+	if ( $trust_proxy && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && is_string( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
 		$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
 		return trim( $ips[0] );
 	}
@@ -1060,5 +1074,31 @@ if ( ! function_exists( 'swh_enqueue_toast_script' ) ) {
 			$version,
 			true
 		);
+	}
+}
+
+if ( ! function_exists( 'swh_rest_require' ) ) {
+	/**
+	 * Build a `permission_callback` that requires either a logged-in WP user
+	 * with the `edit_posts` capability, or a valid `swhk_` bearer token whose
+	 * scope satisfies `$scope`.
+	 *
+	 * This is the canonical permission_callback for every v4.1.0 `swh/v1`
+	 * controller. Routes MUST go through this helper — no inline
+	 * `current_user_can` checks in controllers (Phase 2 of the v4.1.0 plan,
+	 * see docs/internal/plan_v4.1.0.md).
+	 *
+	 * Implementation lives in {@see \SWH\Rest\Auth::require_scope()}. This
+	 * thin global wrapper exists so route definitions stay readable
+	 * (`'permission_callback' => swh_rest_require( 'read' )`) without
+	 * requiring callers to `use` the namespaced class.
+	 *
+	 * @param string $scope 'read' or 'write'. `write` keys satisfy both.
+	 * @return callable(\WP_REST_Request): (true|\WP_Error)
+	 *
+	 * @since 4.1.0
+	 */
+	function swh_rest_require( string $scope ): callable {
+		return \SWH\Rest\Auth::require_scope( $scope );
 	}
 }
