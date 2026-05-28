@@ -107,7 +107,13 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-scripts
 
       - name: Security audit (production deps only)
-        run: composer audit --no-dev
+        # `--locked` audits the composer.lock directly. Without it, Composer
+        # 2.7+ refuses to filter the installed package set down to prod-only
+        # when dev packages are present (and they always are here — the test
+        # job step above installs them). `--no-dev --locked` together asks
+        # Composer to audit only the require (not require-dev) packages from
+        # the lockfile, which is the semantic we want for this job.
+        run: composer audit --no-dev --locked
 
   changelog-check:
     name: CHANGELOG Updated
