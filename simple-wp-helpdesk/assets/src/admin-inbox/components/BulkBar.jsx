@@ -6,8 +6,10 @@ import { Button, SelectControl } from '@wordpress/components';
 import { SWH_INBOX_STORE } from '../store/inbox';
 import { dispatchBulk } from '../util/bulk-action';
 
-// v4.1.1 (#537): read operator-configured priority + status labels from the
-// swhInbox localize bundle so the bulk dropdowns match the REST enum.
+// v4.1.1 (#537): render operator-configured priority + status labels as
+// the dropdown DISPLAY text while keeping the token form as the option
+// VALUE. The bulk-action dispatcher downstream sends the token form to
+// the admin REST controller, which canonicalizes via swh_update_ticket_fields().
 const DEFAULT_STATUS_LABELS = [ 'Open', 'In Progress', 'Resolved', 'Closed' ];
 const DEFAULT_PRIORITY_LABELS = [ 'Low', 'Medium', 'High' ];
 
@@ -17,14 +19,17 @@ const readLocalizedLabels = ( key, fallback ) => {
 	return list.length ? list : fallback;
 };
 
+const tokenize = ( label ) =>
+	String( label || '' ).toLowerCase().replace( /[\s-]+/g, '_' );
+
 const getStatusOptions = () => [
 	{ value: '', label: __( 'Status…', 'simple-wp-helpdesk' ) },
-	...readLocalizedLabels( 'statusLabels', DEFAULT_STATUS_LABELS ).map( ( label ) => ( { value: label, label } ) ),
+	...readLocalizedLabels( 'statusLabels', DEFAULT_STATUS_LABELS ).map( ( label ) => ( { value: tokenize( label ), label } ) ),
 ];
 
 const getPriorityOptions = () => [
 	{ value: '', label: __( 'Priority…', 'simple-wp-helpdesk' ) },
-	...readLocalizedLabels( 'priorityLabels', DEFAULT_PRIORITY_LABELS ).map( ( label ) => ( { value: label, label } ) ),
+	...readLocalizedLabels( 'priorityLabels', DEFAULT_PRIORITY_LABELS ).map( ( label ) => ( { value: tokenize( label ), label } ) ),
 ];
 
 export const BulkBar = () => {

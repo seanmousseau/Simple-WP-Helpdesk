@@ -10,6 +10,28 @@ starting from the next release after 1.8.
 
 ## [Unreleased]
 
+## [4.1.1] — 2026-05-28 — REST polish + admin sweep follow-ups
+
+Fast-follow bug-fix release after the v4.1.0 manual admin sweep. No data-shape changes, no setting changes — drop-in upgrade.
+
+### Fixed
+
+- **REST attachment URL validation** — `swh_insert_helpdesk_reply()`'s pre-uploaded URL allowlist was a prefix-only check; `…/wp-content/uploads/../../private/secret.png` and `%2e%2e` variants passed. Now percent-decodes the URL path and rejects any segment equal to `..` or `.` in addition to the baseurl prefix match. Worst case in v4.1.0 was a misdirected anchor (not SSRF / stored XSS), but the docstring claimed more than the code delivered. (#530, PR #538)
+- **REST priority case-insensitivity** — `POST /swh/v1/tickets` and `PATCH /swh/v1/tickets/{id}` now accept `medium` / `MEDIUM` / `Medium` and store the operator-configured canonical label (e.g. `Medium`), matching the status field's existing behavior. Integrators no longer need to know the exact casing the operator chose for `swh_priority_labels`. OpenAPI spec (`docs/openapi.yaml`, both bundled `.json` artifacts, `Schemas/Ticket.php`) document the case-insensitive write / canonical-echo read. (#532, PR #538)
+- **REST POST default-state response** — `POST /swh/v1/tickets` without `status` / `priority` returned empty strings in the response (a subsequent GET showed the configured defaults). The controller now seeds `swh_get_defaults()` values into `_ticket_status` / `_ticket_priority` post meta before building the response payload, so the immediate 201 reflects the persisted state. (#533, PR #538)
+- **API key shown-once modal focus restoration** — Closing the post-generate modal via any of Close / Close anyway / Escape / backdrop now restores focus to the Generate API key button (WCAG 2.4.3). Root cause: the async generate round-trip disables the button, which drops focus to `<body>`; the modal therefore stashed `<body>` as opener and the close path moved focus there. Fix: capture `refs.generateBtn` explicitly. The revoke modal was already correct; the shown-once modal now matches its pattern. (#535, PR #540)
+- **Drawer + bulk-bar Status/Priority dropdowns** — The React inbox drawer hardcoded `Low / Normal / High / Urgent` and `Open / In Progress / Resolved / Closed`. Operators on the default `Low / Medium / High` config saw a drawer with values that didn't match what the REST API validates, and customized priority labels were invisible. The dropdowns now read from a new `swhInbox.statusLabels` / `swhInbox.priorityLabels` localize payload sourced from `swh_get_statuses()` / `swh_get_priorities()`. (#537, PR #540)
+- **Geist-400 preload warning on every admin/portal page** — `theme-violet.php` emitted `<link rel="preload" href=".../assets/fonts/geist-400.woff2" …>` unconditionally, but the @font-face in the built stylesheet loads the hashed bundle (`assets/dist/fonts/geist-400.<hash>.woff2`), so the preload was never consumed. Every admin and portal page logged a "preloaded but not used" console warning. Dropped the preload entirely; font has `font-display: swap` so no visible regression. (#536, PR #540)
+
+### Changed
+
+- **`swh_get_client_ip()` X-Forwarded-For hardening** — Even with `SWH_TRUST_PROXY` enabled, v4.1.0 returned the leftmost XFF entry — the value the original client supplied. New opt-in `SWH_TRUSTED_PROXIES` constant (comma-separated IPs or CIDR blocks, IPv4 + IPv6) walks the chain right-to-left, pops entries inside the trusted set, returns the first untrusted hop. Without the constant, v4.1.0 leftmost behavior is preserved so existing deployments don't change. Pattern matches Symfony's `trusted_proxies` handling. New helpers `swh_select_xff_hop()` + `swh_ip_in_list()` expose the algorithm for unit testing. Documented in `docs/api-keys.md`. (#534, PR #539)
+
+### Internal
+
+- **Tests: `wp_unslash()` stub matches WP core's array recursion** — `tests/bootstrap.php` now mirrors WP core's `array_map( 'wp_unslash', $value )` behavior so future array-shaped call sites can't silently slip past the unit suite. (#531, PR #539)
+- **+18 PHPUnit regressions** — 3 attachment-URL traversal variants, 3 priority casings, 1 REST POST default-seeding, 10 client-IP scenarios (single proxy, multi-proxy chain, spoofed-leftmost, all-trusted edge, IPv6 CIDR, exact-IP match, invalid input), 3 array unslash cases. 463/463 PHPUnit tests pass.
+
 ## [4.1.0] — 2026-05-27 — Event Surface & REST API
 
 ### Added

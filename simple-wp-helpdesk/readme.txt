@@ -3,7 +3,7 @@ Contributors: seanmousseau
 Tags: helpdesk, tickets, support, customer service, ticketing
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.1.0
+Stable tag: 4.1.1
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,18 @@ Yes. Enable "Restrict Technicians" in Settings > Assignment & Routing. Technicia
 5. Settings page — Email Templates tab
 
 == Changelog ==
+
+= 4.1.1 =
+* Fixed: REST API attachment-URL validation in `swh_insert_helpdesk_reply()` now rejects path-traversal segments (`..`, `%2e%2e`, single-dot) in addition to the existing uploads-baseurl prefix check. (#530)
+* Fixed: REST priority field accepts case-insensitive input (`medium` / `MEDIUM` / `Medium`) and stores the operator-configured canonical label, matching the status field's behavior. OpenAPI spec documents the case-insensitive write / canonical-echo read. (#532)
+* Fixed: `POST /swh/v1/tickets` response now reflects the stored status + priority instead of echoing empty strings when the caller omits them — defaults from `swh_get_defaults()` are seeded before the response payload is built. (#533)
+* Security: `swh_get_client_ip()` X-Forwarded-For handling is now spoof-resistant. Opt-in `SWH_TRUSTED_PROXIES` constant (CIDR list) walks the XFF chain right-to-left and returns the first untrusted hop. Without the constant, v4.1.0 leftmost behavior is preserved. (#534)
+* Fixed: Shown-once API key modal restores focus to the Generate button on every close path (Close / Close anyway / Escape / backdrop). Captures the trigger button explicitly so the async generate round-trip's button-disabled blur doesn't strand focus on `<body>`. WCAG 2.4.3. (#535)
+* Fixed: Removed the unused `geist-400.woff2` preload — link pointed at the unhashed path while the @font-face loaded the hashed bundle, so every admin/portal page logged a "preloaded but not used" console warning. Font has `font-display: swap` so no visible change. (#536)
+* Fixed: Drawer + bulk-bar Status/Priority `SelectControl`s now read operator-configured labels from a new `swhInbox.statusLabels` / `swhInbox.priorityLabels` localize payload sourced from `swh_get_statuses()` / `swh_get_priorities()`. The hardcoded `Low / Normal / High / Urgent` enum silently mismatched the configured `Low / Medium / High` defaults. (#537)
+* Tests: `tests/bootstrap.php` `wp_unslash()` stub mirrors WP core's array recursion. (#531)
+* Tests: +18 PHPUnit regressions covering the above (traversal URLs, priority canonicalization, default seeding, XFF rightmost-pop, IPv4+IPv6 CIDR matching, array unslash).
+* Internal: Documented `SWH_TRUSTED_PROXIES` constant in `docs/api-keys.md`.
 
 = 4.1.0 =
 * Added: Public REST API v1 (`swh/v1`) — tickets CRUD, replies, technicians, categories, public-settings allowlist. Bearer auth via API keys or WP Application Passwords. (#362, #363, #364, #366)

@@ -4,7 +4,7 @@
 
 A lightweight, full-featured ticketing system built natively for WordPress. No third-party services required — all data stays on your server.
 
-**Version:** 4.0.6 &nbsp;|&nbsp; **WordPress:** 6.0+ &nbsp;|&nbsp; **PHP:** 8.0+
+**Version:** 4.1.1 &nbsp;|&nbsp; **WordPress:** 6.0+ &nbsp;|&nbsp; **PHP:** 8.0+
 
 ## Features
 
