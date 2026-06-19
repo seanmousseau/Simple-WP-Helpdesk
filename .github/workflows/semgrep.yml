@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         # Shallow clone: static analysis does not need full git history.
         with:
           fetch-depth: 1
