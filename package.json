@@ -9,7 +9,7 @@
     "format": "wp-scripts format simple-wp-helpdesk/assets/src"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^32.2.0"
+    "@wordpress/scripts": "^32.5.0"
   },
   "comments": {
     "overrides": "Pin vulnerable transitive deps to patched versions until @wordpress/scripts ships upstream fixes. All build-time only — never ship in the plugin. See dependencies.md."
